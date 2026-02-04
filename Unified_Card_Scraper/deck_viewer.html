@@ -756,7 +756,10 @@
             }
             
             const headerLine = lines[0].replace(/^\uFEFF/, ''); // Remove BOM from first line
-            const headers = headerLine.split(';').map(h => h.trim().replace(/\r$/, ''));
+            const headers = headerLine.split(';').map(h => {
+                // Remove BOM from individual headers and trim
+                return h.trim().replace(/^\uFEFF/, '').replace(/\r$/, '');
+            });
             const data = [];
             
             console.log('CSV Headers:', headers); // Debug
@@ -768,7 +771,9 @@
                 const row = {};
                 headers.forEach((header, index) => {
                     let value = values[index] ? values[index].trim().replace(/\r$/, '') : '';
-                    row[header] = value;
+                    // Ensure header name is clean
+                    const cleanHeader = header.replace(/^\uFEFF/, '');
+                    row[cleanHeader] = value;
                 });
                 data.push(row);
             }
