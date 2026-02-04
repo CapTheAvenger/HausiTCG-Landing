@@ -881,14 +881,17 @@
                 normalizeArchetypeName(arch) !== normalizeArchetypeName(mainDeck)
             );
             
-            console.log('Main deck:', mainDeck, '| Base:', baseName, '| Variants found:', variants.length);
+            console.log('Variant Selector - Main deck:', mainDeck, '| Base:', baseName, '| Variants found:', variants.length, '| Total archetypes:', allArchetypes.length);
+            console.log('All archetypes:', allArchetypes);
             
             if (variants.length === 0) {
+                console.log('No variants found, hiding selector');
                 variantSelector.style.display = 'none';
                 return;
             }
             
             // Show selector and populate options
+            console.log('Showing variant selector with', variants.length, 'options');
             variantSelector.style.display = 'block';
             variantOptions.innerHTML = variants.map(variant => {
                 const safeVariant = variant.replace(/'/g, "\\'").replace(/"/g, '&quot;');
