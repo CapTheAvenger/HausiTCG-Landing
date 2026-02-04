@@ -1055,6 +1055,11 @@
             const decksToInclude = [selectedDeck, ...selectedVariants];
             let deckCards = cardsData.filter(c => decksToInclude.includes(c.archetype));
             
+            console.log('Initial filtered cards:', deckCards.length, 'from archetype:', selectedDeck);
+            if (deckCards.length > 0) {
+                console.log('First card image_url:', deckCards[0].image_url);
+            }
+            
             // Aggregate cards by name (combine same cards from different variants)
             const cardMap = new Map();
             deckCards.forEach(card => {
@@ -1070,6 +1075,11 @@
             });
             
             deckCards = Array.from(cardMap.values());
+            
+            console.log('After aggregation:', deckCards.length, 'cards');
+            if (deckCards.length > 0) {
+                console.log('First aggregated card:', deckCards[0].card_name, 'image_url:', deckCards[0].image_url);
+            }
             
             // Apply percentage filter (only for main deck)
             if (filter === '70') {
