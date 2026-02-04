@@ -1122,8 +1122,11 @@
                 
                 // Create thumbnail HTML
                 let thumbnailHtml;
-                if (imageUrl && imageUrl !== '') {
-                    thumbnailHtml = `<img src="${imageUrl}" alt="${card.card_name}" class="card-thumbnail" onclick="showCardImage('${imageUrl}', '${card.card_name}')" onerror="this.parentElement.innerHTML='<div class=\'card-thumbnail-placeholder\'>🃏</div>'">`;
+                if (imageUrl && imageUrl.trim() !== '') {
+                    // Use proxied image URL to bypass 403 Forbidden from pokemontcg.io
+                    const proxiedImageUrl = `https://images.weserv.nl/?url=${encodeURIComponent(imageUrl.replace('https://', ''))}`;
+                    
+                    thumbnailHtml = `<img src="${proxiedImageUrl}" alt="${card.card_name}" class="card-thumbnail" onclick="showCardImage('${imageUrl}', '${card.card_name}')" onerror="this.parentElement.innerHTML='<div class=\\'card-thumbnail-placeholder\\'>🃏</div>'">`;
                 } else {
                     thumbnailHtml = `<div class="card-thumbnail-placeholder">🃏</div>`;
                 }
@@ -1166,10 +1169,16 @@
                 const imageUrl = card.image_url || '';
                 const count = card.max_count || 1;
                 
-                if (imageUrl) {
+                if (imageUrl && imageUrl.trim() !== '') {
+                    // Use proxied image URL to bypass 403 Forbidden from pokemontcg.io
+                    const proxiedImageUrl = `https://images.weserv.nl/?url=${encodeURIComponent(imageUrl.replace('https://', ''))}`;
+                    
                     return `
                         <div class="card-visual" onclick="showCardImage('${imageUrl}', '${card.card_name}')">
-                            <img src="${imageUrl}" alt="${card.card_name}" onerror="this.parentElement.innerHTML='<div class=\\'fallback-content\\'><div class=\\'fallback-icon\\'>\ud83c\udccf</div><div>${card.card_name}</div></div>'">
+                            <img src="${proxiedImageUrl}" 
+                                 alt="${card.card_name}" 
+                                 loading="lazy"
+                                 onerror="this.parentElement.classList.add('no-image'); this.parentElement.innerHTML='<div class=\\'fallback-content\\'><div class=\\'fallback-icon\\'>\ud83c\udccf</div><div>${card.card_name}</div><div class=\\'card-count-badge\\'>${count}</div></div>'">
                             <div class="card-count-badge">${count}</div>
                             <div class="card-name-overlay">${card.card_name}</div>
                         </div>
@@ -1264,10 +1273,13 @@
             
             deckList.innerHTML = myDeck.map(card => {
                 let cardVisual = '';
-                if (card.imageUrl) {
+                if (card.imageUrl && card.imageUrl.trim() !== '') {
+                    // Use proxied image URL to bypass 403 Forbidden from pokemontcg.io
+                    const proxiedImageUrl = `https://images.weserv.nl/?url=${encodeURIComponent(card.imageUrl.replace('https://', ''))}`;
+                    
                     cardVisual = `
                         <div style="width: 60px; height: 80px; margin-right: 10px; cursor: pointer;" onclick="showCardImage('${card.imageUrl}', '${card.name}')">
-                            <img src="${card.imageUrl}" alt="${card.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                            <img src="${proxiedImageUrl}" alt="${card.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
                         </div>
                     `;
                 } else {
@@ -1309,10 +1321,13 @@
                 const imageUrl = card.imageUrl || '';
                 const count = card.count || 1;
                 
-                if (imageUrl) {
+                if (imageUrl && imageUrl.trim() !== '') {
+                    // Use proxied image URL to bypass 403 Forbidden from pokemontcg.io
+                    const proxiedImageUrl = `https://images.weserv.nl/?url=${encodeURIComponent(imageUrl.replace('https://', ''))}`;
+                    
                     return `
                         <div class="card-visual" onclick="showCardImage('${imageUrl}', '${card.name}')">
-                            <img src="${imageUrl}" alt="${card.name}" onerror="this.parentElement.innerHTML='<div class=\\'fallback-content\\'><div class=\\'fallback-icon\\'>\ud83c\udccf</div><div>${card.name}</div></div>'">
+                            <img src="${proxiedImageUrl}" alt="${card.name}" onerror="this.parentElement.innerHTML='<div class=\\'fallback-content\\'><div class=\\'fallback-icon\\'>\ud83c\udccf</div><div>${card.name}</div></div>'">
                             <div class="card-count-badge">${count}</div>
                             <div class="card-name-overlay">${card.name}</div>
                         </div>
