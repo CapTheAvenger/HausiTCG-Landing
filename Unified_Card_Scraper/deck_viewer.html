@@ -906,8 +906,8 @@
                 
                 // WIN RATE / Ø PLATZIERUNG: Limitless > City League
                 if (limitlessMatch && limitlessMatch.win_rate) {
-                    const winRateDisplay = limitlessMatch.win_rate.replace(',', '.');
-                    document.getElementById('statWinRate').textContent = winRateDisplay + '%';
+                    // win_rate is already formatted as "51.29%" in the CSV
+                    document.getElementById('statWinRate').textContent = limitlessMatch.win_rate;
                     document.getElementById('statWinRate').parentElement.querySelector('.label').textContent = 'Win Rate';
                 } else if (cityLeagueMatch && cityLeagueMatch.new_avg_placement) {
                     document.getElementById('statWinRate').textContent = cityLeagueMatch.new_avg_placement;
@@ -1105,6 +1105,15 @@
             if (deckCards.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7" class="loading">Keine Karten gefunden</td></tr>';
                 return;
+            }
+            
+            console.log('Final deck cards for display:', deckCards.length);
+            if (deckCards.length > 0) {
+                console.log('Sample card:', {
+                    name: deckCards[0].card_name,
+                    imageUrl: deckCards[0].image_url,
+                    hasImage: !!deckCards[0].image_url
+                });
             }
             
             tbody.innerHTML = deckCards.map(card => {
