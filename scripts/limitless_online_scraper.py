@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 """
 Limitless Online Deck Scraper
@@ -428,13 +429,14 @@ def scrape_matchup_data(deck_url: str, format_type: str, rotation: str, set_code
     return matchups
 
 def analyze_matchups_for_top_decks(deck_data: List[Dict[str, Any]], settings: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-    """Analyze matchups for top decks against other top 10 decks."""
+    """Analyze matchups for top decks against other top 20 decks."""
     top_n = settings.get('top_decks_for_matchup', 10)
     top_decks = deck_data[:top_n]
     top_deck_names = [deck['deck_name'] for deck in top_decks]
     
-    # Also get Top 10 for matchup ratio calculation (reduced from 20)
-    top_10_names = [deck['deck_name'] for deck in deck_data[:10]]
+    # Use Top 20 for matchup ratio calculation
+    top_ratio_n = min(20, len(deck_data))
+    top_ratio_names = [deck['deck_name'] for deck in deck_data[:top_ratio_n]]
     
     print(f"\n{'=' * 60}")
     print(f"Analyzing matchups for Top {top_n} decks...")
@@ -473,15 +475,15 @@ def analyze_matchups_for_top_decks(deck_data: List[Dict[str, Any]], settings: Di
         # First, filter by minimum games and exclude "Other" decks
         filtered_matchups = [m for m in matchups if m['total_games'] >= 3 and m['opponent_deck'].lower() != 'other']
         
-        # Only analyze matchups vs Top 10 decks (for meaningful meta analysis)
+        # Only analyze matchups vs Top 20 decks (for meaningful meta analysis)
         relevant_matchups = []
         for matchup in filtered_matchups:
             opponent = matchup['opponent_deck']
-            # Case-insensitive match against Top 10
-            if opponent.lower() in [td.lower() for td in top_10_names]:
+            # Case-insensitive match against Top 20
+            if opponent.lower() in [td.lower() for td in top_ratio_names]:
                 relevant_matchups.append(matchup)
         
-        print(f"    Found {len(relevant_matchups)} matchups vs Top 10 decks")
+        print(f"    Found {len(relevant_matchups)} matchups vs Top 20 decks")
         
         if not relevant_matchups:
             print(f"    ⚠ No matchups with minimum 3 games")
@@ -498,9 +500,9 @@ def analyze_matchups_for_top_decks(deck_data: List[Dict[str, Any]], settings: Di
         best_5 = [m for m in relevant_matchups if m['win_rate_numeric'] > 50][:5]
         worst_5 = [m for m in relevant_matchups if m['win_rate_numeric'] < 50][-5:][::-1]  # Reverse to show worst first
         
-        # Calculate matchup ratio vs Top 10 (positive:negative)
-        positive_vs_top10 = len([m for m in relevant_matchups if m['win_rate_numeric'] > 50])
-        negative_vs_top10 = len([m for m in relevant_matchups if m['win_rate_numeric'] < 50])
+        # Calculate matchup ratio vs Top 20 (positive:negative)
+        positive_vs_top20 = len([m for m in relevant_matchups if m['win_rate_numeric'] > 50])
+        negative_vs_top20 = len([m for m in relevant_matchups if m['win_rate_numeric'] < 50])
         
         # Store all opponent matchups for interactive selector
         all_opponent_matchups = {}
@@ -512,9 +514,9 @@ def analyze_matchups_for_top_decks(deck_data: List[Dict[str, Any]], settings: Di
         matchup_analysis[deck_name] = {
             'best_matchups': best_5,
             'worst_matchups': worst_5,
-            'top10_matchups': relevant_matchups,  # All matchups vs Top 10 decks for CSV export
-            'positive_vs_top10': positive_vs_top10,
-            'negative_vs_top10': negative_vs_top10,
+            'top20_matchups': relevant_matchups,  # All matchups vs Top 20 decks for CSV export
+            'positive_vs_top20': positive_vs_top20,
+            'negative_vs_top20': negative_vs_top20,
             'all_opponent_matchups': all_opponent_matchups  # For interactive selector
         }
     return matchup_analysis
@@ -658,9 +660,9 @@ def create_comparison_report(old_stats: Dict[str, Any], new_stats: Dict[str, Any
                 writer.writeheader()
                 
                 for deck_name, matchups in matchup_data.items():
-                    # Write Top 10 matchups for each deck
-                    top10_matchups = matchups.get('top10_matchups', [])
-                    for matchup in top10_matchups:
+                    # Write Top 20 matchups for each deck
+                    top20_matchups = matchups.get('top20_matchups', [])
+                    for matchup in top20_matchups:
                         writer.writerow({
                             'deck_name': deck_name,
                             'opponent': matchup['opponent_deck'],
@@ -1018,7 +1020,7 @@ def create_html_report(comparison_data: List[Dict[str, Any]], output_file: str,
             <div class="stat-card">
                 <h3>📈 Top 10 Changes</h3>
                 <div class="value">{len(entered_top10) + len(left_top10)}</div>
-                <p style="font-size: 0.85em;">{''.join([f'✅ {d} ({deck_lookup.get(d, {}).get("win_rate_numeric", 0):.1f}%)<br>' for d in list(entered_top10)[:3]]) + ''.join([f'❌ {d} ({deck_lookup.get(d, {}).get("win_rate_numeric", 0):.1f}%)<br>' for d in list(left_top10)[:3]]) if (entered_top10 or left_top10) else 'No changes'}</p>
+                <p style="font-size: 0.85em;">{''.join([f'✅ {d} ({deck_lookup.get(d, dict()).get("win_rate_numeric", 0):.1f}%)<br>' for d in list(entered_top10)[:3]]) + ''.join([f'❌ {d} ({deck_lookup.get(d, dict()).get("win_rate_numeric", 0):.1f}%)<br>' for d in list(left_top10)[:3]]) if (entered_top10 or left_top10) else 'No changes'}</p>
             </div>
         </div>
 
@@ -1038,7 +1040,7 @@ def create_html_report(comparison_data: List[Dict[str, Any]], output_file: str,
                     <td><strong>#{[d for d in comparison_data if d['deck_name'] == deck][0]['new_rank']}</strong></td>
                     <td>{deck}</td>
                     <td>{[d for d in comparison_data if d['deck_name'] == deck][0]['new_count']}</td>
-                    <td>{deck_lookup.get(deck, {}).get('win_rate_numeric', 0):.1f}%</td>
+                    <td>{deck_lookup.get(deck, dict()).get('win_rate_numeric', 0):.1f}%</td>
                 </tr>
                 """ for deck in entered_top10)}
             </table>
@@ -1058,7 +1060,7 @@ def create_html_report(comparison_data: List[Dict[str, Any]], output_file: str,
                     <td>#{[d for d in comparison_data if d['deck_name'] == deck][0]['old_rank']}</td>
                     <td>{deck}</td>
                     <td>{[d for d in comparison_data if d['deck_name'] == deck][0]['new_count']}</td>
-                    <td>{deck_lookup.get(deck, {}).get('win_rate_numeric', 0):.1f}%</td>
+                    <td>{deck_lookup.get(deck, dict()).get('win_rate_numeric', 0):.1f}%</td>
                 </tr>
                 """ for deck in left_top10)}
             </table>
@@ -1081,7 +1083,7 @@ def create_html_report(comparison_data: List[Dict[str, Any]], output_file: str,
                     <td>#{deck['old_rank']}</td>
                     <td>#{deck['new_rank']}</td>
                     <td><span class="rank-change rank-up">▲ {deck['rank_change']}</span></td>
-                    <td>{deck_lookup.get(deck['deck_name'], {}).get('win_rate_numeric', 0):.1f}% <span class="{'positive' if deck['winrate_change'] > 0 else 'negative' if deck['winrate_change'] < 0 else 'neutral'}">({deck['winrate_change']:+.2f}%)</span></td>
+                    <td>{deck_lookup.get(deck['deck_name'], dict()).get('win_rate_numeric', 0):.1f}% <span class="{'positive' if deck['winrate_change'] > 0 else 'negative' if deck['winrate_change'] < 0 else 'neutral'}">({deck['winrate_change']:+.2f}%)</span></td>
                 </tr>
                 """ for deck in rank_climbers[:10])}
             </table>
@@ -1103,7 +1105,7 @@ def create_html_report(comparison_data: List[Dict[str, Any]], output_file: str,
                     <td>#{deck['old_rank']}</td>
                     <td>#{deck['new_rank']}</td>
                     <td><span class="rank-change rank-down">▼ {abs(deck['rank_change'])}</span></td>
-                    <td>{deck_lookup.get(deck['deck_name'], {}).get('win_rate_numeric', 0):.1f}% <span class="{'positive' if deck['winrate_change'] > 0 else 'negative' if deck['winrate_change'] < 0 else 'neutral'}">({deck['winrate_change']:+.2f}%)</span></td>
+                    <td>{deck_lookup.get(deck['deck_name'], dict()).get('win_rate_numeric', 0):.1f}% <span class="{'positive' if deck['winrate_change'] > 0 else 'negative' if deck['winrate_change'] < 0 else 'neutral'}">({deck['winrate_change']:+.2f}%)</span></td>
                 </tr>
                 """ for deck in rank_fallers[:10])}
             </table>
@@ -1116,7 +1118,7 @@ def create_html_report(comparison_data: List[Dict[str, Any]], output_file: str,
             
             {''.join(f"""
             <div style="margin-bottom: 40px; background: #f8f9fa; padding: 20px; border-radius: 8px;">
-                <h3 style="color: #2c3e50; margin-top: 0;">{deck_name} <span style="font-size: 0.8em; color: #7f8c8d;">(Total WR: {deck_lookup.get(deck_name, {}).get('win_rate_numeric', 0):.1f}%, Vs Top10: {matchups.get('positive_vs_top10', 0)}:{matchups.get('negative_vs_top10', 0)})</span></h3>
+                <h3 style="color: #2c3e50; margin-top: 0;">{deck_name} <span style="font-size: 0.8em; color: #7f8c8d;">(Total WR: {deck_lookup.get(deck_name, dict()).get('win_rate_numeric', 0):.1f}%, Vs Top20: {matchups.get('positive_vs_top20', 0)}:{matchups.get('negative_vs_top20', 0)})</span></h3>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                     <div>
@@ -1161,13 +1163,13 @@ def create_html_report(comparison_data: List[Dict[str, Any]], output_file: str,
                     <label for="opponent_{deck_name.replace(' ', '_')}" style="display: block; margin-bottom: 8px; font-weight: bold;">Choose Opponent:</label>
                     <select id="opponent_{deck_name.replace(' ', '_')}" onchange="showMatchup(this, '{deck_name.replace(' ', '_')}')" style="width: 100%; padding: 10px; border: 1px solid #bbb; border-radius: 4px; font-size: 1em;">
                         <option value="">-- Select a deck --</option>
-                        {''.join(f'<option value="{opponent}">{opponent}</option>' for opponent in sorted(matchups.get('all_opponent_matchups', {{}}).keys()))}
+                        {''.join(f'<option value="{opponent}">{opponent}</option>' for opponent in sorted(matchups.get('all_opponent_matchups', dict()).keys()))}
                     </select>
                     <div id="matchup_details_{deck_name.replace(' ', '_')}" style="margin-top: 15px; display: none; background: #ecf0f1; padding: 15px; border-radius: 4px;"></div>
                 </div>
                 
                 <script>
-                window.matchupData_{deck_name.replace(' ', '_')} = {json.dumps({{k: {{'opponent_deck': v.get('opponent_deck'), 'win_rate': v.get('win_rate'), 'win_rate_numeric': v.get('win_rate_numeric'), 'record': v.get('record'), 'total_games': v.get('total_games')}} for k, v in matchups.get('all_opponent_matchups', {{}}).items()}})};
+                window.matchupData_{deck_name.replace(' ', '_')} = {json.dumps({k: {'opponent_deck': v.get('opponent_deck'), 'win_rate': v.get('win_rate'), 'win_rate_numeric': v.get('win_rate_numeric'), 'record': v.get('record'), 'total_games': v.get('total_games')} for k, v in matchups.get('all_opponent_matchups', dict()).items()})};
                 </script>
             </div>
             """ for deck_name, matchups in (matchup_data.items() if matchup_data else []) if deck_name.lower() != 'other')}
@@ -1238,7 +1240,7 @@ def create_html_report(comparison_data: List[Dict[str, Any]], output_file: str,
                          else '-'}
                     </td>
                     <td>{deck['new_count']} <span class="{'positive' if deck['count_change'] > 0 else 'negative' if deck['count_change'] < 0 else 'neutral'}">({deck['count_change']:+d})</span></td>
-                    <td>{deck_lookup.get(deck['deck_name'], {}).get('win_rate_numeric', 0):.1f}% <span class="{'positive' if deck['winrate_change'] > 0 else 'negative' if deck['winrate_change'] < 0 else 'neutral'}">({deck['winrate_change']:+.2f}%)</span></td>
+                    <td>{deck_lookup.get(deck['deck_name'], dict()).get('win_rate_numeric', 0):.1f}% <span class="{'positive' if deck['winrate_change'] > 0 else 'negative' if deck['winrate_change'] < 0 else 'neutral'}">({deck['winrate_change']:+.2f}%)</span></td>
                 </tr>
                 """ for deck in comparison_data[:50])}
             </table>

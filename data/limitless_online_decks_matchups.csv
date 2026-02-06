@@ -1,47 +1,96 @@
 ﻿deck_name;opponent;win_rate;record;total_games
 Dragapult Dusknoir;Alakazam Dudunsparce;62,79;594 - 352 - 22;968
 Dragapult Dusknoir;Charizard Noctowl;59,82;789 - 530 - 29;1348
+Dragapult Dusknoir;Flareon Noctowl;59,72;169 - 114 - 5;288
+Dragapult Dusknoir;Greninja;58,45;204 - 145 - 4;353
+Dragapult Dusknoir;Mega Venusaur;57,77;197 - 144 - 9;350
 Dragapult Dusknoir;Charizard Pidgeot;56,44;543 - 419 - 20;982
+Dragapult Dusknoir;Lopunny Dusknoir;55,31;297 - 240 - 3;540
+Dragapult Dusknoir;Sharpedo Toxtricity;53,15;152 - 134 - 2;288
+Dragapult Dusknoir;Dragapult Charizard;51,97;251 - 232 - 7;490
+Dragapult Dusknoir;Ceruledge;51,08;284 - 272 - 9;565
+Dragapult Dusknoir;Raging Bolt Ogerpon;50,97;315 - 303 - 14;632
 Dragapult Dusknoir;Dragapult Dusknoir;50,0;1386 - 1386 - 62;2834
+Dragapult Dusknoir;Tera Box;49,75;198 - 200 - 7;405
 Dragapult Dusknoir;N's Zoroark;49,4;370 - 379 - 20;769
 Dragapult Dusknoir;Gardevoir Jellicent;46,42;519 - 599 - 30;1148
 Dragapult Dusknoir;Grimmsnarl Froslass;46,29;456 - 529 - 19;1004
 Dragapult Dusknoir;Gholdengo Lunatone;45,43;1035 - 1243 - 49;2327
 Dragapult Dusknoir;Kangaskhan Bouffalant;44,75;358 - 442 - 23;823
 Dragapult Dusknoir;Mega Absol Box;44,32;382 - 480 - 25;887
+Dragapult Dusknoir;Gardevoir;41,07;315 - 452 - 14;781
+Gholdengo Lunatone;Sharpedo Toxtricity;68,38;173 - 80 - 1;254
+Gholdengo Lunatone;Lopunny Dusknoir;65,09;330 - 177 - 7;514
+Gholdengo Lunatone;Mega Venusaur;60,39;154 - 101 - 6;261
 Gholdengo Lunatone;N's Zoroark;59,64;396 - 268 - 20;684
+Gholdengo Lunatone;Greninja;56,25;144 - 112 - 9;265
 Gholdengo Lunatone;Mega Absol Box;54,83;409 - 337 - 21;767
 Gholdengo Lunatone;Dragapult Dusknoir;54,57;1243 - 1035 - 49;2327
+Gholdengo Lunatone;Raging Bolt Ogerpon;53,8;276 - 237 - 9;522
 Gholdengo Lunatone;Kangaskhan Bouffalant;53,61;408 - 353 - 18;779
 Gholdengo Lunatone;Charizard Pidgeot;53,42;468 - 408 - 14;890
 Gholdengo Lunatone;Grimmsnarl Froslass;52,59;386 - 348 - 22;756
+Gholdengo Lunatone;Tera Box;51,44;179 - 169 - 7;355
+Gholdengo Lunatone;Gardevoir;51,16;310 - 296 - 29;635
 Gholdengo Lunatone;Gardevoir Jellicent;50,47;534 - 524 - 66;1124
 Gholdengo Lunatone;Gholdengo Lunatone;50,0;1076 - 1076 - 38;2190
 Gholdengo Lunatone;Charizard Noctowl;47,36;556 - 618 - 23;1197
+Gholdengo Lunatone;Dragapult Charizard;46,35;178 - 206 - 4;388
+Gholdengo Lunatone;Flareon Noctowl;45,42;109 - 131 - 10;250
+Gholdengo Lunatone;Ceruledge;42,04;198 - 273 - 6;477
 Gholdengo Lunatone;Alakazam Dudunsparce;38,69;330 - 523 - 11;864
+Gardevoir Jellicent;Mega Venusaur;67,2;84 - 41 - 3;128
+Gardevoir Jellicent;Greninja;63,16;84 - 49 - 1;134
+Gardevoir Jellicent;Raging Bolt Ogerpon;62,73;170 - 101 - 5;276
+Gardevoir Jellicent;Flareon Noctowl;61,11;77 - 49 - 3;129
 Gardevoir Jellicent;Alakazam Dudunsparce;55,09;238 - 194 - 17;449
+Gardevoir Jellicent;Tera Box;54,95;100 - 82 - 3;185
+Gardevoir Jellicent;Ceruledge;53,97;136 - 116 - 7;259
 Gardevoir Jellicent;Dragapult Dusknoir;53,58;599 - 519 - 30;1148
+Gardevoir Jellicent;Dragapult Charizard;53,19;100 - 88 - 8;196
+Gardevoir Jellicent;Gardevoir;50,86;178 - 172 - 12;362
 Gardevoir Jellicent;Gardevoir Jellicent;50,0;279 - 279 - 26;584
 Gardevoir Jellicent;Gholdengo Lunatone;49,53;524 - 534 - 66;1124
+Gardevoir Jellicent;Lopunny Dusknoir;48,03;134 - 145 - 0;279
+Gardevoir Jellicent;Sharpedo Toxtricity;43,42;66 - 86 - 4;156
 Gardevoir Jellicent;Charizard Pidgeot;43,23;201 - 264 - 26;491
 Gardevoir Jellicent;Kangaskhan Bouffalant;43,08;165 - 218 - 21;404
 Gardevoir Jellicent;Mega Absol Box;41,43;174 - 246 - 17;437
 Gardevoir Jellicent;Grimmsnarl Froslass;39,95;157 - 236 - 9;402
 Gardevoir Jellicent;Charizard Noctowl;39,46;236 - 362 - 9;607
 Gardevoir Jellicent;N's Zoroark;36,87;125 - 214 - 11;350
+Charizard Noctowl;Sharpedo Toxtricity;64,29;72 - 40 - 2;114
 Charizard Noctowl;Alakazam Dudunsparce;62,34;293 - 177 - 9;479
+Charizard Noctowl;Ceruledge;61,99;168 - 103 - 3;274
 Charizard Noctowl;Gardevoir Jellicent;60,54;362 - 236 - 9;607
+Charizard Noctowl;Gardevoir;59,94;193 - 129 - 9;331
+Charizard Noctowl;Lopunny Dusknoir;58,5;179 - 127 - 3;309
+Charizard Noctowl;Flareon Noctowl;58,06;72 - 52 - 2;126
 Charizard Noctowl;Charizard Pidgeot;57,94;248 - 180 - 11;439
+Charizard Noctowl;Tera Box;57,07;105 - 79 - 2;186
+Charizard Noctowl;Mega Venusaur;53,21;83 - 73 - 2;158
 Charizard Noctowl;Gholdengo Lunatone;52,64;618 - 556 - 23;1197
+Charizard Noctowl;Raging Bolt Ogerpon;52,55;144 - 130 - 4;278
 Charizard Noctowl;Mega Absol Box;50,55;184 - 180 - 7;371
 Charizard Noctowl;Charizard Noctowl;50,0;345 - 345 - 26;716
 Charizard Noctowl;N's Zoroark;49,7;165 - 167 - 10;342
 Charizard Noctowl;Grimmsnarl Froslass;47,67;205 - 225 - 11;441
+Charizard Noctowl;Greninja;46,98;70 - 79 - 3;152
 Charizard Noctowl;Kangaskhan Bouffalant;46,28;199 - 231 - 12;442
+Charizard Noctowl;Dragapult Charizard;41,43;87 - 123 - 2;212
 Charizard Noctowl;Dragapult Dusknoir;40,18;530 - 789 - 29;1348
+Charizard Pidgeot;Flareon Noctowl;60,19;65 - 43 - 4;112
+Charizard Pidgeot;Gardevoir;57,65;177 - 130 - 10;317
 Charizard Pidgeot;Gardevoir Jellicent;56,77;264 - 201 - 26;491
+Charizard Pidgeot;Mega Venusaur;54,47;67 - 56 - 2;125
 Charizard Pidgeot;Mega Absol Box;54,4;204 - 171 - 17;392
 Charizard Pidgeot;N's Zoroark;53,14;161 - 142 - 8;311
+Charizard Pidgeot;Lopunny Dusknoir;52,42;141 - 128 - 10;279
+Charizard Pidgeot;Raging Bolt Ogerpon;52,05;114 - 105 - 4;223
+Charizard Pidgeot;Ceruledge;51,72;120 - 112 - 5;237
+Charizard Pidgeot;Greninja;51,52;51 - 48 - 1;100
+Charizard Pidgeot;Tera Box;51,32;97 - 92 - 5;194
+Charizard Pidgeot;Sharpedo Toxtricity;50,37;68 - 67 - 7;142
 Charizard Pidgeot;Charizard Pidgeot;50,0;200 - 200 - 8;408
 Charizard Pidgeot;Alakazam Dudunsparce;46,84;163 - 185 - 2;350
 Charizard Pidgeot;Gholdengo Lunatone;46,58;408 - 468 - 14;890
@@ -49,253 +98,104 @@ Charizard Pidgeot;Kangaskhan Bouffalant;44,52;138 - 172 - 10;320
 Charizard Pidgeot;Dragapult Dusknoir;43,56;419 - 543 - 20;982
 Charizard Pidgeot;Charizard Noctowl;42,06;180 - 248 - 11;439
 Charizard Pidgeot;Grimmsnarl Froslass;37,01;114 - 194 - 5;313
+Charizard Pidgeot;Dragapult Charizard;32,89;50 - 102 - 6;158
+Alakazam Dudunsparce;Ceruledge;73,93;156 - 55 - 2;213
 Alakazam Dudunsparce;Kangaskhan Bouffalant;71,1;251 - 102 - 5;358
+Alakazam Dudunsparce;Sharpedo Toxtricity;63,25;74 - 43 - 2;119
+Alakazam Dudunsparce;Mega Venusaur;62,79;81 - 48 - 2;131
 Alakazam Dudunsparce;Gholdengo Lunatone;61,31;523 - 330 - 11;864
+Alakazam Dudunsparce;Raging Bolt Ogerpon;61,31;122 - 77 - 5;204
+Alakazam Dudunsparce;Tera Box;58,22;85 - 61 - 3;149
+Alakazam Dudunsparce;Flareon Noctowl;54,33;69 - 58 - 5;132
 Alakazam Dudunsparce;Charizard Pidgeot;53,16;185 - 163 - 2;350
+Alakazam Dudunsparce;Lopunny Dusknoir;52,82;103 - 92 - 1;196
+Alakazam Dudunsparce;Greninja;52,43;54 - 49 - 2;105
 Alakazam Dudunsparce;Mega Absol Box;52,31;170 - 155 - 10;335
 Alakazam Dudunsparce;Alakazam Dudunsparce;50,0;186 - 186 - 6;378
 Alakazam Dudunsparce;N's Zoroark;46,1;124 - 145 - 4;273
 Alakazam Dudunsparce;Gardevoir Jellicent;44,91;194 - 238 - 17;449
+Alakazam Dudunsparce;Gardevoir;37,97;101 - 165 - 10;276
 Alakazam Dudunsparce;Charizard Noctowl;37,66;177 - 293 - 9;479
 Alakazam Dudunsparce;Dragapult Dusknoir;37,21;352 - 594 - 22;968
 Alakazam Dudunsparce;Grimmsnarl Froslass;37,02;144 - 245 - 9;398
+Alakazam Dudunsparce;Dragapult Charizard;36,78;64 - 110 - 5;179
 Mega Absol Box;Gardevoir Jellicent;58,57;246 - 174 - 17;437
 Mega Absol Box;Grimmsnarl Froslass;58,11;172 - 124 - 6;302
+Mega Absol Box;Gardevoir;55,99;159 - 125 - 5;289
 Mega Absol Box;Dragapult Dusknoir;55,68;480 - 382 - 25;887
+Mega Absol Box;Flareon Noctowl;51,06;48 - 46 - 5;99
 Mega Absol Box;Mega Absol Box;50,0;182 - 182 - 16;380
 Mega Absol Box;Kangaskhan Bouffalant;49,66;147 - 149 - 15;311
+Mega Absol Box;Ceruledge;49,56;113 - 115 - 8;236
 Mega Absol Box;Charizard Noctowl;49,45;180 - 184 - 7;371
+Mega Absol Box;Tera Box;49,39;81 - 83 - 2;166
+Mega Absol Box;Dragapult Charizard;48,68;74 - 78 - 5;157
 Mega Absol Box;N's Zoroark;48,63;124 - 131 - 11;266
 Mega Absol Box;Alakazam Dudunsparce;47,69;155 - 170 - 10;335
 Mega Absol Box;Charizard Pidgeot;45,6;171 - 204 - 17;392
 Mega Absol Box;Gholdengo Lunatone;45,17;337 - 409 - 21;767
+Mega Absol Box;Lopunny Dusknoir;44,59;99 - 123 - 1;223
+Mega Absol Box;Sharpedo Toxtricity;44,09;41 - 52 - 1;94
+Mega Absol Box;Greninja;41,41;41 - 58 - 1;100
+Mega Absol Box;Mega Venusaur;39,36;37 - 57 - 1;95
+Mega Absol Box;Raging Bolt Ogerpon;37,79;82 - 135 - 8;225
 Grimmsnarl Froslass;Charizard Pidgeot;62,99;194 - 114 - 5;313
 Grimmsnarl Froslass;Alakazam Dudunsparce;62,98;245 - 144 - 9;398
 Grimmsnarl Froslass;Gardevoir Jellicent;60,05;236 - 157 - 9;402
+Grimmsnarl Froslass;Gardevoir;59,0;141 - 98 - 8;247
+Grimmsnarl Froslass;Dragapult Charizard;56,02;107 - 84 - 6;197
+Grimmsnarl Froslass;Ceruledge;55,29;115 - 93 - 6;214
 Grimmsnarl Froslass;Dragapult Dusknoir;53,71;529 - 456 - 19;1004
+Grimmsnarl Froslass;Lopunny Dusknoir;53,61;89 - 77 - 1;167
 Grimmsnarl Froslass;N's Zoroark;52,57;133 - 120 - 6;259
 Grimmsnarl Froslass;Charizard Noctowl;52,33;225 - 205 - 11;441
 Grimmsnarl Froslass;Grimmsnarl Froslass;50,0;172 - 172 - 26;370
+Grimmsnarl Froslass;Sharpedo Toxtricity;47,62;40 - 44 - 2;86
 Grimmsnarl Froslass;Gholdengo Lunatone;47,41;348 - 386 - 22;756
+Grimmsnarl Froslass;Tera Box;45,9;56 - 66 - 4;126
+Grimmsnarl Froslass;Greninja;43,43;43 - 56 - 1;100
+Grimmsnarl Froslass;Flareon Noctowl;43,24;48 - 63 - 2;113
 Grimmsnarl Froslass;Mega Absol Box;41,89;124 - 172 - 6;302
 Grimmsnarl Froslass;Kangaskhan Bouffalant;41,57;106 - 149 - 3;258
+Grimmsnarl Froslass;Raging Bolt Ogerpon;41,06;85 - 122 - 3;210
+Grimmsnarl Froslass;Mega Venusaur;37,27;41 - 69 - 4;114
 N's Zoroark;Gardevoir Jellicent;63,13;214 - 125 - 11;350
+N's Zoroark;Tera Box;55,91;71 - 56 - 2;129
+N's Zoroark;Flareon Noctowl;55,41;41 - 33 - 4;78
 N's Zoroark;Alakazam Dudunsparce;53,9;145 - 124 - 4;273
 N's Zoroark;Mega Absol Box;51,37;131 - 124 - 11;266
 N's Zoroark;Dragapult Dusknoir;50,6;379 - 370 - 20;769
 N's Zoroark;Charizard Noctowl;50,3;167 - 165 - 10;342
 N's Zoroark;N's Zoroark;50,0;143 - 143 - 10;296
+N's Zoroark;Gardevoir;49,79;120 - 121 - 8;249
+N's Zoroark;Greninja;49,46;46 - 47 - 1;94
 N's Zoroark;Kangaskhan Bouffalant;47,97;130 - 141 - 5;276
 N's Zoroark;Grimmsnarl Froslass;47,43;120 - 133 - 6;259
+N's Zoroark;Lopunny Dusknoir;47,1;73 - 82 - 2;157
 N's Zoroark;Charizard Pidgeot;46,86;142 - 161 - 8;311
+N's Zoroark;Dragapult Charizard;44,85;61 - 75 - 3;139
+N's Zoroark;Ceruledge;41,1;67 - 96 - 3;166
 N's Zoroark;Gholdengo Lunatone;40,36;268 - 396 - 20;684
+N's Zoroark;Sharpedo Toxtricity;39,77;35 - 53 - 1;89
+N's Zoroark;Raging Bolt Ogerpon;36,75;61 - 105 - 5;171
+N's Zoroark;Mega Venusaur;31,25;35 - 77 - 0;112
+Kangaskhan Bouffalant;Tera Box;71,83;102 - 40 - 2;144
+Kangaskhan Bouffalant;Flareon Noctowl;60,64;57 - 37 - 1;95
 Kangaskhan Bouffalant;Grimmsnarl Froslass;58,43;149 - 106 - 3;258
+Kangaskhan Bouffalant;Sharpedo Toxtricity;58,16;57 - 41 - 2;100
 Kangaskhan Bouffalant;Gardevoir Jellicent;56,92;218 - 165 - 21;404
+Kangaskhan Bouffalant;Dragapult Charizard;56,3;76 - 59 - 2;137
 Kangaskhan Bouffalant;Charizard Pidgeot;55,48;172 - 138 - 10;320
 Kangaskhan Bouffalant;Dragapult Dusknoir;55,25;442 - 358 - 23;823
+Kangaskhan Bouffalant;Ceruledge;53,96;109 - 93 - 4;206
 Kangaskhan Bouffalant;Charizard Noctowl;53,72;231 - 199 - 12;442
+Kangaskhan Bouffalant;Gardevoir;52,78;133 - 119 - 6;258
 Kangaskhan Bouffalant;N's Zoroark;52,03;141 - 130 - 5;276
 Kangaskhan Bouffalant;Mega Absol Box;50,34;149 - 147 - 15;311
 Kangaskhan Bouffalant;Kangaskhan Bouffalant;50,0;142 - 142 - 16;300
+Kangaskhan Bouffalant;Lopunny Dusknoir;49,52;104 - 106 - 2;212
 Kangaskhan Bouffalant;Gholdengo Lunatone;46,39;353 - 408 - 18;779
+Kangaskhan Bouffalant;Mega Venusaur;43,3;42 - 55 - 3;100
+Kangaskhan Bouffalant;Greninja;42,72;44 - 59 - 1;104
+Kangaskhan Bouffalant;Raging Bolt Ogerpon;38,65;80 - 127 - 2;209
 Kangaskhan Bouffalant;Alakazam Dudunsparce;28,9;102 - 251 - 5;358
-Gardevoir;Alakazam Dudunsparce;62,03;165 - 101 - 10;276
-Gardevoir;Dragapult Dusknoir;58,93;452 - 315 - 14;781
-Gardevoir;N's Zoroark;50,21;121 - 120 - 8;249
-Gardevoir;Gardevoir Jellicent;49,14;172 - 178 - 12;362
-Gardevoir;Gholdengo Lunatone;48,84;296 - 310 - 29;635
-Gardevoir;Kangaskhan Bouffalant;47,22;119 - 133 - 6;258
-Gardevoir;Mega Absol Box;44,01;125 - 159 - 5;289
-Gardevoir;Charizard Pidgeot;42,35;130 - 177 - 10;317
-Gardevoir;Grimmsnarl Froslass;41,0;98 - 141 - 8;247
-Gardevoir;Charizard Noctowl;40,06;129 - 193 - 9;331
-Lopunny Dusknoir;Mega Absol Box;55,41;123 - 99 - 1;223
-Lopunny Dusknoir;N's Zoroark;52,9;82 - 73 - 2;157
-Lopunny Dusknoir;Gardevoir Jellicent;51,97;145 - 134 - 0;279
-Lopunny Dusknoir;Kangaskhan Bouffalant;50,48;106 - 104 - 2;212
-Lopunny Dusknoir;Charizard Pidgeot;47,58;128 - 141 - 10;279
-Lopunny Dusknoir;Alakazam Dudunsparce;47,18;92 - 103 - 1;196
-Lopunny Dusknoir;Grimmsnarl Froslass;46,39;77 - 89 - 1;167
-Lopunny Dusknoir;Dragapult Dusknoir;44,69;240 - 297 - 3;540
-Lopunny Dusknoir;Charizard Noctowl;41,5;127 - 179 - 3;309
-Lopunny Dusknoir;Gholdengo Lunatone;34,91;177 - 330 - 7;514
-Raging Bolt Ogerpon;N's Zoroark;63,25;105 - 61 - 5;171
-Raging Bolt Ogerpon;Mega Absol Box;62,21;135 - 82 - 8;225
-Raging Bolt Ogerpon;Kangaskhan Bouffalant;61,35;127 - 80 - 2;209
-Raging Bolt Ogerpon;Grimmsnarl Froslass;58,94;122 - 85 - 3;210
-Raging Bolt Ogerpon;Dragapult Dusknoir;49,03;303 - 315 - 14;632
-Raging Bolt Ogerpon;Charizard Pidgeot;47,95;105 - 114 - 4;223
-Raging Bolt Ogerpon;Charizard Noctowl;47,45;130 - 144 - 4;278
-Raging Bolt Ogerpon;Gholdengo Lunatone;46,2;237 - 276 - 9;522
-Raging Bolt Ogerpon;Alakazam Dudunsparce;38,69;77 - 122 - 5;204
-Raging Bolt Ogerpon;Gardevoir Jellicent;37,27;101 - 170 - 5;276
-Ceruledge;N's Zoroark;58,9;96 - 67 - 3;166
-Ceruledge;Gholdengo Lunatone;57,96;273 - 198 - 6;477
-Ceruledge;Mega Absol Box;50,44;115 - 113 - 8;236
-Ceruledge;Dragapult Dusknoir;48,92;272 - 284 - 9;565
-Ceruledge;Charizard Pidgeot;48,28;112 - 120 - 5;237
-Ceruledge;Kangaskhan Bouffalant;46,04;93 - 109 - 4;206
-Ceruledge;Gardevoir Jellicent;46,03;116 - 136 - 7;259
-Ceruledge;Grimmsnarl Froslass;44,71;93 - 115 - 6;214
-Ceruledge;Charizard Noctowl;38,01;103 - 168 - 3;274
-Ceruledge;Alakazam Dudunsparce;26,07;55 - 156 - 2;213
-Tera Box;Grimmsnarl Froslass;54,1;66 - 56 - 4;126
-Tera Box;Mega Absol Box;50,61;83 - 81 - 2;166
-Tera Box;Dragapult Dusknoir;50,25;200 - 198 - 7;405
-Tera Box;Charizard Pidgeot;48,68;92 - 97 - 5;194
-Tera Box;Gholdengo Lunatone;48,56;169 - 179 - 7;355
-Tera Box;Gardevoir Jellicent;45,05;82 - 100 - 3;185
-Tera Box;N's Zoroark;44,09;56 - 71 - 2;129
-Tera Box;Charizard Noctowl;42,93;79 - 105 - 2;186
-Tera Box;Alakazam Dudunsparce;41,78;61 - 85 - 3;149
-Tera Box;Kangaskhan Bouffalant;28,17;40 - 102 - 2;144
-Dragapult Charizard;Charizard Pidgeot;67,11;102 - 50 - 6;158
-Dragapult Charizard;Alakazam Dudunsparce;63,22;110 - 64 - 5;179
-Dragapult Charizard;Charizard Noctowl;58,57;123 - 87 - 2;212
-Dragapult Charizard;N's Zoroark;55,15;75 - 61 - 3;139
-Dragapult Charizard;Gholdengo Lunatone;53,65;206 - 178 - 4;388
-Dragapult Charizard;Mega Absol Box;51,32;78 - 74 - 5;157
-Dragapult Charizard;Dragapult Dusknoir;48,03;232 - 251 - 7;490
-Dragapult Charizard;Gardevoir Jellicent;46,81;88 - 100 - 8;196
-Dragapult Charizard;Grimmsnarl Froslass;43,98;84 - 107 - 6;197
-Dragapult Charizard;Kangaskhan Bouffalant;43,7;59 - 76 - 2;137
-Sharpedo Toxtricity;N's Zoroark;60,23;53 - 35 - 1;89
-Sharpedo Toxtricity;Gardevoir Jellicent;56,58;86 - 66 - 4;156
-Sharpedo Toxtricity;Mega Absol Box;55,91;52 - 41 - 1;94
-Sharpedo Toxtricity;Grimmsnarl Froslass;52,38;44 - 40 - 2;86
-Sharpedo Toxtricity;Charizard Pidgeot;49,63;67 - 68 - 7;142
-Sharpedo Toxtricity;Dragapult Dusknoir;46,85;134 - 152 - 2;288
-Sharpedo Toxtricity;Kangaskhan Bouffalant;41,84;41 - 57 - 2;100
-Sharpedo Toxtricity;Alakazam Dudunsparce;36,75;43 - 74 - 2;119
-Sharpedo Toxtricity;Charizard Noctowl;35,71;40 - 72 - 2;114
-Sharpedo Toxtricity;Gholdengo Lunatone;31,62;80 - 173 - 1;254
-Flareon Noctowl;Grimmsnarl Froslass;56,76;63 - 48 - 2;113
-Flareon Noctowl;Gholdengo Lunatone;54,58;131 - 109 - 10;250
-Flareon Noctowl;Mega Absol Box;48,94;46 - 48 - 5;99
-Flareon Noctowl;Alakazam Dudunsparce;45,67;58 - 69 - 5;132
-Flareon Noctowl;N's Zoroark;44,59;33 - 41 - 4;78
-Flareon Noctowl;Charizard Noctowl;41,94;52 - 72 - 2;126
-Flareon Noctowl;Dragapult Dusknoir;40,28;114 - 169 - 5;288
-Flareon Noctowl;Charizard Pidgeot;39,81;43 - 65 - 4;112
-Flareon Noctowl;Kangaskhan Bouffalant;39,36;37 - 57 - 1;95
-Flareon Noctowl;Gardevoir Jellicent;38,89;49 - 77 - 3;129
-Mega Venusaur;N's Zoroark;68,75;77 - 35 - 0;112
-Mega Venusaur;Grimmsnarl Froslass;62,73;69 - 41 - 4;114
-Mega Venusaur;Mega Absol Box;60,64;57 - 37 - 1;95
-Mega Venusaur;Kangaskhan Bouffalant;56,7;55 - 42 - 3;100
-Mega Venusaur;Charizard Noctowl;46,79;73 - 83 - 2;158
-Mega Venusaur;Charizard Pidgeot;45,53;56 - 67 - 2;125
-Mega Venusaur;Dragapult Dusknoir;42,23;144 - 197 - 9;350
-Mega Venusaur;Gholdengo Lunatone;39,61;101 - 154 - 6;261
-Mega Venusaur;Alakazam Dudunsparce;37,21;48 - 81 - 2;131
-Mega Venusaur;Gardevoir Jellicent;32,8;41 - 84 - 3;128
-Greninja;Mega Absol Box;58,59;58 - 41 - 1;100
-Greninja;Kangaskhan Bouffalant;57,28;59 - 44 - 1;104
-Greninja;Grimmsnarl Froslass;56,57;56 - 43 - 1;100
-Greninja;Charizard Noctowl;53,02;79 - 70 - 3;152
-Greninja;N's Zoroark;50,54;47 - 46 - 1;94
-Greninja;Charizard Pidgeot;48,48;48 - 51 - 1;100
-Greninja;Alakazam Dudunsparce;47,57;49 - 54 - 2;105
-Greninja;Gholdengo Lunatone;43,75;112 - 144 - 9;265
-Greninja;Dragapult Dusknoir;41,55;145 - 204 - 4;353
-Greninja;Gardevoir Jellicent;36,84;49 - 84 - 1;134
-Lucario Hariyama;Kangaskhan Bouffalant;83,95;68 - 13 - 1;82
-Lucario Hariyama;Mega Absol Box;69,32;61 - 27 - 2;90
-Lucario Hariyama;N's Zoroark;59,09;52 - 36 - 2;90
-Lucario Hariyama;Grimmsnarl Froslass;51,65;47 - 44 - 0;91
-Lucario Hariyama;Charizard Pidgeot;49,54;54 - 55 - 6;115
-Lucario Hariyama;Dragapult Dusknoir;49,45;135 - 138 - 6;279
-Lucario Hariyama;Charizard Noctowl;43,31;55 - 72 - 3;130
-Lucario Hariyama;Alakazam Dudunsparce;40,15;53 - 79 - 2;134
-Lucario Hariyama;Gholdengo Lunatone;38,5;87 - 139 - 6;232
-Lucario Hariyama;Gardevoir Jellicent;26,61;29 - 80 - 1;110
-Gholdengo;Kangaskhan Bouffalant;60,0;45 - 30 - 3;78
-Gholdengo;N's Zoroark;58,65;61 - 43 - 1;105
-Gholdengo;Charizard Pidgeot;52,81;47 - 42 - 1;90
-Gholdengo;Grimmsnarl Froslass;50,49;52 - 51 - 0;103
-Gholdengo;Dragapult Dusknoir;48,85;149 - 156 - 3;308
-Gholdengo;Mega Absol Box;47,87;45 - 49 - 1;95
-Gholdengo;Gardevoir Jellicent;42,02;50 - 69 - 2;121
-Gholdengo;Charizard Noctowl;38,38;38 - 61 - 1;100
-Gholdengo;Gholdengo Lunatone;36,13;56 - 99 - 3;158
-Gholdengo;Alakazam Dudunsparce;32,11;35 - 74 - 1;110
-Joltik Box;Grimmsnarl Froslass;60,24;50 - 33 - 5;88
-Joltik Box;Mega Absol Box;60,22;56 - 37 - 2;95
-Joltik Box;N's Zoroark;60,0;48 - 32 - 2;82
-Joltik Box;Charizard Pidgeot;53,85;49 - 42 - 1;92
-Joltik Box;Dragapult Dusknoir;49,35;114 - 117 - 4;235
-Joltik Box;Gholdengo Lunatone;46,62;69 - 79 - 8;156
-Joltik Box;Gardevoir Jellicent;46,46;46 - 53 - 3;102
-Joltik Box;Alakazam Dudunsparce;40,45;36 - 53 - 1;90
-Joltik Box;Charizard Noctowl;39,81;41 - 62 - 0;103
-Joltik Box;Kangaskhan Bouffalant;19,48;15 - 62 - 1;78
-Cynthia's Garchomp;Kangaskhan Bouffalant;71,43;55 - 22 - 1;78
-Cynthia's Garchomp;N's Zoroark;62,03;49 - 30 - 3;82
-Cynthia's Garchomp;Charizard Pidgeot;61,7;58 - 36 - 1;95
-Cynthia's Garchomp;Grimmsnarl Froslass;60,66;37 - 24 - 1;62
-Cynthia's Garchomp;Gardevoir Jellicent;49,15;58 - 60 - 2;120
-Cynthia's Garchomp;Dragapult Dusknoir;47,47;103 - 114 - 8;225
-Cynthia's Garchomp;Mega Absol Box;44,3;35 - 44 - 1;80
-Cynthia's Garchomp;Charizard Noctowl;43,0;43 - 57 - 5;105
-Cynthia's Garchomp;Alakazam Dudunsparce;35,11;33 - 61 - 3;97
-Cynthia's Garchomp;Gholdengo Lunatone;34,1;74 - 143 - 6;223
-Seaking Festival Lead;N's Zoroark;75,36;52 - 17 - 2;71
-Seaking Festival Lead;Charizard Pidgeot;66,29;59 - 30 - 1;90
-Seaking Festival Lead;Mega Absol Box;63,77;44 - 25 - 2;71
-Seaking Festival Lead;Alakazam Dudunsparce;60,71;51 - 33 - 2;86
-Seaking Festival Lead;Gholdengo Lunatone;58,88;116 - 81 - 2;199
-Seaking Festival Lead;Charizard Noctowl;57,14;64 - 48 - 4;116
-Seaking Festival Lead;Grimmsnarl Froslass;44,58;37 - 46 - 0;83
-Seaking Festival Lead;Gardevoir Jellicent;42,86;36 - 48 - 2;86
-Seaking Festival Lead;Dragapult Dusknoir;32,58;72 - 149 - 3;224
-Seaking Festival Lead;Kangaskhan Bouffalant;24,66;18 - 55 - 0;73
-Slowking;Charizard Pidgeot;55,71;39 - 31 - 0;70
-Slowking;Kangaskhan Bouffalant;51,92;27 - 25 - 0;52
-Slowking;Charizard Noctowl;51,9;41 - 38 - 2;81
-Slowking;Mega Absol Box;50,0;34 - 34 - 2;70
-Slowking;Gholdengo Lunatone;46,98;70 - 79 - 2;151
-Slowking;Grimmsnarl Froslass;45,83;22 - 26 - 0;48
-Slowking;Dragapult Dusknoir;39,53;68 - 104 - 0;172
-Slowking;Gardevoir Jellicent;37,8;31 - 51 - 1;83
-Slowking;Alakazam Dudunsparce;37,04;20 - 34 - 1;55
-Slowking;N's Zoroark;36,73;18 - 31 - 2;51
-Froslass Munkidori;Charizard Pidgeot;53,97;34 - 29 - 2;65
-Froslass Munkidori;Gholdengo Lunatone;50,0;84 - 84 - 4;172
-Froslass Munkidori;Alakazam Dudunsparce;48,21;27 - 29 - 3;59
-Froslass Munkidori;Charizard Noctowl;44,83;39 - 48 - 2;89
-Froslass Munkidori;Dragapult Dusknoir;43,79;74 - 95 - 3;172
-Froslass Munkidori;N's Zoroark;41,46;17 - 24 - 1;42
-Froslass Munkidori;Kangaskhan Bouffalant;41,07;23 - 33 - 1;57
-Froslass Munkidori;Gardevoir Jellicent;40,48;34 - 50 - 1;85
-Froslass Munkidori;Grimmsnarl Froslass;38,64;17 - 27 - 1;45
-Froslass Munkidori;Mega Absol Box;28,12;18 - 46 - 4;68
-Hydreigon;Gardevoir Jellicent;54,93;39 - 32 - 0;71
-Hydreigon;Alakazam Dudunsparce;43,55;27 - 35 - 1;63
-Hydreigon;Dragapult Dusknoir;42,74;53 - 71 - 1;125
-Hydreigon;Charizard Pidgeot;42,03;29 - 40 - 0;69
-Hydreigon;Charizard Noctowl;40,32;25 - 37 - 1;63
-Hydreigon;Grimmsnarl Froslass;35,9;14 - 25 - 0;39
-Hydreigon;Mega Absol Box;35,71;20 - 36 - 1;57
-Hydreigon;Gholdengo Lunatone;33,09;45 - 91 - 0;136
-Hydreigon;Kangaskhan Bouffalant;32,08;17 - 36 - 2;55
-Hydreigon;N's Zoroark;26,67;12 - 33 - 2;47
-Festival Lead;N's Zoroark;80,0;40 - 10 - 1;51
-Festival Lead;Charizard Pidgeot;75,86;44 - 14 - 2;60
-Festival Lead;Alakazam Dudunsparce;57,38;35 - 26 - 2;63
-Festival Lead;Gholdengo Lunatone;53,44;70 - 61 - 4;135
-Festival Lead;Mega Absol Box;52,63;30 - 27 - 1;58
-Festival Lead;Charizard Noctowl;44,62;29 - 36 - 1;66
-Festival Lead;Grimmsnarl Froslass;42,19;27 - 37 - 1;65
-Festival Lead;Dragapult Dusknoir;36,36;52 - 91 - 3;146
-Festival Lead;Gardevoir Jellicent;32,84;22 - 45 - 0;67
-Festival Lead;Kangaskhan Bouffalant;26,67;12 - 33 - 2;47
-Toxtricity Box;Alakazam Dudunsparce;57,14;24 - 18 - 0;42
-Toxtricity Box;Kangaskhan Bouffalant;56,52;26 - 20 - 1;47
-Toxtricity Box;N's Zoroark;53,66;22 - 19 - 0;41
-Toxtricity Box;Mega Absol Box;51,22;21 - 20 - 2;43
-Toxtricity Box;Gardevoir Jellicent;50,67;38 - 37 - 1;76
-Toxtricity Box;Dragapult Dusknoir;44,78;60 - 74 - 4;138
-Toxtricity Box;Grimmsnarl Froslass;43,14;22 - 29 - 0;51
-Toxtricity Box;Charizard Noctowl;41,38;24 - 34 - 1;59
-Toxtricity Box;Charizard Pidgeot;38,24;26 - 42 - 4;72
-Toxtricity Box;Gholdengo Lunatone;30,33;37 - 85 - 6;128
