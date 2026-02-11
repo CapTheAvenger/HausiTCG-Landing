@@ -4458,8 +4458,8 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                 return;
             }
             
-            const modal = document.getElementById('imageViewModal');
-            const grid = document.getElementById('compactCardGrid');
+            // Show images in the Karten-Filter tab itself, NOT in a modal
+            const grid = document.getElementById('filteredGrid');
             
             grid.innerHTML = filteredCards.map(card => {
                 const imageUrl = card.image_url || '';
@@ -4467,7 +4467,7 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                 
                 if (imageUrl && imageUrl.trim() !== '') {
                     return `
-                        <div class="compact-card" data-image-url="${imageUrl}" data-card-name="${card.card_name}" style="cursor: pointer;">
+                        <div class="compact-card" data-image-url="${imageUrl}" data-card-name="${card.card_name}" style="cursor: pointer;" onclick="showCardImageFullscreen('${imageUrl}', '${card.card_name}')">
                             <img src="${imageUrl}" 
                                  alt="${card.card_name}" 
                                  loading="lazy"
@@ -4479,13 +4479,15 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                 } else {
                     return `
                         <div class="compact-card" style="display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                            <div class="compact-badge" style="position: static; margin-top: 10px;">${count}</div>
+                            <div style="color: white; text-align: center; padding: 10px; font-size: 0.85em;">${card.card_name}</div>
+                            <div class="compact-badge" style="position: absolute; top: 5px; right: 5px;">${count}</div>
                         </div>
                     `;
                 }
             }).join('');
             
-            modal.classList.add('show');
+            // Scroll to the visual section
+            document.getElementById('filteredCardsVisual').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
         
         function generateDeckCardsImage() {
