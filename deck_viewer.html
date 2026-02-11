@@ -4161,12 +4161,19 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                     : '';
                 const line = `${card.count} ${card.name} ${setInfo}`.trim() + '\n';
                 
-                // Simple categorization (you can improve this)
-                if (card.name.includes('Energy') || card.name.includes('energie')) {
-                    energyText += line;
-                } else if (isTrainerCard(card.name)) {
+                // Determine card type dynamically using getCardType()
+                const cardType = card.type || getCardType(card.name);
+                
+                // Trainer cards: Supporter, Item, Tool, Stadium
+                if (cardType === 'Supporter' || cardType === 'Item' || cardType === 'Tool' || cardType === 'Stadium' || cardType === 'Trainer') {
                     trainerText += line;
-                } else {
+                }
+                // Energy cards: Energy, Special Energy
+                else if (cardType === 'Energy' || cardType === 'Special Energy' || card.name.includes('Energy') || card.name.includes('energie')) {
+                    energyText += line;
+                }
+                // Everything else is Pokemon
+                else {
                     exportText += line;
                 }
             });
