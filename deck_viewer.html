@@ -4458,7 +4458,7 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                 return;
             }
             
-            // Show images in the Karten-Filter tab itself, NOT in a modal
+            // Show images in the Karten-Filter tab itself with LARGE card visual
             const grid = document.getElementById('filteredGrid');
             
             grid.innerHTML = filteredCards.map(card => {
@@ -4467,24 +4467,33 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                 
                 if (imageUrl && imageUrl.trim() !== '') {
                     return `
-                        <div class="compact-card" data-image-url="${imageUrl}" data-card-name="${card.card_name}" style="cursor: pointer;" onclick="showCardImageFullscreen('${imageUrl}', '${card.card_name}')">
+                        <div class="card-visual" data-image-url="${imageUrl}" data-card-name="${card.card_name}" style="cursor: pointer;" onclick="showCardImageFullscreen('${imageUrl}', '${card.card_name}')">
                             <img src="${imageUrl}" 
                                  alt="${card.card_name}" 
                                  loading="lazy"
                                  referrerpolicy="no-referrer"
                                  onerror="this.style.display='none'">
-                            <div class="compact-badge">${count}</div>
+                            <div class="card-count-badge">${count}</div>
+                            <div class="card-name-overlay">${card.card_name}</div>
                         </div>
                     `;
                 } else {
                     return `
-                        <div class="compact-card" style="display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                            <div style="color: white; text-align: center; padding: 10px; font-size: 0.85em;">${card.card_name}</div>
-                            <div class="compact-badge" style="position: absolute; top: 5px; right: 5px;">${count}</div>
+                        <div class="card-visual" style="display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <div style="flex-direction: column;">
+                                <div style="color: white; text-align: center; padding: 10px; font-size: 0.85em;">${card.card_name}</div>
+                                <div class="card-count-badge" style="position: static; margin-top: 10px;">${count}</div>
+                            </div>
                         </div>
                     `;
                 }
             }).join('');
+            
+            // Make sure the visual section is visible
+            const visualDiv = document.getElementById('filteredCardsVisual');
+            if (visualDiv) {
+                visualDiv.classList.add('show');
+            }
             
             // Scroll to the visual section
             document.getElementById('filteredCardsVisual').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
