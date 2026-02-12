@@ -1482,7 +1482,7 @@
         <div class="cards-section">
             <div class="cards-header">
                 <h2>🃏 Karten Liste</h2>
-                <span id="cardCount">0 Karten</span>
+                <span style="font-size: 1.1em; color: #333;"><span id="cardCount">0 Karten</span><span id="cardCountSummary" style="margin-left: 10px; font-weight: normal; color: #666;">/ 0 Total</span></span>
             </div>
             
             <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
@@ -1507,7 +1507,7 @@
             </div>
             
             <div id="cardsTableContent" style="display: none;">
-                <input type="text" id="cardSearchInput" placeholder="🔍 Karte suchen..." class="card-search-input" oninput="filterCards()" style="margin-bottom: 15px; width: 100%; max-width: 500px;">
+                <input type="text" id="cardSearchInputDeckView" placeholder="🔍 Karte suchen..." class="card-search-input" oninput="filterCards()" style="margin-bottom: 15px; width: 100%; max-width: 500px;">
                 
                 <!-- Desktop Tabellen-Ansicht -->
                 <div class="cards-table" id="cardsTableDesktop">
@@ -1548,7 +1548,7 @@
             </div>
             
             <div class="deck-summary">
-                <h3>Aktuell: <span id="deckCardCount">0</span> / 60 Karten</h3>
+                <h3>Aktuell: <span id="deckCardCount">0</span> / 60 Karten <span id="deckCardCountUnique" style="font-weight: normal; font-size: 0.9em; color: #666;">(0 Unique)</span></h3>
             </div>
             
             <div id="myDeckVisual" style="display: none;">
@@ -1671,11 +1671,25 @@
         // Loads cardsData from CSV (now global)
         async function loadCardsData() {
             try {
-                const response = await fetch(BASE_PATH + 'data/unified_card_data.csv');
+                const timestamp = new Date().getTime();
+                const response = await fetch(BASE_PATH + `data/unified_card_data.csv?t=${timestamp}`);
                 if (response.ok) {
                     const text = await response.text();
                     cardsData = parseCSV(text);
                     console.log('Loaded cards data - Entries:', cardsData.length);
+                    console.log('First card:', cardsData[0]);
+                    
+                    // Debug: Check Ace Spec cards
+                    const aceSpecCards = cardsData.filter(c => c.is_ace_spec === 'Yes' || c.is_ace_spec === true);
+                    console.log('Ace Spec cards found:', aceSpecCards.length);
+                    if (aceSpecCards.length > 0) {
+                        console.log('Sample Ace Spec cards:', aceSpecCards.slice(0, 3).map(c => ({
+                            name: c.card_name,
+                            is_ace_spec: c.is_ace_spec,
+                            archetype: c.archetype,
+                            percentage: c.percentage_in_archetype
+                        })));
+                    }
                 } else {
                     console.warn('Cards data not found');
                 }
@@ -1711,7 +1725,7 @@
             }
         }
                 // --- Meta Filter (fixe Reihenfolge + optionale neue Metas) ---
-                const metaMainOptions = [
+                let metaMainOptions = [
                     { label: 'Alle', value: 'all' },
                     { label: 'City Leagues', value: 'city_leagues' },
                     { label: 'SVI - PFL', value: 'SVI-PFL' },
@@ -1766,11 +1780,19 @@
                             discovered.add(metaValue);
                         }
                     });
+                    
                     if (discovered.size > 0) {
+                        // Find insertion point and remove any existing duplicates first
                         const insertIndex = metaMainOptions.findIndex(opt => opt.value === 'city_leagues') + 1;
+                        
+                        // Remove any discovered metas that might already exist (prevent duplicates)
+                        metaMainOptions = metaMainOptions.filter(opt => !discovered.has(opt.value));
+                        
+                        // Now add the discovered metas in sorted order
                         const ordered = Array.from(discovered).sort();
                         metaMainOptions.splice(insertIndex, 0, ...ordered.map(m => ({ label: m, value: m })));
                     }
+                    
                     console.log('Meta options:', metaMainOptions.map(o => o.value));
                 }
 
@@ -2589,18 +2611,34 @@
             const deckSelect = document.getElementById('deckSelect');
             const currentSelection = deckSelect.value; // Remember current selection
             deckSelect.innerHTML = '<option value="">-- Bitte Deck wählen --</option>';
-            const cityLeagueArchetypes = [...new Set(cityLeagueData.map(c => c.archetype).filter(Boolean))];
-            let allArchetypes = [...new Set(cardsData.map(c => c.archetype))];
+            
+            // CRITICAL: Normalize City League archetypes to match cardsData format
             const normalize = (str) => str.toLowerCase().trim();
+            const cityLeagueArchetypesRaw = [...new Set(cityLeagueData.map(c => c.archetype).filter(Boolean))];
+            
+            // Create a mapping from normalized names to actual cardsData names
+            const cardDataArchetypes = [...new Set(cardsData.map(c => c.archetype).filter(Boolean))];
+            const normalizedToActual = {};
+            cardDataArchetypes.forEach(arch => {
+                normalizedToActual[normalize(arch)] = arch;
+            });
+            
+            // Map city league archetypes to their actual cardsData counterparts
+            const cityLeagueArchetypes = cityLeagueArchetypesRaw
+                .map(arch => normalizedToActual[normalize(arch)] || arch)
+                .filter(arch => cardDataArchetypes.includes(arch)); // Only include if in cardsData
+            
+            let allArchetypes = [...new Set(cardsData.map(c => c.archetype))];
             const selectedMeta = getSelectedMetaMainOptions();
 
             // If City Leagues is selected, base list on City League archetypes
             if (selectedMeta.has('city_leagues')) {
+                console.log('City Leagues filter active. cityLeagueArchetypes:', cityLeagueArchetypes.length);
                 allArchetypes = cityLeagueArchetypes;
             }
             
             // FILTER archetypes based on selected meta
-            if (selectedMeta.size > 0) {
+            if (selectedMeta.size > 0 && !selectedMeta.has('all')) {
                 allArchetypes = allArchetypes.filter(arch => archetypeMatchesSelectedMeta(arch, selectedMeta));
             }
             
@@ -2836,23 +2874,7 @@
             if (setFilter) {
                 setFilter.addEventListener('change', applyCardFilters);
             }
-            const cardSearch = document.getElementById('cardSearchInput');
-            if (cardSearch) {
-                // Apply filter on Enter key
-                cardSearch.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        applyCardFilters();
-                    }
-                });
-                // Optional: Live search while typing (with debounce)
-                let searchTimeout;
-                cardSearch.addEventListener('input', () => {
-                    clearTimeout(searchTimeout);
-                    searchTimeout = setTimeout(() => {
-                        applyCardFilters();
-                    }, 500); // Wait 500ms after user stops typing
-                });
-            }
+            // cardSearchInput uses oninput="applyCardFilters()" so no need for addEventListener
             
             // Event delegation for card image clicks
             document.addEventListener('click', (e) => {
@@ -3046,19 +3068,28 @@
             const searchInput = document.getElementById('cardSearchInput');
             const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
             const selectedTypes = getSelectedCardTypes();
+            
+            console.log('applyCardFilters called:');
+            console.log('  searchInput element:', searchInput);
+            console.log('  searchInput.value:', searchInput ? searchInput.value : 'NULL');
+            console.log('  searchTerm after trim/lowercase:', searchTerm);
+            console.log('  selectedSet:', selectedSet);
+            console.log('  cardsData length:', cardsData.length);
 
             const cardMap = new Map();
 
             cardsData.forEach(card => {
                 const setCode = (card.set_code || '').trim();
                 const cardNumber = (card.set_number || '').trim();
-                const cardName = (card.card_name || '').trim();
+                const cardName = (card.card_name || '').trim().toLowerCase();
                 if (!cardName) return;
 
                 if (selectedSet && setCode !== selectedSet) return;
                 
                 // Filter by search term
-                if (searchTerm && !cardName.toLowerCase().includes(searchTerm)) return;
+                if (searchTerm && !cardName.includes(searchTerm)) {
+                    return;
+                }
 
                 // Use the actual type from CSV for filtering
                 const csvType = card.type || '';
@@ -3091,6 +3122,8 @@
             });
 
             filteredCards = Array.from(cardMap.values());
+            console.log('applyCardFilters - Filtered cards count:', filteredCards.length, 'with searchTerm:', searchTerm);
+            
             // Sort by card type first
             filteredCards = sortCardsByType(filteredCards);
             
@@ -3151,10 +3184,15 @@
         function renderFilteredCards() {
             const tbody = document.getElementById('filteredCardsBody');
             const countEl = document.getElementById('filteredCardCount');
+            const countSummaryEl = document.getElementById('filteredCardCountSummary');
 
             if (!tbody || !countEl) return;
 
+            const filteredCardTotal = filteredCards.reduce((sum, card) => sum + (parseInt(card.max_count) || 1), 0);
             countEl.textContent = `${filteredCards.length} Karten`;
+            if (countSummaryEl) {
+                countSummaryEl.textContent = `/ ${filteredCardTotal} Total`;
+            }
             tbody.innerHTML = '';
 
             if (filteredCards.length === 0) {
@@ -3555,11 +3593,15 @@
         // Card Search Filter
         function filterCards() {
             const searchInput = document.getElementById('cardSearchInput');
-            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+            const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
             
-            // Filter Desktop Table
+            console.log('filterCards called with searchTerm:', searchTerm);
+            
+            // Filter Desktop Table (Alle Karten)
             const tbody = document.getElementById('cardsBody');
             if (tbody) {
+                let visibleCount = 0;
+                let visibleSum = 0;
                 const rows = tbody.querySelectorAll('tr');
                 rows.forEach(row => {
                     // Skip loading/error rows
@@ -3571,12 +3613,62 @@
                     const cardName = row.cells[2] ? row.cells[2].textContent.toLowerCase() : '';
                     const setName = row.cells[3] ? row.cells[3].textContent.toLowerCase() : '';
                     
-                    if (cardName.includes(searchTerm) || setName.includes(searchTerm)) {
+                    // Show if no search term or if it matches
+                    const matches = searchTerm === '' || cardName.includes(searchTerm) || setName.includes(searchTerm);
+                    
+                    if (matches) {
                         row.style.display = '';
+                        visibleCount++;
+                        // Get max_count from cell[1] (card-count)
+                        const countCell = row.cells[1];
+                        if (countCell) {
+                            const count = parseInt(countCell.textContent) || 1;
+                            visibleSum += count;
+                        }
                     } else {
                         row.style.display = 'none';
                     }
                 });
+                // Update summary for main deck
+                document.getElementById('cardCount').textContent = `${visibleCount} Karten`;
+                document.getElementById('cardCountSummary').textContent = `/ ${visibleSum} Total`;
+            }
+            
+            // Filter Filtered Cards Table (Gefilterte Karten)
+            const filteredCardsBody = document.getElementById('filteredCardsBody');
+            if (filteredCardsBody) {
+                let visibleCount = 0;
+                let visibleSum = 0;
+                const rows = filteredCardsBody.querySelectorAll('tr');
+                rows.forEach(row => {
+                    // Skip loading/error rows
+                    if (row.cells.length === 1) {
+                        row.style.display = '';
+                        return;
+                    }
+                    
+                    const cardName = row.cells[1] ? row.cells[1].textContent.toLowerCase() : '';
+                    const setName = row.cells[2] ? row.cells[2].textContent.toLowerCase() : '';
+                    
+                    // Show if no search term or if it matches
+                    const matches = searchTerm === '' || cardName.includes(searchTerm) || setName.includes(searchTerm);
+                    
+                    if (matches) {
+                        row.style.display = '';
+                        visibleCount++;
+                        // Get max_count from cells[5]
+                        const countCell = row.cells[5];
+                        if (countCell) {
+                            const count = parseInt(countCell.textContent) || 1;
+                            visibleSum += count;
+                        }
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+                // Update summary for filtered cards
+                document.getElementById('filteredCardCount').textContent = `${visibleCount} Karten`;
+                document.getElementById('filteredCardCountSummary').textContent = `/ ${visibleSum} Total`;
             }
             
             // Filter Mobile Card Grid
@@ -3587,7 +3679,9 @@
                     const cardName = cardItem.querySelector('.card-item-name')?.textContent.toLowerCase() || '';
                     const cardSet = cardItem.querySelector('.card-item-set')?.textContent.toLowerCase() || '';
                     
-                    if (cardName.includes(searchTerm) || cardSet.includes(searchTerm)) {
+                    const matches = searchTerm === '' || cardName.includes(searchTerm) || cardSet.includes(searchTerm);
+                    
+                    if (matches) {
                         cardItem.style.display = '';
                     } else {
                         cardItem.style.display = 'none';
@@ -4063,8 +4157,11 @@
                 );
             }
             
-            // Update count
+            // Update count with cumulative sum
+            const cardCountTotal = deckCards.reduce((sum, card) => sum + (parseInt(card.max_count) || 1), 0);
+            currentDeckCards = deckCards; // Store for filterCards() function
             document.getElementById('cardCount').textContent = `${deckCards.length} Karten`;
+            document.getElementById('cardCountSummary').textContent = `/ ${cardCountTotal} Total`;
             
             // Sort cards by type (Pokemon, Supporter, Item, Tool, Stadium, Special Energy, Energy)
 console.log('BEFORE SORT - All cards count:', deckCards.length);
@@ -4148,11 +4245,14 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                     sourceInfo = `<br><small style="color: #667eea;">aus: ${card.sources[0]}</small>`;
                 }
                 
+                // Check if card is Ace Spec
+                const aceSpecBadge = card.is_ace_spec === 'Yes' ? '<span style="background: linear-gradient(135deg, #FFD700, #FFA500); color: #000; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; font-weight: bold; margin-left: 6px;">⭐ ACE SPEC</span>' : '';
+                
                 return `
                     <tr>
                         <td>${thumbnailHtml}</td>
                         <td class="card-count">${card.max_count}</td>
-                        <td><strong>${card.card_name}</strong>${sourceInfo}</td>
+                        <td><strong>${card.card_name}</strong>${aceSpecBadge}${sourceInfo}</td>
                         <td>${card.set_code || '-'}</td>
                         <td>${card.set_number || '-'}</td>
                         <td><span style="color: ${percentage > 70 ? '#28a745' : percentage > 50 ? '#ffc107' : '#666'}; font-weight: bold;">${card.percentage_in_archetype}%</span></td>
@@ -4223,6 +4323,7 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                 const percentage = parseFloat(card.percentage_in_archetype.replace(',', '.'));
                 const imageUrl = card.image_url || '';
                 const maxCount = card.max_count || '-';
+                const aceSpecBadge = card.is_ace_spec === 'Yes' ? '<span style="background: linear-gradient(135deg, #FFD700, #FFA500); color: #000; padding: 2px 6px; border-radius: 3px; font-size: 0.7em; font-weight: bold; display: inline-block; margin-top: 4px;">⭐ ACE SPEC</span>' : '';
                 
                 const imgHtml = imageUrl && imageUrl.trim() !== '' 
                     ? `<img src="${imageUrl}" alt="${card.card_name}" referrerpolicy="no-referrer" onerror="this.style.opacity='0.3'">`
@@ -4233,7 +4334,7 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                         ${imgHtml}
                         <div class="card-item-count">${maxCount}</div>
                         <div class="card-item-info">
-                            <div class="card-item-name">${card.card_name}</div>
+                            <div class="card-item-name">${card.card_name}${aceSpecBadge}</div>
                             <div class="card-item-set">${card.set_code} ${card.set_number} (${card.percentage_in_archetype})</div>
                         </div>
                         <div class="card-item-actions">
@@ -4274,28 +4375,50 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
         }
         
         function addToDeck(cardIdentifier, maxCount, cardName, imageUrl, setCode, setNumber) {
+            // Find card data from cardsData
+            const cardData = cardsData.find(c => c.card_identifier === cardIdentifier);
+            const isAceSpec = cardData && cardData.is_ace_spec === 'Yes';
+            
+            // Check if this is an Ace Spec card
+            if (isAceSpec) {
+                // Check if we already have ANY Ace Spec card in the deck
+                const existingAceSpec = myDeck.find(c => c.is_ace_spec === true);
+                if (existingAceSpec && existingAceSpec.name !== cardName) {
+                    alert(`⚠️ Du kannst nur eine Ace Spec Karte im Deck haben!\n\nBereits im Deck: ${existingAceSpec.name}\nVersuchst hinzuzufügen: ${cardName}\n\nBitte entferne zuerst die bestehende Ace Spec Karte.`);
+                    return;
+                }
+                
+                // If trying to add the same Ace Spec that's already in the deck
+                const existingCard = myDeck.find(c => c.identifier === cardIdentifier);
+                if (existingCard && existingCard.count >= 1) {
+                    alert(`⚠️ Ace Spec Karten dürfen nur 1x im Deck sein!\n\n${cardName} ist bereits im Deck.`);
+                    return;
+                }
+            }
+            
             const existingCard = myDeck.find(c => c.identifier === cardIdentifier);
             
             if (existingCard) {
-                if (existingCard.count < Math.min(4, maxCount)) {
+                // For Ace Spec cards, max is 1
+                const actualMaxCount = isAceSpec ? 1 : Math.min(4, maxCount);
+                if (existingCard.count < actualMaxCount) {
                     existingCard.count++;
                 }
             } else {
-                // Find card type from cardsData
-                const cardData = cardsData.find(c => c.card_identifier === cardIdentifier);
                 const cardType = cardData ? cardData.type : '';
                 
                 myDeck.push({
                     identifier: cardIdentifier,
                     name: cardName,
                     count: 1,
-                    maxCount: Math.min(4, maxCount),
+                    maxCount: isAceSpec ? 1 : Math.min(4, maxCount),
                     imageUrl: imageUrl,
                     type: cardType,
                     setCode: setCode || (cardData ? cardData.set_code : ''),
                     setNumber: setNumber || (cardData ? cardData.set_number : ''),
                     setName: cardData ? cardData.set_name : '',
-                    percentage_in_archetype: cardData ? cardData.percentage_in_archetype : '0'
+                    percentage_in_archetype: cardData ? cardData.percentage_in_archetype : '0',
+                    is_ace_spec: isAceSpec
                 });
             }
             
@@ -4316,8 +4439,10 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
         function updateDeckDisplay() {
             const deckList = document.getElementById('deckList');
             const totalCards = myDeck.reduce((sum, card) => sum + card.count, 0);
+            const uniqueCards = myDeck.length;
             
             document.getElementById('deckCardCount').textContent = totalCards;
+            document.getElementById('deckCardCountUnique').textContent = `(${uniqueCards} Unique)`;
             
             // Update visual grid
             updateMyDeckVisual();
@@ -4349,6 +4474,7 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                         ${cardVisual}
                         <div style="flex: 1;">
                             <strong>${card.count}x ${card.name}</strong>
+                            ${card.is_ace_spec ? '<span style="background: linear-gradient(135deg, #FFD700, #FFA500); color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; margin-left: 8px;">⭐ ACE SPEC</span>' : ''}
                             <br><small style="color: #666;">${card.setCode || ''} ${card.setNumber || ''}</small>
                         </div>
                         <div class="deck-card-controls">
@@ -4442,42 +4568,105 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
             }
             
             myDeck = [];
-            let deckCards = cardsData.filter(c => c.archetype === selectedDeck);
             
-            // Sort all cards by percentage (descending)
-            deckCards.forEach(card => {
-                const percentage = parseFloat((card.percentage_in_archetype || '0').toString().replace(',', '.'));
-                card.percentage = percentage;
+            console.log('[autoComplete] Starting autoComplete for:', selectedDeck);
+            console.log('[autoComplete] Total cardsData entries:', cardsData.length);
+            
+            // Get ALL cards for this archetype
+            let deckCards = cardsData.filter(c => c.archetype === selectedDeck);
+            console.log('[autoComplete] Cards filtered for archetype:', deckCards.length);
+            
+            // Step 1: CRITICAL - Deduplicate by card_identifier
+            // If multiple entries have identical percentage, keep first occurrence
+            const uniqueCards = {};
+            for (const card of deckCards) {
+                const cardId = card.card_identifier;
+                
+                if (!uniqueCards[cardId]) {
+                    // First occurrence - keep it
+                    uniqueCards[cardId] = card;
+                } else {
+                    // Compare percentages
+                    const newPercentage = parseFloat((card.percentage_in_archetype || '0').toString().replace(',', '.'));
+                    const existingPercentage = parseFloat((uniqueCards[cardId].percentage_in_archetype || '0').toString().replace(',', '.'));
+                    
+                    // Only replace if new percentage is strictly HIGHER
+                    if (newPercentage > existingPercentage) {
+                        uniqueCards[cardId] = card;
+                    }
+                    // If same percentage, keep existing (do nothing)
+                }
+            }
+            
+            deckCards = Object.values(uniqueCards);
+            console.log('[autoComplete] After deduplication:', deckCards.length, 'unique card IDs');
+            
+            // Step 2: Sort by percentage (descending)
+            deckCards.sort((a, b) => {
+                const percentageA = parseFloat((a.percentage_in_archetype || '0').toString().replace(',', '.'));
+                const percentageB = parseFloat((b.percentage_in_archetype || '0').toString().replace(',', '.'));
+                return percentageB - percentageA;
             });
             
-            deckCards.sort((a, b) => b.percentage - a.percentage);
-            
+            // Step 3: Build the deck
             let totalCards = 0;
-            let addedEnergyTypes = new Set(); // Track which energies we've added
+            const addedCardIdentifiers = new Set(); // CRITICAL: Track by identifier to prevent any duplicates
             
-            // Step 1: Add cards from highest to lowest percentage until 60 cards
+            // Find the best Ace Spec (highest percentage)
+            const aceSpecCards = deckCards.filter(c => c.is_ace_spec === 'Yes' || c.is_ace_spec === true);
+            
+            if (aceSpecCards.length > 0) {
+                const bestAceSpec = aceSpecCards[0]; // First after sorting = highest percentage
+                const cardId = bestAceSpec.card_identifier;
+                
+                // Add Ace Spec with exactly 1 copy
+                myDeck.push({
+                    identifier: cardId,
+                    name: bestAceSpec.card_name,
+                    count: 1,
+                    maxCount: 1,
+                    imageUrl: bestAceSpec.image_url || '',
+                    type: bestAceSpec.type || '',
+                    setCode: bestAceSpec.set_code || '',
+                    setNumber: bestAceSpec.set_number || '',
+                    setName: bestAceSpec.set_name || '',
+                    percentage_in_archetype: bestAceSpec.percentage_in_archetype || '0',
+                    is_ace_spec: true
+                });
+                
+                addedCardIdentifiers.add(cardId);
+                totalCards += 1;
+                console.log('[autoComplete] Added Ace Spec:', bestAceSpec.card_name, '(ID:', cardId + ')');
+            } else {
+                console.log('[autoComplete] No Ace Spec found for archetype:', selectedDeck);
+            }
+            
+            // Add remaining cards until 60 total cards
             for (const card of deckCards) {
                 if (totalCards >= 60) break;
                 
-                // Berechne Durchschnitt: total_count / deck_count
-                const avgCount = parseFloat(card.total_count) / parseFloat(card.deck_count);
-                let recommendedCount = Math.round(avgCount);
+                const cardId = card.card_identifier;
                 
-                // For energies, make sure we use the rounded value
-                const cardType = card.type || '';
-                if (cardType.includes('Energy')) {
-                    console.log('[autoComplete] Energy:', card.card_name, 'avgCount:', avgCount, 'rounded:', recommendedCount);
+                // Skip if already added
+                if (addedCardIdentifiers.has(cardId)) {
+                    continue;
                 }
                 
-                const count = Math.min(
-                    Math.max(1, recommendedCount || 1),
-                    4,
-                    60 - totalCards
-                );
+                // Skip Ace Spec cards (already handled the best one)
+                if (card.is_ace_spec === 'Yes' || card.is_ace_spec === true) {
+                    continue;
+                }
+                
+                // Calculate recommended count
+                const totalCount = parseFloat(card.total_count) || 1;
+                const deckCount = parseFloat(card.deck_count) || 1;
+                const avgCount = totalCount / deckCount;
+                const recommendedCount = Math.round(avgCount);
+                const count = Math.min(Math.max(1, recommendedCount), 4, 60 - totalCards);
                 
                 if (count > 0) {
                     myDeck.push({
-                        identifier: card.card_identifier,
+                        identifier: cardId,
                         name: card.card_name,
                         count: count,
                         maxCount: 4,
@@ -4486,89 +4675,19 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                         setCode: card.set_code || '',
                         setNumber: card.set_number || '',
                         setName: card.set_name || '',
-                        percentage_in_archetype: card.percentage_in_archetype || '0'
+                        percentage_in_archetype: card.percentage_in_archetype || '0',
+                        is_ace_spec: false
                     });
+                    
+                    addedCardIdentifiers.add(cardId);
                     totalCards += count;
-                    console.log('[autoComplete] Added:', card.card_name, 'count:', count, 'total:', totalCards);
-                    
-                    // Track energy types
-                    if (cardType.includes('Energy')) {
-                        addedEnergyTypes.add(card.card_name);
-                    }
                 }
             }
             
-            // Step 2: Check for Pokemon-Energy dependencies
-            // Wenn Pokemon mit bestimmtem Type im Deck, check ob entsprechende Energy vorhanden ist
-            const pokemonInDeck = myDeck.filter(c => {
-                const type = c.type || '';
-                return type && !type.includes('Energy');
-            });
+            console.log('[autoComplete] Finished with', totalCards, 'total cards');
+            console.log('[autoComplete] myDeck has', myDeck.length, 'unique card entries');
+            console.log('[autoComplete] addedCardIdentifiers has', addedCardIdentifiers.size, 'unique IDs');
             
-            for (const pokemon of pokemonInDeck) {
-                const pokemonType = pokemon.type || '';
-                let requiredEnergy = null;
-                
-                // Map Pokemon types to required energies
-                if (pokemonType.startsWith('D')) {
-                    requiredEnergy = 'Darkness Energy';
-                } else if (pokemonType.startsWith('G')) {
-                    requiredEnergy = 'Grass Energy';
-                } else if (pokemonType.startsWith('R')) {
-                    requiredEnergy = 'Fire Energy';
-                } else if (pokemonType.startsWith('W')) {
-                    requiredEnergy = 'Water Energy';
-                } else if (pokemonType.startsWith('L')) {
-                    requiredEnergy = 'Lightning Energy';
-                } else if (pokemonType.startsWith('P')) {
-                    requiredEnergy = 'Psychic Energy';
-                } else if (pokemonType.startsWith('F')) {
-                    requiredEnergy = 'Fighting Energy';
-                } else if (pokemonType.startsWith('M')) {
-                    requiredEnergy = 'Metal Energy';
-                } else if (pokemonType.startsWith('N')) {
-                    requiredEnergy = 'Dragon Energy';
-                } else if (pokemonType.startsWith('C')) {
-                    requiredEnergy = 'Colorless Energy';
-                }
-                
-                // Check if energy already in deck
-                if (requiredEnergy && !addedEnergyTypes.has(requiredEnergy)) {
-                    // Check if we have that energy in the database
-                    const energyCard = deckCards.find(c => 
-                        c.card_name === requiredEnergy && 
-                        c.archetype === selectedDeck
-                    );
-                    
-                    if (energyCard && totalCards < 60) {
-                        const avgCount = parseFloat(energyCard.total_count) / parseFloat(energyCard.deck_count);
-                        const recommendedCount = Math.round(avgCount);
-                        const count = Math.min(
-                            Math.max(1, recommendedCount),
-                            4,
-                            60 - totalCards
-                        );
-                        
-                        myDeck.push({
-                            identifier: energyCard.card_identifier,
-                            name: energyCard.card_name,
-                            count: count,
-                            maxCount: 4,
-                            imageUrl: energyCard.image_url || '',
-                            type: energyCard.type || '',
-                            setCode: energyCard.set_code || '',
-                            setNumber: energyCard.set_number || '',
-                            setName: energyCard.set_name || '',
-                            percentage_in_archetype: energyCard.percentage_in_archetype || '0'
-                        });
-                        totalCards += count;
-                        addedEnergyTypes.add(requiredEnergy);
-                        console.log('[autoComplete] Auto-added', requiredEnergy, 'for Pokemon:', pokemon.name);
-                    }
-                }
-            }
-            
-            console.log('[autoComplete] Finished with', totalCards, 'cards');
             updateDeckDisplay();
         }
         
@@ -5086,7 +5205,7 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                         </div>
                         <div class="control-group">
                             <label for="cardSearchInput">🔍 Kartensuche</label>
-                            <input type="text" id="cardSearchInput" placeholder="Kartenname eingeben..." style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
+                            <input type="text" id="cardSearchInput" placeholder="Kartenname eingeben..." oninput="applyCardFilters()" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
                         </div>
                         <div class="control-group">
                             <label for="cardTypeFiltersContainer">🧩 Kartentyp (Mehrfachauswahl)</label>
@@ -5102,7 +5221,7 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                     </div>
 
                     <div class="filter-summary">
-                        <span id="filteredCardCount">0 Karten</span>
+                        <span style="font-size: 1.1em; color: #333;"><span id="filteredCardCount">0 Karten</span><span id="filteredCardCountSummary" style="margin-left: 10px; font-weight: normal; color: #666;">/ 0 Total</span></span>
                     </div>
 
                     <div class="cards-table">
