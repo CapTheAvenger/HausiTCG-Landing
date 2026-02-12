@@ -4853,7 +4853,10 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
             const modal = document.getElementById('imageViewModal');
             const grid = document.getElementById('compactCardGrid');
             
-            grid.innerHTML = myDeck.map(card => {
+            // Sort cards using the standard sorting function
+            const sortedCards = sortCardsByType([...myDeck]);
+            
+            grid.innerHTML = sortedCards.map(card => {
                 const imageUrl = card.imageUrl || '';
                 const count = card.count;
                 
@@ -4970,7 +4973,10 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
             const modal = document.getElementById('imageViewModal');
             const grid = document.getElementById('compactCardGrid');
             
-            grid.innerHTML = currentDeckCards.map(card => {
+            // Sort cards using the standard sorting function
+            const sortedCards = sortCardsByType([...currentDeckCards]);
+            
+            grid.innerHTML = sortedCards.map(card => {
                 const imageUrl = card.image_url || '';
                 const count = card.max_count || 1;
                 
