@@ -4860,6 +4860,20 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                 return;
             }
             
+            const lookupCardmarketData = (setCode, setNumber, version) => {
+                if (!setCode || !setNumber) return null;
+                const key = setCode + '/' + setNumber + '/' + version;
+                let data = cardmarketPrices.get(key) || null;
+                if (data) return data;
+                const prefix = setCode + '/' + setNumber + '/';
+                for (const [k, v] of cardmarketPrices.entries()) {
+                    if (k.startsWith(prefix)) {
+                        return v;
+                    }
+                }
+                return null;
+            };
+
             gridContainer.innerHTML = deckCards.map(card => {
                 const percentage = parseFloat(card.percentage_in_archetype.replace(',', '.'));
                 const imageUrl = card.image_url || '';
@@ -4878,17 +4892,14 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                 else if (rarityCategory === 'high') version = '3';
 
                 let cardmarketLinkHtml = '';
-                if (setCode && setNumber) {
-                    const priceKey = setCode + '/' + setNumber + '/' + version;
-                    const priceData = cardmarketPrices.get(priceKey);
-                    if (priceData && priceData.url) {
-                        if (version === '1') {
-                            cardmarketLinkHtml = `<a href="${priceData.url}" target="_blank" style="display:block; margin-top: 6px; text-decoration: none; color: #3498db; font-size: 0.85em;">🔍 CardMarket</a>`;
-                        } else if (priceData.price) {
-                            cardmarketLinkHtml = `<a href="${priceData.url}" target="_blank" style="display:block; margin-top: 6px; text-decoration: none; color: #27ae60; font-weight: 600; font-size: 0.95em;">💰 €${priceData.price}</a>`;
-                        } else {
-                            cardmarketLinkHtml = `<a href="${priceData.url}" target="_blank" style="display:block; margin-top: 6px; text-decoration: none; color: #3498db; font-size: 0.85em;">🔍 CardMarket</a>`;
-                        }
+                const priceData = lookupCardmarketData(setCode, setNumber, version);
+                if (priceData && priceData.url) {
+                    if (version === '1') {
+                        cardmarketLinkHtml = `<a href="${priceData.url}" target="_blank" style="display:block; margin-top: 6px; text-decoration: none; color: #3498db; font-size: 0.85em;">🔍 CardMarket</a>`;
+                    } else if (priceData.price) {
+                        cardmarketLinkHtml = `<a href="${priceData.url}" target="_blank" style="display:block; margin-top: 6px; text-decoration: none; color: #27ae60; font-weight: 600; font-size: 0.95em;">💰 €${priceData.price}</a>`;
+                    } else {
+                        cardmarketLinkHtml = `<a href="${priceData.url}" target="_blank" style="display:block; margin-top: 6px; text-decoration: none; color: #3498db; font-size: 0.85em;">🔍 CardMarket</a>`;
                     }
                 }
                 
