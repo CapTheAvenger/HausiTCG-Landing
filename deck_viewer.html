@@ -1562,7 +1562,7 @@
                                 <th>Kartenname</th>
                                 <th>Set</th>
                                 <th>Nummer</th>
-                                <th>% in Archetype</th>
+                                <th>% / Ø in Archetype</th>
                                 <th>Aktion</th>
                             </tr>
                         </thead>
@@ -4809,6 +4809,9 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                 const percentage = parseFloat(card.percentage_in_archetype.replace(',', '.'));
                 const imageUrl = card.image_url || '';
                 const deckCount = getCardCountInDeck(card.card_identifier);
+                const totalCount = parseInt(card.total_count || '0', 10) || 0;
+                const cardDeckCount = parseInt(card.deck_count || '0', 10) || 0;
+                const avgCount = cardDeckCount > 0 ? (totalCount / cardDeckCount).toFixed(1) : '0';
                 
                 // Create thumbnail HTML
                 let thumbnailHtml;
@@ -4836,7 +4839,7 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                         <td><strong>${card.card_name}</strong>${aceSpecBadge}${sourceInfo}</td>
                         <td>${card.set_code || '-'}</td>
                         <td>${card.set_number || '-'}</td>
-                        <td><span style="color: ${percentage > 70 ? '#28a745' : percentage > 50 ? '#ffc107' : '#666'}; font-weight: bold;">${card.percentage_in_archetype}%</span></td>
+                        <td><span style="color: ${percentage > 70 ? '#28a745' : percentage > 50 ? '#ffc107' : '#666'}; font-weight: bold;">${card.percentage_in_archetype}%</span> <span style="color: #999; font-size: 0.9em;">| Ø ${avgCount}x</span></td>
                         <td><button class="btn btn-sm btn-add" data-identifier="${card.card_identifier}" data-max-count="${card.max_count}" data-card-name="${card.card_name}" data-image-url="${imageUrl}" data-set-code="${card.set_code || ''}" data-set-number="${card.set_number || ''}">➕ Hinzufügen</button></td>
                     </tr>
                 `;
