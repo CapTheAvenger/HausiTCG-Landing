@@ -1876,7 +1876,6 @@
                 // --- Meta Filter (fixe Reihenfolge + optionale neue Metas) ---
                 let metaMainOptions = [
                     { label: 'Alle', value: 'all' },
-                    { label: 'City Leagues', value: 'city_leagues' },
                     { label: 'SVI - PFL', value: 'SVI-PFL' },
                     { label: 'SVI - MEG', value: 'SVI-MEG' },
                     { label: 'SVI - BLK/WHT', value: 'SVI-BLK' },
@@ -1931,8 +1930,8 @@
                     });
                     
                     if (discovered.size > 0) {
-                        // Find insertion point and remove any existing duplicates first
-                        const insertIndex = metaMainOptions.findIndex(opt => opt.value === 'city_leagues') + 1;
+                        // Find insertion point after 'all' option and remove any existing duplicates first
+                        const insertIndex = metaMainOptions.findIndex(opt => opt.value === 'all') + 1;
                         
                         // Remove any discovered metas that might already exist (prevent duplicates)
                         metaMainOptions = metaMainOptions.filter(opt => !discovered.has(opt.value));
@@ -2100,14 +2099,8 @@
                 function cardMatchesSelectedMeta(card, selectedMeta) {
                     if (!selectedMeta || selectedMeta.size === 0) return true;
                     let matches = false;
-                    if (selectedMeta.has('city_leagues')) {
-                        const normalize = (str) => str.toLowerCase().trim();
-                        if (cityLeagueData.some(j => normalize(j.archetype) === normalize(card.archetype))) {
-                            matches = true;
-                        }
-                    }
                     for (const metaValue of selectedMeta) {
-                        if (metaValue === 'all' || metaValue === 'city_leagues') continue;
+                        if (metaValue === 'all') continue;
                         if (cardMatchesMetaValue(card, metaValue)) {
                             matches = true;
                         }
@@ -2118,14 +2111,8 @@
                 function archetypeMatchesSelectedMeta(archetype, selectedMeta) {
                     if (!selectedMeta || selectedMeta.size === 0) return true;
                     let matches = false;
-                    if (selectedMeta.has('city_leagues')) {
-                        const normalize = (str) => str.toLowerCase().trim();
-                        if (cityLeagueData.some(j => normalize(j.archetype) === normalize(archetype))) {
-                            matches = true;
-                        }
-                    }
                     for (const metaValue of selectedMeta) {
-                        if (metaValue === 'all' || metaValue === 'city_leagues') continue;
+                        if (metaValue === 'all') continue;
                         if (cardsData.some(card => card.archetype === archetype && cardMatchesMetaValue(card, metaValue))) {
                             matches = true;
                         }
@@ -2780,11 +2767,6 @@
             let allArchetypes = [...new Set(cardsData.map(c => c.archetype))];
             const selectedMeta = getSelectedMetaMainOptions();
 
-            // If City Leagues is selected, base list on City League archetypes
-            if (selectedMeta.has('city_leagues')) {
-                console.log('City Leagues filter active. cityLeagueArchetypes:', cityLeagueArchetypes.length);
-                allArchetypes = cityLeagueArchetypes;
-            }
             
             // FILTER archetypes based on selected meta
             if (selectedMeta.size > 0 && !selectedMeta.has('all')) {
