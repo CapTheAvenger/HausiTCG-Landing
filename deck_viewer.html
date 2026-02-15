@@ -1619,6 +1619,7 @@
         let top10CityLeagueArchetypes = [];
         let limitlessDeckStats = {};
         let myDeck = [];
+        let filteredRawData = [];  // Raw card data filtered by Meta+Deck selection (for statistics calculation)
         
         // Helper function to get the count of a card in the deck
         function getCardCountInDeck(cardIdentifier) {
@@ -4736,12 +4737,33 @@
                 );
             }
             
-            // Update count with cumulative sum
-            const cardCountTotal = deckCards.reduce((sum, card) => sum + (parseInt(card.max_count) || 1), 0);
-            const totalDecks = deckCards.length > 0 ? (deckCards[0].total_decks_in_archetype || '0') : '0';
+            // Update count with cumulative sum - CORRECTED FOR FILTERS
+            // Get statistics ONLY from filtered raw data (before display aggregation)
+            filteredRawData = cardsData.filter(c => decksToInclude.includes(c.archetype));
+            if (selectedMeta.size > 0) {
+                filteredRawData = filteredRawData.filter(card => cardMatchesSelectedMeta(card, selectedMeta));
+            }
+            
+            // Get total decks count from filtered data
+            // All cards in filteredRawData should have the same total_decks_in_archetype value
+            const totalDeckCount = filteredRawData.length > 0 ? parseInt(filteredRawData[0].total_decks_in_archetype || '0', 10) : 0;
+            
+            // Calculate total card count by summing max_count (deduped by card)
+            const cardCountTotalSum = new Map(); // card_name + set -> max_count
+            filteredRawData.forEach(card => {
+                const cardKey = `${card.card_name}_${card.set_code}_${card.set_number}`;
+                const currentMax = cardCountTotalSum.get(cardKey) || 0;
+                const cardMax = parseInt(card.max_count) || 1;
+                if (cardMax > currentMax) {
+                    cardCountTotalSum.set(cardKey, cardMax);
+                }
+            });
+            
+            const cardCountTotal = Array.from(cardCountTotalSum.values()).reduce((sum, val) => sum + val, 0);
+            
             currentDeckCards = deckCards; // Store for filterCards() function
             document.getElementById('cardCount').textContent = `${deckCards.length} Karten`;
-            document.getElementById('cardCountSummary').textContent = `/ ${cardCountTotal} Total / ${totalDecks} Decks`;
+            document.getElementById('cardCountSummary').textContent = `/ ${cardCountTotal} Total / ${totalDeckCount} Decks`;
             
             // Sort cards by type (Pokemon, Supporter, Item, Tool, Stadium, Special Energy, Energy)
 console.log('BEFORE SORT - All cards count:', deckCards.length);
@@ -4809,9 +4831,24 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                 const percentage = parseFloat(card.percentage_in_archetype.replace(',', '.'));
                 const imageUrl = card.image_url || '';
                 const deckCount = getCardCountInDeck(card.card_identifier);
-                const totalCount = parseInt(card.total_count || '0', 10) || 0;
-                const cardDeckCount = parseInt(card.deck_count || '0', 10) || 0;
-                const avgCount = cardDeckCount > 0 ? (totalCount / cardDeckCount).toFixed(1) : '0';
+                
+                // Calculate average ONLY from filtered data (not total database)
+                const cardKey = `${card.card_name}_${card.set_code}_${card.set_number}`;
+                const cardInFilteredData = filteredRawData.filter(c => 
+                    c.card_name === card.card_name && 
+                    c.set_code === card.set_code && 
+                    c.set_number === card.set_number
+                );
+                
+                // Sum total_count and count decks from filtered data
+                let filteredTotalCount = 0;
+                let filteredDeckCount = 0;
+                cardInFilteredData.forEach(c => {
+                    filteredTotalCount += parseInt(c.total_count || '0', 10) || 0;
+                    filteredDeckCount += parseInt(c.deck_count || '0', 10) || 0;
+                });
+                
+                const avgCount = filteredDeckCount > 0 ? (filteredTotalCount / filteredDeckCount).toFixed(1) : '0';
                 
                 // Create thumbnail HTML
                 let thumbnailHtml;
@@ -4869,9 +4906,23 @@ console.log('BEFORE SORT - All cards count:', deckCards.length);
                 const count = card.max_count || 1;
                 const deckCount = getCardCountInDeck(card.card_identifier);
                 const percentage = card.percentage_in_archetype || '0';
-                const totalCount = parseInt(card.total_count || '0', 10) || 0;
-                const cardDeckCount = parseInt(card.deck_count || '0', 10) || 0;
-                const avgCount = cardDeckCount > 0 ? (totalCount / cardDeckCount).toFixed(1) : '0';
+                
+                // Calculate average ONLY from filtered data (not total database)
+                const cardInFilteredData = filteredRawData.filter(c => 
+                    c.card_name === card.card_name && 
+                    c.set_code === card.set_code && 
+                    c.set_number === card.set_number
+                );
+                
+                // Sum total_count and count decks from filtered data
+                let filteredTotalCount = 0;
+                let filteredDeckCount = 0;
+                cardInFilteredData.forEach(c => {
+                    filteredTotalCount += parseInt(c.total_count || '0', 10) || 0;
+                    filteredDeckCount += parseInt(c.deck_count || '0', 10) || 0;
+                });
+                
+                const avgCount = filteredDeckCount > 0 ? (filteredTotalCount / filteredDeckCount).toFixed(1) : '0';
                 
                 if (imageUrl && imageUrl.trim() !== '') {
                     return `
