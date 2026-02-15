@@ -4685,16 +4685,29 @@
             
             // Filter cards for selected deck AND selected variants
             const decksToInclude = [selectedDeck, ...selectedVariants];
-            let deckCards = cardsData.filter(c => decksToInclude.includes(c.archetype));
+            console.log('[updateCardsDisplay] Decks to include:', decksToInclude, 'Selected Meta:', Array.from(selectedMeta));
             
-            // Apply meta filter to cards
+            // FIRST: Calculate filteredRawData for statistics
+            filteredRawData = cardsData.filter(c => decksToInclude.includes(c.archetype));
+            console.log('[updateCardsDisplay] After deck filter:', filteredRawData.length, 'cards');
+            
+            if (selectedMeta.size > 0) {
+                filteredRawData = filteredRawData.filter(card => cardMatchesSelectedMeta(card, selectedMeta));
+                console.log('[updateCardsDisplay] After meta filter:', filteredRawData.length, 'cards');
+            }
+            
+            // SECOND: Create deckCards from filteredRawData (not from cardsData directly!)
+            let deckCards = [...filteredRawData];
+            console.log('[updateCardsDisplay] deckCards created from filteredRawData:', deckCards.length);
+            
+            // Apply meta filter to cards (should already be filtered, but keeping for safety)
             if (selectedMeta.size > 0) {
                 deckCards = deckCards.filter(card => cardMatchesSelectedMeta(card, selectedMeta));
             }
             
             console.log('Initial filtered cards:', deckCards.length, 'from archetype:', selectedDeck);
             if (deckCards.length > 0) {
-                console.log('First card image_url:', deckCards[0].image_url);
+                console.log('First card meta:', getCardMetaValue(deckCards[0]), 'image_url:', deckCards[0].image_url);
             }
             
             // Aggregate cards by name (combine same cards from different variants)
@@ -4718,7 +4731,6 @@
                 console.log('First aggregated card:', deckCards[0].card_name, 'image_url:', deckCards[0].image_url);
             }
             
-            // Meta filter applied before aggregation.
             // Apply percentage filter (only for main deck)
             if (filter === '90') {
                 deckCards = deckCards.filter(c => 
@@ -4737,16 +4749,10 @@
                 );
             }
             
-            // Update count with cumulative sum - CORRECTED FOR FILTERS
-            // Get statistics ONLY from filtered raw data (before display aggregation)
-            filteredRawData = cardsData.filter(c => decksToInclude.includes(c.archetype));
-            if (selectedMeta.size > 0) {
-                filteredRawData = filteredRawData.filter(card => cardMatchesSelectedMeta(card, selectedMeta));
-            }
-            
             // Get total decks count from filtered data
             // All cards in filteredRawData should have the same total_decks_in_archetype value
             const totalDeckCount = filteredRawData.length > 0 ? parseInt(filteredRawData[0].total_decks_in_archetype || '0', 10) : 0;
+            console.log('[DEBUG] Total deck count:', totalDeckCount, 'from first card:', filteredRawData[0]?.archetype);
             
             // Calculate total card count by summing max_count (deduped by card)
             const cardCountTotalSum = new Map(); // card_name + set -> max_count
@@ -4760,10 +4766,12 @@
             });
             
             const cardCountTotal = Array.from(cardCountTotalSum.values()).reduce((sum, val) => sum + val, 0);
+            console.log('[DEBUG] Card count total:', cardCountTotal, 'from', cardCountTotalSum.size, 'unique cards');
             
             currentDeckCards = deckCards; // Store for filterCards() function
             document.getElementById('cardCount').textContent = `${deckCards.length} Karten`;
             document.getElementById('cardCountSummary').textContent = `/ ${cardCountTotal} Total / ${totalDeckCount} Decks`;
+            console.log('[DEBUG] Updated display: cardCount=', deckCards.length, 'cardCountTotal=', cardCountTotal, 'totalDeckCount=', totalDeckCount);
             
             // Sort cards by type (Pokemon, Supporter, Item, Tool, Stadium, Special Energy, Energy)
 console.log('BEFORE SORT - All cards count:', deckCards.length);
