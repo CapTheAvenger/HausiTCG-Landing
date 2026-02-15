@@ -1915,6 +1915,15 @@
                 ];
 
                 const metaFieldKeys = ['meta', 'meta_code', 'meta_group', 'meta_name'];
+                
+                // Mapping für falsche Meta-Codes in den Daten
+                const metaAliasMap = {
+                    'SVI-SSP': 'BRS-SSP',
+                    'SVI-SFA': 'BRS-SFA',
+                    'SVI-SCR': 'BRS-SCR',
+                    'SVI-PRE': 'BRS-PRE'
+                };
+                
                 const metaSetCodeMap = {
                     'SVI-PFL': new Set(),
                     'SVI-MEG': new Set(),
@@ -1936,7 +1945,12 @@
                     for (const key of metaFieldKeys) {
                         const value = card[key];
                         if (value && String(value).trim()) {
-                            return String(value).trim();
+                            let metaValue = String(value).trim();
+                            // Apply alias mapping if exists
+                            if (metaAliasMap[metaValue]) {
+                                metaValue = metaAliasMap[metaValue];
+                            }
+                            return metaValue;
                         }
                     }
                     return '';
