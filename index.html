@@ -4908,13 +4908,30 @@
 
             currentRaritySwitcherCard = { cardName: actualCardName, deckKey };
             
-            // Find all versions of this card
-            const versions = getEnglishCardVersions(actualCardName);
+            // Find all versions of this card - try multiple methods
+            let versions = [];
             
-            console.log(`[openRaritySwitcher] Found ${versions.length} versions for ${actualCardName}`);
+            // Method 1: Use cardsByNameMap if available
+            if (window.cardsByNameMap && window.cardsByNameMap[actualCardName]) {
+                versions = window.cardsByNameMap[actualCardName].slice();
+                console.log(`[openRaritySwitcher] Found ${versions.length} versions via cardsByNameMap`);
+            }
+            
+            // Method 2: Direct search in allCardsDatabase if cardsByNameMap failed
+            if (versions.length === 0 && window.allCardsDatabase) {
+                versions = window.allCardsDatabase.filter(card => card.name === actualCardName);
+                console.log(`[openRaritySwitcher] Found ${versions.length} versions via direct search`);
+            }
+            
+            // Filter to English sets only if we have the set mapping
+            if (window.englishSetCodes && window.englishSetCodes.size > 0) {
+                versions = versions.filter(version => window.englishSetCodes.has(version.set));
+                console.log(`[openRaritySwitcher] After English filter: ${versions.length} versions`);
+            }
             
             if (versions.length === 0) {
-                alert(`Keine Versionen für "${actualCardName}" gefunden.\n\nTipp: Stelle sicher, dass die Karte in der all_cards_database.csv existiert.`);
+                alert(`Keine Versionen für "${actualCardName}" gefunden.\n\nMögliche Gründe:\n- Karte nicht in all_cards_database.csv\n- Falscher Kartenname\n- Nur japanische Sets verfügbar\n\nGesuchter Name: "${actualCardName}"`);
+                console.error(`[openRaritySwitcher] No versions found for "${actualCardName}". Available cards:`, Object.keys(window.cardsByNameMap || {}).slice(0, 10));
                 return;
             }
 
