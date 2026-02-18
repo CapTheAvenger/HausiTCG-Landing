@@ -1,0 +1,66 @@
+{
+  "comment": "Pokemon TCG Format Mapping",
+  "comment2": "Maps short codes to full format names",
+  "comment3": "Used by scraper for Meta labeling in unified_card_data.csv",
+  
+  "limitless_format_map": {
+    "PFL": "SVI-PFL",
+    "MEG": "SVI-MEG",
+    "BLK": "SVI-BLK",
+    "DRI": "SVI-DRI",
+    "JTG": "SVI-JTG",
+    "PRE": "BRS-PRE",
+    "SSP": "BRS-SSP",
+    "SCR": "BRS-SCR",
+    "SFA": "BRS-SFA",
+    "TWM": "BRS-TWM",
+    "TEF": "BRS-TEF",
+    "PAR": "BST-PAR",
+    "OBF": "BST-OBF",
+    "PAL": "BST-PAL",
+    "SVI": "BST-SVI",
+    "SIT": "SSH-SIT",
+    "LOR": "SSH-LOR",
+    "ASR": "SSH-ASR",
+    "BRS": "SSH-BRS",
+    "CRE": "TEU-CRE",
+    "BST": "TEU-BST",
+    "VIV": "TEU-VIV",
+    "DAA": "TEU-DAA"
+  },
+  
+  "tournament_formats": {
+    "Standard": "Tournament (Standard)",
+    "Standard (JP)": "Tournament (Standard JP)",
+    "Expanded": "Tournament (Expanded)",
+    "Expanded (JP)": "Tournament (Expanded JP)"
+  },
+  
+  "city_league_meta": "City Leagues",
+  
+  "format_full_names": {
+    "SVI-PFL": "Scarlet & Violet - Phantasmal Flames",
+    "SVI-MEG": "Scarlet & Violet - Mega Evolution",
+    "SVI-BLK": "Scarlet & Violet - Black Bolt",
+    "SVI-DRI": "Scarlet & Violet - Destined Rivals",
+    "SVI-JTG": "Scarlet & Violet - Journey Together",
+    "BRS-PRE": "Brilliant Stars - Prismatic Evolutions",
+    "BRS-SSP": "Brilliant Stars - Surging Sparks",
+    "BRS-SCR": "Brilliant Stars - Stellar Crown",
+    "BRS-SFA": "Brilliant Stars - Shrouded Fable",
+    "BRS-TWM": "Brilliant Stars - Twilight Masquerade",
+    "BRS-TEF": "Brilliant Stars - Temporal Forces",
+    "BST-PAR": "Battle Styles - Paradox Rift",
+    "BST-OBF": "Battle Styles - Obsidian Flames",
+    "BST-PAL": "Battle Styles - Paldea Evolved",
+    "BST-SVI": "Battle Styles - Scarlet & Violet",
+    "SSH-SIT": "Sword & Shield - Silver Tempest",
+    "SSH-LOR": "Sword & Shield - Lost Origin",
+    "SSH-ASR": "Sword & Shield - Astral Radiance",
+    "SSH-BRS": "Sword & Shield - Brilliant Stars",
+    "TEU-CRE": "Team Up - Chilling Reign",
+    "TEU-BST": "Team Up - Battle Styles",
+    "TEU-VIV": "Team Up - Vivid Voltage",
+    "TEU-DAA": "Team Up - Darkness Ablaze"
+  }
+}

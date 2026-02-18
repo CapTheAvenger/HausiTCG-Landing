@@ -1,0 +1,71 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+*.sublime-*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary Files
+*.tmp
+*.log
+*.bak
+*.swp
+*~
+
+# Build Tools
+*.exe
+*.spec
+build/
+dist/
+
+# Python Scripts (Landing-Site benötigt nur HTML+CSV)
+*.py
+
+# Batch Scripts
+*.bat
+
+# Documentation (außer README)
+BUILD_SUMMARY.md
+MIGRATION_GUIDE.py
+ACE_SPEC_*.md
+CARD_DATA_SYSTEM.md
+DATA_DIRECTORY_STRUCTURE.md
+CITY_LEAGUE_TAB_EXTRACTION.md
+JAPANESE_CARDS_SCRAPER_README.md
+PRICE_SCRAPER_README.md
+ALL_CARDS_SCRAPER_README.md
+ACE_SPEC_SCRAPER_README.txt
+ACE_SPEC_SCRAPER_GUIDE.md
+
+# Settings Files (nur für lokale Scraper)
+*_settings.json
+*_settings_*.json
+
+# HTML Debug Files
+debug_*.html
+ace_spec_*.html
+inspect_*.py
+quick_test.py
+
+# CSV Mapping Files (optional - könnte auch committed werden)
+pokemon_sets_mapping.csv
+
+# Config Files
+_config.yml
