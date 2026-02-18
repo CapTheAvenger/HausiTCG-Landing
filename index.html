@@ -4900,13 +4900,21 @@
                 return;
             }
 
-            currentRaritySwitcherCard = { cardName, deckKey };
+            // Extract card name from deckKey if needed (handle "CardName (SET NUM)" format)
+            const baseNameMatch = deckKey.match(/^(.+?)\s*\(/);
+            const actualCardName = baseNameMatch ? baseNameMatch[1] : cardName;
+            
+            console.log(`[openRaritySwitcher] cardName: ${cardName}, deckKey: ${deckKey}, actualCardName: ${actualCardName}`);
+
+            currentRaritySwitcherCard = { cardName: actualCardName, deckKey };
             
             // Find all versions of this card
-            const versions = getEnglishCardVersions(cardName);
+            const versions = getEnglishCardVersions(actualCardName);
+            
+            console.log(`[openRaritySwitcher] Found ${versions.length} versions for ${actualCardName}`);
             
             if (versions.length === 0) {
-                alert('Keine Versionen für diese Karte gefunden.');
+                alert(`Keine Versionen für "${actualCardName}" gefunden.\n\nTipp: Stelle sicher, dass die Karte in der all_cards_database.csv existiert.`);
                 return;
             }
 
@@ -4919,16 +4927,16 @@
                 optionDiv.className = 'rarity-option-card';
                 
                 // Check if this is the current version
-                const versionKey = `${cardName} (${version.set} ${version.number})`;
+                const versionKey = `${actualCardName} (${version.set} ${version.number})`;
                 if (deckKey === versionKey) {
                     optionDiv.classList.add('selected');
                 }
                 
-                optionDiv.onclick = () => selectRarityVersion(version.set, version.number, deckKey, cardName);
+                optionDiv.onclick = () => selectRarityVersion(version.set, version.number, deckKey, actualCardName);
                 
                 let imageHtml = '';
                 const imageUrl = version.image_url || buildCardImageUrl(version.set, version.number, version.rarity);
-                imageHtml = `<img src="${imageUrl}" alt="${cardName} - ${version.rarity}" loading="lazy">`;
+                imageHtml = `<img src="${imageUrl}" alt="${actualCardName} - ${version.rarity}" loading="lazy">`;
                 
                 const rarityBadgeColor = getRarityColor(version.rarity);
                 
@@ -4946,7 +4954,7 @@
                 optionsList.appendChild(optionDiv);
             });
 
-            document.getElementById('raritySwitcherTitle').textContent = `${cardName} - Rarity Switcher`;
+            document.getElementById('raritySwitcherTitle').textContent = `${actualCardName} - Rarity Switcher`;
             const modal = document.getElementById('raritySwitcherModal');
             modal.classList.add('show');
         }
