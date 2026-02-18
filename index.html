@@ -3267,8 +3267,34 @@
                 }
             }
             
-            // Create unique deck key: "Card Name (SET NUM)"
-            const deckKey = (setCode && setNumber) ? `${cardName} (${setCode} ${setNumber})` : cardName;
+            // CRITICAL FIX: Check if card already exists with a different key format
+            // If card exists as "CardName" but we're adding "CardName (SET NUM)", update the existing key
+            let deckKey = (setCode && setNumber) ? `${cardName} (${setCode} ${setNumber})` : cardName;
+            
+            // Check if there's already an entry for this card (with or without version info)
+            let existingKey = null;
+            if (deck[deckKey]) {
+                existingKey = deckKey; // Exact match
+            } else if (deck[cardName]) {
+                existingKey = cardName; // Card exists without version
+            } else {
+                // Check if any key starts with this card name
+                for (const key in deck) {
+                    if (key === cardName || key.startsWith(cardName + ' (')) {
+                        existingKey = key;
+                        break;
+                    }
+                }
+            }
+            
+            // If we found an existing key and it's different from our new key, migrate it
+            if (existingKey && existingKey !== deckKey && setCode && setNumber) {
+                console.log(`Migrating deck entry from "${existingKey}" to "${deckKey}"`);
+                deck[deckKey] = deck[existingKey];
+                delete deck[existingKey];
+            } else if (existingKey) {
+                deckKey = existingKey; // Use the existing key
+            }
             
             if (!deck[deckKey]) {
                 deck[deckKey] = 0;
@@ -3304,6 +3330,7 @@
             }
             
             deck[deckKey]++;
+            console.log(`Added card to deck: ${deckKey} -> ${deck[deckKey]}`);
             updateDeckDisplay('cityLeague');
         }
         
@@ -3437,10 +3464,21 @@
                 const setCode = card.set_code || '';
                 const setNumber = card.set_number || '';
                 
+                // Calculate average count
+                const totalCount = parseInt(card.total_count || 0);
+                const totalDecksInArchetype = parseInt(card.total_decks_in_archetype || 1);
+                const avgCount = totalDecksInArchetype > 0 ? (totalCount / totalDecksInArchetype).toFixed(2) : '0.00';
+                
                 html += `
                     <div class="deck-card" style="position: relative;" title="${card.deck_key || card.card_name} (${count}x) - ${percentage}%">
                         <img src="${imageUrl}" alt="${card.card_name}" style="cursor: zoom-in;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22245%22 height=%22342%22%3E%3Crect fill=%22%23667eea%22 width=%22245%22 height=%22342%22/%3E%3Ctext fill=%22white%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2220%22%3EKeine Bild%3C/text%3E%3C/svg%3E'" onclick="showSingleCard('${imageUrl}', '${cardNameEscaped}')">
                         <div class="card-max-count">${count}</div>
+                        
+                        <!-- Stats über den Buttons -->
+                        <div style="position: absolute; bottom: 30px; left: 5px; right: 5px; background: rgba(0,0,0,0.75); color: white; padding: 2px 4px; border-radius: 4px; font-size: 8px; text-align: center; z-index: 2; white-space: nowrap; overflow: hidden;">
+                            <div style="font-weight: bold;">${percentage}% | Ø ${avgCount}x</div>
+                        </div>
+                        
                         <div style="position: absolute; bottom: 5px; left: 5px; right: 5px; display: grid; grid-template-columns: 20px 1fr 20px; gap: 3px; z-index: 3; align-items: center;">
                             <button onclick="removeCardFromDeck('cityLeague', '${deckKeyEscaped}')" style="background: #dc3545; color: white; border: none; border-radius: 3px; width: 20px; height: 20px; cursor: pointer; font-weight: bold; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 12px;">−</button>
                             <button onclick="openRaritySwitcher('${cardNameEscaped}', '${deckKeyEscaped}')" style="background: #ffc107; color: #333; border: none; border-radius: 3px; padding: 2px 6px; cursor: pointer; font-size: 12px; font-weight: bold; text-align: center;">★</button>
@@ -3799,7 +3837,20 @@
                 const maxCount = card.max_count || '-';
                 
                 // Get actual deck count from window.cityLeagueDeck
-                const deckCount = deck[card.card_name] || 0;
+                // Try both: card name only AND "CardName (SET NUM)" format
+                let deckCount = deck[card.card_name] || 0;
+                if (deckCount === 0 && card.set_code && card.set_number) {
+                    const versionKey = `${card.card_name} (${card.set_code} ${card.set_number})`;
+                    deckCount = deck[versionKey] || 0;
+                }
+                // Also check all deck keys that start with the card name
+                if (deckCount === 0) {
+                    for (const key in deck) {
+                        if (key.startsWith(card.card_name + ' (')) {
+                            deckCount += deck[key];
+                        }
+                    }
+                }
                 
                 // Calculate average count over all decks (total_count / total_decks_in_archetype)
                 const totalCount = parseInt(card.total_count || 0);
@@ -3847,7 +3898,7 @@
                             </div>
                             
                             <!-- Add button -->
-                            <button class="btn btn-success" style="padding: 4px 8px; font-size: 0.75em; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s; margin-top: 8px; width: 100%;" onclick="addCardToDeck('cityLeague', '${card.card_name.replace(/'/g, "\\'")}')" title="Add to deck">Add to Deck</button>
+                            <button class="btn btn-success" style="padding: 4px 8px; font-size: 0.75em; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s; margin-top: 8px; width: 100%;" onclick="addCardToDeck('cityLeague', '${card.card_name.replace(/'/g, "\\'")}', '${card.set_code || ''}', '${card.set_number || ''}')" title="Add to deck">Add to Deck</button>
                         </div>
                     </div>
                 `;
