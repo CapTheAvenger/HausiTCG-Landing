@@ -3427,6 +3427,29 @@
                 // Try exact match first (with SET NUM), then fallback to name only
                 let cardData = cardDataByKey[deckKey] || cardDataByName[deckKey];
                 
+                // If still not found, extract card name from "CardName (SET NUM)" format
+                if (!cardData) {
+                    const baseNameMatch = deckKey.match(/^(.+?)\s*\(/);
+                    if (baseNameMatch) {
+                        const baseName = baseNameMatch[1];
+                        cardData = cardDataByName[baseName];
+                        
+                        // If found via base name, try to extract SET and NUM from deckKey
+                        if (cardData) {
+                            const setMatch = deckKey.match(/\(([A-Z0-9]+)\s+([A-Z0-9]+)\)$/);
+                            if (setMatch) {
+                                const imageUrl = buildCardImageUrl(setMatch[1], setMatch[2], cardData.rarity);
+                                cardData = {
+                                    ...cardData,
+                                    set_code: setMatch[1],
+                                    set_number: setMatch[2],
+                                    image_url: imageUrl
+                                };
+                            }
+                        }
+                    }
+                }
+                
                 if (!cardData) continue;
 
                 const baseNameMatch = deckKey.match(/^(.+?)\s*\(/);
