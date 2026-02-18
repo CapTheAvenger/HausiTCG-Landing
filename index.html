@@ -3456,16 +3456,18 @@
                                     rarity: exactCard.rarity
                                 };
                             } else {
-                                // Fallback to base name
-                                cardData = cardDataByName[baseName];
-                                if (cardData) {
-                                    const imageUrl = buildCardImageUrl(setCode, setNumber, cardData.rarity || 'Common');
+                                // Fallback to base name - keep original image_url!
+                                const baseCardData = cardDataByName[baseName];
+                                if (baseCardData) {
+                                    console.log(`[renderMyDeckGrid] Using base card data for: ${baseName}, keeping image_url: ${baseCardData.image_url}`);
                                     cardData = {
-                                        ...cardData,
+                                        ...baseCardData,
                                         set_code: setCode,
-                                        set_number: setNumber,
-                                        image_url: imageUrl
+                                        set_number: setNumber
+                                        // Keep original image_url from baseCardData
                                     };
+                                } else {
+                                    console.warn(`[renderMyDeckGrid] Card not found: ${baseName} (${setCode} ${setNumber})`);
                                 }
                             }
                         } else {
