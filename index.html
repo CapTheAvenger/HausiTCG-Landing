@@ -3432,20 +3432,45 @@
                     const baseNameMatch = deckKey.match(/^(.+?)\s*\(/);
                     if (baseNameMatch) {
                         const baseName = baseNameMatch[1];
-                        cardData = cardDataByName[baseName];
+                        const setMatch = deckKey.match(/\(([A-Z0-9]+)\s+([A-Z0-9]+)\)$/);
                         
-                        // If found via base name, try to extract SET and NUM from deckKey
-                        if (cardData) {
-                            const setMatch = deckKey.match(/\(([A-Z0-9]+)\s+([A-Z0-9]+)\)$/);
-                            if (setMatch) {
-                                const imageUrl = buildCardImageUrl(setMatch[1], setMatch[2], cardData.rarity);
+                        if (setMatch) {
+                            const setCode = setMatch[1];
+                            const setNumber = setMatch[2];
+                            
+                            // Try to find exact card in allCardsDatabase
+                            const exactCard = allCardsFromDb.find(c => 
+                                c.name === baseName && c.set === setCode && c.number === setNumber
+                            );
+                            
+                            if (exactCard) {
+                                const imageUrl = buildCardImageUrl(exactCard.set, exactCard.number, exactCard.rarity);
                                 cardData = {
-                                    ...cardData,
-                                    set_code: setMatch[1],
-                                    set_number: setMatch[2],
-                                    image_url: imageUrl
+                                    card_name: exactCard.name,
+                                    image_url: imageUrl,
+                                    percentage_in_archetype: 0,
+                                    type: exactCard.type || 'Unknown',
+                                    card_type: exactCard.type || 'Unknown',
+                                    set_code: exactCard.set,
+                                    set_number: exactCard.number,
+                                    rarity: exactCard.rarity
                                 };
+                            } else {
+                                // Fallback to base name
+                                cardData = cardDataByName[baseName];
+                                if (cardData) {
+                                    const imageUrl = buildCardImageUrl(setCode, setNumber, cardData.rarity || 'Common');
+                                    cardData = {
+                                        ...cardData,
+                                        set_code: setCode,
+                                        set_number: setNumber,
+                                        image_url: imageUrl
+                                    };
+                                }
                             }
+                        } else {
+                            // No set info in key, use base name
+                            cardData = cardDataByName[baseName];
                         }
                     }
                 }
