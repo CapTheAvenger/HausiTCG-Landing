@@ -1,0 +1,2662 @@
+{
+  "timestamp": "2026-02-18T12:13:21.577495",
+  "source": "https://limitlesstcg.com/cards?q=lang%3Aen",
+  "total_count": 295,
+  "cards": [
+    {
+      "name": "Erika's Oddish",
+      "set": "ASC",
+      "number": "1",
+      "type": "G Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/1",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_001_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Erika's Gloom",
+      "set": "ASC",
+      "number": "2",
+      "type": "G Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/2",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_002_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Erika's Vileplume ex",
+      "set": "ASC",
+      "number": "3",
+      "type": "G Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/3",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_003_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Erika's Bellsprout",
+      "set": "ASC",
+      "number": "4",
+      "type": "G Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/4",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_004_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Erika's Weepinbell",
+      "set": "ASC",
+      "number": "5",
+      "type": "G Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/5",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_005_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Erika's Victreebel",
+      "set": "ASC",
+      "number": "6",
+      "type": "G Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/6",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_006_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Erika's Tangela",
+      "set": "ASC",
+      "number": "7",
+      "type": "G Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/7",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_007_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Chikorita",
+      "set": "ASC",
+      "number": "8",
+      "type": "G Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/8",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_008_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Bayleef",
+      "set": "ASC",
+      "number": "9",
+      "type": "G Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/9",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_009_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Mega Meganium ex",
+      "set": "ASC",
+      "number": "10",
+      "type": "G Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/10",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_010_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Wurmple",
+      "set": "ASC",
+      "number": "11",
+      "type": "G Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/11",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_011_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Silcoon",
+      "set": "ASC",
+      "number": "12",
+      "type": "G Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/12",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_012_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Beautifly",
+      "set": "ASC",
+      "number": "13",
+      "type": "G Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/13",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_013_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Cascoon",
+      "set": "ASC",
+      "number": "14",
+      "type": "G Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/14",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_014_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Dustox",
+      "set": "ASC",
+      "number": "15",
+      "type": "G Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/15",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_015_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Budew",
+      "set": "ASC",
+      "number": "16",
+      "type": "G Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/16",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_016_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Grubbin",
+      "set": "ASC",
+      "number": "17",
+      "type": "G Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/17",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_017_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Team Rocket's Tarountula",
+      "set": "ASC",
+      "number": "18",
+      "type": "G Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/18",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_018_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Team Rocket's Spidops",
+      "set": "ASC",
+      "number": "19",
+      "type": "G Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/19",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_019_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Charmander",
+      "set": "ASC",
+      "number": "20",
+      "type": "R Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/20",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_020_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Charmeleon",
+      "set": "ASC",
+      "number": "21",
+      "type": "R Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/21",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_021_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Mega Charizard Y ex",
+      "set": "ASC",
+      "number": "22",
+      "type": "R Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/22",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_022_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Ethan's Slugma",
+      "set": "ASC",
+      "number": "23",
+      "type": "R Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/23",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_023_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Ethan's Magcargo",
+      "set": "ASC",
+      "number": "24",
+      "type": "R Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/24",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_024_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Entei",
+      "set": "ASC",
+      "number": "25",
+      "type": "R Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/25",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_025_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Ethan's Ho-Oh ex",
+      "set": "ASC",
+      "number": "26",
+      "type": "R Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/26",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_026_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Numel",
+      "set": "ASC",
+      "number": "27",
+      "type": "R Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/27",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_027_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Camerupt",
+      "set": "ASC",
+      "number": "28",
+      "type": "R Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/28",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_028_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Tepig",
+      "set": "ASC",
+      "number": "29",
+      "type": "R Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/29",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_029_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Pignite",
+      "set": "ASC",
+      "number": "30",
+      "type": "R Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/30",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_030_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Mega Emboar ex",
+      "set": "ASC",
+      "number": "31",
+      "type": "R Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/31",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_031_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "N's Darumaka",
+      "set": "ASC",
+      "number": "32",
+      "type": "R Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/32",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_032_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "N's Darmanitan",
+      "set": "ASC",
+      "number": "33",
+      "type": "R Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/33",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_033_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Salandit",
+      "set": "ASC",
+      "number": "34",
+      "type": "R Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/34",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_034_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Salazzle",
+      "set": "ASC",
+      "number": "35",
+      "type": "R Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/35",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_035_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Scorbunny",
+      "set": "ASC",
+      "number": "36",
+      "type": "R Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/36",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_036_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Raboot",
+      "set": "ASC",
+      "number": "37",
+      "type": "R Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/37",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_037_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Cinderace ex",
+      "set": "ASC",
+      "number": "38",
+      "type": "R Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/38",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_038_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Psyduck",
+      "set": "ASC",
+      "number": "39",
+      "type": "W Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/39",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_039_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Golduck",
+      "set": "ASC",
+      "number": "40",
+      "type": "W Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/40",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_040_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Totodile",
+      "set": "ASC",
+      "number": "41",
+      "type": "W Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/41",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_041_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Croconaw",
+      "set": "ASC",
+      "number": "42",
+      "type": "W Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/42",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_042_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Mega Feraligatr ex",
+      "set": "ASC",
+      "number": "43",
+      "type": "W Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/43",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_043_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Sneasel",
+      "set": "ASC",
+      "number": "44",
+      "type": "W Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/44",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_044_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Weavile",
+      "set": "ASC",
+      "number": "45",
+      "type": "W Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/45",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_045_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Snorunt",
+      "set": "ASC",
+      "number": "46",
+      "type": "W Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/46",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_046_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Mega Froslass ex",
+      "set": "ASC",
+      "number": "47",
+      "type": "W Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/47",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_047_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Regice ex",
+      "set": "ASC",
+      "number": "48",
+      "type": "W Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/48",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_048_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "N's Vanillite",
+      "set": "ASC",
+      "number": "49",
+      "type": "W Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/49",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_049_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "N's Vanillish",
+      "set": "ASC",
+      "number": "50",
+      "type": "W Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/50",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_050_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "N's Vanilluxe",
+      "set": "ASC",
+      "number": "51",
+      "type": "W Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/51",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_051_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Snom",
+      "set": "ASC",
+      "number": "52",
+      "type": "W Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/52",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_052_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Frosmoth",
+      "set": "ASC",
+      "number": "53",
+      "type": "W Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/53",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_053_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Glastrier",
+      "set": "ASC",
+      "number": "54",
+      "type": "W Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/54",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_054_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Pikachu",
+      "set": "ASC",
+      "number": "55",
+      "type": "L Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/55",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_055_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Raichu",
+      "set": "ASC",
+      "number": "56",
+      "type": "L Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/56",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_056_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Pikachu ex",
+      "set": "ASC",
+      "number": "57",
+      "type": "L Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/57",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_057_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Voltorb ex",
+      "set": "ASC",
+      "number": "58",
+      "type": "L Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/58",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_058_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Tynamo",
+      "set": "ASC",
+      "number": "59",
+      "type": "L Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/59",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_059_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Eelektrik",
+      "set": "ASC",
+      "number": "60",
+      "type": "L Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/60",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_060_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Mega Eelektross ex",
+      "set": "ASC",
+      "number": "61",
+      "type": "L Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/61",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_061_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Stunfisk",
+      "set": "ASC",
+      "number": "62",
+      "type": "L Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/62",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_062_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Helioptile",
+      "set": "ASC",
+      "number": "63",
+      "type": "L Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/63",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_063_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Heliolisk",
+      "set": "ASC",
+      "number": "64",
+      "type": "L Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/64",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_064_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Charjabug",
+      "set": "ASC",
+      "number": "65",
+      "type": "L Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/65",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_065_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Vikavolt",
+      "set": "ASC",
+      "number": "66",
+      "type": "L Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/66",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_066_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Tapu Koko",
+      "set": "ASC",
+      "number": "67",
+      "type": "L Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/67",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_067_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Hop's Pincurchin ex",
+      "set": "ASC",
+      "number": "68",
+      "type": "L Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/68",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_068_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Iono's Tadbulb",
+      "set": "ASC",
+      "number": "69",
+      "type": "L Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/69",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_069_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Iono's Bellibolt ex",
+      "set": "ASC",
+      "number": "70",
+      "type": "L Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/70",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_070_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Iono's Wattrel",
+      "set": "ASC",
+      "number": "71",
+      "type": "L Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/71",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_071_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Iono's Kilowattrel",
+      "set": "ASC",
+      "number": "72",
+      "type": "L Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/72",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_072_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Miraidon ex",
+      "set": "ASC",
+      "number": "73",
+      "type": "L Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/73",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_073_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Clefairy",
+      "set": "ASC",
+      "number": "74",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/74",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_074_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Clefable",
+      "set": "ASC",
+      "number": "75",
+      "type": "P Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/75",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_075_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Lillie's Clefairy ex",
+      "set": "ASC",
+      "number": "76",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/76",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_076_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Team Rocket's Exeggcute",
+      "set": "ASC",
+      "number": "77",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/77",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_077_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Team Rocket's Exeggutor",
+      "set": "ASC",
+      "number": "78",
+      "type": "P Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/78",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_078_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Team Rocket's Mewtwo ex",
+      "set": "ASC",
+      "number": "79",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/79",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_079_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Togepi",
+      "set": "ASC",
+      "number": "80",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/80",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_080_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Togetic",
+      "set": "ASC",
+      "number": "81",
+      "type": "P Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/81",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_081_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Togekiss",
+      "set": "ASC",
+      "number": "82",
+      "type": "P Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/82",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_082_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Marill",
+      "set": "ASC",
+      "number": "83",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/83",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_083_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Azumarill ex",
+      "set": "ASC",
+      "number": "84",
+      "type": "P Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/84",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_084_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Misdreavus",
+      "set": "ASC",
+      "number": "85",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/85",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_085_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Mismagius",
+      "set": "ASC",
+      "number": "86",
+      "type": "P Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/86",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_086_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Ralts",
+      "set": "ASC",
+      "number": "87",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/87",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_087_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Kirlia",
+      "set": "ASC",
+      "number": "88",
+      "type": "P Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/88",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_088_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Mega Gardevoir ex",
+      "set": "ASC",
+      "number": "89",
+      "type": "P Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/89",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_089_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Shuppet",
+      "set": "ASC",
+      "number": "90",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/90",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_090_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Banette",
+      "set": "ASC",
+      "number": "91",
+      "type": "P Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/91",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_091_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Rotom",
+      "set": "ASC",
+      "number": "92",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/92",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_092_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Swirlix",
+      "set": "ASC",
+      "number": "93",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/93",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_093_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Slurpuff",
+      "set": "ASC",
+      "number": "94",
+      "type": "P Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/94",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_094_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Hop's Phantump",
+      "set": "ASC",
+      "number": "95",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/95",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_095_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Hop's Trevenant",
+      "set": "ASC",
+      "number": "96",
+      "type": "P Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/96",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_096_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Team Rocket's Mimikyu",
+      "set": "ASC",
+      "number": "97",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/97",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_097_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Spectrier",
+      "set": "ASC",
+      "number": "98",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/98",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_098_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Munkidori",
+      "set": "ASC",
+      "number": "99",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/99",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_099_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Team Rocket's Diglett",
+      "set": "ASC",
+      "number": "100",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/100",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_100_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Team Rocket's Dugtrio",
+      "set": "ASC",
+      "number": "101",
+      "type": "F Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/101",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_101_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Hitmontop",
+      "set": "ASC",
+      "number": "102",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/102",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_102_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Meditite",
+      "set": "ASC",
+      "number": "103",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/103",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_103_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Medicham",
+      "set": "ASC",
+      "number": "104",
+      "type": "F Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/104",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_104_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Lunatone",
+      "set": "ASC",
+      "number": "105",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/105",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_105_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Solrock",
+      "set": "ASC",
+      "number": "106",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/106",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_106_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Regirock ex",
+      "set": "ASC",
+      "number": "107",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/107",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_107_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Groudon",
+      "set": "ASC",
+      "number": "108",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/108",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_108_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Cynthia's Gible",
+      "set": "ASC",
+      "number": "109",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/109",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_109_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Cynthia's Gabite",
+      "set": "ASC",
+      "number": "110",
+      "type": "F Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/110",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_110_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Cynthia's Garchomp ex",
+      "set": "ASC",
+      "number": "111",
+      "type": "F Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/111",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_111_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Riolu",
+      "set": "ASC",
+      "number": "112",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/112",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_112_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Mega Lucario ex",
+      "set": "ASC",
+      "number": "113",
+      "type": "F Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/113",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_113_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Stunfisk ex",
+      "set": "ASC",
+      "number": "114",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/114",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_114_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Pancham",
+      "set": "ASC",
+      "number": "115",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/115",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_115_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Mega Hawlucha ex",
+      "set": "ASC",
+      "number": "116",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/116",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_116_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Carbink",
+      "set": "ASC",
+      "number": "117",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/117",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_117_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Rolycoly",
+      "set": "ASC",
+      "number": "118",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/118",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_118_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Carkol",
+      "set": "ASC",
+      "number": "119",
+      "type": "F Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/119",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_119_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Coalossal",
+      "set": "ASC",
+      "number": "120",
+      "type": "F Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/120",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_120_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Koraidon ex",
+      "set": "ASC",
+      "number": "121",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/121",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_121_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Okidogi",
+      "set": "ASC",
+      "number": "122",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/122",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_122_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Gastly",
+      "set": "ASC",
+      "number": "123",
+      "type": "D Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/123",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_123_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Haunter",
+      "set": "ASC",
+      "number": "124",
+      "type": "D Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/124",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_124_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Mega Gengar ex",
+      "set": "ASC",
+      "number": "125",
+      "type": "D Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/125",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_125_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Team Rocket's Murkrow",
+      "set": "ASC",
+      "number": "126",
+      "type": "D Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/126",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_126_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Team Rocket's Honchkrow",
+      "set": "ASC",
+      "number": "127",
+      "type": "D Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/127",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_127_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Poochyena",
+      "set": "ASC",
+      "number": "128",
+      "type": "D Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/128",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_128_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Mightyena",
+      "set": "ASC",
+      "number": "129",
+      "type": "D Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/129",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_129_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Galarian Zigzagoon",
+      "set": "ASC",
+      "number": "130",
+      "type": "D Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/130",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_130_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Galarian Linoone",
+      "set": "ASC",
+      "number": "131",
+      "type": "D Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/131",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_131_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Galarian Obstagoon",
+      "set": "ASC",
+      "number": "132",
+      "type": "D Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/132",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_132_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Cynthia's Spiritomb",
+      "set": "ASC",
+      "number": "133",
+      "type": "D Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/133",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_133_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Scraggy",
+      "set": "ASC",
+      "number": "134",
+      "type": "D Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/134",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_134_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Mega Scrafty ex",
+      "set": "ASC",
+      "number": "135",
+      "type": "D Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/135",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_135_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "N's Zorua",
+      "set": "ASC",
+      "number": "136",
+      "type": "D Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/136",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_136_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "N's Zoroark ex",
+      "set": "ASC",
+      "number": "137",
+      "type": "D Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/137",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_137_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Vullaby",
+      "set": "ASC",
+      "number": "138",
+      "type": "D Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/138",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_138_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Mandibuzz ex",
+      "set": "ASC",
+      "number": "139",
+      "type": "D Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/139",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_139_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Pangoro",
+      "set": "ASC",
+      "number": "140",
+      "type": "D Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/140",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_140_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Hoopa",
+      "set": "ASC",
+      "number": "141",
+      "type": "D Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/141",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_141_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Fezandipiti ex",
+      "set": "ASC",
+      "number": "142",
+      "type": "D Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/142",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_142_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Pecharunt",
+      "set": "ASC",
+      "number": "143",
+      "type": "D Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/143",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_143_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Mawile",
+      "set": "ASC",
+      "number": "144",
+      "type": "M Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/144",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_144_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Registeel ex",
+      "set": "ASC",
+      "number": "145",
+      "type": "M Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/145",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_145_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Pawniard",
+      "set": "ASC",
+      "number": "146",
+      "type": "M Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/146",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_146_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Bisharp",
+      "set": "ASC",
+      "number": "147",
+      "type": "M Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/147",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_147_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Kingambit",
+      "set": "ASC",
+      "number": "148",
+      "type": "M Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/148",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_148_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Togedemaru ex",
+      "set": "ASC",
+      "number": "149",
+      "type": "M Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/149",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_149_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Dratini",
+      "set": "ASC",
+      "number": "150",
+      "type": "N Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/150",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_150_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Dragonair",
+      "set": "ASC",
+      "number": "151",
+      "type": "N Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/151",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_151_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Mega Dragonite ex",
+      "set": "ASC",
+      "number": "152",
+      "type": "N Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/152",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_152_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Rayquaza",
+      "set": "ASC",
+      "number": "153",
+      "type": "N Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/153",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_153_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "N's Reshiram",
+      "set": "ASC",
+      "number": "154",
+      "type": "N Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/154",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_154_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "N's Zekrom",
+      "set": "ASC",
+      "number": "155",
+      "type": "N Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/155",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_155_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Noibat",
+      "set": "ASC",
+      "number": "156",
+      "type": "N Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/156",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_156_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Noivern",
+      "set": "ASC",
+      "number": "157",
+      "type": "N Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/157",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_157_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Dreepy",
+      "set": "ASC",
+      "number": "158",
+      "type": "N Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/158",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_158_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Drakloak",
+      "set": "ASC",
+      "number": "159",
+      "type": "N Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/159",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_159_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Dragapult ex",
+      "set": "ASC",
+      "number": "160",
+      "type": "N Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/160",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_160_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Team Rocket's Meowth",
+      "set": "ASC",
+      "number": "161",
+      "type": "C Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/161",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_161_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Team Rocket's Kangaskhan ex",
+      "set": "ASC",
+      "number": "162",
+      "type": "C Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/162",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_162_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Larry's Dunsparce",
+      "set": "ASC",
+      "number": "163",
+      "type": "C Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/163",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_163_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Larry's Dudunsparce ex",
+      "set": "ASC",
+      "number": "164",
+      "type": "C Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/164",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_164_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Skitty",
+      "set": "ASC",
+      "number": "165",
+      "type": "C Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/165",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_165_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Delcatty",
+      "set": "ASC",
+      "number": "166",
+      "type": "C Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/166",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_166_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Zangoose ex",
+      "set": "ASC",
+      "number": "167",
+      "type": "C Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/167",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_167_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Larry's Starly",
+      "set": "ASC",
+      "number": "168",
+      "type": "C Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/168",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_168_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Larry's Staravia",
+      "set": "ASC",
+      "number": "169",
+      "type": "C Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/169",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_169_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Larry's Staraptor",
+      "set": "ASC",
+      "number": "170",
+      "type": "C Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/170",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_170_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Fan Rotom",
+      "set": "ASC",
+      "number": "171",
+      "type": "C Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/171",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_171_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Mega Audino ex",
+      "set": "ASC",
+      "number": "172",
+      "type": "C Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/172",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_172_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Larry's Rufflet",
+      "set": "ASC",
+      "number": "173",
+      "type": "C Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/173",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_173_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Larry's Braviary",
+      "set": "ASC",
+      "number": "174",
+      "type": "C Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/174",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_174_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Larry's Komala",
+      "set": "ASC",
+      "number": "175",
+      "type": "C Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/175",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_175_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Drampa",
+      "set": "ASC",
+      "number": "176",
+      "type": "C Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/176",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_176_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Hop's Cramorant",
+      "set": "ASC",
+      "number": "177",
+      "type": "C Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/177",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_177_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Terapagos",
+      "set": "ASC",
+      "number": "178",
+      "type": "C Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/178",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_178_R_EN_LG.png",
+      "rarity": "Rare"
+    },
+    {
+      "name": "Terapagos ex",
+      "set": "ASC",
+      "number": "179",
+      "type": "C Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/179",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_179_R_EN_LG.png",
+      "rarity": "Double Rare"
+    },
+    {
+      "name": "Acerola's Mischief",
+      "set": "ASC",
+      "number": "180",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/180",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_180_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Air Balloon",
+      "set": "ASC",
+      "number": "181",
+      "type": "Tool",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/181",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_181_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Anthea & Concordia",
+      "set": "ASC",
+      "number": "182",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/182",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_182_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Boss's Orders",
+      "set": "ASC",
+      "number": "183",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/183",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_183_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Buddy-Buddy Poffin",
+      "set": "ASC",
+      "number": "184",
+      "type": "Item",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/184",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_184_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Canari",
+      "set": "ASC",
+      "number": "185",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/185",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_185_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Counter Gain",
+      "set": "ASC",
+      "number": "186",
+      "type": "Tool",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/186",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_186_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Fighting Gong",
+      "set": "ASC",
+      "number": "187",
+      "type": "Item",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/187",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_187_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Forest of Vitality",
+      "set": "ASC",
+      "number": "188",
+      "type": "Stadium",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/188",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_188_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Glass Trumpet",
+      "set": "ASC",
+      "number": "189",
+      "type": "Item",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/189",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_189_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Iris's Fighting Spirit",
+      "set": "ASC",
+      "number": "190",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/190",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_190_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Light Ball",
+      "set": "ASC",
+      "number": "191",
+      "type": "Tool",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/191",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_191_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Lillie's Determination",
+      "set": "ASC",
+      "number": "192",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/192",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_192_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Mega Signal",
+      "set": "ASC",
+      "number": "193",
+      "type": "Item",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/193",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_193_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Mystery Garden",
+      "set": "ASC",
+      "number": "194",
+      "type": "Stadium",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/194",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_194_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "N's PP Up",
+      "set": "ASC",
+      "number": "195",
+      "type": "Item",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/195",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_195_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Night Stretcher",
+      "set": "ASC",
+      "number": "196",
+      "type": "Item",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/196",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_196_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Nighttime Mine",
+      "set": "ASC",
+      "number": "197",
+      "type": "Stadium",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/197",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_197_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Poké Pad",
+      "set": "ASC",
+      "number": "198",
+      "type": "Item",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/198",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_198_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Premium Power Pro",
+      "set": "ASC",
+      "number": "199",
+      "type": "Item",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/199",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_199_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Surfer",
+      "set": "ASC",
+      "number": "200",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/200",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_200_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Team Rocket's Archer",
+      "set": "ASC",
+      "number": "201",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/201",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_201_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Team Rocket's Ariana",
+      "set": "ASC",
+      "number": "202",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/202",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_202_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Team Rocket's Factory",
+      "set": "ASC",
+      "number": "203",
+      "type": "Stadium",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/203",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_203_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Team Rocket's Giovanni",
+      "set": "ASC",
+      "number": "204",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/204",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_204_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Team Rocket's Great Ball",
+      "set": "ASC",
+      "number": "205",
+      "type": "Item",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/205",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_205_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Team Rocket's Hypnotizer",
+      "set": "ASC",
+      "number": "206",
+      "type": "Tool",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/206",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_206_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Team Rocket's Petrel",
+      "set": "ASC",
+      "number": "207",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/207",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_207_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Team Rocket's Proton",
+      "set": "ASC",
+      "number": "208",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/208",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_208_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Team Rocket's Transceiver",
+      "set": "ASC",
+      "number": "209",
+      "type": "Item",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/209",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_209_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Team Rocket's Watchtower",
+      "set": "ASC",
+      "number": "210",
+      "type": "Stadium",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/210",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_210_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Thick Scale",
+      "set": "ASC",
+      "number": "211",
+      "type": "Tool",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/211",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_211_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Tool Scrapper",
+      "set": "ASC",
+      "number": "212",
+      "type": "Item",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/212",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_212_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Ultra Ball",
+      "set": "ASC",
+      "number": "213",
+      "type": "Item",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/213",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_213_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Urbain",
+      "set": "ASC",
+      "number": "214",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/214",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_214_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Waitress",
+      "set": "ASC",
+      "number": "215",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/215",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_215_R_EN_LG.png",
+      "rarity": "Common"
+    },
+    {
+      "name": "Prism Energy",
+      "set": "ASC",
+      "number": "216",
+      "type": "Special Energy",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/216",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_216_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Team Rocket's Energy",
+      "set": "ASC",
+      "number": "217",
+      "type": "Special Energy",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/217",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_217_R_EN_LG.png",
+      "rarity": "Uncommon"
+    },
+    {
+      "name": "Erika's Tangela",
+      "set": "ASC",
+      "number": "218",
+      "type": "G Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/218",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_218_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Beautifly",
+      "set": "ASC",
+      "number": "219",
+      "type": "G Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/219",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_219_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Dustox",
+      "set": "ASC",
+      "number": "220",
+      "type": "G Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/220",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_220_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Budew",
+      "set": "ASC",
+      "number": "221",
+      "type": "G Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/221",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_221_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Ethan's Magcargo",
+      "set": "ASC",
+      "number": "222",
+      "type": "R Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/222",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_222_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Numel",
+      "set": "ASC",
+      "number": "223",
+      "type": "R Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/223",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_223_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Salazzle",
+      "set": "ASC",
+      "number": "224",
+      "type": "R Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/224",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_224_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Scorbunny",
+      "set": "ASC",
+      "number": "225",
+      "type": "R Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/225",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_225_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Psyduck",
+      "set": "ASC",
+      "number": "226",
+      "type": "W Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/226",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_226_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Snorunt",
+      "set": "ASC",
+      "number": "227",
+      "type": "W Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/227",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_227_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Weavile",
+      "set": "ASC",
+      "number": "228",
+      "type": "W Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/228",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_228_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Heliolisk",
+      "set": "ASC",
+      "number": "229",
+      "type": "L Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/229",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_229_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Vikavolt",
+      "set": "ASC",
+      "number": "230",
+      "type": "L Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/230",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_230_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Iono's Wattrel",
+      "set": "ASC",
+      "number": "231",
+      "type": "L Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/231",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_231_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Marill",
+      "set": "ASC",
+      "number": "232",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/232",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_232_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Misdreavus",
+      "set": "ASC",
+      "number": "233",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/233",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_233_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Banette",
+      "set": "ASC",
+      "number": "234",
+      "type": "P Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/234",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_234_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Togekiss",
+      "set": "ASC",
+      "number": "235",
+      "type": "P Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/235",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_235_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Slurpuff",
+      "set": "ASC",
+      "number": "236",
+      "type": "P Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/236",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_236_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Hop's Trevenant",
+      "set": "ASC",
+      "number": "237",
+      "type": "P Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/237",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_237_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Team Rocket's Mimikyu",
+      "set": "ASC",
+      "number": "238",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/238",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_238_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Team Rocket's Dugtrio",
+      "set": "ASC",
+      "number": "239",
+      "type": "F Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/239",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_239_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Hitmontop",
+      "set": "ASC",
+      "number": "240",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/240",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_240_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Medicham",
+      "set": "ASC",
+      "number": "241",
+      "type": "F Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/241",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_241_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Carbink",
+      "set": "ASC",
+      "number": "242",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/242",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_242_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Mightyena",
+      "set": "ASC",
+      "number": "243",
+      "type": "D Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/243",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_243_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Cynthia's Spiritomb",
+      "set": "ASC",
+      "number": "244",
+      "type": "D Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/244",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_244_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Galarian Obstagoon",
+      "set": "ASC",
+      "number": "245",
+      "type": "D Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/245",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_245_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Mawile",
+      "set": "ASC",
+      "number": "246",
+      "type": "M Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/246",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_246_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Dreepy",
+      "set": "ASC",
+      "number": "247",
+      "type": "N Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/247",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_247_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Drakloak",
+      "set": "ASC",
+      "number": "248",
+      "type": "N Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/248",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_248_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Larry's Staraptor",
+      "set": "ASC",
+      "number": "249",
+      "type": "C Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/249",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_249_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Fan Rotom",
+      "set": "ASC",
+      "number": "250",
+      "type": "C Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/250",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_250_R_EN_LG.png",
+      "rarity": "Art Rare"
+    },
+    {
+      "name": "Sprigatito ex",
+      "set": "ASC",
+      "number": "251",
+      "type": "G Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/251",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_251_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Stunfisk ex",
+      "set": "ASC",
+      "number": "252",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/252",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_252_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Mega Audino ex",
+      "set": "ASC",
+      "number": "253",
+      "type": "C Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/253",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_253_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Anthea & Concordia",
+      "set": "ASC",
+      "number": "254",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/254",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_254_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Black Belt's Training",
+      "set": "ASC",
+      "number": "255",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/255",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_255_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Boss's Orders",
+      "set": "ASC",
+      "number": "256",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/256",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_256_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Canari",
+      "set": "ASC",
+      "number": "257",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/257",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_257_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Cheren",
+      "set": "ASC",
+      "number": "258",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/258",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_258_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Counter Gain",
+      "set": "ASC",
+      "number": "259",
+      "type": "Tool",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/259",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_259_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Glass Trumpet",
+      "set": "ASC",
+      "number": "260",
+      "type": "Item",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/260",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_260_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Jamming Tower",
+      "set": "ASC",
+      "number": "261",
+      "type": "Stadium",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/261",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_261_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "N's PP Up",
+      "set": "ASC",
+      "number": "262",
+      "type": "Item",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/262",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_262_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Team Rocket's Transceiver",
+      "set": "ASC",
+      "number": "263",
+      "type": "Item",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/263",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_263_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Ultra Ball",
+      "set": "ASC",
+      "number": "264",
+      "type": "Item",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/264",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_264_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Mega Froslass ex",
+      "set": "ASC",
+      "number": "265",
+      "type": "W Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/265",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_265_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Mega Eelektross ex",
+      "set": "ASC",
+      "number": "266",
+      "type": "L Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/266",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_266_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Mega Diancie ex",
+      "set": "ASC",
+      "number": "267",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/267",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_267_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Mega Hawlucha ex",
+      "set": "ASC",
+      "number": "268",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/268",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_268_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Mega Gengar ex",
+      "set": "ASC",
+      "number": "269",
+      "type": "D Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/269",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_269_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Mega Scrafty ex",
+      "set": "ASC",
+      "number": "270",
+      "type": "D Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/270",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_270_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Mega Dragonite ex",
+      "set": "ASC",
+      "number": "271",
+      "type": "N Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/271",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_271_R_EN_LG.png",
+      "rarity": "Ultra Rare"
+    },
+    {
+      "name": "Mega Meganium ex",
+      "set": "ASC",
+      "number": "272",
+      "type": "G Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/272",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_272_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Mega Emboar ex",
+      "set": "ASC",
+      "number": "273",
+      "type": "R Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/273",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_273_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Mega Feraligatr ex",
+      "set": "ASC",
+      "number": "274",
+      "type": "W Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/274",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_274_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Mega Froslass ex",
+      "set": "ASC",
+      "number": "275",
+      "type": "W Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/275",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_275_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Pikachu ex",
+      "set": "ASC",
+      "number": "276",
+      "type": "L Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/276",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_276_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Pikachu ex",
+      "set": "ASC",
+      "number": "277",
+      "type": "L Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/277",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_277_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Mega Eelektross ex",
+      "set": "ASC",
+      "number": "278",
+      "type": "L Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/278",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_278_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Iono's Bellibolt ex",
+      "set": "ASC",
+      "number": "279",
+      "type": "L Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/279",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_279_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Lillie's Clefairy ex",
+      "set": "ASC",
+      "number": "280",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/280",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_280_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Team Rocket's Mewtwo ex",
+      "set": "ASC",
+      "number": "281",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/281",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_281_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Mega Diancie ex",
+      "set": "ASC",
+      "number": "282",
+      "type": "P Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/282",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_282_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Mega Hawlucha ex",
+      "set": "ASC",
+      "number": "283",
+      "type": "F Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/283",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_283_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Mega Gengar ex",
+      "set": "ASC",
+      "number": "284",
+      "type": "D Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/284",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_284_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Mega Scrafty ex",
+      "set": "ASC",
+      "number": "285",
+      "type": "D Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/285",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_285_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "N's Zoroark ex",
+      "set": "ASC",
+      "number": "286",
+      "type": "D Stage 1",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/286",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_286_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Marnie's Grimmsnarl ex",
+      "set": "ASC",
+      "number": "287",
+      "type": "D Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/287",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_287_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Fezandipiti ex",
+      "set": "ASC",
+      "number": "288",
+      "type": "D Basic",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/288",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_288_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Steven's Metagross ex",
+      "set": "ASC",
+      "number": "289",
+      "type": "M Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/289",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_289_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Mega Dragonite ex",
+      "set": "ASC",
+      "number": "290",
+      "type": "N Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/290",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_290_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Canari",
+      "set": "ASC",
+      "number": "291",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/291",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_291_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Iris's Fighting Spirit",
+      "set": "ASC",
+      "number": "292",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/292",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_292_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Surfer",
+      "set": "ASC",
+      "number": "293",
+      "type": "Supporter",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/293",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_293_R_EN_LG.png",
+      "rarity": "Special Art Rare"
+    },
+    {
+      "name": "Mega Charizard Y ex",
+      "set": "ASC",
+      "number": "294",
+      "type": "R Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/294",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_294_R_EN_LG.png",
+      "rarity": "Secret Rare"
+    },
+    {
+      "name": "Mega Dragonite ex",
+      "set": "ASC",
+      "number": "295",
+      "type": "N Stage 2",
+      "card_url": "https://limitlesstcg.com/cards/en/ASC/295",
+      "image_url": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_295_R_EN_LG.png",
+      "rarity": "Secret Rare"
+    }
+  ]
+}
