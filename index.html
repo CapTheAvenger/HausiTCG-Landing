@@ -1216,6 +1216,23 @@
                 font-size: 1.8em;
             }
 
+            /* Controls auf Mobile optimieren */
+            .controls {
+                padding: 15px;
+            }
+
+            /* Control-Row: Vertical Stacking auf Mobile */
+            .control-row {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            /* Control-Group: Volle Breite auf Mobile */
+            .control-group {
+                min-width: 100%;
+                width: 100%;
+            }
+
             /* Datum-Filter für Mobile optimieren */
             .controls input[type="date"],
             .controls input[type="text"],
@@ -1223,7 +1240,8 @@
             .controls button {
                 min-height: 44px; /* Touch-Target Mindestgröße */
                 font-size: 16px; /* Verhindert Auto-Zoom auf iOS */
-                padding: 10px;
+                padding: 12px;
+                width: 100%;
             }
 
             /* Grid-Layout für Datum-Filter auf Mobile: Stacked */
