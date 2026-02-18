@@ -64,8 +64,5 @@ ace_spec_*.html
 inspect_*.py
 quick_test.py
 
-# CSV Mapping Files (optional - könnte auch committed werden)
-pokemon_sets_mapping.csv
-
 # Config Files
 _config.yml
