@@ -836,6 +836,26 @@
                 padding: 10px;
             }
 
+            /* Mobile Compact Grid - für Screenshot ohne Scrollen */
+            .mobile-compact-grid {
+                grid-template-columns: repeat(10, 1fr) !important;
+                gap: 3px !important;
+                padding: 5px !important;
+            }
+
+            .mobile-compact-grid .compact-card {
+                aspect-ratio: 245/342;
+                border-radius: 3px;
+            }
+
+            .mobile-compact-grid .compact-badge {
+                font-size: 8px !important;
+                padding: 1px 3px !important;
+                min-width: 14px !important;
+                top: 2px;
+                right: 2px;
+            }
+
             .compact-badge {
                 font-size: 11px;
                 padding: 2px 6px;
@@ -1284,6 +1304,38 @@
                 gap: 10px;
             }
 
+            /* Dein Deck Grid - Kleinere Karten auf Mobile */
+            #cityLeagueMyDeckGrid {
+                grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)) !important;
+                gap: 8px;
+            }
+
+            /* Deck-Karten Buttons kleiner auf Mobile */
+            #cityLeagueMyDeckGrid .deck-card button {
+                font-size: 10px !important;
+                min-width: 16px !important;
+                min-height: 16px !important;
+            }
+
+            #cityLeagueMyDeckGrid .deck-card > div[style*="grid-template-columns"] {
+                grid-template-columns: 16px 1fr 16px !important;
+                gap: 2px !important;
+                bottom: 3px !important;
+            }
+
+            #cityLeagueMyDeckGrid .deck-card .card-max-count {
+                font-size: 14px !important;
+                width: 24px !important;
+                height: 24px !important;
+            }
+
+            /* Stats über Buttons kompakter */
+            #cityLeagueMyDeckGrid .deck-card div[style*="bottom: 30px"] {
+                font-size: 7px !important;
+                padding: 1px 2px !important;
+                bottom: 22px !important;
+            }
+
             /* Metadata und Stats kompakter */
             .metadata {
                 padding: 10px;
@@ -1334,6 +1386,42 @@
             #cityLeagueDeckOverview,
             #cityLeagueDeckSearchResults {
                 grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
+            }
+
+            /* Noch kleinere Deck-Karten auf kleinen Phones */
+            #cityLeagueMyDeckGrid {
+                grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)) !important;
+                gap: 5px;
+            }
+        }
+
+        /* Grid-Ansicht: Kompakte Darstellung für Screenshots */
+        @media (max-width: 768px) {
+            .grid-view-active #cityLeagueDeckOverview {
+                grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)) !important;
+                gap: 5px;
+            }
+
+            .grid-view-active #cityLeagueDeckOverview .deck-card img {
+                max-height: 84px;
+            }
+
+            .grid-view-active #cityLeagueDeckOverview .deck-card {
+                font-size: 8px;
+            }
+
+            .grid-view-active #cityLeagueDeckOverview .card-max-count,
+            .grid-view-active #cityLeagueDeckOverview .card-in-deck-count {
+                font-size: 10px !important;
+                width: 20px !important;
+                height: 20px !important;
+            }
+
+            .grid-view-active #cityLeagueDeckOverview button {
+                font-size: 8px !important;
+                padding: 2px 4px !important;
+                min-width: 14px !important;
+                min-height: 14px !important;
             }
         }
     </style>
@@ -3969,6 +4057,7 @@
             const modal = document.getElementById('imageViewModal');
             const grid = document.getElementById('compactCardGrid');
             const allCards = window.currentCityLeagueDeckCards || [];
+            const allCardsDb = window.allCardsDatabase || [];
             
             // Build a map of card data keyed by name
             const cardDataMap = {};
@@ -3978,17 +4067,42 @@
             
             // Convert deck to array with card data
             const deckCards = [];
-            for (const [cardName, count] of Object.entries(deck)) {
+            for (const [deckKey, count] of Object.entries(deck)) {
                 if (count <= 0) continue;
                 
-                const cardData = cardDataMap[cardName];
+                // Extract card name from deckKey (handle "CardName (SET NUM)" format)
+                const baseNameMatch = deckKey.match(/^(.+?)\s*\(/);
+                const cardName = baseNameMatch ? baseNameMatch[1] : deckKey;
+                
+                let cardData = cardDataMap[cardName] || cardDataMap[deckKey];
+                
+                // If not found, try to find in allCardsDatabase
+                if (!cardData) {
+                    const setMatch = deckKey.match(/\(([A-Z0-9]+)\s+([A-Z0-9]+)\)$/);
+                    if (setMatch) {
+                        const exactCard = allCardsDb.find(c => c.name === cardName);
+                        if (exactCard) {
+                            const imageUrl = buildCardImageUrl(setMatch[1], setMatch[2], exactCard.rarity || 'Common');
+                            cardData = {
+                                card_name: exactCard.name,
+                                image_url: imageUrl,
+                                type: exactCard.type || 'Unknown',
+                                set_code: setMatch[1]
+                            };
+                        }
+                    }
+                }
+                
                 if (!cardData) continue;
                 
-                deckCards.push({...cardData, deck_count_in_selected: count});
+                deckCards.push({...cardData, deck_count_in_selected: count, card_name: cardName});
             }
             
             // Sort cards using the standard sorting function
             const sortedCards = sortCardsByType(deckCards);
+            
+            // Check if mobile device
+            const isMobile = window.innerWidth <= 768;
             
             // Build grid HTML
             grid.innerHTML = sortedCards.map(card => {
@@ -4019,6 +4133,13 @@
                     `;
                 }
             }).join('');
+            
+            // Add mobile-specific class for compact layout
+            if (isMobile) {
+                grid.classList.add('mobile-compact-grid');
+            } else {
+                grid.classList.remove('mobile-compact-grid');
+            }
             
             modal.classList.add('show');
         }
