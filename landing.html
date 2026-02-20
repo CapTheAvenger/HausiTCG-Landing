@@ -2045,10 +2045,56 @@
             });
         }
 
-        function getPreferredVersionForCard(cardName) {
+        // Get international prints for a specific card (set + number)
+        function getInternationalPrintsForCard(set, number) {
+            const allCardsDb = window.allCardsDatabase || [];
+            if (allCardsDb.length === 0) {
+                console.warn('[getInternationalPrintsForCard] Database not loaded yet');
+                return [];
+            }
+            
+            // Find the base card
+            const baseCard = allCardsDb.find(c => c.set === set && c.number === number);
+            if (!baseCard) {
+                console.warn(`[getInternationalPrintsForCard] Card not found: ${set} ${number}`);
+                return [];
+            }
+            
+            if (!baseCard.international_prints) {
+                console.log(`[getInternationalPrintsForCard] No international prints for ${set} ${number}, returning base card only`);
+                return [baseCard];
+            }
+            
+            // Parse "ASC-112,MEG-76,MEP-10" -> [{set: "ASC", number: "112"}, ...]
+            const printRefs = baseCard.international_prints.split(',').map(p => {
+                const [s, n] = p.trim().split('-');
+                return {set: s, number: n};
+            });
+            
+            // Find all these cards in database
+            const intPrintCards = printRefs.map(ref => 
+                allCardsDb.find(c => c.set === ref.set && c.number === ref.number)
+            ).filter(c => c); // Remove nulls
+            
+            console.log(`[getInternationalPrintsForCard] Found ${intPrintCards.length} international prints for ${baseCard.name} (${set} ${number}):`, 
+                intPrintCards.map(c => `${c.set} ${c.number} (${c.rarity || 'NO RARITY'})`).join(', ')
+            );
+            
+            return intPrintCards;
+        }
+
+        function getPreferredVersionForCard(cardName, originalSet = null, originalNumber = null) {
             const pref = getRarityPreference(cardName);
             const globalPref = getGlobalRarityPreference();
-            const versions = getEnglishCardVersions(cardName);
+            
+            // If originalSet and originalNumber provided, use international prints only
+            let versions;
+            if (originalSet && originalNumber) {
+                versions = getInternationalPrintsForCard(originalSet, originalNumber);
+                console.log(`[getPreferredVersionForCard] Using international prints for ${cardName} (${originalSet} ${originalNumber})`);
+            } else {
+                versions = getEnglishCardVersions(cardName);
+            }
             
             // DEBUG: Log when versions are not found
             if (versions.length === 0) {
@@ -3580,8 +3626,18 @@
                 window.cityLeagueDeckOrder = [];
             }
 
-            // Apply saved rarity preference when no version is specified
-            if ((!setCode || !setNumber) && cardName) {
+            const globalPref = getGlobalRarityPreference();
+            
+            // If set/number provided AND global preference is max/min, find preferred version from international prints
+            if (setCode && setNumber && (globalPref === 'max' || globalPref === 'min')) {
+                const preferredVersion = getPreferredVersionForCard(cardName, setCode, setNumber);
+                if (preferredVersion) {
+                    setCode = preferredVersion.set;
+                    setNumber = preferredVersion.number;
+                }
+            }
+            // If no set/number provided, try to find preferred version (searches all cards with same name)
+            else if ((!setCode || !setNumber) && cardName) {
                 const preferredVersion = getPreferredVersionForCard(cardName);
                 if (preferredVersion) {
                     setCode = preferredVersion.set;
@@ -4756,22 +4812,9 @@
                 // Add all cards to deck
                 cardsToAdd.forEach(card => {
                     for (let i = 0; i < card.addCount; i++) {
-                        const globalPref = getGlobalRarityPreference();
-                        const preferredVersion = getPreferredVersionForCard(card.card_name);
-                        
-                        // DEBUG: Log when using fallback set/number
-                        if (globalPref !== 'auto' && !preferredVersion) {
-                            console.warn(`[autoComplete] No preferred version found for "${card.card_name}", falling back to City League data: ${card.set_code} ${card.set_number}`);
-                        }
-                        
-                        if (globalPref === 'auto') {
-                            addCardToDeck('cityLeague', card.card_name);
-                        } else if (preferredVersion) {
-                            addCardToDeck('cityLeague', card.card_name, preferredVersion.set, preferredVersion.number);
-                        } else {
-                            // FALLBACK: Use set/number from City League data (may be outdated/wrong!)
-                            addCardToDeck('cityLeague', card.card_name, card.set_code, card.set_number);
-                        }
+                        // Pass original set_code and set_number from City League data
+                        // addCardToDeck will handle finding the preferred version
+                        addCardToDeck('cityLeague', card.card_name, card.set_code, card.set_number);
                     }
                 });
                 console.log('[autoComplete] Deck completed!');
