@@ -2,22 +2,22 @@
 chcp 65001 >nul
 cls
 echo ============================================================
-echo            DECK VIEWER - HTML Viewer öffnen
+echo            LANDING PAGE - HTML Viewer öffnen
 echo ============================================================
 echo.
-echo Öffnet den Deck Viewer im Browser...
+echo Öffnet die Landing Page im Browser...
 echo.
 
-REM Öffne den HTML Viewer im Standard-Browser
-start "" "deck_viewer.html"
+REM Öffne die Landing Page im Standard-Browser
+start "" "landing.html"
 
 echo.
-echo Deck Viewer wurde im Browser geöffnet!
+echo Landing Page wurde im Browser geöffnet!
 echo.
-echo Du kannst dort die CSV-Dateien aus dem "data\" Ordner laden:
-echo   - city_league_archetypes_comparison.html
-echo   - limitless_online_decks_comparison.html
-echo   - unified_card_data.csv
+echo Alle Funktionen sind jetzt in landing.html integriert:
+echo   - Deck Builder
+echo   - City League Analysis
+echo   - Card Database
 echo.
 echo ============================================================
 timeout /t 3 >nul

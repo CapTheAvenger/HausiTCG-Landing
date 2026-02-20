@@ -18,6 +18,19 @@ from datetime import datetime
 from html.parser import HTMLParser
 from typing import List, Dict, Optional, Tuple, Any
 
+# Fix Windows console encoding for Unicode characters (✓, ×, •, etc.)
+if sys.platform == 'win32':
+    if hasattr(sys.stdout, 'reconfigure'):
+        try:
+            sys.stdout.reconfigure(encoding='utf-8')
+        except Exception:
+            pass
+    if hasattr(sys.stderr, 'reconfigure'):
+        try:
+            sys.stderr.reconfigure(encoding='utf-8')
+        except Exception:
+            pass
+
 # Default settings
 DEFAULT_SETTINGS: Dict[str, Any] = {
     "game": "POKEMON",
@@ -782,10 +795,18 @@ def create_comparison_report(old_stats: Dict[str, Any], new_stats: Dict[str, Any
     
     # Create HTML report (data/ folder)
     try:
+        print(f"[DEBUG] Creating HTML report: {comparison_html}")
+        print(f"[DEBUG] comparison_data length: {len(comparison_data)}")
+        print(f"[DEBUG] old_stats length: {len(old_stats)}")
+        print(f"[DEBUG] new_stats length: {len(new_stats)}")
+        print(f"[DEBUG] matchup_data: {type(matchup_data)}, {'has data' if matchup_data else 'is None/empty'}")
+        print(f"[DEBUG] deck_lookup: {type(deck_lookup)}, {'has data' if deck_lookup else 'is None/empty'}")
         create_html_report(comparison_data, comparison_html, old_stats, new_stats, settings, matchup_data, deck_lookup)
         print(f"HTML comparison report saved to: {comparison_html}")
     except Exception as e:
         print(f"Error creating HTML report (data/): {e}")
+        import traceback
+        traceback.print_exc()
     
     # Create HTML report (local - neben EXE)
     try:
@@ -949,6 +970,60 @@ def create_html_report(comparison_data: List[Dict[str, Any]], output_file: str,
     rank_fallers = [d for d in comparison_data if d['rank_change'] < 0 and isinstance(d['new_rank'], int) and d['new_rank'] <= 30]
     rank_fallers.sort(key=lambda x: x['rank_change'])
     
+    # Pre-calculate complex HTML sections to avoid nested f-strings
+    top3_by_count_html = ""
+    if new_stats:
+        try:
+            decks_by_count = sorted(
+                [{'deck_name': k, 'count': int(v.get('count', '0').replace(',', ''))} 
+                 for k, v in new_stats.items()],
+                key=lambda x: x['count'], 
+                reverse=True
+            )[:3]
+            top3_by_count_html = '<br>'.join(
+                f'<span style="color: #3498db;">{d["deck_name"]}</span> ({d["count"]})'
+                for d in decks_by_count
+            )
+        except Exception as e:
+            print(f"Warning: Could not calculate top 3 by count: {e}")
+            top3_by_count_html = "N/A"
+    else:
+        top3_by_count_html = "N/A"
+    
+    top_by_winrate_html = "N/A"
+    if new_stats:
+        try:
+            max_count = max(int(v.get('count', '0').replace(',', '')) for v in new_stats.values())
+            min_count_threshold = max_count * 0.1
+            
+            decks_with_winrate = [
+                {'deck_name': k, 
+                 'count': int(v.get('count', '0').replace(',', '')),
+                 'win_rate_numeric': v.get('win_rate_numeric', 0)}
+                for k, v in new_stats.items()
+                if int(v.get('count', '0').replace(',', '')) >= min_count_threshold
+            ]
+            
+            if decks_with_winrate:
+                decks_with_winrate.sort(key=lambda x: x['win_rate_numeric'], reverse=True)
+                top_deck = decks_with_winrate[0]
+                top_by_winrate_html = f'<span style="color: #27ae60;">{top_deck["deck_name"]}</span> ({top_deck["win_rate_numeric"]:.1f}%)'
+        except Exception as e:
+            print(f"Warning: Could not calculate top by WR: {e}")
+    
+    top10_changes_html = ""
+    if entered_top10 or left_top10:
+        changes = []
+        for d in list(entered_top10)[:3]:
+            wr = deck_lookup.get(d, {}).get('win_rate_numeric', 0) if deck_lookup else 0
+            changes.append(f'✅ {d} ({wr:.1f}%)')
+        for d in list(left_top10)[:3]:
+            wr = deck_lookup.get(d, {}).get('win_rate_numeric', 0) if deck_lookup else 0
+            changes.append(f'❌ {d} ({wr:.1f}%)')
+        top10_changes_html = '<br>'.join(changes)
+    else:
+        top10_changes_html = 'No changes'
+    
     html_content = f"""<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -1096,15 +1171,15 @@ def create_html_report(comparison_data: List[Dict[str, Any]], output_file: str,
 
         <div class="stats-grid">
             <div class="stat-card">
-                <h3>� Archetype Overview</h3>
+                <h3>📊 Archetype Overview</h3>
                 <div class="value">{len([d for d in new_stats.values()])}</div>
-                <p style="font-size: 0.9em; margin: 10px 0;"><strong>Top 3 by Count:</strong><br>{'<br>'.join([f'<span style="color: #3498db;">{d["deck_name"]}</span> ({d["count"]})' for d in sorted([{{'deck_name': k, 'count': int(v.get('count', '0').replace(',', ''))}} for k, v in new_stats.items()], key=lambda x: x['count'], reverse=True)[:3]])}</p>
-                <p style="font-size: 0.9em; margin: 10px 0;"><strong>Top by Win Rate (≥10% of #1 games):</strong><br>{{'<br>'.join([f'<span style="color: #27ae60;">{d["deck_name"]}</span> ({d["win_rate_numeric"]:.1f}%)' for d in sorted([{{'deck_name': k, 'count': int(v.get('count', '0').replace(',', '')), 'win_rate_numeric': v.get('win_rate_numeric', 0)}} for k, v in new_stats.items()], key=lambda x: (x['count'] >= max([int(vv.get('count', '0').replace(',', '')) for vv in new_stats.values()]) * 0.1, x['win_rate_numeric']), reverse=True)[:1]]) if new_stats else 'N/A'}}</p>
+                <p style="font-size: 0.9em; margin: 10px 0;"><strong>Top 3 by Count:</strong><br>{top3_by_count_html}</p>
+                <p style="font-size: 0.9em; margin: 10px 0;"><strong>Top by Win Rate (≥10% of #1 games):</strong><br>{top_by_winrate_html}</p>
             </div>
             <div class="stat-card">
-                <h3>� Top 10 Changes</h3>
+                <h3>🔄 Top 10 Changes</h3>
                 <div class="value">{len(entered_top10) + len(left_top10)}</div>
-                <p style="font-size: 0.85em;">{''.join([f'✅ {d} ({deck_lookup.get(d, dict()).get("win_rate_numeric", 0):.1f}%)<br>' for d in list(entered_top10)[:3]]) + ''.join([f'❌ {d} ({deck_lookup.get(d, dict()).get("win_rate_numeric", 0):.1f}%)<br>' for d in list(left_top10)[:3]]) if (entered_top10 or left_top10) else 'No changes'}</p>
+                <p style="font-size: 0.85em;">{top10_changes_html}</p>
             </div>
             <div class="stat-card">
                 <h3>🎴 Meta</h3>

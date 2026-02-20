@@ -8,9 +8,9 @@ if %errorlevel%==0 (
   pause
   exit /b 1
 )
-tasklist /FI "IMAGENAME eq unified_card_scraper.exe" | find /I "unified_card_scraper.exe" >nul
+tasklist /FI "IMAGENAME eq current_meta_analysis_scraper.exe" | find /I "current_meta_analysis_scraper.exe" >nul
 if %errorlevel%==0 (
-  echo [ERROR] unified_card_scraper.exe is still running. Please wait and try again.
+  echo [ERROR] current_meta_analysis_scraper.exe is still running. Please wait and try again.
   pause
   exit /b 1
 )

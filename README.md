@@ -7,15 +7,11 @@ Komplettes Pokemon TCG Scraping & Deck Analysis System mit HTML Comparison Repor
 ```
 Unified Scraper TCG/
 ├── dist/                         # 🎯 Fertige Executables (EXE + Settings)
-│   ├── city_league_archetype_scraper/
-│   │   ├── city_league_archetype_scraper.exe
-│   │   └── city_league_archetype_settings.json
-│   ├── limitless_online_scraper/
-│   │   ├── limitless_online_scraper.exe
-│   │   └── limitless_online_settings.json
-│   └── unified_card_scraper/
-│       ├── unified_card_scraper.exe
-│       └── unified_card_settings.json
+│   ├── city_league_archetype_scraper.exe
+│   ├── limitless_online_scraper.exe
+│   ├── tournament_scraper_JH.exe
+│   ├── city_league_analysis_scraper.exe
+│   └── current_meta_analysis_scraper.exe
 ├── data/                         # 📊 Generierte Daten (CSV + HTML)
 │   ├── city_league_archetypes.csv
 │   ├── city_league_archetypes_comparison.csv
@@ -25,19 +21,20 @@ Unified Scraper TCG/
 │   ├── limitless_online_decks_comparison.csv
 │   ├── limitless_online_decks_comparison.html ✨
 │   ├── limitless_online_decks_matchups.csv
-│   ├── unified_card_data.csv
+│   ├── current_meta_card_data.csv
 │   ├── all_cards_database.csv
+│   ├── japanese_cards_database.csv
 │   └── archive/                  # Alte Daten (nach RESET_STATS.bat)
-├── web/                          # 🌐 Web Interface
-│   └── deck_viewer.html
+├── landing.html                  # 🌐 Main Web Interface (Deck Builder + Analysis)
+├── index.html                    # 🏠 Index Page
 ├── scripts/                      # 🐍 Python Source Code
 │   ├── city_league_archetype_scraper.py
 │   ├── limitless_online_scraper.py
-│   ├── unified_card_scraper.py
+│   ├── current_meta_analysis_scraper.py
 │   └── card_type_lookup.py
 ├── RUN_ALL_SCRAPERS.bat          # 🚀 Startet alle Scraper
 ├── RESET_STATS.bat               # 🔄 Reset für neues Meta
-└── OPEN_VIEWER.bat               # 🌐 Öffnet Deck Viewer
+└── OPEN_VIEWER.bat               # 🌐 Öffnet Landing Page
 
 ```
 
@@ -45,10 +42,12 @@ Unified Scraper TCG/
 
 ### 1️⃣ Alle Scraper ausführen
 Doppelklick auf: **`RUN_ALL_SCRAPERS.bat`**
-- Führt alle 3 Scraper nacheinander aus:
+- Führt alle Scraper nacheinander aus:
   1. City League Archetype Scraper
   2. Limitless Online Scraper
-  3. Unified Card Scraper
+  3. Tournament Scraper JH
+  4. City League Analysis Scraper
+  5. Current Meta Analysis Scraper
 - Erstellt CSV + HTML Comparison Reports
 - Dauert ca. 10-20 Minuten
 
@@ -87,8 +86,8 @@ Doppelklick auf: **`RESET_STATS.bat`**
   - Detailed Matchup Tables (Best/Worst)
   - Meta Trend Visualization
 
-### Unified Card Scraper
-- ✅ Kombiniert alle Quellen
+### Current Meta Analysis Scraper
+- ✅ Meta Live (Limitless) + Meta Play! (Play! events)
 - ✅ Card Usage Statistics
 - ✅ Set/Number Information
 - ✅ Archetype Percentage Breakdown
@@ -97,7 +96,7 @@ Doppelklick auf: **`RESET_STATS.bat`**
 
 Alle Settings-Dateien befinden sich direkt bei den EXEs in `dist/`:
 
-**City League**: `dist/city_league_archetype_scraper/city_league_archetype_settings.json`
+**City League**: `dist/city_league_archetype_settings.json`
 ```json
 {
     "start_date": "24.01.2026",
@@ -108,15 +107,39 @@ Alle Settings-Dateien befinden sich direkt bei den EXEs in `dist/`:
 }
 ```
 
-**Limitless Online**: `dist/limitless_online_scraper/limitless_online_settings.json`
+**Limitless Online**: `dist/limitless_online_settings.json`
 ```json
 {
-    "game": "POKEMON",
-    "format": "STANDARD",
-    "rotation": "2025",
-    "set": "PFL",
-    "top_decks_for_matchup": 100,
-    "delay_between_requests": 1.5
+  "game": "POKEMON",
+  "format": "STANDARD",
+  "rotation": "2025",
+  "set": "PFL",
+  "top_decks_for_matchup": 100,
+  "delay_between_requests": 1.5
+}
+```
+
+**Current Meta Analysis**: `dist/current_meta_analysis_settings.json`
+```json
+{
+  "sources": {
+    "limitless_online": {
+      "enabled": true,
+      "max_decks": 60,
+      "max_lists_per_deck": 20,
+      "delay_between_lists": 4.0,
+      "delay_between_decks": 8.0,
+      "format_filter": "PFL"
+    },
+    "tournaments": {
+      "enabled": true,
+      "max_tournaments": 60,
+      "max_decks_per_tournament": 256,
+      "format_filter": ["Standard", "Standard (JP)"]
+    }
+  },
+  "delay_between_requests": 3.0,
+  "output_file": "current_meta_card_data.csv"
 }
 ```
 
@@ -161,7 +184,7 @@ Python Sourcecode in `scripts/`:
 - ✅ Mobile-optimiert
 
 ### Scraper
-1. **Unified Card Scraper**: Erstellt komplette Kartendatenbank mit Types
+1. **Current Meta Analysis Scraper**: Meta Live + Play! kombiniert in einer Datei
 2. **Limitless Online Scraper**: Top Decks, Win-Rates, alle Matchup-Daten
 3. **City League Archetype Scraper**: Japan Turnier-Daten und Trends
 
@@ -177,7 +200,7 @@ Alle Settings in `settings/` anpassen:
 ```bash
 # Einzelne Scraper ausführen (im scripts/ Ordner)
 cd scripts
-python unified_card_scraper.py
+python current_meta_analysis_scraper.py
 python limitless_online_scraper.py
 python city_league_archetype_scraper.py
 

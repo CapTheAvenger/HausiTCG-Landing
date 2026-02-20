@@ -10,7 +10,7 @@ Die Scraper laufen jetzt **automatisch jeden Tag um 0:00 Uhr UTC** (1:00 Uhr MEZ
 
 1. **City League Scraper** läuft
 2. **Limitless Online Scraper** läuft
-3. **Unified Card Scraper** läuft (kombiniert alle Daten)
+3. **Current Meta Analysis Scraper** läuft (Meta Live + Play!)
 4. Alle Änderungen in `data/` werden automatisch committed
 5. Änderungen werden zu GitHub gepusht
 6. Website wird automatisch auf GitHub Pages aktualisiert

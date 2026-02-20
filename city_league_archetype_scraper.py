@@ -17,6 +17,19 @@ from datetime import datetime
 from html.parser import HTMLParser
 from typing import List, Dict, Optional, Tuple, Any
 
+# Fix Windows console encoding for Unicode characters (✓, ×, •, etc.)
+if sys.platform == 'win32':
+    if hasattr(sys.stdout, 'reconfigure'):
+        try:
+            sys.stdout.reconfigure(encoding='utf-8')
+        except Exception:
+            pass
+    if hasattr(sys.stderr, 'reconfigure'):
+        try:
+            sys.stderr.reconfigure(encoding='utf-8')
+        except Exception:
+            pass
+
 # Default settings
 DEFAULT_SETTINGS: Dict[str, Any] = {
     "start_date": "24.01.2026",
@@ -734,6 +747,7 @@ def create_html_comparison(comparison_data: List[Dict[str, Any]], output_file: s
                     <th>New Count</th>
                     <th>Change</th>
                     <th>Avg Placement</th>
+                    <th>Avg Δ</th>
                 </tr>
                 {''.join(f"""
                 <tr>
@@ -741,7 +755,8 @@ def create_html_comparison(comparison_data: List[Dict[str, Any]], output_file: s
                     <td>{deck['old_count']}</td>
                     <td>{deck['new_count']}</td>
                     <td><span class="positive">+{deck['count_change']}</span></td>
-                    <td>{deck['new_avg_placement']:.2f} <span class="{'positive' if deck['avg_placement_change'] < 0 else 'negative' if deck['avg_placement_change'] > 0 else 'neutral'}">({deck['avg_placement_change']:+.2f})</span></td>
+                    <td>{deck['new_avg_placement']:.2f}</td>
+                    <td><span class="{'positive' if deck['avg_placement_change'] < 0 else 'negative' if deck['avg_placement_change'] > 0 else 'neutral'}">({deck['avg_placement_change']:+.2f})</span></td>
                 </tr>
                 """ for deck in count_increasers[:10])}
             </table>
@@ -756,6 +771,7 @@ def create_html_comparison(comparison_data: List[Dict[str, Any]], output_file: s
                     <th>New Count</th>
                     <th>Change</th>
                     <th>Avg Placement</th>
+                    <th>Avg Δ</th>
                 </tr>
                 {''.join(f"""
                 <tr>
@@ -763,7 +779,8 @@ def create_html_comparison(comparison_data: List[Dict[str, Any]], output_file: s
                     <td>{deck['old_count']}</td>
                     <td>{deck['new_count']}</td>
                     <td><span class="negative">{deck['count_change']}</span></td>
-                    <td>{deck['new_avg_placement']:.2f} <span class="{'positive' if deck['avg_placement_change'] < 0 else 'negative' if deck['avg_placement_change'] > 0 else 'neutral'}">({deck['avg_placement_change']:+.2f})</span></td>
+                    <td>{deck['new_avg_placement']:.2f}</td>
+                    <td><span class="{'positive' if deck['avg_placement_change'] < 0 else 'negative' if deck['avg_placement_change'] > 0 else 'neutral'}">({deck['avg_placement_change']:+.2f})</span></td>
                 </tr>
                 """ for deck in count_decreasers[:10])}
             </table>
@@ -827,6 +844,7 @@ def create_html_comparison(comparison_data: List[Dict[str, Any]], output_file: s
                     <th>Count</th>
                     <th>Count Δ</th>
                     <th>Avg Placement</th>
+                    <th>Avg Δ</th>
                     <th>Best</th>
                 </tr>
                 {''.join(f"""
@@ -836,7 +854,8 @@ def create_html_comparison(comparison_data: List[Dict[str, Any]], output_file: s
                     <td><span class="badge badge-{deck['trend'].lower()}">{deck['trend']}</span></td>
                     <td>{deck['new_count']}</td>
                     <td><span class="{'positive' if deck['count_change'] > 0 else 'negative' if deck['count_change'] < 0 else 'neutral'}">({deck['count_change']:+d})</span></td>
-                    <td>{deck['new_avg_placement']:.2f} <span class="{'positive' if deck['avg_placement_change'] < 0 else 'negative' if deck['avg_placement_change'] > 0 else 'neutral'}">({deck['avg_placement_change']:+.2f})</span></td>
+                    <td>{deck['new_avg_placement']:.2f}</td>
+                    <td><span class="{'positive' if deck['avg_placement_change'] < 0 else 'negative' if deck['avg_placement_change'] > 0 else 'neutral'}">({deck['avg_placement_change']:+.2f})</span></td>
                     <td>{deck['new_best'] if deck['new_best'] > 0 else '-'}</td>
                 </tr>
                 """ for deck in comparison_data[:30])}

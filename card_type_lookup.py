@@ -100,12 +100,27 @@ class CardTypeLookup:
         Returns True if successfully loaded, False otherwise.
         """
         app_path = self.get_app_path()
-        csv_file = os.path.join(app_path, 'all_cards_database.csv')
-        if not os.path.exists(csv_file):
-            print("INFO: all_cards_database.csv not found in main directory. Will use fallback text files.")
-            print(f"  Checked location: {csv_file}")
+        
+        # Try new location first: data/all_cards_database.csv (relative to workspace root)
+        data_csv = os.path.join(os.path.dirname(app_path), 'data', 'all_cards_database.csv')
+        
+        # Fallback to old location: all_cards_database.csv in app directory
+        app_csv = os.path.join(app_path, 'all_cards_database.csv')
+        
+        # Determine which file to use
+        if os.path.exists(data_csv):
+            csv_file = data_csv
+            print(f"Loading card database from data/: {csv_file}")
+        elif os.path.exists(app_csv):
+            csv_file = app_csv
+            print(f"Loading card database from app dir: {csv_file}")
+        else:
+            print("INFO: all_cards_database.csv not found. Will use fallback text files.")
+            print(f"  Checked locations:")
+            print(f"    - {data_csv}")
+            print(f"    - {app_csv}")
             return False
-        print(f"Loading card database from CSV: {csv_file}")
+        
         try:
             with open(csv_file, 'r', encoding='utf-8-sig') as f:
                 reader = csv.DictReader(f, delimiter=';')

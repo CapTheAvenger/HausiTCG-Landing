@@ -14,8 +14,10 @@ echo Copying settings files...
 copy "%base_dir%scripts\limitless_online_settings.json" "%base_dir%dist\limitless_online_scraper\" /Y >nul
 if %ERRORLEVEL%==0 (echo ✓ limitless_online_settings.json) else (echo ✗ limitless_online_settings.json)
 
-copy "%base_dir%scripts\unified_card_settings.json" "%base_dir%dist\unified_card_scraper\" /Y >nul
-if %ERRORLEVEL%==0 (echo ✓ unified_card_settings.json) else (echo ✗ unified_card_settings.json)
+if exist "%base_dir%current_meta_analysis_settings.json" (
+	copy "%base_dir%current_meta_analysis_settings.json" "%base_dir%dist\" /Y >nul
+	if %ERRORLEVEL%==0 (echo ✓ current_meta_analysis_settings.json) else (echo ✗ current_meta_analysis_settings.json)
+)
 
 echo.
 echo Copying RESET_STATS.bat files...

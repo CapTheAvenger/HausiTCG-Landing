@@ -17,8 +17,8 @@ echo [%date% %time%] Checking git status...
 git status
 
 echo.
-echo [%date% %time%] Staging files: data/, deck_viewer.html, index.html
-git add data/ deck_viewer.html index.html
+echo [%date% %time%] Staging files: data/, landing.html, index.html
+git add data/ landing.html index.html
 
 echo.
 echo [%date% %time%] Committing changes...

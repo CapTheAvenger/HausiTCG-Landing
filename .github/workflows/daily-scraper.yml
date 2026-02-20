@@ -42,13 +42,13 @@ jobs:
           echo "================================================"
           python limitless_online_scraper.py
       
-      - name: Run Unified Card Scraper
+      - name: Run Current Meta Analysis Scraper
         continue-on-error: true
         run: |
           echo "================================================"
-          echo "Running Unified Card Scraper..."
+          echo "Running Current Meta Analysis Scraper..."
           echo "================================================"
-          python unified_card_scraper.py
+          python current_meta_analysis_scraper.py
       
       - name: Check for Changes
         id: check_changes
@@ -67,7 +67,7 @@ jobs:
           
           # Stage alle Änderungen in data/
           git add data/
-          git add deck_viewer.html index.html || true
+          git add landing.html index.html || true
           
           # Commit mit Timestamp
           git commit -m "🤖 Automated data update - ${TIMESTAMP}" || exit 0
