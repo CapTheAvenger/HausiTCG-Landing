@@ -2087,17 +2087,18 @@
             const pref = getRarityPreference(cardName);
             const globalPref = getGlobalRarityPreference();
             
-            // For Max/Min Rarity: Always search ALL cards with the same name (not just international prints)
-            // For other modes: Use international prints if originalSet/originalNumber provided
+            // If originalSet and originalNumber provided, try international prints first
             let versions;
-            if (globalPref === 'max' || globalPref === 'min') {
-                // Max/Min Rarity: Search ALL versions of this card
-                versions = getEnglishCardVersions(cardName);
-                console.log(`[getPreferredVersionForCard] ${globalPref} rarity mode: Searching ALL versions for ${cardName}`);
-            } else if (originalSet && originalNumber) {
-                // Other modes: Use international prints only
+            if (originalSet && originalNumber) {
                 versions = getInternationalPrintsForCard(originalSet, originalNumber);
-                console.log(`[getPreferredVersionForCard] Using international prints for ${cardName} (${originalSet} ${originalNumber})`);
+                
+                // If no international prints found (empty array), fall back to all versions
+                if (versions.length === 0) {
+                    versions = getEnglishCardVersions(cardName);
+                    console.log(`[getPreferredVersionForCard] No international prints for ${cardName} (${originalSet} ${originalNumber}), using ALL versions`);
+                } else {
+                    console.log(`[getPreferredVersionForCard] Using international prints for ${cardName} (${originalSet} ${originalNumber})`);
+                }
             } else {
                 versions = getEnglishCardVersions(cardName);
             }
