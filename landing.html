@@ -2092,10 +2092,16 @@
             if (originalSet && originalNumber) {
                 versions = getInternationalPrintsForCard(originalSet, originalNumber);
                 
-                // If no international prints found (empty array), fall back to all versions
-                if (versions.length === 0) {
+                // Intelligent fallback: If no international prints OR if international prints only has low-priority cards,
+                // fall back to all versions (fixes Judge DRI 222 issue)
+                const hasSufficientRarity = versions.length > 0 && 
+                    versions.some(v => getRarityPriority(v.rarity, v.set_code) >= 10);
+                
+                if (versions.length === 0 || !hasSufficientRarity) {
+                    const fallbackReason = versions.length === 0 ? 'no international prints' : 
+                        'international prints only has low rarity (max < 10)';
                     versions = getEnglishCardVersions(cardName);
-                    console.log(`[getPreferredVersionForCard] No international prints for ${cardName} (${originalSet} ${originalNumber}), using ALL versions`);
+                    console.log(`[getPreferredVersionForCard] ${fallbackReason} for ${cardName} (${originalSet} ${originalNumber}), using ALL versions`);
                 } else {
                     console.log(`[getPreferredVersionForCard] Using international prints for ${cardName} (${originalSet} ${originalNumber})`);
                 }
@@ -2183,11 +2189,12 @@
             // High-end & secret rarities (check BEFORE plain rare to avoid matching "rare" in all)
             if (r.includes('secret rare')) return 16;
             if (r.includes('rainbow rare')) return 15;
-            if (r.includes('shiny rare')) return 14; // Shiny Vault cards
+            // SAR is most valuable in modern sets (MEG, TEF, TWM, etc.) - priority 14
+            if (r.includes('special art rare') || r.includes('special illustration rare')) return 14;
             if (r.includes('ultra rare')) return 13;
 
             // Art rarities
-            if (r.includes('special art rare') || r.includes('special illustration rare')) return 12;
+            if (r.includes('shiny rare')) return 12; // Shiny Vault cards - below Ultra Rare
             if (r.includes('character super rare')) return 11;
             if (r.includes('character holo rare') || r.includes('art rare') || r.includes('illustration rare')) return 10;
 
