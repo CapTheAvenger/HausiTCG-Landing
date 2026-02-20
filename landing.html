@@ -2116,13 +2116,22 @@
                     // This assumes later versions in international_prints are newer/preferred
                     const indexA = versions.indexOf(a);
                     const indexB = versions.indexOf(b);
+                    
+                    // DEBUG: Log index comparison for cards with same priority
+                    if (cardName.toLowerCase().includes('judge')) {
+                        console.log(`[Judge Debug] Comparing ${a.set} ${a.number} (index ${indexA}) vs ${b.set} ${b.number} (index ${indexB}), result: ${indexB - indexA}`);
+                    }
+                    
                     return indexB - indexA; // Prefer later versions (higher index = newer)
                 });
                 const selected = globalPref === 'max' ? sorted[sorted.length - 1] : sorted[0];
                 
                 // DEBUG: Log all versions and their priorities
                 console.log(`[getPreferredVersionForCard] All versions for "${cardName}":`, 
-                    versions.map(v => `${v.set} ${v.number} (${v.rarity || 'NO RARITY'}, priority: ${getRarityPriority(v.rarity, v.set)})`).join(', ')
+                    versions.map((v, idx) => `${v.set} ${v.number} (${v.rarity || 'NO RARITY'}, priority: ${getRarityPriority(v.rarity, v.set)}, index: ${idx})`).join(', ')
+                );
+                console.log(`[getPreferredVersionForCard] Sorted order:`, 
+                    sorted.map(v => `${v.set} ${v.number} (priority: ${getRarityPriority(v.rarity, v.set)})`).join(', ')
                 );
                 console.log(`[getPreferredVersionForCard] ${globalPref} rarity for "${cardName}": ${selected.set} ${selected.number} (${selected.rarity}, priority: ${getRarityPriority(selected.rarity, selected.set)})`);
                 return selected;
@@ -4121,6 +4130,25 @@
                 'Energy': 7
             };
             
+            // Helper function to get evolution family identifier
+            const getEvolutionFamily = (cardName) => {
+                if (evolutionChains[cardName]) {
+                    return evolutionChains[cardName][0]; // First member of family is the identifier
+                }
+                return cardName; // Single Pokemon (no evolution)
+            };
+            
+            // Calculate family percentages for sorting families by importance
+            const familyPercentages = new Map();
+            cards.forEach(card => {
+                if (getCardTypeCategory(card.type || card.card_type) === 'Pokemon') {
+                    const family = getEvolutionFamily(card.card_name || card.name || '');
+                    const perc = parseFloat((card.percentage_in_archetype || '0').toString().replace(',', '.')) || 0;
+                    const currentMax = familyPercentages.get(family) || 0;
+                    familyPercentages.set(family, Math.max(currentMax, perc));
+                }
+            });
+            
             return cards.sort((a, b) => {
                 const cardTypeA = a.type || a.card_type || '';
                 const cardTypeB = b.type || b.card_type || '';
@@ -4140,7 +4168,7 @@
                 const percA = parseFloat((a.percentage_in_archetype || '0').toString().replace(',', '.')) || 0;
                 const percB = parseFloat((b.percentage_in_archetype || '0').toString().replace(',', '.')) || 0;
                 
-                // For Pokemon: sort by element first
+                // For Pokemon: prioritize keeping evolution families together
                 if (categoryA === 'Pokemon' && categoryB === 'Pokemon') {
                     const elementA = cardTypeA.charAt(0);
                     const elementB = cardTypeB.charAt(0);
@@ -4155,24 +4183,41 @@
                         return elemOrderA - elemOrderB;
                     }
                     
-                    // SAME ELEMENT: Sort by PERCENTAGE (highest first)
-                    if (percA !== percB) {
-                        return percB - percA;
+                    // SAME ELEMENT: Group by evolution family
+                    const nameA = a.card_name || a.name || '';
+                    const nameB = b.card_name || b.name || '';
+                    const familyA = getEvolutionFamily(nameA);
+                    const familyB = getEvolutionFamily(nameB);
+                    
+                    // Different family: sort by family's highest percentage
+                    if (familyA !== familyB) {
+                        const familyPercA = familyPercentages.get(familyA) || 0;
+                        const familyPercB = familyPercentages.get(familyB) || 0;
+                        if (familyPercA !== familyPercB) {
+                            return familyPercB - familyPercA; // Higher percentage families first
+                        }
+                        // Same family percentage: sort by family name
+                        return familyA.localeCompare(familyB);
                     }
                     
-                    // Same percentage: sort by SET NUMBER (für korrekte Reihenfolge)
-                    const setNumA = parseInt((a.set_number || '0').toString().replace(/[^\d]/g, '')) || 0;
-                    const setNumB = parseInt((b.set_number || '0').toString().replace(/[^\d]/g, '')) || 0;
-                    if (setNumA !== setNumB) {
-                        return setNumA - setNumB;
-                    }
-                    
-                    // Same set number: sort by evolution stage (falls mehrere Versionen)
+                    // SAME FAMILY: Sort by evolution stage (Basic → Stage1 → Stage2)
                     const evolOrderA = evolutionOrder[evolutionA] || 99;
                     const evolOrderB = evolutionOrder[evolutionB] || 99;
                     
                     if (evolOrderA !== evolOrderB) {
                         return evolOrderA - evolOrderB;
+                    }
+                    
+                    // Same evolution stage: sort by PERCENTAGE (highest first)
+                    if (percA !== percB) {
+                        return percB - percA;
+                    }
+                    
+                    // Same percentage: sort by SET NUMBER
+                    const setNumA = parseInt((a.set_number || '0').toString().replace(/[^\d]/g, '')) || 0;
+                    const setNumB = parseInt((b.set_number || '0').toString().replace(/[^\d]/g, '')) || 0;
+                    if (setNumA !== setNumB) {
+                        return setNumA - setNumB;
                     }
                 }
                 
