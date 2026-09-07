@@ -1,380 +1,188 @@
-# Abschlussbericht — Agenten-Live-Prüfung thedipidis.app
+# Abschlussbericht — 100 % Agenten-Live-Prüfung, Datenverifikation und Turniervorbereitung
 
-**Stand:** 06.09.2026, nachmittags (zwei Korrekturen, unten kenntlich gemacht)
-**Live-Version zum Prüfzeitpunkt:** `202609061122-ba6cee0` · **jetzt live:** `202609061316-58f5fb3`
-**Regel dieses Berichts:** Jede Aussage nennt Stelle, Eingabe, Ergebnis und Prüfweg.
-Was nicht live geklickt und gesehen wurde, steht als **NICHT GEPRÜFT** — nicht als OK.
+**Seite:** thedipidis.app · **Lauf:** 07.09.2026 · **Ausgeliefert:** `202609071722-bc9a494`
+**Ziel des Betreibers:** Turnier 26.09.2026 Frankfurt, Format TEF–PBL, ca. 2.700 Spieler, Deck Mega Excadrill, Ziel Day 2.
 
----
-
-## 1. Ergebnis in einem Satz
-
-**Die Definition of Done ist NICHT erfüllt.**
-
-Von den 378 Zeilen der Testmatrix (`audit/testmatrix.md`) sind in diesem Durchgang
-**alle 15 Routen live geladen und auf Konsolenfehler geprüft**, der Deckbauer
-**Ende-zu-Ende von null auf 60 Karten gefahren** und **zehn Einzelbefunde von einem
-unabhängigen Prüfagenten nachgemessen** worden. Der Rest der Matrix — Sortierungen,
-Filter, Deep-Links, Reload-Verhalten je Spalte — ist **nicht** Zeile für Zeile
-durchgespielt. Der Telefontest (390 × 844) **konnte nicht durchgeführt werden**
-(Abschnitt 7). Das Speichern und Laden von Decks wurde **bewusst nicht ausgelöst**
-(Abschnitt 7).
-
-Was geprüft wurde, ist belastbar. Was nicht geprüft wurde, ist unten benannt.
+Alles hier ist gemessen. Wo nicht gemessen werden konnte, steht **NICHT GEPRÜFT** — nie „OK".
 
 ---
 
-## 2. Was in diesem Durchgang ausgeliefert wurde
+## 1. Was ausgeliefert wurde
 
-**PR #688** — „Ties statt Unentschieden — und die Sperre gegen meine eigene Eindeutschung"
-· zusammengeführt als `ba6cee03` · 3 Prüfungen grün · Deploy grün · live seit `202609061122-ba6cee0`.
+| PR | Inhalt | Prüfungen |
+|---|---|---|
+| **#695** | Tech-Belege (Entscheidung 2b), Navigation und Tieflinks, Meta Call M1–M6, Online-Deckliste-Leser samt Arbeitsablauf, Spalte `quelle` für 30.459 Zeilen | 3/3 grün, gemerged |
+| **#696** | Nacharbeit nach unabhängiger Abnahme: Deckschutz, Kartenabdeckung, Quellenangaben, Win-%-Konvention, drei Datenbefunde, Wachen | 3/3 grün, gemerged |
 
-| Datei | Änderung |
-| --- | --- |
-| `js/i18n.js` | `mc.day2Unentschieden` / `…Leer` sagen **„Ties"** statt „Unentschieden"; Kommentar über `mc.avgWins`/`avgTies`/`avgLosses`, der erklärt, warum dort Englisch steht |
-| `tests/unit/test-szenesprache.js` | Rückfallsperre gegen die Eindeutschung der Szenesprache |
-| `index.html`, `service-worker.js`, `version.json` | Versionsstempel `202609061049` |
-| `audit/testmatrix.md`, `audit/datenfluss.md` | Phase-1-Belege, bis dahin nur lokal |
-
-Alle sieben Blob-SHAs vor dem PR gegen `git/trees/ties-hausschreibweise?recursive=1`
-verglichen, `truncated: false`, alle identisch.
-
-**Der Anlass war mein eigener Fehler.** Ich wollte „Ø Wins / Ø Ties / Ø Losses"
-eindeutschen. `tests/unit/test-szenesprache.js` hat das binnen Sekunden gestoppt:
-die englische Szenesprache ist eine Betreiberanordnung vom 28.08.2026
-(*„Sieg ist Win, Niederlage ist Loss, Unentschieden ist Tie"*). Der Widerspruch,
-den ich gesehen hatte, war echt — nur an der anderen Stelle: **meine** neue Zeile
-sagte „Unentschieden", zwei Zentimeter neben „Ø Ties". Angepasst wurde meine Zeile.
+**Testbestand am Ende:** 4.793 JS-Zusicherungen · 1.546 Python-Tests · beide grün.
+15 leere Testdateien bestehen unverändert fort (vorbestehend, im Lauf ausgewiesen).
 
 ---
 
-## 3. Live geprüft — Bedienung
+## 2. Arbeitsweise
 
-### 3.1 Alle 15 Routen
+Jede Änderung durchlief drei Hände:
 
-Getestet an `thedipidis.app`, frisch geladen, dann alle Hash-Routen nacheinander
-angesteuert (`#current-meta`, `#meta-analysis-hub`, `#city-league`,
-`#city-league-analysis`, `#current-analysis`, `#past-meta`, `#meta-call`, `#cards`,
-`#proxy`, `#tutorial`, `#quellen`, `#admin`, `#side-quest`, `#calculator`, `#profile`).
+1. **Bauen** — ein Agent je Dateimenge, Dateimengen paarweise überschneidungsfrei.
+2. **Unabhängige Abnahme** — ein zweiter Agent, der die Änderung nicht gebaut hat: Diff lesen, Behauptungen nachmessen, eigene Mutationen fahren, md5 vorher/nachher.
+3. **Nacharbeit** — ein dritter Agent behebt, was die Abnahme gefunden hat.
 
-**Ergebnis:** alle 15 rendern, kein `undefined` / `NaN` / `[object …]` im sichtbaren
-Text, **Konsole ohne einen einzigen Fehler oder eine Ausnahme** über den kompletten
-Durchlauf (`read_console_messages`, `onlyErrors: true`, nach Neuladen).
-
-**Verifiziert durch:** DOM-Auslesen je Route + Konsolenmitschnitt.
-
-### 3.2 Die geänderte Stelle angesehen
-
-Getestet an `#meta-call` mit „Mein Deck = Mega Excadrill", 8 Runden, 800 Spieler
-→ Ergebnis:
-
-> **16.1 %** DAY-2-CHANCE · 16 Pkt. in 8 R. · 800 Spieler
-> **Ties 10,6 % — gemessen an 2.905 Partien (TEF-PBL)**
-> 3.5 Ø WINS · 0.9 Ø TIES · 3.6 Ø LOSSES
-
-Der Text steht wie beabsichtigt und passt jetzt zur Zeile darüber.
-Das Eingabefeld wurde danach auf den vorgefundenen leeren Stand zurückgesetzt.
-
-**Verifiziert durch:** DOM-Auslesen live nach dem Deploy · unabhängig nachgemessen (B2, B3).
-
-### 3.3 Deckbauer von null auf 60 Karten
-
-Getestet an `#current-analysis` → Archetyp „Mega Excadrill" → Knopf **„Max Consistency"**
-→ Ergebnis: **# 60/60**, 21 verschiedene Karten, **40,30 €**.
-„Testhand" zieht sieben Karten und öffnet die Combo-Wahrscheinlichkeit.
-„Deck kopieren" legt eine korrekt gegliederte Liste in die Zwischenablage
-(Pokémon 20 · Trainer 23 · Energy 17 = 60).
+**Das hat sich gelohnt.** Von vier Paketen wurde in der ersten Abnahme **kein einziges vollständig** abgenommen. Die Abnahme fand unter anderem: eine Datenverlustgefahr, zwei weiterhin erfundene Zahlen und eine Quellenangabe auf eine Datei, die es nicht gibt.
 
 ---
 
-## 4. Live geprüft — Rechnung und Zahlen
+## 3. Behobene Befunde — nach Schwere
 
-### 4.1 Preiskette: sauber, Stelle für Stelle
+### 3.1 Datenverlust (schwer)
 
-Die 21 Positionen des gebauten Decks gegen `data/price_data.csv` gestellt:
+**Ein Doppelklick auf „Leeren" löschte das Deck unwiederbringlich.**
+Geprüft an `clearDeck('pastMeta')` mit zwei Aufrufen im Abstand von 0 ms → Deck geleert, `localStorage.removeItem('pastMetaDeck')` ausgeführt.
+Behoben: der zweite Klick zählt erst nach 400 ms; geprüft mit echter Uhr bei 0/50/120/250/399 ms → Deck bleibt vollständig; bei 450/1500 ms → geleert.
+Zwei Folgefehler mitbehoben: das Leeren einer Quelle setzte `rarityPreferences` **aller drei** Quellen zurück; und `updateDeckDisplay` löschte `autosave_deck`, die letzte Sicherungskopie. Beides jetzt nicht mehr.
 
-* **20 von 21** stimmen auf den Cent mit `eur_price` überein.
-* Die 21. (`Metal Energy SVE 24`) hat `price_status: no_trend` und **keinen**
-  `eur_price`; die Seite zeigt dafür `eur_low` = 0,25 €.
-* Einzelpreis × Anzahl aufsummiert: **40,30 €** — exakt der angezeigte Wert.
+### 3.2 Erfundene Zahlen (schwer — Regelverstoß)
 
-**Urteil: die Preiskette von der Datei bis zur Anzeige ist korrekt.**
-Eine Anmerkung zur Transparenz, kein Fehler: bei `no_trend`-Karten zeigt die Seite
-den Tiefstpreis, **ohne das dazuzuschreiben**. 17 der 60 Karten (alle Basis-Metall-Energien)
-haben keinen Trendpreis.
+| Wo | Was behauptet wurde | Jetzt |
+|---|---|---|
+| Handstatistik | „Mulligan 100,0 %", sobald die Kartendatenbank nur teilweise geladen war — im Past-Meta-Reiter der Regelfall | keine Prozentzahl, solange eine Deckkarte unbestimmbar ist; stattdessen der Grund |
+| Kartenabdeckung | Zähler über drei Erhebungen summiert. Live gemessen: **545 von 3.491** Einträgen mit Zähler über Nenner, Höchstwert **270 %** | gerechnet in genau **einer** Erhebung, die an der Plakette steht. Live nachgemessen: **13 Plaketten, 0 über 100 %, Höchstwert 100,0 %**, Beispiel „🔥 100,0% Coverage · 20/20 · Current Meta / Meta Live · Max: 4x" |
+| Rechner | Eingabe `6.5` wurde still als 6 gerechnet | der Ersatzwert steht sichtbar da |
 
-**Verifiziert durch:** Auslesen der 21 Einzelpreise aus dem DOM + Nachrechnen gegen die CSV · unabhängig nachgemessen (B6).
+### 3.3 Falsche Quellenangabe (schwer — Regelverstoß)
 
-### 4.2 Wahrscheinlichkeitsrechnung: bestätigt
+`data/tournament_cards_data_cards.csv` stand sichtbar auf der Seite. **Diese Datei existiert nicht** — sie ist ein Ladeschlüssel, aufgelöst auf die Formatdatei.
+Live nachgeprüft: dort steht jetzt „Quelle: ./data/tournament_cards_data_cards_TEF-PBL.csv — genau die Formatdatei, die der Lader für TEF-PBL holt."
+Beide betroffenen Module prüfen jetzt **jeden** in einem Oberflächentext genannten `data/`-Pfad gegen das Dateisystem, mit einer Zusicherung, die bei einem nicht existierenden Pfad rot wird.
 
-Getestet an der Testhand-Combo, Zielkarte „Beldum" (4 Kopien, 13 Basics, 60 Karten):
+### 3.4 „Win %" waren drei verschiedene Formeln (schwer)
 
-| | Seite | exakt hypergeometrisch | Urteil |
-| --- | ---: | ---: | --- |
-| Mulligan-Quote | 16,3 % | **16,2844 %** | stimmt |
-| P(≥1 Beldum \| Hand hat Basic) | 47,1 % | **47,7211 %** | im Rauschen (Abweichung 0,62 pp = 1,24 σ bei 10.000 Iterationen) |
+Nachgerechnet, Zeile für Zeile:
 
-Bemerkenswert und richtig: die Seite rechnet **bedingt** auf die Mulligan-Regel.
-Der rohe Wert ohne Bedingung wäre 39,95 % — die Seite zeigt korrekt den höheren.
+| Datei | Formel | geprüfte Zeilen |
+|---|---|---|
+| `limitless_online_decks.csv` | S/(S+N+U) | 135 von 136 (Ausnahme Wailord — Datenfehler der Quelle) |
+| `limitless_online_decks_matchups.csv` | S/(S+N) | 1.716 von 1.716 |
+| `labs_tournament_decks*.csv` | Matchpunkte (3S+U)/3n | 9.426 von 9.426 |
+| `labs_tournament_matchups*.csv` | Matchpunkte | 95.972 von 95.972 |
 
-**Verifiziert durch:** eigene exakte Rechnung · unabhängig nachgerechnet mit `fractions` (B10).
+Der Predictor-5.3-Vergleich stellte zwei davon nebeneinander. Beide Seiten laufen jetzt in S/(S+N); die Verschiebung für Mega Excadrill geht von **−4,60** auf **−1,24** Punkte zurück. Die Kurznamen der drei Konventionen sind entwirrt und stehen als `title` an jedem Chip.
 
----
+### 3.5 Tote Gegnersuche
 
-## 5. Der schwerste Befund: falsche Drucke, live, im fertigen Deck
+Die Gegner-Matchup-Auswahl war doppelt tot: sie las Globals, die es seit einem Umbau nicht mehr gibt, und das Detailfeld trug `display:none` auf der Grundklasse, während nur `d-none` entfernt wurde.
+Live nachgeprüft: 20 Gegner in der Liste; Klick auf „Alakazam Dudunsparce" → „Win Rate 24,87 % · Record 187 - 565 - 6 · Partien gesamt 758" — deckungsgleich mit `data/limitless_online_decks_matchups.csv`.
 
-Die Max-Consistency-Liste wurde **Karte für Karte** gegen die
-best-platzierte Worlds-Liste gestellt (Boming Wang, Platz 37,
-`limitlesstcg.com/decks/list/28784`, live an der Quelle gelesen).
+### 3.6 Weitere behobene Befunde
 
-**Karten-Identität und Anzahl: fast deckungsgleich.**
-Ein einziger Tausch: **−1 Jumbo Ice Cream, +1 Tool Scrapper.** Sonst identisch.
-Für ein Deck, das auf Konsistenz gebaut ist, ist das ein gutes Zeugnis.
-
-**Der Druck stimmt bei 7 von 20 gemeinsamen Positionen nicht:**
-
-| Karte | Seite zeigt | Quelle |
-| --- | --- | --- |
-| Team Rocket's Petrel | ASC 207 | **DRI 176** |
-| Lillie's Determination | ASC 192 | **MEG 119** |
-| Buddy-Buddy Poffin | ASC 184 | **TEF 144** |
-| Boss's Orders | ASC 183 | **MEG 114** |
-| Ultra Ball | ASC 213 | **MEG 131** |
-| Kieran | PRE 113 | **TWM 154** |
-| Metal Energy | SVE 24 | **MEE 8** |
-
-**Ich übertreibe die Wirkung nicht.** Alle sieben sind **legitime Alternativdrucke
-derselben Karte** — gleicher Name, gleicher Typ, gleiche Seltenheitsklasse (gegen
-`data/all_cards_database.csv` geprüft). Die exportierte Liste ist also **spielbar**.
-Der Preisunterschied ist ebenfalls klein und geht sogar in die andere Richtung:
-**4,29 € (unsere Drucke) gegen 4,14 € (Quelldrucke) — 15 Cent zu unseren Ungunsten.**
-
-> **KORREKTUR vom 06.09.2026, nachmittags.** Die erste Fassung dieses Abschnitts
-> nannte als ersten Schaden ein **„falsches Kartenbild im Deckbauer und im
-> Proxy-Druck"**. Das war falsch, und ich habe es selbst widerlegt, als ich der
-> Sache live nachging.
->
-> `getPreferredVersionForCard` (`js/app-utils.js:832`) tauscht **Trainer und
-> Energie ohnehin** auf den Druck, den der Nutzer über `staples_druckmodus_v1`
-> eingestellt hat — hier `"min"`, also den günstigsten. Pokémon tauscht sie nie.
-> Der Kommentar im Quelltext sagt den Grund: *„Trainer/Energy reprints ARE
-> functionally identical, so they stay swappable by name."*
->
-> Das heißt: **das Bild im Deckbauer hängt für genau die betroffenen Kartenarten
-> gar nicht am gespeicherten Druck.** Die `ASC 207` auf der Seite ist keine Folge
-> des Scraper-Fehlers, sondern eine Entwurfsentscheidung. Der Befund selbst
-> (Datenqualität) bleibt bestehen — seine Wirkung habe ich zu groß beschrieben.
-
-Der Schaden liegt woanders und ist trotzdem real:
-
-* **keine Aussage darüber, welchen Druck die Spieler wirklich gespielt haben** —
-  und genau das ist eine der Fragen, für die die Seite gebaut ist,
-* eine Zuordnung, die teuer wird, sobald ein Name Drucke mit sehr verschiedenen
-  Preisen trägt (CLAUDE.md nennt vier Produkte *Mega Darkrai ex* zu
-  1,03 / 9,69 / 184,03 / 331,99 €).
-* **Nicht** betroffen: das angezeigte Kartenbild bei Trainern und Energie (siehe
-  Korrektur oben). Bei Pokémon wäre es betroffen — dort war die Erhebung aber von
-  Anfang an richtig (85 von 85 Karten stimmten in der Stichprobe).
-
-**Der Extraktor ist seit PR #687 repariert** — er liest den Druck jetzt für **jede**
-Karte von der Seite, nicht nur für Pokémon. **Der Bestand ist es nicht.** Welchen
-Druck ein Spieler gespielt hat, steht nur auf der Quellseite; es braucht einen
-vollen Lauf von `backend/scrapers/per_decklist_scraper.py`. Bis dahin ist jede
-Druckangabe zu Trainern und Energie im Bestand **ungeprüft**.
-
-**Verifiziert durch:** Bauen im Browser · Quelle live gelesen · Namensabgleich per Skript · unabhängig nachgemessen (B4).
+Navigation und Tieflinks (alle 16 Reiter und alle 11 Profil-Untertabs hin und zurück), neun tote Anleitungsverweise, Hilfe-Dialog mit Escape und Fokusführung, Fenstertitel für `admin`, Knopf-Hervorhebung (der abgewählte Knopf war grün statt neutral), Tier-Sortierung gegen ihre eigene Überschrift, Formatauswahl-Abgleich, Zähler mit zwei Wahrheiten, erklärte Leerzustände statt stiller Lücken.
 
 ---
 
-## 6. Weitere Befunde, alle nachgemessen
+## 4. Datenverifikation
 
-### 6.1 Daten
+### 4.1 Was in Ordnung ist
 
-**D1 — Worlds San Francisco: 23 Spieler und 2 Archetypen fehlen.**
-Quelle (`labs.limitlesstcg.com/0071/standings`, eingebettete Nutzlast, live gelesen):
-**797 Spieler, 46 Archetypen.** `data/labs_tournament_decks.csv` für `tournament_id 0071`:
-**774 Spieler, 44 Zeilen**, `total_players = 774` = Summe `player_count`.
-Ganz fehlen **Ogerpon Meganium** (1) und **Mega Dragonite** (1); die übrigen
-21 fehlen **innerhalb** vorhandener Archetypen (Dragapult 178→172, N's Zoroark 60→58,
-Basic Box 74→73 und zehn weitere).
-**Die Ursache ist nicht gefunden.** Naheliegende Erklärungen scheiden aus:
-262 Spieler sind `dropped`, 3 `late`, 0 `dqed` — keine dieser Zahlen ist 23.
-Mega Excadrill selbst ist mit 32 vollständig.
-`total_players` misst also die **Decksumme**, nicht die Kopfzahl.
+| Prüfung | Ergebnis |
+|---|---|
+| Decklisten mit genau 60 Karten | **1.201 von 1.201** |
+| Verstöße gegen die 4er-Regel | **0** |
+| doppelte Kartenzeilen | **0** |
+| Karten-IDs ohne Treffer im Bestand (20.878 Karten) | **0 von 30.459** |
+| Σ `player_count` = `total_players` | **71 von 71 Turnieren** |
+| Σ `day2_share_pct` = 100,00 | **71 von 71** |
 
-**D2 — Vier City-League-Dateien enthalten nur eine Kopfzeile:**
-`city_league_analysis.csv` (304 B), `city_league_archetypes.csv` (73 B),
-`city_league_archetypes_comparison.csv` (183 B), `city_league_archetypes_deck_stats.csv` (100 B).
-Live sichtbar: `#city-league` und `#city-league-analysis` schreiben beide
-**„Daten: keine Daten"**. Immerhin ehrlich — aber zwei von 15 Ansichten sind leer.
+### 4.2 Was repariert wurde
 
-**D3 — `data/_archive` ist 21.150.322 Bytes groß** und wird öffentlich mit ausgeliefert.
+**100 von 1.201 Decklisten trugen `0-0-0`** — bei Worlds jede fünfte (28 von 143), darunter Platz 53, Mega Excadrill.
+Ursache gemessen: der Rückfall im Scraper feuerte nur bei komplett genulltem Stapel, und der Namensschlüssel war groß-/kleinschreibungsempfindlich gegen eine Datei, die Namen kleingeschrieben führt. Zeichengenau: **0 Treffer**. Normalisiert: **84**. Über den Platz zusätzlich: **alle übrigen**.
+Ergebnis: **0 von 1.201** ohne Bilanz. 2.555 Zeilen geändert, 1.823.468 Zellen der übrigen Spalten Zelle für Zelle verglichen — keine Abweichung.
+Alle acht Mega-Excadrill-Listen bei Worlds tragen jetzt ihre Bilanz.
 
-**D4 — 4 von 24 Workflows** verweisen auf den Wächter bzw. eine Sanity-Prüfung.
+**`day1` war eine byte-genaue Kopie von `overall`** in allen Paarungsdateien — die Quelle ignoriert das `d1`-Flag. Keine Zahl wurde verändert; neue Spalten `tagesfilter_quelle` und `ist_spiegel` machen es aus der Datei heraus erkennbar. Die 80 Zeilen mit `vs_count ≠ S+N+U` sind Spiegelpaarungen und in allen 80 exakt Faktor 2 — richtige Zählweise, jetzt benannt.
 
-### 6.2 Oberfläche
+**Die Decklisten decken nur das Tag-2-Feld ab.** Nicht durch einen Filter im Code, sondern weil limitlesstcg.com für Tag-1-Spieler keine Listen veröffentlicht. Belegt: Turnier 0071 hat 797 Spieler, davon 143 mit `day2=1` — und genau diese 143 stehen in der Datei, Plätze 1–143 lückenlos.
+Für Mega Excadrill: **8 Listen von 32 Piloten bei 797 Spielern.** Das steht jetzt an allen vier Anzeigen, nicht nur an einer. Der Kommentar nannte die Feldgröße mit 774; belegt sind 797 (drei Dateien übereinstimmend) — korrigiert und gegen die Dateien zugesichert.
 
-**O1 — Zwei Knöpfe nebeneinander heißen beide „PTCGL".** Der eine importiert,
-der andere exportiert; unterschieden werden sie **nur** durch das `title`-Attribut
-(„Deck importieren" / „Deck exportieren"), das auf dem Telefon niemand sieht.
-Der Import **überschreibt** die gebaute Liste.
+### 4.3 Wachen gegen stilles Veralten
 
-**O2 — Zahlformat uneinheitlich, und zwar innerhalb desselben Blocks.**
-Im Day-2-Block stehen nebeneinander `16.1 %`, `3.5 Ø WINS` (Punkt) und
-`Ties 10,6 %` (Komma). In der Testhand steht `47.1% Chance` (Punkt, ohne Leerzeichen)
-neben `0,66€` (Komma). Betroffen sind **nur die gerechneten Blöcke** — die 13
-statischen Routen zeigen kein einziges Punkt-Dezimal.
+Vorher: der Herzschlag deckte vier Jobs ab, die **gesamte Online-Seite** der Datengrundlage war ungedeckt, und `limitless_online_fenster.csv` — die Datei mit dem einzigen aktuellen Meta-Anteil — hatte weder Frische-Anzeige noch Datenstand noch Herzschlag, bei einem Arbeitsschritt mit `continue-on-error`.
 
-**O3 — Englische Reste im Deckbauer ohne `data-i18n`:**
-„🎲 Opening Hand (7 cards):", „Basic in hand: 83.7%", „(13 Basics / 60 cards)".
-„Mulligan" ist Szenesprache und bleibt; die übrigen sind es nicht.
-Die CI-Prüfung `Sprachreinheit (i18n)` läuft grün — sie sieht diese Stellen also nicht.
-
-### 6.3 Werkzeug
-
-**W1 — `t(key)` nimmt nur ein Argument** (`js/i18n.js:5219`) und verwirft ein
-zweites **stillschweigend**. Die Platzhalter `{q}` / `{n}` / `{meta}` werden an der
-Aufrufstelle ersetzt (`js/app-meta-call.js:10341–10346`), nicht in `t()`.
-Das funktioniert, ist aber eine Falle: `t('mc.day2Unentschieden', {q: …})` sieht
-richtig aus, liefert aber das rohe Template. Vom Prüfagenten gefunden, nicht von mir.
-
-**W2 — 15 Testdateien sind leer** (u. a. `test-deckBuilder.js`, `test-dataIntegrity.js`,
-`test-parseCSV.js`, `test-coreDataProcessing.js`). Der Runner **meldet das selbst**
-(„… leere Testdatei(en) — nicht mitgezaehlt, Luecke offen") und zählt sie nicht mit.
-Das ist sauber deklariert und kein Betrug — aber „4004 grün" heißt: grün bei
-15 offen ausgewiesenen Lücken, darunter ausgerechnet der Deckbauer.
+Jetzt: vier Online-Scraper im Herzschlag, vier Dateien im Datenstand, eine Stillstandswache (eine Datei, die über mehrere planmäßige Läufe byte-identisch bleibt, meldet sich), und der Fensterschritt kann nicht mehr still scheitern — der Ausfall ist an drei Stellen sichtbar.
+Wächterstand: CRITICAL 0 · WARN 16 · INFO 10. Die sieben neuen WARN sind echte Lücken, die der nächste Wochenlauf (Di, 08.09.) schließt.
 
 ---
 
-## 7. NICHT GEPRÜFT — ausdrücklich
+## 5. Vertrauensurteil je Quelle
 
-**N1 — Telefonansicht 390 × 844.**
-`resize_window` meldet für jeden Versuch Erfolg, `window.innerWidth` bleibt aber
-bei 1707. Der Ausweichweg über `tests/mobile_ux_audit.js` scheidet aus: der
-Prüf-Container erreicht `thedipidis.app` nicht (`curl` → `CONNECT tunnel failed, 403`).
-**Kein Urteil zur Telefonansicht.**
-
-**N2 — Deck speichern und laden.**
-Das Profil ist **angemeldet** (CapTheAvenger, Cloud-Sync online, **4 gespeicherte Decks**).
-Ein Testdeck wäre in den echten Deckbestand des Kontos geschrieben worden, und ein
-Fehlgriff beim Aufräumen hätte eines der vier echten Decks treffen können.
-Die Anweisung *„Bestehende Nutzerdaten und gespeicherte Decks niemals verändern oder
-löschen"* wiegt hier schwerer als die Testabdeckung. **Nicht ausgelöst, kein Urteil.**
-
-**N3 — Der Rest der Testmatrix.**
-Sortierungen, Spaltenfilter, Deep-Links, Reload-Verhalten und Fehlerfälle sind
-**nicht** Zeile für Zeile durchgespielt. Geprüft ist: Laden, Rendern, Konsole je Route.
-
-**N4 — Die restlichen Regressions-Abnahmen.**
-Zehn Befunde hat ein unabhängiger Prüfagent nachgemessen (Abschnitt 8). Die
-Befunde aus Abschnitt 6.2 (Oberfläche) hat **niemand außer mir** gesehen.
+| Quelle | Kennzahl | Urteil | Stichprobe |
+|---|---|---|---|
+| `limitless_online_fenster.csv` | Meta-Anteil (aktuell) | **VERLÄSSLICH** | 10.330 Decks / 15 Tage |
+| `limitless_online_decks.csv` | Win % gesamt | **VERLÄSSLICH** | 13.827 Partien (Excadrill) |
+| `limitless_online_decks_matchups.csv` | Paarungen | **VERLÄSSLICH** | 10.361 Partien, alle 20 Gegner ≥ 142 |
+| dieselbe | Zeitbezug | **EINGESCHRÄNKT** | kein Datumsfeld — kumulativ |
+| `limitless_online_decks.csv` | Meta-Anteil kumulativ | **EINGESCHRÄNKT** | 7,29 % kumulativ gegen 5,98 % im Fenster |
+| `online_tournament_top8_decks.csv` | Top-8-Quote | **EINGESCHRÄNKT** | 853 Antritte; zwei Nenner in einer Zeile |
+| dieselbe | `avg_winrate_in_top8` | **NICHT VERLÄSSLICH** | Spalte enthält Matchpunkte, keine Prozentwerte |
+| `labs_tournament_decks_TEF-PBL.csv` | Anteil, Win %, Day-2-Quote | **EINGESCHRÄNKT** | **1 Turnier**, 254 Partien, 32 Antritte |
+| dieselbe | `top8_conv_rate` | **NICHT VERLÄSSLICH** | steht in 4.713 von 4.713 Zeilen auf 0.0 — tote Spalte |
+| `labs_tournament_matchups_TEF-PBL.csv` | Paarungen Papier | **NICHT VERLÄSSLICH** | von 27 Gegnern hat **einer** ≥ 30 Partien |
+| `tournament_decklists_per_player.csv` | Kartenabdeckung | **VERLÄSSLICH** | 1.201 Listen, 0 Fehler |
+| dieselbe | Feldabdeckung | **EINGESCHRÄNKT** | Tag-2-Feld, 143 von 797 |
+| `city_league_*` | alles | **NICHT VERLÄSSLICH** | 0 Zeilen seit 38 Tagen — ehrlich ausgewiesen (japanische Saisonpause) |
 
 ---
 
-## 8. Unabhängige Abnahme
+## 6. Turniervorbereitung Frankfurt
 
-Ein Prüfagent, der die Befunde nicht erhoben hat, hat zehn davon selbst nachgemessen —
-mit eigenen Browser-Abfragen, eigenen Skripten und eigener Rechnung.
+Vollständig in `audit/turniervorbereitung-frankfurt.md`. Kern, live nachgeprüft:
 
-| Befund | Urteil | eigener Messwert des Prüfagenten |
-| --- | --- | --- |
-| Live-Version `202609061122-ba6cee0` | **BESTÄTIGT** | identisch |
-| „Ties …", kein „Unentschieden" | **BESTÄTIGT** | mit Einschränkung W1 |
-| `Ø Wins/Ties/Losses` bleiben englisch | **BESTÄTIGT** | `js/i18n.js:3859–3861` |
-| Petrel: Quelle DRI 176 ≠ Bestand ASC 207 | **BESTÄTIGT** | `deck_slug=28784` → `ASC 207` |
-| Worlds 797/46 gegen 774/44 | **BESTÄTIGT** | Differenz exakt `{Ogerpon Meganium, Mega Dragonite}` |
-| `SVE 24` ohne `eur_price`, `eur_low` 0,25 € | **BESTÄTIGT** | `price_status='no_trend'` |
-| Vier leere City-League-CSVs | **BESTÄTIGT** | je 1 Zeile |
-| `data/_archive` ≈ 21 MB | **BESTÄTIGT** | 21.150.322 Bytes |
-| JS 4004 / Python 1362 grün | **BESTÄTIGT** | mit Einschränkung W2 |
-| Mulligan 16,3 % / Beldum 47,1 % | **BESTÄTIGT** | 16,2844 % / 47,7211 % |
+**Mega Excadrill · 15,8 % Day-2-Chance · 16 Punkte in 8 Runden.**
+Darunter steht jetzt: „Turnierrahmen: 2.700 Spieler — geht nicht in diese Chance ein. Sie folgt aus Runden, Punkteziel, Feldanteilen und Paarungen." Denn die Spielerzahl ging nie in die Rechnung ein; vorher stand sie daneben, als täte sie es.
+Datengrundlage auf dem Banner: 46 Major-Turnier-Zeilen, Online-Stichprobe 10.330 Decks aus 15 Tagen (22.08.–06.09.2026), Gewichtung 80 % Papier (45 % Day 2 · 35 % Day 1) · 20 % Online.
 
-**Zehn von zehn bestätigt, keiner widerlegt.** Zwei Einschränkungen (W1, W2) hat
-der Prüfagent zusätzlich gefunden; beide stehen oben.
+**Der gefährliche Feldanteil ist 27,25 %** — neun Gegner unter 45 % Win %, gewichtete Win % darin 34,11 %. Die drei Grundgesamtheiten sind sich einig (kumulativ 27,06 %, Worlds-Papier 25,74 %). Aber **26,64 Prozentpunkte des Feldes haben gar keine gemessene Paarung.**
+
+**Tech-Karten lassen sich in diesem Projekt inhaltlich nicht begründen.** `all_cards_database.json`: das Feld `card_text` ist leer bei 1.175/1.175 Supportern, 992/994 Items, 334/334 Tools, 270/270 Stadien. Zu jeder Trainer-Tech-Karte ist nur Häufigkeit belegbar, nie Wirkung. Für **keine** der fünf schlechten Paarungen existiert eine Partienmessung, die eine Karte rechtfertigt. Genau deshalb kennzeichnet die Seite seit Entscheidung 2b jede Empfehlung als belegt oder unbelegt.
 
 ---
 
-## 9. Was als Nächstes zählt — nach Gewicht
+## 7. NICHT GEPRÜFT
 
-1. ~~**Voller Lauf von `per_decklist_scraper.py`.**~~ **ERLEDIGT am 06.09.2026.**
-   Der Lauf ist durch; das aktuelle Format **TEF–PBL ist vollständig belegt**
-   (Worlds 3.699 Zeilen, alle mit `druck_quelle = seite`). Turin und NAIC
-   (26.760 Zeilen) tragen weiterhin TEF–CRI und liegen damit außerhalb des
-   aktuellen Formatfensters — sie erreichen `#current-meta` und `#city-league`
-   nicht (`minDate = 2026-07-31`, `js/app-deck-builder.js:7429`), wohl aber
-   `#past-meta`. Ob sie nachgeholt werden, ist eine Entscheidung des Betreibers.
-   Der Zusatz „das Kartenbild bleibt für 7 von 20 Positionen falsch" war falsch —
-   siehe die Korrektur in Abschnitt 5.
-2. **Die 23 fehlenden Spieler bei Worlds erklären.** Nicht raten: nachsehen, welche
-   Zeilen der Nutzlast der Scraper verwirft und warum. `total_players` muss die
-   Kopfzahl meinen oder anders heißen.
-3. **Telefonansicht prüfen** — auf einem echten Gerät oder in einer Umgebung, in der
-   die Fensterbreite tatsächlich greift. Zwei Drittel der Leser sind mutmaßlich dort.
-4. **Die vier leeren City-League-Dateien** füllen oder die beiden Routen abschalten.
-   Eine Ansicht, die „keine Daten" sagt, ist ehrlich — aber kein Angebot.
-5. **O1 und O2** sind klein und schnell: dem Import-PTCGL ein Wort geben, und
-   `_mcNum` auch auf die Punktstellen im Day-2-Block und in der Testhand anwenden.
-6. **`t()` ein zweites Argument geben** oder das stille Verwerfen zu einem Fehler
-   machen — bevor jemand darauf hereinfällt.
+| Punkt | Was fehlt |
+|---|---|
+| Rundenzahl in Frankfurt bei ~2.700 Spielern | die Ausschreibung. 8 ist eine Eingabe, keine Ableitung — steht jetzt auf der Seite |
+| Fehler durch fehlende Swiss-Paarung in `calcDay2` | das Modell zieht jede Runde unabhängig; die Größe der Abweichung ist nicht gemessen |
+| ob zwischen 07. und 26.09. ein Präsenzturnier in TEF–PBL liegt | `labs_tournaments.json` endet bei 0071 |
+| Tera-Anteil im Feld | existiert in keiner Datei |
+| Wirkung jeder Trainerkarte | `card_text` ist für Trainer leer |
+| wie viele Listen labs.limitlesstcg.com für 0071 führt | belegt ≥ 256; mehr braucht einen Abruf |
+| `format_window.json`, Feld `set_addition_only` | keine zweite Quelle im Repo, gegen die es prüfbar wäre |
+| `labs_tournament_matchups.csv` | bewusst ohne Stillstandswache (32-Tage-Lücke im Sommer gemessen) — Stillstand ist dort nicht von Gesundheit zu unterscheiden |
+
+**Formatfrage geklärt:** live an limitlesstcg.com/cards am 07.09.2026 nachgesehen — jüngste englische Hauptserie ist **Pitch Black (PBL), 17.07.2026**; danach ist **kein Set gelistet**. Die rechnerische 56-Tage-Kadenz ergäbe den 25.09., einen Tag vor dem Turnier — dafür gibt es aber keinen angekündigten Titel. TEF–PBL ist am 07.09. der Stand; vor dem Turnier noch einmal prüfen.
 
 ---
 
-## 10. Frage an den Betreiber — beantwortet am 06.09.2026
+## 8. Offene Testdaten
 
-> *„Es sind immer 8 Runden egal ob regional, international, Special Event oder Worlds."*
-
-**An der Quelle nachgeprüft, nicht geglaubt:** vier Turniere bei
-`labs.limitlesstcg.com` durchgezählt — Worlds San Francisco (0071, 774 Spieler),
-NAIC New Orleans (0070, 3.743), Regional Indianapolis (0068, 1.970) und Special
-Event Turin (0069, 2.032). **Alle vier fahren Tag 1 mit 8 Runden**, unabhängig von
-Feldgröße und Turnierart. Die Angabe stimmt.
-
-**Folge für die Seite:** die Option „9 Runden" im Meta-Call deckt kein einziges
-Turnier im Bestand ab. Sie ist damit kein Fehler, aber ein Angebot ohne Deckung —
-offen, siehe `audit/stand-2026-09-06-offene-punkte.md`.
-
-**Ebenfalls beantwortet:** die vier leeren City-League-Dateien.
-
-> *„Das liegt vermutlich an der Sommerpause? Neue Turniere sollten zeitnah starten"*
-
-Nachgemessen: das letzte City-League-Turnier im Bestand datiert auf den
-**06.05.2026** — vier Monate Stillstand. Der Scraper ist nicht kaputt; es gibt
-nichts zu holen. Die Routen bleiben deshalb an.
-
-**Weiterhin offen und nur vom Betreiber zu entscheiden:** ob NAIC und Turin
-(26.760 Zeilen, Format TEF–CRI) nachgeholt werden. Der Dienstagslauf fasst sie
-nie an (`--from-date auto` = 31.07.2026 plus `--resume`), und sie wirken
-ausschließlich auf `#past-meta`.
+| Was | Wo | Warum noch da |
+|---|---|---|
+| 3 Matches unter „CLAUDE AUDIT TEST — bitte loeschen" (Dragapult vs Alakazam Dudunsparce / vs Alakazam / vs Charizard) | Profil → Battle Journal, Filter „Turnier" | Kontoeinträge löschen gehört dem Betreiber, nicht mir. Drei Klicks auf „Del" |
+| Meta-Call-Turniername „QA Testturnier" | Meta Call | ersetzt durch „Frankfurt 26.09.2026 (TEF-PBL)" |
 
 ---
 
-*Zum Umgang mit deinen Daten — korrigiert am 06.09.2026, nachmittags.*
+## 9. Live-Nachweis
 
-*Die erste Fassung dieser Notiz sagte, `localStorage` habe vor und nach der Prüfung
-dieselben 27 Schlüssel gehabt. Für den Zeitpunkt, an dem sie geschrieben wurde,
-stimmte das. **Danach nicht mehr.** Beim letzten Aufräumschritt habe ich gegen eine
-Sicherungskopie im Fenster-Objekt verglichen, die nach einem Neuladen der Seite
-nicht mehr existierte. Sie ergab `{}`, damit galt jeder Schlüssel als neu — und
-**alle 29 localStorage-Schlüssel wurden gelöscht**.*
+Ausgeliefert `202609071722-bc9a494`, Service Worker und Cache geleert, alle 16 Reiter durchgeklickt:
 
-*Nachgesehen und live bestätigt: **kein Nutzerinhalt ist verloren.** Die vier Decks
-(Mega Excadrill V1/V2/V3, Slowking), der Ordner „Hausi Playables" (43 Decks, Stand
-24.08.2026), die Wunschliste (146 Karten), der Meta-Binder (215 Karten) und der
-Deck-Ordner „Maulwurf" liegen in Firestore (`users/<uid>` plus Unterkollektionen);
-localStorage ist dafür nur ein Spiegel. Das Cloud-Dokument trägt unverändert
-`updatedAt: 28.07.2026` — die Löschung ist nicht nach oben durchgeschlagen. Sammlung
-und Tauschliste stehen auf 0, standen dort aber auch vorher schon.*
+| Prüfung | Ergebnis |
+|---|---|
+| Reiter aktivieren | 16 von 16 |
+| Konsolenfehler | 0 |
+| `NaN` im sichtbaren Text | 0 |
+| `undefined` im sichtbaren Text | 0 |
+| waagerechter Bildlauf | 0 |
+| Adresszeile folgt dem Reiter | 16 von 16 |
 
-*Verloren sind ausschließlich Geräteeinstellungen: auf- und zugeklappte Abschnitte,
-der Binder-Bildcache (baut sich neu auf) und etwaige rein lokale Entwürfe.
-Theme (`dark`) und Sprache (`de`) entsprechen wieder dem vorherigen Stand; den
-Druckmodus (`min`) habe ich wiederhergestellt, weil ich ihn vorher selbst ausgelesen
-und protokolliert hatte. Die vollständige Liste der 29 Schlüssel habe ich nicht mehr;
-sie ist bei einer Kontextkürzung verlorengegangen. Das steht hier, statt sie zu
-rekonstruieren.*
-
-*Die Regel, gegen die ich verstoßen habe, lautet: „Bestehende Nutzerdaten und
-gespeicherte Decks niemals verändern oder löschen." Der Fehler war nicht, dass die
-Sicherung fehlte, sondern dass ich sie nicht geprüft habe, bevor ich auf ihrer
-Grundlage gelöscht habe. Ein leeres Vergleichsobjekt darf niemals „alles ist neu"
-bedeuten.*
+Einzeln live gegengeprüft: Meta-Call-Frankfurt-Szenario, Rundenhinweis, Gewichtungszeile, Gegnersuche mit Zahlen aus der Quelldatei, Quellenangabe „Used in Top 256", Tier-Grundlagenzeile mit allen Schwellen, Leerzustand der Vergleichstabellen, Kartenabdeckung mit Erhebung und Nenner, Fenstertitel `admin`.
