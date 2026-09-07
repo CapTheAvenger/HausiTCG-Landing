@@ -96,10 +96,19 @@ def _schritte_lesen(pfad):
 # nicht stillschweigend scheitern — die Regel bleibt fuer die drei
 # uebrigen unveraendert scharf. Dass er nicht zurueckkehrt, haelt
 # test_champions_nur_ein_scraper.py fest.
+#
+# NACHTRAG 07.09.2026: build_online_fenster steht jetzt mit in der Reihe.
+# Sein Schritt lief bis dahin mit `continue-on-error: true` — die Bauart,
+# die dieselbe Luecke auf andere Weise offenlaesst: der Schritt darf
+# scheitern, der Lauf bleibt gruen, und protokolliert wird nichts. Er
+# schreibt die aktuellste Zahl der ganzen Seite (den Anteil im laufenden
+# 14-Tage-Fenster); ein stiller Ausfall dort friert sie ein, ohne dass
+# irgendwo etwas widerspricht.
 NICHT_BLOCKIEREND = (
     "scrapers/labs_tournament_scraper.py",
     "scrapers/player_continuity_scraper.py",
     "scrapers/per_decklist_scraper.py",
+    "scripts/build_online_fenster.py",
 )
 
 

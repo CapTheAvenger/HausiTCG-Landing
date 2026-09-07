@@ -15,8 +15,13 @@
  *     × tournament size. Every consumer downstream uses these weights.
  *
  *   Spec rule 3 — placement weight is step-function B:
- *     Top-4 = 1.0, Top-8 = 0.7, Top-16 = 0.5, Day-2 = 0.3,
- *     Day-1-only = 0.1. _placementWeight() below.
+ *     Top-4 = 1.0, Top-8 = 0.7, Top-16 = 0.5, Top-32 = 0.3,
+ *     uebriger Top Cut = 0.1. _placementWeight() below.
+ *     ACHTUNG: die Grundgesamtheit dieser Datei IST der Top Cut —
+ *     limitlesstcg.com veroeffentlicht Decklisten erst ab Tag 2, und
+ *     die CSV fuehrt je Turnier genau diese Spieler (nachgezaehlt bei
+ *     PLACEMENT_WEIGHT_BANDS). Das letzte Band heisst deshalb NICHT
+ *     "Day-1-only"; eine Day-1-only-Liste gibt es hier nicht.
  *
  *   Spec rule 4 — tournament size weight = log(players)/log(2000):
  *     Capped at 1.0 for ≥ 2000-player events. _sizeWeight() below.
@@ -58,13 +63,30 @@
   // ── Tuning constants ──────────────────────────────────────────────
   const DATA_URL = 'data/tournament_decklists_per_player.csv';
 
+  /* DIE GRUNDGESAMTHEIT IST DER TOP CUT, NICHT DAS FELD (07.09.2026).
+     Nachgezaehlt in data/tournament_decklists_per_player.csv gegen
+     data/player_continuity.csv: die Datei fuehrt je Turnier GENAU die
+     Spieler mit day2=1, lueckenlos von Platz 1 bis zum letzten.
+
+         Turnier        Feld   day2=1   Listen in der CSV   Plaetze
+         0071 Worlds     797      143                 143     1-143
+         0070 NAIC     3.743      675                 675     1-675
+         0069 Turin    2.032      383                 383     1-383
+
+     Der Grund ist nicht der Scraper, sondern limitlesstcg.com: dort
+     stehen Decklisten erst ab Tag 2. Jede Zeile unten gewichtet also
+     INNERHALB DES TOP CUT. Die Beschriftung "Day-1-only floor" stand
+     hier bis zum 07.09.2026 am letzten Band und war falsch: eine
+     Day-1-only-Liste gibt es im Bestand ueberhaupt nicht — Platz 122
+     bei Worlds ist ein Tag-2-Spieler im unteren Drittel des Cuts, kein
+     Spieler, der Tag 1 ausgeschieden ist. */
   // Spec rule 3: step-function placement weight.
   const PLACEMENT_WEIGHT_BANDS = [
     { maxPlace:   4, weight: 1.0 },
     { maxPlace:   8, weight: 0.7 },
     { maxPlace:  16, weight: 0.5 },
-    { maxPlace:  32, weight: 0.3 },  // Day-2 cut for typical Regional
-    { maxPlace: Infinity, weight: 0.1 },  // Day-1-only floor
+    { maxPlace:  32, weight: 0.3 },  // oberes Ende des Top Cut
+    { maxPlace: Infinity, weight: 0.1 },  // uebriger Top Cut (NICHT Tag 1)
   ];
 
   /* DIE ABSOLUTEN BAENDER WAREN BEI GROSSEN TURNIEREN WIRKUNGSLOS
@@ -74,7 +96,7 @@
      Turniere im Bestand veroeffentlichen rund 18-19 % ihres Feldes.
 
          Turnier          Feld    Listen   Plaetze   davon auf 0,1
-         Worlds 2026       774       143     1-143    111  (78 %)
+         Worlds 2026       797       143     1-143    111  (78 %)
          NAIC 2026       3.743       675     1-675    643  (95 %)
          Turin           2.032       383     1-383    351  (92 %)
 
@@ -82,6 +104,25 @@
      ist die Quelle, aus der _loadTournamentSizes liest. Die Spalte
      `players` in tournament_cards_data_overview.csv zaehlt anders und
      ist hier NICHT gemeint.)
+
+     DIE 797 STAND HIER BIS ZUM 07.09.2026 ALS 774. Das war kein
+     Rechenfehler, sondern ein ueberholter Wert: am 05.09.2026, als
+     dieser Block geschrieben wurde, fuehrten labs_tournaments.json UND
+     labs_tournament_decks.csv fuer 0071 wirklich total_players = 774
+     (nachgesehen mit `git show 1cf2abb6:data/labs_tournaments.json`).
+     Der Wochenlauf "Auto: weekly full update" vom 06.09.2026 15:42 UTC
+     (afec9825) hat das Feld auf 797 nachgezogen; drei Dateien sagen
+     seither uebereinstimmend 797 (labs_tournaments.json,
+     labs_tournament_decks.csv, und player_continuity.csv fuehrt genau
+     797 Zeilen fuer 0071). Der Kommentar hat die Aenderung nicht
+     mitbekommen — deshalb steht die Zahl jetzt zusaetzlich als
+     BELEGTE_FELDER unten im Code und wird von
+     tests/unit/test-tag2-grundgesamtheit.js gegen die Datei geprueft.
+
+     Wirkung des Unterschieds, nachgemessen: 3 der 143 Worlds-Plaetze
+     bekommen mit 797 ein anderes Gewicht als mit 774 (Platz 39:
+     0,4 -> 0,6; Plaetze 78 und 79: 0,2 -> 0,4). Platz 39 ist eine der
+     acht Mega-Excadrill-Listen.
 
      Ueber 32 hinaus vergibt die Tabelle oben nur noch den Notwert 0,1 —
      also trugen rund neun von zehn veroeffentlichten Listen dasselbe
@@ -91,8 +132,8 @@
      daraus entstanden die Gleichstaende, bei denen am Ende die
      Zeilenreihenfolge der CSV entschied.
 
-     Der Fehler ist die absolute Skala: Platz 37 von 774 ist das obere
-     4,8 % eines Weltmeisterschaftsfeldes, Platz 37 von 120 ist Mittelfeld
+     Der Fehler ist die absolute Skala: Platz 37 von 797 ist das obere
+     4,6 % eines Weltmeisterschaftsfeldes, Platz 37 von 120 ist Mittelfeld
      eines Regionals. Beides als "ausserhalb der Top 32" zu behandeln
      wirft die Information weg, um die es geht.
 
@@ -104,6 +145,9 @@
      Das ist bewusst monoton: ein Gewicht kann dadurch nur STEIGEN, nie
      fallen. Ein Sieg bei einem kleinen Turnier behaelt seine 1,0 ueber
      das absolute Band; ein Platz 37 bei Worlds steigt von 0,1 auf 0,6.
+     Der Perzentilwert misst dabei den Platz am GANZEN Feld (797), die
+     Gewichtung selbst laeuft aber nur ueber den Top Cut (143 Listen) —
+     beides gilt gleichzeitig und darf nicht verwechselt werden.
      Waere es ein Ersatz, wuerde Platz 4 von 60 (= 6,7 %) auf 0,6
      abgewertet — ein Turniersieg zaehlte weniger als vorher, und das
      will niemand.
@@ -141,6 +185,24 @@
     { maxQuantil: Infinity, weight: 0.1 },
   ];
 
+  /* DIE ZAHLEN, AUF DIE SICH DIE KOMMENTARE OBEN BERUFEN.
+     Sie stehen hier als Code und nicht nur als Prosa, damit
+     tests/unit/test-tag2-grundgesamtheit.js sie gegen
+     data/labs_tournament_decks.csv und data/player_continuity.csv
+     nachrechnen kann. Laufen Kommentar und Datei auseinander — wie am
+     06.09.2026, als der Wochenlauf Worlds von 774 auf 797 zog —, wird
+     dieser Test rot, und der Kommentar wird nachgezogen. Das ist der
+     ganze Zweck; eine Zahl in einem Kommentar altert sonst still.
+
+     `feld`   = total_players aus labs_tournament_decks.csv
+     `listen` = Zeilen mit day2=1 in player_continuity.csv
+                = Zahl der Listen in tournament_decklists_per_player.csv */
+  const BELEGTE_FELDER = {
+    '0071': { name: 'Worlds 2026',  feld:  797, listen: 143 },
+    '0070': { name: 'NAIC 2026',    feld: 3743, listen: 675 },
+    '0069': { name: 'Turin',        feld: 2032, listen: 383 },
+  };
+
   // Spec rule 4: log(players)/log(2000), capped at 1.0.
   const SIZE_WEIGHT_REFERENCE = 2000;  // IC-scale tournaments hit 1.0
   const SIZE_WEIGHT_FLOOR     = 0.5;   // tournaments without size info
@@ -158,15 +220,21 @@
   const TECH_PACKAGE_COOCCURRENCE = 0.70;
 
   // Spec rule 10: data-quality gates.
+  // Untergrenze der STICHPROBE, nicht des Feldes: unter drei Listen
+  // gibt es nichts zu mitteln. Die Zahl haengt nicht an der
+  // Feldgroesse und aendert sich deshalb nicht dadurch, dass die
+  // Grundgesamtheit der Tag-2-Cut ist (siehe PLACEMENT_WEIGHT_BANDS).
   const MIN_WEIGHTED_LISTS = 3;  // < 3 → refuse to build, transparent.
 
   // ── Phase 4.5: alternative-count suggestion (2nd Prüfstand) ─────
   //
   // When the naive Math.round of weightedAvgCount lands close to a
-  // round-boundary, the field plurality + that plurality group's
-  // median placement form a "what would change if we trusted the
-  // field consensus instead?" diagnostic. Emitted into the trace so
-  // the Why? modal can surface it without overriding the live build.
+  // round-boundary, the plurality among the analysed lists + that
+  // plurality group's median placement form a "what would change if we
+  // trusted the list consensus instead?" diagnostic. Emitted into the
+  // trace so the Why? modal can surface it without overriding the live
+  // build. Der Konsens ist der des TAG-2-CUT, nicht der des Feldes —
+  // die Quelle kennt keine Liste ausserhalb des Cuts.
   //
   // The thresholds below are deliberately conservative — the Turin
   // sweep showed a 50/50 win-rate for naive vs plurality with looser
@@ -196,6 +264,12 @@
   let _byList          = null;  // Map(listKey → { meta, cards[] }) per
                                  // (tournament_id, player_name, place)
   let _tournamentSizes = null;  // Map(tournament_id → total_players)
+  let _archetypPiloten = null;  // Map("tid|archetyp" → player_count)
+                                 // aus labs_tournament_decks.csv. Das ist
+                                 // die Zahl der SPIELER dieses Archetyps im
+                                 // ganzen Feld — nicht die Zahl der Listen.
+                                 // Fuer Mega Excadrill bei Worlds: 32
+                                 // Piloten, 8 veroeffentlichte Tag-2-Listen.
   let _aceSpecNames    = null;  // Set of normalized ACE-SPEC card names
                                  // sourced from data/ace_specs.json.
                                  // 30.08.2026 nachgemessen: die Spalte
@@ -320,11 +394,27 @@
   // dedupe by tournament_id and take the max.
   async function _loadTournamentSizes() {
     const sizes = new Map();
+    /* Die zweite Zahl aus derselben Datei: wie viele Spieler des FELDES
+       diesen Archetyp gespielt haben (`player_count`). Ohne sie liest
+       sich "8 Listen ausgewertet" wie "8 Leute spielten das Deck" —
+       bei Mega Excadrill waren es 32 Piloten, von denen 8 den Tag-2-Cut
+       erreicht und damit eine veroeffentlichte Liste haben.
+       Verknuepft wird ueber labs `deck_name` gegen `deck_archetype` der
+       Listen-CSV; die Spalte `deck_slug` dort fuehrt eine Zahlenkennung
+       und taugt dafuer nicht. Findet sich kein Paar, bleibt die Zahl
+       LEER — geraten wird nichts. */
+    const piloten = new Map();
     try {
       const rows = await _loadCsv('data/labs_tournament_decks.csv');
       for (const r of rows) {
         const tid = String(r.tournament_id || '').trim();
         const total = parseInt(r.total_players || '0', 10) || 0;
+        const name = _norm(r.deck_name);
+        const pc = parseInt(r.player_count || '0', 10) || 0;
+        if (tid && name && pc > 0) {
+          const k = tid + '|' + name;
+          if (!piloten.has(k) || piloten.get(k) < pc) piloten.set(k, pc);
+        }
         if (!tid || total <= 0) continue;
         if (!sizes.has(tid) || sizes.get(tid) < total) {
           sizes.set(tid, total);
@@ -351,7 +441,17 @@
         for (const r of ueber) {
           const limitless = String(r.tournament_id || '').trim();
           const labs = String(r.labs_tournament_id || '').trim();
-          if (!limitless || !labs || sizes.has(limitless)) continue;
+          if (!limitless || !labs) continue;
+          // Dieselbe Bruecke fuer die Pilotenzahlen — sonst kennt der
+          // Bau bei NAIC (limitless '518') die Feldgroesse, aber nicht
+          // den Nenner daneben.
+          for (const [k, v] of piloten) {
+            const [t, a] = k.split('|');
+            if (t !== labs) continue;
+            const nk = limitless + '|' + a;
+            if (!piloten.has(nk)) piloten.set(nk, v);
+          }
+          if (sizes.has(limitless)) continue;
           if (sizes.has(labs)) sizes.set(limitless, sizes.get(labs));
         }
       } catch (e) {
@@ -360,20 +460,21 @@
     } catch (e) {
       console.warn('[MostConsistencyBuilder] could not load labs sizes:', e);
     }
-    return sizes;
+    return { sizes, piloten };
   }
 
   async function _loadAll() {
     if (_allRows) return;
     if (_loadPromise) return _loadPromise;
     _loadPromise = (async () => {
-      const [rows, sizes, aceSpecs] = await Promise.all([
+      const [rows, labsGroessen, aceSpecs] = await Promise.all([
         _loadCsv(DATA_URL),
         _loadTournamentSizes(),
         _loadAceSpecNames(),
       ]);
       _allRows         = rows;
-      _tournamentSizes = sizes;
+      _tournamentSizes = (labsGroessen && labsGroessen.sizes) || new Map();
+      _archetypPiloten = (labsGroessen && labsGroessen.piloten) || new Map();
       _aceSpecNames    = aceSpecs;
 
       _byArchetype = new Map();
@@ -529,6 +630,10 @@
   //   weightedAvgCount = Σ(weight × count) / Σ(weight where list ran it)
   //   topCutFreq       = #lists with place ≤ 8 that ran the card /
   //                       #lists with place ≤ 8 total
+  //                       ACHTUNG: das ist die Top-8-Quote INNERHALB des
+  //                       Tag-2-Cut, nicht "wie oft die Karte den Cut
+  //                       erreicht hat" — jede Liste hier hat den Cut
+  //                       erreicht, sonst waere sie nicht in der Datei.
   //   listsWithCard    = decklist references (used for co-occurrence)
   //
   // Spec rule 6 uses these as the canonical card-level signal that
@@ -744,11 +849,20 @@
   // ── Alternative-count suggestion (2nd Prüfstand) ─────────────────
   //
   // For a card whose naive Math.round(weightedAvgCount) lands in the
-  // borderline zone, compute the field plurality + that group's
-  // median placement. If the plurality is well-represented (≥50 % of
-  // lists running the card) AND places clearly better than the naive
-  // group (≥50-place median delta), emit a suggestion. Caller
-  // attaches it to the deck entry; the live build does NOT change.
+  // borderline zone, compute the plurality ACROSS THE ANALYSED LISTS +
+  // that group's median placement. If the plurality is
+  // well-represented (≥50 % of lists running the card) AND places
+  // clearly better than the naive group (≥50-place median delta),
+  // emit a suggestion. Caller attaches it to the deck entry; the live
+  // build does NOT change.
+  //
+  // ES IST KEINE "FIELD PLURALITY" (korrigiert 07.09.2026). Sie hiess
+  // hier und in drei detail-Texten so, gerechnet wird sie aber ueber
+  // `_perListCounts` — also ueber die veroeffentlichten Listen, und die
+  // sind ausschliesslich Tag-2-Listen. Bei Mega Excadrill waere "die
+  // Mehrheit des Feldes" eine Aussage ueber 32 Piloten, gerechnet aus
+  // 8 Listen. Auch die Plaetze im Medianabstand sind Plaetze im
+  // Gesamtfeld, verglichen werden aber nur Listen aus dem Cut.
   //
   // Returns null when no suggestion fires.
   function _computeAlternativeSuggestion(scoredCard, naiveCount) {
@@ -863,7 +977,8 @@
       if (copies < 1) copies = 1;
       const legalMax = c.is_basic_energy ? 59 : 4;
       if (copies > legalMax) copies = legalMax;
-      // 2nd Prüfstand — non-blocking suggestion if the field plurality
+      // 2nd Prüfstand — non-blocking suggestion if the plurality of
+      // the analysed Tag-2 lists (NICHT des Feldes)
       // places clearly better than the naive group. See
       // _computeAlternativeSuggestion() for thresholds.
       const altSuggestion = _computeAlternativeSuggestion(c, copies);
@@ -874,7 +989,7 @@
           card: c.name,
           slotType: c.is_energy ? 'energy' : 'core',
           ...altSuggestion,
-          detail: `Field plurality (${altSuggestion.plurality_n}/${altSuggestion.plurality_n + altSuggestion.naive_n} lists) `
+          detail: `Day-2 list plurality (${altSuggestion.plurality_n}/${altSuggestion.plurality_n + altSuggestion.naive_n} lists) `
                 + `plays ${altSuggestion.suggested_count} and places ${altSuggestion.placement_gap.toFixed(0)} `
                 + `places better (median P.${altSuggestion.plurality_median.toFixed(0)} vs P.${altSuggestion.naive_median.toFixed(0)}). `
                 + `Builder kept ${copies}; consider ${altSuggestion.suggested_count}.`,
@@ -1071,8 +1186,11 @@
         cards,
         score: Math.max(...cards.map(c => c.weightedShare)),
         // Der Tiebreak-Wert der Gruppe: die meisten Kopien, die eine
-        // ihrer Karten im Feld hat.
-        kopienImFeld: Math.max(...cards.map(c => c.weightedAvgCount || 0)),
+        // ihrer Karten in den AUSGEWERTETEN LISTEN hat — und das sind
+        // ausschliesslich Tag-2-Listen. "im Feld" hiess dieses Feld bis
+        // zum 07.09.2026 und war falsch: weightedAvgCount ist ein
+        // gewichtetes Mittel ueber den Top Cut, nicht ueber das Feld.
+        kopienInDenListen: Math.max(...cards.map(c => c.weightedAvgCount || 0)),
         totalCount: cards.reduce(
           (s, c) => s + Math.max(1, Math.round(c.weightedAvgCount)),
           0
@@ -1085,7 +1203,8 @@
     const tracePicks = [];
     let used = 0;
     // Helper: build a tech entry + emit the alternative-count
-    // diagnostic if the field plurality places clearly better.
+    // diagnostic if the plurality of the analysed Tag-2 lists (NICHT
+    // des Feldes) places clearly better.
     const _emitTech = (c, placed, packageId) => {
       const altSuggestion = _computeAlternativeSuggestion(c, placed);
       if (altSuggestion) {
@@ -1095,7 +1214,7 @@
           card: c.name,
           slotType: 'tech',
           ...altSuggestion,
-          detail: `Field plurality (${altSuggestion.plurality_n}/${altSuggestion.plurality_n + altSuggestion.naive_n} lists) `
+          detail: `Day-2 list plurality (${altSuggestion.plurality_n}/${altSuggestion.plurality_n + altSuggestion.naive_n} lists) `
                 + `plays ${altSuggestion.suggested_count} and places ${altSuggestion.placement_gap.toFixed(0)} `
                 + `places better (median P.${altSuggestion.plurality_median.toFixed(0)} vs P.${altSuggestion.naive_median.toFixed(0)}). `
                 + `Builder kept ${placed}; consider ${altSuggestion.suggested_count}.`,
@@ -1287,6 +1406,26 @@
         if (_platzMax == null || p > _platzMax) _platzMax = p;
       }
     }
+    /* DER NENNER, DER BISHER FEHLTE (07.09.2026).
+       "8 Listen ausgewertet" laesst offen, WOVON acht. Die CSV fuehrt
+       nur Tag-2-Listen (siehe PLACEMENT_WEIGHT_BANDS), also sind acht
+       Listen bei Mega Excadrill acht von 32 Piloten in einem Feld von
+       797 — nicht acht Leute, die das Deck gespielt haben.
+
+       Beide Zusatzzahlen stehen in labs_tournament_decks.csv und werden
+       von dort geholt, nicht abgeschrieben: `player_count` je
+       (Turnier x Archetyp) und `total_players` je Turnier. Fehlt eine
+       davon fuer auch nur EIN beteiligtes Turnier, bleibt sie null —
+       eine halb summierte Feldgroesse waere eine erfundene Zahl. */
+    const _arch = _norm((lists[0] && lists[0].deck_archetype) || '');
+    let _piloten = 0, _feld = 0;
+    let _pilotenVollstaendig = !!_arch, _feldVollstaendig = _turnierIds.size > 0;
+    for (const tid of _turnierIds) {
+      const pc = _archetypPiloten ? _archetypPiloten.get(tid + '|' + _arch) : undefined;
+      if (Number.isFinite(pc) && pc > 0) _piloten += pc; else _pilotenVollstaendig = false;
+      const tp = _tournamentSizes ? _tournamentSizes.get(tid) : undefined;
+      if (Number.isFinite(tp) && tp > 0) _feld += tp; else _feldVollstaendig = false;
+    }
     const dq = {
       n_lists:               lists.length,
       total_weight:          totalW,
@@ -1298,11 +1437,24 @@
       juengstes_turnier:     _juengstes,
       platz_von:             _platzMin,
       platz_bis:             _platzMax,
+      // Die Grundgesamtheit dieser Datei ist immer der Tag-2-Cut.
+      nur_tag2:              true,
+      n_piloten:             _pilotenVollstaendig ? _piloten : null,
+      feldgroesse:           _feldVollstaendig ? _feld : null,
     };
     if (!dq.sufficient) {
-      dq.warning = `Only ${lists.length} decklist(s) for this archetype — `
+      /* Die Schwelle ist eine STICHPROBENUNTERGRENZE, keine Aussage
+         ueber das Feld: unter drei Listen gibt es nichts zu mitteln.
+         Sie bleibt bei 3 — dass die Grundgesamtheit der Tag-2-Cut ist,
+         aendert daran nichts, weil sie nicht am Feld haengt. Was sich
+         aendert, ist die Beschriftung: "3 decklists" waren immer schon
+         3 TAG-2-Listen. Ob 3 der richtige Wert ist, ist NICHT GEPRUEFT
+         — hier wurde nur die Beschreibung richtiggestellt. */
+      dq.warning = `Only ${lists.length} day-2 decklist(s) for this archetype — `
                  + `below ${MIN_WEIGHTED_LISTS} the algorithm can't produce a `
-                 + `representative build. Try widening the tournament filter.`;
+                 + `representative build. Note that limitless publishes lists `
+                 + `from day 2 onward, so this is the top cut, not the field. `
+                 + `Try widening the tournament filter.`;
       trace.push({
         phase: 6, decision: 'data_too_thin',
         n_lists: lists.length,
@@ -1557,11 +1709,108 @@
     return raus;
   }
 
+  /* EINE FORMULIERUNG FUER ALLE ANZEIGEN (07.09.2026).
+     Die Listenzahl stand an vier Stellen im Deckbauer und ueberall
+     nackt da ("8 Listen ausgewertet"). Sie hier EINMAL zu bauen ist
+     nicht Kosmetik: solange jede Stelle ihren eigenen Satz baut, kann
+     eine davon den Tag-2-Hinweis wieder verlieren, ohne dass es
+     auffaellt. Vorbild ist die Kachel in js/app-past-meta.js:1160-1184
+     ("Tag-2-Decklisten" plus Erklaerung im title).
+
+     Regel fuer die Zusatzzahlen: sie kommen aus dq und NUR aus dq. Ist
+     dq.n_piloten oder dq.feldgroesse null, faellt der jeweilige
+     Halbsatz ersatzlos weg — die Listenzahl mit dem Wort Tag 2 steht
+     dann allein, geraten wird keine Feldgroesse. */
+  function _istDeutsch(lang) {
+    if (lang === 'de') return true;
+    if (lang === 'en') return false;
+    try {
+      if (typeof global.getLang === 'function') return global.getLang() === 'de';
+    } catch (_) { /* egal */ }
+    return true;
+  }
+
+  /**
+   * Der Satz, der an der Zahl steht.
+   * @param {Object} dq  dataQuality aus build()
+   * @param {string} [lang]  'de' | 'en'; sonst getLang()
+   * @returns {string} z. B. "8 Tag-2-Listen von 32 Piloten (Feld 797)"
+   */
+  function datenbasisSatz(dq, lang) {
+    const d = dq || {};
+    const n = Number(d.n_lists || 0);
+    const de = _istDeutsch(lang);
+    const zahl = (x) => de ? String(x).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : String(x);
+    const kopf = de
+      ? `${zahl(n)} Tag-2-${n === 1 ? 'Liste' : 'Listen'}`
+      : `${zahl(n)} day-2 ${n === 1 ? 'list' : 'lists'}`;
+    const piloten = Number.isFinite(d.n_piloten) && d.n_piloten > 0 ? d.n_piloten : null;
+    const feld    = Number.isFinite(d.feldgroesse) && d.feldgroesse > 0 ? d.feldgroesse : null;
+    let satz = kopf;
+    if (piloten !== null) {
+      satz += de ? ` von ${zahl(piloten)} Piloten` : ` from ${zahl(piloten)} pilots`;
+    }
+    if (feld !== null) {
+      satz += de ? ` (Feld ${zahl(feld)})` : ` (field ${zahl(feld)})`;
+    }
+    return satz;
+  }
+
+  /** Die Erklaerung fuer den title-Text daneben. */
+  function datenbasisHinweis(dq, lang) {
+    const d = dq || {};
+    const de = _istDeutsch(lang);
+    const piloten = Number.isFinite(d.n_piloten) && d.n_piloten > 0 ? d.n_piloten : null;
+    const feld    = Number.isFinite(d.feldgroesse) && d.feldgroesse > 0 ? d.feldgroesse : null;
+    // Dieselbe Tausenderschreibung wie im Satz daneben — sonst steht in
+    // der Kachel "6.572" und im Tooltip "6572".
+    const zahl = (x) => de ? String(x).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : String(x);
+    const nL = zahl(Number(d.n_lists || 0));
+    if (de) {
+      let t = 'Limitless veroeffentlicht Decklisten erst ab Tag 2. Der Bau steht '
+            + 'deshalb auf dem Top Cut, nicht auf dem ganzen Feld';
+      if (piloten !== null) {
+        t += ` — ${zahl(piloten)} Spieler haben diesen Archetyp gespielt, `
+           + `veroeffentlicht sind ${nL} ihrer Listen`;
+      }
+      if (feld !== null) t += `, bei ${zahl(feld)} Spielern im Feld`;
+      return t + '.';
+    }
+    let t = 'Limitless publishes decklists from day 2 onward, so this build rests '
+          + 'on the top cut, not the whole field';
+    if (piloten !== null) {
+      t += ` — ${piloten} players ran this archetype, `
+         + `${nL} of their lists are published`;
+    }
+    if (feld !== null) t += `, out of ${feld} players in the field`;
+    return t + '.';
+  }
+
+  /**
+   * Feldgroesse und Pilotenzahl fuer EIN Turnier x Archetyp — fuer
+   * Anzeigen, die keine dataQuality haben (Schnellreferenz-Kachel).
+   * Gibt null zurueck, wo die Datei nichts hergibt.
+   */
+  function turnierFeld(tournamentId, archetyp) {
+    const tid = String(tournamentId || '').trim();
+    const a = _norm(archetyp);
+    const tp = _tournamentSizes ? _tournamentSizes.get(tid) : undefined;
+    const pc = (_archetypPiloten && a) ? _archetypPiloten.get(tid + '|' + a) : undefined;
+    return {
+      feldgroesse: Number.isFinite(tp) && tp > 0 ? tp : null,
+      n_piloten:   Number.isFinite(pc) && pc > 0 ? pc : null,
+    };
+  }
+
   global.MostConsistencyBuilder = {
     build,
     loadData:           _loadAll,
     isAvailable,
     listsForArchetype,
+    datenbasisSatz,
+    datenbasisHinweis,
+    turnierFeld,
+    BELEGTE_FELDER,
     // Exposed for unit tests / future "explain why" UIs:
     _internals: {
       placementWeight:  _placementWeight,

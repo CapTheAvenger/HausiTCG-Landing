@@ -39,6 +39,10 @@ Usage:
   python backend/scrapers/per_decklist_scraper.py --resume   # skip tids
                                                               # already in
                                                               # the output
+  python backend/scrapers/per_decklist_scraper.py --bilanzen-nachtragen
+                       # ohne Netz: 0-0-0-Bilanzen im vorhandenen Bestand
+                       # aus data/player_continuity.csv fuellen; was dort
+                       # nicht steht, bekommt leere Felder statt einer 0.
 
 Network notes:
   - One fetch per tournament page (?show=2000 to skip pagination).
@@ -57,6 +61,7 @@ import os
 import re
 import sys
 import time
+import unicodedata
 from collections import OrderedDict
 from datetime import date, datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
@@ -289,24 +294,148 @@ def load_tournament_index_from_jh_state() -> List[Dict]:
     ]
 
 
-def load_player_continuity_records() -> Dict[Tuple[str, str, str], Tuple[int, int, int]]:
-    """Build { (labs_tid, place, player_name): (wins, losses, ties) }
-    from player_continuity.csv. Used as a W-L fallback when the
-    standings parser can't extract the record from the tournament's
-    HTML — Special-Event pages (e.g. Turin 2026-06) use a column
-    layout the per-decklist scraper's _HEADER_SYNONYMS table doesn't
-    cover (Match Points instead of Record). player_continuity.csv is
-    written by a separate scraper that DOES extract the right field
-    for those events, so cross-referencing fills the gap without
-    waiting for a per_decklist_scraper standings-parser fix.
+def _bilanz_namensschluessel(name: str) -> str:
+    """Der Spielername als Vergleichsschluessel zwischen den zwei Dateien.
 
-    Returns {} when the continuity file is missing — caller skips
-    the enrichment step silently."""
-    data_dir = get_data_dir()
-    path = os.path.join(data_dir, 'player_continuity.csv')
-    if not os.path.exists(path):
-        return {}
-    out: Dict[Tuple[str, str, str], Tuple[int, int, int]] = {}
+    BEFUND 07.09.2026. Der Rueckfall unten verglich die Namen roh.
+    tournament_decklists_per_player.csv fuehrt `Benjamin Pham`,
+    player_continuity.csv fuehrt `benjamin pham` — derselbe Mensch, kein
+    Treffer. Gemessen an den 100 genullten Decklisten des Bestands:
+
+        roh                                   0 von 100 Treffern
+        .strip().lower()                     84 von 100
+        zusaetzlich entakzentuiert           86 von 100
+        zusaetzlich ohne Satzzeichen         86 von 100
+
+    Die dritte Stufe bringt zwei Treffer (Namen mit Akzent, die eine der
+    beiden Quellen entakzentuiert fuehrt). Die vierte bringt heute
+    nichts; sie steht trotzdem hier, weil `Jesper S.H Eriksen` gegen
+    `Jesper S.H. Eriksen` sonst wieder am Punkt scheitert und ein
+    doppeltes Leerzeichen ebenso. Sie kostet keinen Treffer, das ist
+    gemessen, nicht vermutet.
+
+    Weiter wird NICHT normalisiert. Namensteile wegzulassen oder
+    umzusortieren waere kein Schluessel mehr, sondern ein Ratespiel.
+    """
+    t = unicodedata.normalize('NFKD', (name or '').strip().lower())
+    t = ''.join(c for c in t if not unicodedata.combining(c))
+    t = ''.join(c if (c.isalnum() or c.isspace()) else ' ' for c in t)
+    return ' '.join(t.split())
+
+
+def _namen_meinen_denselben(a: str, b: str) -> bool:
+    """Sind das zwei Schreibweisen EINES Spielers?
+
+    Nur wahr, wenn die Wortteile des einen Namens vollstaendig in denen
+    des anderen stecken UND mindestens zwei Teile gemeinsam sind. Also
+    ja fuer `Marco Aurelio Fernandes Garcia` / `Marco Garcia` und fuer
+    `Seungrim Kim` / `KIM SEUNGRIM`; nein fuer zwei fremde Menschen, die
+    sich nur einen Vornamen teilen.
+
+    Zwei gemeinsame Teile sind das Mindestmass, weil ein einzelner
+    gleicher Vorname bei 797 Spielern eines Turniers nichts beweist.
+    """
+    ta = set(_bilanz_namensschluessel(a).split())
+    tb = set(_bilanz_namensschluessel(b).split())
+    if not ta or not tb:
+        return False
+    return (ta <= tb or tb <= ta) and len(ta & tb) >= 2
+
+
+class Kontinuitaetsbilanzen:
+    """Die Bilanzen aus player_continuity.csv, auf zwei Wegen nachschlagbar.
+
+    `nach_name`  (labs_tid, Platz, Namensschluessel) -> (w, l, t)
+    `nach_platz` (labs_tid, Platz)                   -> [(Name, (w, l, t))]
+
+    Der Platzweg ist der zweite Anlauf fuer die Faelle, in denen die
+    beiden Dateien denselben Menschen verschieden ausschreiben
+    (`Marco Cifuentes Meta` gegen `Marco Cifuentes`). Er ist nur so
+    sicher, wie der Platz eindeutig ist — deshalb wird ausschliesslich
+    ein EINZELNER Eintrag unter (Turnier, Platz) genommen, und der Name
+    muss zusaetzlich zum selben Menschen passen.
+
+    Belegt, bevor dieser Weg gebaut wurde (gemessen am 07.09.2026 gegen
+    alle 1.201 Decklisten des Bestands):
+      * 1.201 von 1.201 finden GENAU EINEN Eintrag unter (Turnier, Platz);
+        mehrfach belegte Paare gibt es nur mit LEEREM Platz (52 Zeilen,
+        ausgestiegene Spieler) — die kommen hier nicht vor.
+      * 1.187 Namen sind danach zeichengleich, 14 sind Teilmengen,
+        0 sind fremd.
+      * Bei den 1.101 Listen, die schon eine Bilanz tragen, stimmt die
+        Bilanz aus player_continuity.csv in 1.101 von 1.101 Faellen
+        aufs Spiel genau ueberein. Diese Datei widerspricht dem
+        Bestand nirgends; sie fuellt nur, was fehlt.
+    """
+
+    def __init__(self, nach_name, nach_platz):
+        self.nach_name = nach_name
+        self.nach_platz = nach_platz
+
+    def __bool__(self) -> bool:
+        return bool(self.nach_name)
+
+    def __len__(self) -> int:
+        return len(self.nach_name)
+
+    def finde(self, tid, place, name):
+        """((w, l, t), Weg) oder None. `Weg` ist 'name' oder 'platz'."""
+        tid = str(tid or '').strip()
+        place = str(place or '').strip()
+        if not (tid and place):
+            return None
+        schl = _bilanz_namensschluessel(name)
+        if schl:
+            treffer = self.nach_name.get((tid, place, schl))
+            if treffer:
+                return treffer, 'name'
+        kandidaten = self.nach_platz.get((tid, place)) or []
+        if len(kandidaten) == 1:
+            k_name, k_bilanz = kandidaten[0]
+            if _namen_meinen_denselben(name, k_name):
+                return k_bilanz, 'platz'
+        return None
+
+
+def _pfad_zur_kontinuitaetsdatei() -> str:
+    """player_continuity.csv — erst im Arbeitsverzeichnis, dann im Repo.
+
+    `get_data_dir()` zeigt auf backend/core/data. Im Wochenlauf wird die
+    Datei dorthin geseedet, lokal steht sie nur unter data/ im Repo.
+    Ohne den zweiten Blick lief `--bilanzen-nachtragen` von Hand ins
+    Leere und meldete "Quelle fehlt", obwohl sie danebenlag.
+    Zurueck kommt der erste Pfad, den es gibt, sonst ''.
+    """
+    for p in (os.path.join(get_data_dir(), 'player_continuity.csv'),
+              os.path.join(_PROJECT_ROOT, 'data', 'player_continuity.csv')):
+        if os.path.exists(p):
+            return p
+    return ''
+
+
+def load_player_continuity_records() -> Kontinuitaetsbilanzen:
+    """Bilanzen aus player_continuity.csv, nachschlagbar nach Namen und
+    nach Platz. Rueckfall fuer den Fall, dass der Standings-Leser die
+    Bilanz nicht aus der Turnierseite bekommt — Special-Event-Seiten
+    (Turin 2026-06 war der erste Fall) fuehren eine Spalte
+    "Match Points" statt "Record", die `_HEADER_SYNONYMS` nicht kennt,
+    und liefern dann (0, 0, 0). player_continuity.csv wird von einem
+    anderen Scraper mit einem anderen Leser geschrieben und hat die
+    Bilanz.
+
+    Eine 0-0-0-Bilanz wird NICHT uebernommen: sie waere kein Fund,
+    sondern dieselbe Luecke noch einmal. Dass es sie als echte Bilanz
+    nicht gibt, ist gemessen — von 21.247 Eintraegen mit Platz in
+    player_continuity.csv traegt kein einziger 0-0-0.
+
+    Leere Bilanzen, wenn die Datei fehlt — der Aufrufer ueberspringt
+    den Schritt dann stillschweigend."""
+    leer = Kontinuitaetsbilanzen({}, {})
+    path = _pfad_zur_kontinuitaetsdatei()
+    if not path:
+        return leer
+    nach_name: Dict[Tuple[str, str, str], Tuple[int, int, int]] = {}
+    nach_platz: Dict[Tuple[str, str], List[Tuple[str, Tuple[int, int, int]]]] = {}
     try:
         with open(path, encoding='utf-8') as f:
             reader = csv.DictReader(f)
@@ -322,12 +451,14 @@ def load_player_continuity_records() -> Dict[Tuple[str, str, str], Tuple[int, in
                     t = int(r.get('ties') or 0)
                 except ValueError:
                     continue
-                if (w + l + t) > 0:
-                    out[(tid, place, player)] = (w, l, t)
+                if (w + l + t) <= 0:
+                    continue
+                nach_name[(tid, place, _bilanz_namensschluessel(player))] = (w, l, t)
+                nach_platz.setdefault((tid, place), []).append((player, (w, l, t)))
     except Exception as e:
         logger.warning("Could not parse player_continuity.csv: %s", e)
-        return {}
-    return out
+        return leer
+    return Kontinuitaetsbilanzen(nach_name, nach_platz)
 
 
 def load_tournament_metadata_lookup() -> Dict[str, Dict]:
@@ -469,6 +600,21 @@ def _schluessel(r: Dict) -> Tuple[str, str, str]:
     Neulauf AENDERT sich der Druck (ASC 207 -> DRI 176), die alte Zeile
     haette einen anderen Schluessel und bliebe stehen. Ersetzt wird
     deshalb die ganze Deckliste auf einmal.
+
+    OFFEN, bewusst so gelassen (07.09.2026). Dieser Schluessel vergleicht
+    den Spielernamen zeichengenau — dieselbe Bauart, die den
+    Bilanz-Rueckfall stumm gemacht hat (siehe
+    `_bilanz_namensschluessel`). Gemessen am heutigen Bestand ist er
+    unauffaellig: 1.201 verschiedene Schluessel zeichengenau, 1.201
+    normalisiert, also kein einziges Paar, das nur an der
+    Schreibweise auseinanderfaellt. Traete eines auf, wuerde die alte
+    Zeile nicht ersetzt, sondern verdoppelt.
+    Hier trotzdem NICHT normalisiert, weil
+    `limitless_online_decklist_scraper._schluessel` in dieselbe Datei
+    schreibt und dieselbe Einteilung waehlen muss. Einseitig geaendert
+    waeren es zwei Schreiber mit zwei Vorstellungen davon, was dieselbe
+    Deckliste ist — schlimmer als das Problem. Zu aendern sind beide
+    zusammen.
     """
     return (
         str(r.get('limitless_tournament_id', '') or ''),
@@ -539,11 +685,54 @@ def write_rows(rows: List[Dict], out_path: str, append: bool = True) -> None:
             writer.writerow({k: r.get(k, '') for k in CSV_FIELDS})
 
 
+def bilanz_rueckfall_je_zeile(rows_std: List[Dict], labs_tid: str,
+                             bilanzen: 'Kontinuitaetsbilanzen') -> Dict[str, int]:
+    """Fuellt JEDE genullte Standings-Zeile einzeln aus den Bilanzen.
+    Aendert `rows_std` an Ort und Stelle, zaehlt die Wege zurueck.
+
+    Ausdruecklich JE ZEILE und nicht je Stapel. Der Vorgaenger fragte
+    `all_zero`, also ob der ganze Stapel genullt ist, und feuerte
+    deshalb nie: bei Worlds (0071) waren 28 von 143 Listen genullt,
+    bei NAIC (0070) 32 von 675. Gemessen am Bestand blieben so 100 von
+    1.201 Decklisten mit 0-0-0 stehen, darunter Platz 53, Benjamin
+    Pham, Mega Excadrill — dessen Bilanz 8-3-1 die ganze Zeit in
+    player_continuity.csv stand.
+
+    Eine vorhandene Bilanz wird nie angefasst. Eine echte 0-0-0-Bilanz
+    zu ueberschreiben ist ausgeschlossen: von 21.247 Eintraegen mit
+    Platz in player_continuity.csv traegt keiner 0-0-0 — wer mit einem
+    Platz in einer Standings-Tabelle steht, hat gespielt.
+    """
+    z = {'aus_name': 0, 'aus_platz': 0, 'unbekannt': 0}
+    for r in rows_std:
+        werte = [str(r.get(k, '') if r.get(k, '') is not None else '').strip()
+                 for k in ('wins', 'losses', 'ties')]
+        if any(v == '' for v in werte):
+            # Schon als "keine Quelle" gekennzeichnet — nicht erneut anfassen.
+            continue
+        try:
+            if sum(int(v) for v in werte) > 0:
+                continue
+        except ValueError:
+            continue
+        fund = bilanzen.finde(labs_tid, r.get('place'), r.get('player_name'))
+        if fund:
+            (w, l, t), weg = fund
+            r['wins'], r['losses'], r['ties'] = w, l, t
+            z['aus_name' if weg == 'name' else 'aus_platz'] += 1
+        else:
+            # Keine Quelle — also auch keine Zahl. Leer statt 0, damit
+            # die Zeile nichts behauptet, statt "0 Siege" zu behaupten.
+            r['wins'] = r['losses'] = r['ties'] = ''
+            z['unbekannt'] += 1
+    return z
+
+
 def scrape_one_tournament(
     tournament: Dict,
     card_db: CardDatabaseLookup,
     delay: float = DEFAULT_DELAY,
-    continuity_records: Optional[Dict[Tuple[str, str, str], Tuple[int, int, int]]] = None,
+    continuity_records: Optional['Kontinuitaetsbilanzen'] = None,
 ) -> List[Dict]:
     """Scrape one tournament end-to-end and return the rows. Top-level
     flow:
@@ -580,31 +769,50 @@ def scrape_one_tournament(
         logger.info("  No standings rows for %s — skipping", tid_lim)
         return []
 
-    # W-L fallback from player_continuity.csv. Special-Event standings
-    # pages (Turin 2026-06 was the first observed case) use a "Match
-    # Points" column that the current _HEADER_SYNONYMS table doesn't
-    # match, so parse_standings_rows() returns (0, 0, 0) for every
-    # player. player_continuity.csv carries the right record for those
-    # players (different scraper, different parser), so we fill the
-    # gap here. Only applies when the entire batch came back zeroed —
-    # if even one player has a non-zero record, we trust the standings
-    # parser and leave the data alone.
+    # Bilanz-Rueckfall aus player_continuity.csv.
+    #
+    # Der Standings-Leser liefert (0, 0, 0), wenn die Turnierseite die
+    # Bilanz in einer Spalte fuehrt, die `_HEADER_SYNONYMS` nicht kennt
+    # ("Match Points" statt "Record"; Turin 2026-06 war der erste Fall).
+    # player_continuity.csv hat die Bilanz, weil sie von einem anderen
+    # Scraper mit einem anderen Leser geschrieben wird.
+    #
+    # ZWEI BEFUNDE vom 07.09.2026, die diesen Block vorher stumm
+    # liessen — beide gemessen am Bestand:
+    #
+    #  1. Der Rueckfall fragte `all_zero`, also ob der GANZE Stapel
+    #     genullt ist. Bei Worlds (0071) waren 28 von 143 Listen
+    #     genullt, bei NAIC (0070) 32 von 675 — der Stapel war nie
+    #     ganz genullt, der Rueckfall feuerte nie, und 100 von 1.201
+    #     Decklisten standen mit 0-0-0 da. Darunter Platz 53, Benjamin
+    #     Pham, Mega Excadrill, dessen Bilanz 8-3-1 die ganze Zeit in
+    #     player_continuity.csv stand.
+    #     Jetzt wird JEDE ZEILE einzeln gefragt. Das ist auch das
+    #     richtige Mass: eine halb geratene Standings-Tabelle ist
+    #     wahrscheinlicher als eine ganz kaputte.
+    #  2. Der Schluessel verglich die Namen zeichengenau. Der Bestand
+    #     fuehrt `Benjamin Pham`, player_continuity.csv `benjamin pham`.
+    #     Treffer zeichengenau: 0 von 100. Ueber
+    #     `_bilanz_namensschluessel`: 86 von 100.
+    #
+    # Eine vorhandene Bilanz wird NIE angefasst — nur Zeilen, die
+    # 0-0-0 tragen. Dass eine echte 0-0-0-Bilanz dabei ueberschrieben
+    # werden koennte, ist ausgeschlossen und nicht bloss angenommen:
+    # von 21.247 Eintraegen mit Platz in player_continuity.csv traegt
+    # keiner 0-0-0. Wer in einer Standings-Tabelle mit einem Platz
+    # steht, hat gespielt.
     if continuity_records and labs_tid:
-        all_zero = all(
-            (r.get('wins', 0) + r.get('losses', 0) + r.get('ties', 0)) == 0
-            for r in rows_std
-        )
-        if all_zero:
-            fixed = 0
-            for r in rows_std:
-                key = (str(labs_tid), str(r.get('place', '')), str(r.get('player_name', '')))
-                if key in continuity_records:
-                    w, l, t = continuity_records[key]
-                    r['wins'], r['losses'], r['ties'] = w, l, t
-                    fixed += 1
-            if fixed > 0:
-                logger.info("  W-L fallback: enriched %d/%d players from player_continuity.csv",
-                            fixed, len(rows_std))
+        z = bilanz_rueckfall_je_zeile(rows_std, labs_tid, continuity_records)
+        if z['aus_name'] or z['aus_platz'] or z['unbekannt']:
+            logger.info("  Bilanz-Rueckfall: %d ueber den Namen, %d ueber den "
+                        "Platz, %d ohne Quelle (bleiben leer) — von %d Zeilen",
+                        z['aus_name'], z['aus_platz'], z['unbekannt'],
+                        len(rows_std))
+        if z['unbekannt']:
+            print(f"::warning::per_decklist_scraper: {z['unbekannt']} Spieler "
+                  f"bei Turnier {labs_tid} haben weder auf der Turnierseite "
+                  f"noch in player_continuity.csv eine Bilanz. Ihre Felder "
+                  f"wins/losses/ties bleiben LEER — nicht 0.")
 
     # Group rows by deck_id so we fetch each unique decklist once
     by_deck_id: "OrderedDict[str, List[Dict]]" = OrderedDict()
@@ -721,6 +929,141 @@ def _vorformat_fenster(data_dir):
     return d.isoformat(), schluessel
 
 
+def _schreibe_atomar(pfad: str, kopf: List[str], zeilen: List[Dict]) -> None:
+    """Erst daneben schreiben, dann umbenennen.
+
+    `open(pfad, "w")` kuerzt die vorhandene Datei, BEVOR geschrieben
+    wird. Ein Abbruch mittendrin — der Ablauf in Actions hat ein
+    Zeitlimit — hinterliesse eine halbe CSV, und der Commit-Schritt
+    committet sie. Gleiche Bauart wie `_schreibe_atomar` in
+    backend/scrapers/limitless_online_decklist_scraper.py.
+    """
+    os.makedirs(os.path.dirname(pfad) or '.', exist_ok=True)
+    vorlaeufig = pfad + '.tmp'
+    with open(vorlaeufig, 'w', newline='', encoding='utf-8') as f:
+        w = csv.DictWriter(f, fieldnames=kopf)
+        w.writeheader()
+        for z in zeilen:
+            w.writerow({k: z.get(k, '') for k in kopf})
+    os.replace(vorlaeufig, pfad)
+
+
+def _ist_genullt(z: Dict) -> bool:
+    """Traegt diese Zeile eine 0-0-0-Bilanz?
+
+    Leere Felder zaehlen NICHT als genullt: sie sind das Kennzeichen
+    fuer "keine Quelle gefunden" und wurden absichtlich so gesetzt.
+    Sie noch einmal anzufassen brachte nichts und wuerde nur
+    verschleiern, wie viele Luecken wirklich offen sind.
+    """
+    werte = [str(z.get(k, '')).strip() for k in ('wins', 'losses', 'ties')]
+    if any(v == '' for v in werte):
+        return False
+    try:
+        return sum(int(v) for v in werte) == 0
+    except ValueError:
+        return False
+
+
+def bilanzen_nachtragen(zeilen: List[Dict],
+                        bilanzen: 'Kontinuitaetsbilanzen') -> Dict[str, int]:
+    """Genullte Bilanzen im vorhandenen Bestand aus player_continuity.csv
+    nachtragen. Aendert `zeilen` an Ort und Stelle.
+
+    Entschieden wird je DECKLISTE (Turnier, Platz, Spieler), nicht je
+    Kartenzeile: eine Liste hat 20 bis 30 Kartenzeilen, und alle tragen
+    dieselbe Bilanz. Einmal nachschlagen statt dreissigmal, und vor
+    allem: keine Liste, die am Ende halb gefuellt dasteht.
+
+    Angefasst werden ausschliesslich `wins`, `losses` und `ties`, und
+    das nur bei Zeilen, die heute 0-0-0 tragen. Rueckgabe: die Zaehlung
+    nach Weg.
+    """
+    # Decklisten sammeln
+    nach_liste: "OrderedDict[Tuple[str, str, str], List[Dict]]" = OrderedDict()
+    for z in zeilen:
+        schl = (str(z.get('tournament_id', '') or '').strip(),
+                str(z.get('place', '') or '').strip(),
+                str(z.get('player_name', '') or '').strip())
+        nach_liste.setdefault(schl, []).append(z)
+
+    zaehlung = {'listen': len(nach_liste), 'genullt': 0, 'aus_name': 0,
+                'aus_platz': 0, 'unbekannt': 0, 'zeilen_geaendert': 0}
+    offen: List[Tuple[Tuple[str, str, str], Dict]] = []
+    for (tid, platz, name), gruppe in nach_liste.items():
+        if not _ist_genullt(gruppe[0]):
+            continue
+        zaehlung['genullt'] += 1
+        fund = bilanzen.finde(tid, platz, name) if bilanzen else None
+        if fund:
+            (w, l, t), weg = fund
+            zaehlung['aus_name' if weg == 'name' else 'aus_platz'] += 1
+            for z in gruppe:
+                z['wins'], z['losses'], z['ties'] = str(w), str(l), str(t)
+                zaehlung['zeilen_geaendert'] += 1
+        else:
+            # Keine Quelle. Leer statt 0 — die Zeile behauptet dann
+            # nichts mehr, statt "0 Siege" zu behaupten.
+            zaehlung['unbekannt'] += 1
+            offen.append(((tid, platz, name), gruppe[0]))
+            for z in gruppe:
+                z['wins'] = z['losses'] = z['ties'] = ''
+                zaehlung['zeilen_geaendert'] += 1
+    zaehlung['_offen'] = offen
+    return zaehlung
+
+
+def _lauf_bilanzen(ziel: str, trocken: bool = False) -> int:
+    """`--bilanzen-nachtragen`: den vorhandenen Bestand reparieren, ohne Netz.
+
+    Vorbild ist `--nur-herkunft-nachtragen` im Online-Scraper: lesen,
+    genau eine Spaltengruppe anfassen, atomar zurueckschreiben.
+    """
+    kopf, zeilen = _bestand_lesen(ziel)
+    if not zeilen:
+        print(f"::error::{ziel} hat keine Zeilen — nichts nachzutragen.")
+        return 1
+    vorher_zeilen = len(zeilen)
+    # Zustand VOR der Reparatur, Zelle fuer Zelle, ohne die drei
+    # Bilanzspalten. Danach wird derselbe Abdruck noch einmal gebildet.
+    # Weicht er ab, hat die Reparatur etwas angefasst, das ihr nicht
+    # gehoert — dann wird nichts geschrieben.
+    andere = [k for k in kopf if k not in ('wins', 'losses', 'ties')]
+    abdruck_vorher = [tuple(z.get(k, '') for k in andere) for z in zeilen]
+
+    bilanzen = load_player_continuity_records()
+    if not bilanzen:
+        print("::error::player_continuity.csv fehlt oder ist leer — ohne "
+              "Quelle wird keine Bilanz nachgetragen.")
+        return 1
+    z = bilanzen_nachtragen(zeilen, bilanzen)
+    offen = z.pop('_offen', [])
+
+    abdruck_nachher = [tuple(r.get(k, '') for k in andere) for r in zeilen]
+    if len(zeilen) != vorher_zeilen or abdruck_nachher != abdruck_vorher:
+        print("::error::die Reparatur haette ausserhalb von wins/losses/ties "
+              "etwas veraendert — es wird nichts geschrieben.")
+        return 1
+
+    noch_genullt = sum(1 for r in zeilen if _ist_genullt(r))
+    print(f"{z['listen']} Deckliste(n) im Bestand, davon {z['genullt']} mit "
+          f"0-0-0.")
+    print(f"  ueber den Namensschluessel repariert: {z['aus_name']}")
+    print(f"  ueber (Turnier, Platz) repariert:     {z['aus_platz']}")
+    print(f"  ohne Quelle, Felder geleert:          {z['unbekannt']}")
+    for (tid, platz, name), zeile in offen:
+        print(f"    offen: Turnier {tid}, Platz {platz}, {name} "
+              f"({zeile.get('deck_archetype', '')})")
+    print(f"  betroffene Kartenzeilen: {z['zeilen_geaendert']} von {len(zeilen)}")
+    print(f"  Kartenzeilen mit 0-0-0 danach: {noch_genullt}")
+    if trocken:
+        print("Probelauf — es wird nichts geschrieben.")
+        return 0
+    _schreibe_atomar(ziel, kopf, zeilen)
+    print(f"geschrieben: {ziel} ({len(zeilen)} Zeilen, {len(kopf)} Spalten)")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--tournament-url', type=str,
@@ -749,10 +1092,30 @@ def main():
                     help='Stop after this many tournaments (0 = unlimited).')
     ap.add_argument('--output', default=OUTPUT_FILE,
                     help='Output CSV filename (relative to data_dir).')
+    ap.add_argument('--bilanzen-nachtragen', action='store_true',
+                    dest='bilanzen_nachtragen',
+                    help='Ohne Netz: im vorhandenen Bestand jede Deckliste '
+                         'mit 0-0-0 aus data/player_continuity.csv fuellen. '
+                         'Was dort nicht steht, bekommt LEERE Felder statt '
+                         'einer 0. Nur wins/losses/ties werden angefasst.')
+    ap.add_argument('--trocken', action='store_true',
+                    help='Nur berichten, nichts schreiben (mit '
+                         '--bilanzen-nachtragen).')
     args = ap.parse_args()
 
     data_dir = get_data_dir()
     out_path = os.path.join(data_dir, args.output)
+
+    if args.bilanzen_nachtragen:
+        # Reiner Dateilauf: kein Netz, keine Kartendatenbank, kein
+        # Turnierindex. Zielt auf data/ im Repo, wenn --output nicht
+        # ausdruecklich etwas anderes sagt.
+        ziel = out_path
+        if args.output == OUTPUT_FILE:
+            im_repo = os.path.join(_PROJECT_ROOT, 'data', OUTPUT_FILE)
+            if os.path.exists(im_repo):
+                ziel = im_repo
+        return _lauf_bilanzen(ziel, args.trocken)
 
     try:
         card_db = CardDatabaseLookup()
@@ -908,8 +1271,9 @@ def main():
     # through to it without reopening the CSV.
     continuity_records = load_player_continuity_records()
     if continuity_records:
-        logger.info("Loaded %d player_continuity.csv (tid,place,player) records "
-                    "for W-L fallback.", len(continuity_records))
+        logger.info("player_continuity.csv: %d Bilanzen geladen "
+                    "(Nachschlag ueber Namensschluessel und ueber Platz).",
+                    len(continuity_records))
 
     total_rows = 0
     for i, t in enumerate(work, 1):

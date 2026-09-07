@@ -70,6 +70,29 @@ DATEIEN = [
     # Frischechip dort zeigte bis heute auf city_league_analysis_past.csv
     # — eine Datei, die dieser Reiter gar nicht laedt.
     "tournament_cards_data_overview.csv",
+    # NACHTRAG 07.09.2026: die ONLINE-Seite der Datengrundlage stand komplett
+    # nicht in dieser Liste — vier Dateien ohne jedes Datum.
+    #
+    # limitless_online_fenster.csv traegt die AKTUELLSTE Zahl der ganzen Seite:
+    # den Anteil im laufenden 14-Tage-Fenster (Differenz zweier gemessener
+    # Kumulativstaende). Sie speist laut scripts/sanity_check_data.py 12-30 %
+    # des prognostizierten Anteils im Meta Call. Ohne Eintrag hier hat
+    # ausgerechnet die juengste Zahl der Seite kein Erhebungsdatum — und ein
+    # Chip, der auf sie zeigte, muesste "unbekannt" sagen.
+    #
+    # Die drei uebrigen tragen die Kartenanalyse (Deck Analysis, Typical
+    # Build) und die Matchup-Matrix des Meta Calls.
+    "limitless_online_fenster.csv",
+    "current_meta_card_data.csv",
+    "online_tournament_dated_cards.csv",
+    "labs_tournament_matchups.csv",
+    # format_window.json entscheidet, WELCHES Format ueberhaupt gefiltert
+    # wird. Sie aendert sich nur bei einer Rotation, bekommt hier also erst
+    # dann einen Stand — bis dahin steht sie in "ohne_stand" (siehe unten),
+    # damit die Luecke sichtbar ist statt still. Ihr genaues Alter nennt
+    # scripts/data_guardian.py aus dem vollen Verlauf; dieser Lauf hier
+    # arbeitet auf einem flachen Klon und koennte es nur raten.
+    "format_window.json",
 ]
 
 WURZEL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -93,7 +116,38 @@ INHALT_BIS = {
     "labs_tournament_decks.csv": "tournament_date",
     "city_league_archetypes.csv": "date",
     "city_league_archetypes_past.csv": "date",
+    # Dieselbe Frage fuer die Online-Turnierkarten: die Datei fuehrt je Zeile
+    # das Turnierdatum, also laesst sich sagen, wie weit ihr Inhalt reicht.
+    "online_tournament_dated_cards.csv": "tournament_date",
 }
+
+# Dateien, deren Inhaltsdatum in einer NEBENDATEI steht statt in einer Spalte:
+# {Datei: (Nebendatei, Feld)}.
+#
+# limitless_online_fenster.csv hat kein Datum je Zeile — das Fenster gilt fuer
+# die ganze Datei und steht in ihrer Kopfzeile ("# Fenster 2026-08-22 bis
+# 2026-09-06") sowie, maschinenlesbar, als "fenster_bis" in
+# data/limitless_online_fenster_meta.json. Gelesen wird die JSON-Datei: eine
+# Kommentarzeile zu zerlegen waere ein Parser mehr, der beim naechsten
+# Textwechsel still falsch liegt.
+INHALT_AUS_NEBENDATEI = {
+    "limitless_online_fenster.csv": ("limitless_online_fenster_meta.json",
+                                     "fenster_bis"),
+}
+
+
+def inhalt_aus_nebendatei(nebendatei, feld):
+    """ISO-Tag aus einem Feld einer JSON-Nebendatei. None, wenn nicht lesbar."""
+    pfad = os.path.join(WURZEL, "data", nebendatei)
+    try:
+        with open(pfad, encoding="utf-8") as fh:
+            wert = (json.load(fh) or {}).get(feld)
+    except (OSError, ValueError):
+        return None
+    wert = str(wert or "").strip()[:10]
+    if len(wert) == 10 and wert[4] == "-" and wert[7] == "-":
+        return wert
+    return None
 
 
 def _ohne_datenzeilen(datei):
@@ -229,6 +283,12 @@ def main():
         bis = inhalt_bis(f, spalte)
         if bis:
             inhalt[f] = bis
+    for f, (nebendatei, feld) in INHALT_AUS_NEBENDATEI.items():
+        if f not in stand or f in inhalt:
+            continue
+        bis = inhalt_aus_nebendatei(nebendatei, feld)
+        if bis:
+            inhalt[f] = bis
 
     # Dritte Ebene: hat die Datei ueberhaupt Zeilen?
     #
@@ -244,13 +304,31 @@ def main():
     # soll das sagen koennen, also muss er es wissen.
     leer = sorted(f for f in stand if _ohne_datenzeilen(f))
 
+    # Vierte Ebene: welche gefuehrte Datei hat GAR KEINEN Stand?
+    #
+    # Der Stand wird nur fortgeschrieben, wenn ein Lauf die Datei anfasst. Eine
+    # neu in DATEIEN aufgenommene Datei hat also so lange keinen Eintrag, bis
+    # sie sich das erste Mal aendert — und ohne diese Liste faellt sie einfach
+    # aus der JSON heraus. Ein fehlender Schluessel und "diese Datei fuehren
+    # wir, wissen aber noch nichts ueber sie" sehen fuer jeden Leser gleich
+    # aus; das ist genau die Art stiller Luecke, gegen die diese Datei
+    # geschrieben wurde. scripts/data_guardian.py (check_datenstand) meldet
+    # daraus einen Befund, wenn die Datei bei jedem Lauf neu geschrieben wird.
+    ohne_stand = sorted(f for f in DATEIEN
+                        if f not in stand
+                        and os.path.exists(os.path.join(WURZEL, "data", f)))
+
     with open(ZIEL, "w", encoding="utf-8") as fh:
         json.dump({"erzeugt_am": jetzt, "quelle": quelle,
-                   "dateien": stand, "inhalt_bis": inhalt, "leer": leer},
+                   "dateien": stand, "inhalt_bis": inhalt, "leer": leer,
+                   "ohne_stand": ohne_stand},
                   fh, indent=2, ensure_ascii=False)
         fh.write("\n")
     if leer:
         print("ohne Datenzeilen: " + ", ".join(leer))
+    if ohne_stand:
+        print("noch ohne Stand (bekommen eins beim naechsten Lauf, der sie "
+              "aendert): " + ", ".join(ohne_stand))
 
     print("data/data_stand.json: %d Staende" % len(stand))
     for f, d in sorted(stand.items()):

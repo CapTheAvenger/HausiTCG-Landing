@@ -1205,49 +1205,364 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
             }, 140);
         }
         
+        /* ── Deck leeren: Befund C1 / F16.31 ────────────────────────────
+         *
+         * GEMESSEN am 07.09.2026 (tests/unit/test-deckbau-leeren.js, das
+         * echte clearDeck() im Sandkasten ausgefuehrt):
+         *
+         *   confirm() => false   nichts passiert. Kein Aufruf, kein
+         *                        Fehler, das Deck bleibt vollstaendig
+         *                        stehen. Genau das Bild "Leeren tut
+         *                        nichts".
+         *   confirm() => true    das Deck wird geleert, ABER die
+         *                        Neuzeichnung schlug den Reiter unter
+         *                        der Kennung "current-meta-tab" nach
+         *                        — und DIESE KENNUNG GIBT ES IM MARKUP
+         *                        NICHT. Gezaehlt in index.html:
+         *                        'city-league-tab' 0x, 'current-meta-tab'
+         *                        0x, 'past-meta-tab' 0x. Die Reiter
+         *                        heissen 'city-league', 'current-meta',
+         *                        'past-meta'. Der ganze Block war tot,
+         *                        fuer ALLE drei Quellen — und im
+         *                        pastMeta-Zweig haette er ohnehin das
+         *                        Current-Meta-Raster gezeichnet.
+         *
+         * Im Zeichenpfad selbst steckt also KEIN Einfrieren: clearDeck
+         * lief im Sandkasten ohne Ausnahme und ohne Schleife durch. Das
+         * einzige blockierende Element in dieser Funktion war das
+         * native confirm(). Es haelt den Seitenlauf an, bis der Dialog
+         * beantwortet ist — und solange sieht der Reiter tot aus.
+         *
+         * Einen fertigen, nicht blockierenden Bestaetigungsweg gibt es
+         * im Projekt nicht (gesucht ueber js/: 26 Fundstellen confirm(),
+         * kein Dialog-Baustein). Was es gibt, ist showToast(). Also
+         * zwei Schritte statt eines Dialogs: der erste Klick macht
+         * scharf und sagt es an, der zweite leert. Das blockiert nichts
+         * und laesst sich messen.
+         */
+        const DECK_REITER = {
+            cityLeague:  'city-league',
+            currentMeta: 'current-meta',
+            pastMeta:    'past-meta'
+        };
+
+        /** Wie lange der erste Klick scharf bleibt. */
+        const DECK_LEEREN_FRIST_MS = 6000;
+
+        /* BEFUND B1 (Pruefagent, 07.09.2026) — DATENVERLUST DURCH DOPPELKLICK.
+         *
+         * Gemessen: zwei Aufrufe von clearDeck('pastMeta') im Abstand von
+         * 0 ms leerten das Deck und fuehrten
+         * localStorage.removeItem('pastMetaDeck') aus. Die Zwei-Schritt-
+         * Bestaetigung hatte weder eine Mindestwartezeit noch eine
+         * Entprellung — ein gewoehnlicher Doppelklick auf "Leeren" hat
+         * also unwiederbringlich geloescht, und genau davor sollte die
+         * Bestaetigung schuetzen.
+         *
+         * WARUM 400 ms. Ein Doppelklick liegt in den Voreinstellungen der
+         * gaengigen Systeme bei 500 ms (Windows), macOS und die
+         * Zeigereinstellungen von GNOME/KDE liegen im selben Bereich;
+         * ein UNBEABSICHTIGTER zweiter Klick trifft praktisch immer
+         * innerhalb dieser Spanne. 400 ms liegen darueber, was ein
+         * versehentlicher Doppelklick erreicht, und weit unter dem, was
+         * ein Mensch braucht, um eine Frage zu LESEN und dann bewusst
+         * noch einmal zu tippen. Die Zahl ist eine Setzung, keine
+         * Messung — sie steht hier, damit sie sich nachlesen und
+         * aendern laesst, statt in einer Bedingung zu verschwinden.
+         *
+         * Zwei Sperren, nicht eine:
+         *   MINDEST  der zweite Klick zaehlt erst ab dieser Zeit,
+         *   PRELL    zwei Klicks auf DENSELBEN Knopf innerhalb dieser
+         *            Zeit gelten als EIN Klick — damit macht ein
+         *            Doppelklick auch nicht versehentlich scharf und
+         *            entschaerft gleich wieder.
+         */
+        const DECK_LEEREN_MINDEST_MS = 400;
+        const DECK_LEEREN_PRELL_MS = 400;
+
+        /** { source, ab, bis } oder null. Auch auf window, damit Tests es sehen. */
+        let _deckLeerenScharf = null;
+        let _deckLeerenUhr = null;
+        /** { source, zeit } des zuletzt angenommenen Klicks — fuer die Entprellung. */
+        let _deckLeerenLetzterKlick = null;
+        /** Wann zuletzt "zu schnell" angesagt wurde — eine Ansage je Klickfolge. */
+        let _deckLeerenZuFruehGemeldet = null;
+
+        function _deckLeerenDe() {
+            return (typeof getLang === 'function' && getLang() === 'de');
+        }
+
+        /** Der Knopf, der clearDeck(source) ausloest — alle drei tragen
+         *  in index.html die Klasse .deck-builder-clear-btn. */
+        function _deckLeerenKnopf(source) {
+            try {
+                return document.querySelector(
+                    '.deck-builder-clear-btn[onclick*="clearDeck(\'' + source + '\')"]');
+            } catch (e) { return null; }
+        }
+
+        /* BEFUND B2 (Pruefagent, 07.09.2026): ein Sprachwechsel INNERHALB
+         * der Bestaetigungsfrist setzte die Knopfbeschriftung auf
+         * "Leeren" zurueck, waehrend der scharfe Zustand blieb — ein
+         * harmlos beschrifteter Knopf, der beim naechsten Tippen loescht.
+         * Ausloeser ist nicht nur switchLanguage(): auch
+         * js/app-cards-db.js ruft updateTranslationsInDOM() zweimal OHNE
+         * languageChanged-Ereignis auf (Z. 194 und 1102). Ein Horcher auf
+         * das Ereignis allein haette diese beiden Wege nicht gefangen.
+         *
+         * Deshalb wird dem Knopf fuer die Dauer der Frist sein data-i18n
+         * ABGENOMMEN: updateTranslationsInDOM() geht nur ueber
+         * [data-i18n], also kann kein Uebersetzungslauf die Warnung mehr
+         * ueberschreiben — egal, wer ihn ausloest. Beim Entschaerfen
+         * bekommt der Knopf sein data-i18n zurueck.
+         */
+        function _deckLeerenWarnungSchreiben(knopf) {
+            if (!knopf) return;
+            knopf.textContent = _deckLeerenDe() ? 'Wirklich leeren?' : 'Really clear?';
+        }
+
+        function _deckLeerenEntschaerfen() {
+            if (_deckLeerenUhr) { clearTimeout(_deckLeerenUhr); _deckLeerenUhr = null; }
+            const alt = _deckLeerenScharf;
+            _deckLeerenScharf = null;
+            if (typeof window !== 'undefined') window.__deckLeerenScharf = null;
+            if (!alt) return;
+            const knopf = _deckLeerenKnopf(alt.source);
+            if (!knopf || !knopf.dataset) return;
+            /* BEFUND B3: hier wurde die vor dem Sprachwechsel GEMERKTE
+               Beschriftung zurueckgeschrieben — nach einem Wechsel also
+               die alte Sprache. Steht ein data-i18n-Schluessel bereit,
+               gilt die frische Uebersetzung; die gemerkte Beschriftung
+               ist nur noch der Rueckfall. */
+            let neuerText = null;
+            if (knopf.dataset.leerenI18n !== undefined) {
+                const schluessel = knopf.dataset.leerenI18n;
+                if (schluessel) knopf.setAttribute('data-i18n', schluessel);
+                delete knopf.dataset.leerenI18n;
+                if (schluessel && typeof t === 'function') {
+                    const uebersetzt = t(schluessel);
+                    // t() gibt bei fehlendem Schluessel den Schluessel
+                    // zurueck — der gehoert nicht auf einen Knopf.
+                    if (uebersetzt && uebersetzt !== schluessel) neuerText = uebersetzt;
+                }
+            }
+            if (neuerText === null && knopf.dataset.leerenLabel !== undefined) {
+                neuerText = knopf.dataset.leerenLabel;
+            }
+            if (neuerText !== null) knopf.textContent = neuerText;
+            delete knopf.dataset.leerenLabel;
+        }
+
+        function _deckLeerenScharfMachen(source) {
+            _deckLeerenEntschaerfen();
+            const jetzt = Date.now();
+            _deckLeerenScharf = {
+                source: source,
+                // Vor `ab` zaehlt der zweite Klick NICHT — siehe B1.
+                ab: jetzt + DECK_LEEREN_MINDEST_MS,
+                bis: jetzt + DECK_LEEREN_FRIST_MS
+            };
+            if (typeof window !== 'undefined') window.__deckLeerenScharf = _deckLeerenScharf;
+
+            const sek = Math.round(DECK_LEEREN_FRIST_MS / 1000);
+            const knopf = _deckLeerenKnopf(source);
+            if (knopf) {
+                if (knopf.dataset && knopf.dataset.leerenLabel === undefined) {
+                    knopf.dataset.leerenLabel = knopf.textContent;
+                }
+                if (knopf.dataset && typeof knopf.hasAttribute === 'function'
+                    && knopf.hasAttribute('data-i18n')) {
+                    knopf.dataset.leerenI18n = knopf.getAttribute('data-i18n');
+                    knopf.removeAttribute('data-i18n');
+                }
+                _deckLeerenWarnungSchreiben(knopf);
+            }
+            if (typeof showToast === 'function') {
+                // Die Frage selbst bleibt der uebersetzte Satz, der bis
+                // heute im confirm() stand (i18n-Schluessel deck.clearConfirm)
+                // — nur die Antwort ist jetzt ein zweiter Klick statt
+                // eines Dialogs, der die Seite anhaelt.
+                const frage = (typeof t === 'function' && t('deck.clearConfirm')) || '';
+                showToast(frage + ' ' + (_deckLeerenDe()
+                    ? 'Noch einmal auf \u201eLeeren\u201c tippen (' + sek + ' Sekunden).'
+                    : 'Tap \u201cClear\u201d again (' + sek + ' seconds).'),
+                    'warning', DECK_LEEREN_FRIST_MS);
+            }
+            _deckLeerenUhr = setTimeout(function () {
+                _deckLeerenUhr = null;
+                if (!_deckLeerenScharf || _deckLeerenScharf.source !== source) return;
+                _deckLeerenEntschaerfen();
+                if (typeof showToast === 'function') {
+                    showToast(_deckLeerenDe()
+                        ? 'Leeren abgebrochen \u2014 das Deck ist unveraendert.'
+                        : 'Clearing cancelled \u2014 the deck is unchanged.', 'info', 2000);
+                }
+            }, DECK_LEEREN_FRIST_MS);
+        }
+
+        /** Nach dem Leeren die Uebersicht des EIGENEN Reiters neu zeichnen. */
+        function _deckLeerenUebersichtNeu(source) {
+            const reiterId = DECK_REITER[source];
+            const reiter = document.getElementById(reiterId);
+            if (!reiter) {
+                // Kein stiller Ausfall: wenn die Kennung nicht mehr
+                // stimmt, steht der Grund im Protokoll und gezeichnet
+                // wird trotzdem — sonst blieben die Abzeichen stehen.
+                devLog('[clearDeck] Reiter "' + reiterId + '" nicht gefunden \u2014 es wird trotzdem neu gezeichnet');
+            } else if (!reiter.classList.contains('active')) {
+                return;
+            }
+            try {
+                if (source === 'cityLeague') {
+                    renderCityLeagueDeckGrid(cityLeagueCardsFiltered, cityLeagueOverviewRarityMode);
+                } else if (source === 'currentMeta') {
+                    renderCurrentMetaDeckGrid(currentMetaCardsFiltered, currentMetaOverviewRarityMode);
+                } else {
+                    renderPastMetaCards();
+                }
+            } catch (e) {
+                console.error('[clearDeck] Uebersicht nicht neu gezeichnet:', e);
+                if (typeof showToast === 'function') {
+                    showToast(_deckLeerenDe()
+                        ? 'Das Deck ist geleert, die Kartenuebersicht konnte nicht neu gezeichnet werden: ' + (e && e.message ? e.message : e)
+                        : 'The deck is cleared, but the card overview could not be redrawn: ' + (e && e.message ? e.message : e),
+                        'warning', 5000);
+                }
+            }
+        }
+
+        /* Sprachwechsel bei scharfem Knopf: die Warnung wird in der neuen
+           Sprache NEU geschrieben. Ohne das stuende nach dem Wechsel die
+           alte Sprache auf einem scharfen Knopf (Befund B2/B3). */
+        if (typeof document !== 'undefined' && document.addEventListener) {
+            document.addEventListener('languageChanged', function () {
+                if (!_deckLeerenScharf) return;
+                _deckLeerenWarnungSchreiben(_deckLeerenKnopf(_deckLeerenScharf.source));
+            });
+        }
+
+        /** "Iono (PAL 185)" -> "Iono". Die Seltenheitseinstellungen haengen
+         *  am blanken Kartennamen (js/app-core.js, setRarityPreference). */
+        function _deckLeerenBasisname(deckSchluessel) {
+            return String(deckSchluessel).replace(/\s*\([^()]*\)\s*$/, '').trim();
+        }
+
+        /* BEFUND B1 (Teil b): hier stand `rarityPreferences = {}` gefolgt
+         * von saveRarityPreferences(). Das ist EIN Speicher fuer ALLE DREI
+         * Quellen — wer sein Past-Meta-Deck leerte, verlor auch die
+         * Druckauswahl seiner City-League- und Current-Meta-Karten, und
+         * zwar dauerhaft in localStorage. Geleert wird jetzt nur, was zu
+         * den Karten der geleerten Quelle gehoert, und auch das nur, wenn
+         * derselbe Kartenname in keinem der beiden anderen Decks mehr
+         * liegt (sonst nimmt man dem anderen Deck seine Auswahl weg).
+         */
+        function _deckLeerenSeltenheitAufraeumen(source, geleertesDeck) {
+            if (typeof rarityPreferences !== 'object' || !rarityPreferences) return [];
+            const bleibt = new Set();
+            [['cityLeague', window.cityLeagueDeck],
+             ['currentMeta', window.currentMetaDeck],
+             ['pastMeta', window.pastMetaDeck]].forEach(function (paar) {
+                if (paar[0] === source || !paar[1]) return;
+                Object.keys(paar[1]).forEach(function (k) {
+                    if (paar[1][k] > 0) bleibt.add(_deckLeerenBasisname(k));
+                });
+            });
+            const weg = [];
+            Object.keys(geleertesDeck || {}).forEach(function (k) {
+                const name = _deckLeerenBasisname(k);
+                if (!name || bleibt.has(name)) return;
+                if (Object.prototype.hasOwnProperty.call(rarityPreferences, name)) {
+                    delete rarityPreferences[name];
+                    weg.push(name);
+                }
+            });
+            if (weg.length && typeof saveRarityPreferences === 'function') saveRarityPreferences();
+            return weg;
+        }
+
         function clearDeck(source) {
             if (source !== 'cityLeague' && source !== 'currentMeta' && source !== 'pastMeta') return;
+
+            const jetzt = Date.now();
+            const scharf = _deckLeerenScharf;
+            const istScharf = !!(scharf && scharf.source === source && jetzt <= scharf.bis);
+
+            if (!istScharf) {
+                /* Entprellung (Befund B1, Teil a): zwei Klicks auf
+                   denselben Knopf innerhalb von DECK_LEEREN_PRELL_MS sind
+                   EIN Klick. Sonst koennte ein Doppelklick auf einen
+                   abgelaufenen Knopf neu scharf machen UND gleich
+                   bestaetigen. */
+                if (_deckLeerenLetzterKlick && _deckLeerenLetzterKlick.source === source
+                    && (jetzt - _deckLeerenLetzterKlick.zeit) < DECK_LEEREN_PRELL_MS) {
+                    devLog('[clearDeck] zweiter Klick nach '
+                        + (jetzt - _deckLeerenLetzterKlick.zeit) + ' ms verworfen (Entprellung)');
+                    return;
+                }
+                _deckLeerenLetzterKlick = { source: source, zeit: jetzt };
+                // Erster Klick: scharf machen und ansagen. Kein Dialog,
+                // der die Seite anhaelt.
+                _deckLeerenScharfMachen(source);
+                return;
+            }
+
+            /* Mindestwartezeit (Befund B1, Teil a): der Knopf ist scharf,
+               aber der Klick kommt so schnell, dass er kein bewusster
+               zweiter Klick sein kann — genau der gemessene Doppelklick.
+               Der Knopf BLEIBT scharf, der Klick zaehlt nur nicht als
+               Bestaetigung. */
+            if (jetzt < scharf.ab) {
+                devLog('[clearDeck] Bestaetigung '
+                    + (scharf.ab - jetzt) + ' ms zu frueh \u2014 das Deck bleibt stehen');
+                // Eine Ansage je Klickfolge, nicht eine je Klick.
+                if (typeof showToast === 'function'
+                    && (_deckLeerenZuFruehGemeldet === null
+                        || (jetzt - _deckLeerenZuFruehGemeldet) >= DECK_LEEREN_PRELL_MS)) {
+                    _deckLeerenZuFruehGemeldet = jetzt;
+                    showToast(_deckLeerenDe()
+                        ? 'Zu schnell \u2014 lies bitte kurz und tippe dann noch einmal auf \u201eLeeren\u201c.'
+                        : 'Too fast \u2014 please read, then tap \u201cClear\u201d again.', 'warning', 2000);
+                }
+                return;
+            }
+            _deckLeerenEntschaerfen();
+            const _geleertesDeck = Object.assign({}, (source === 'cityLeague') ? window.cityLeagueDeck
+                : (source === 'currentMeta') ? window.currentMetaDeck : window.pastMetaDeck);
+
+            if (source === 'cityLeague') {
+                window.cityLeagueDeck = {};
+                window.cityLeagueDeckOrder = [];
+                window.currentCityLeagueArchetype = null;
+                // CRITICAL: Remove from localStorage completely
+                localStorage.removeItem('cityLeagueDeck');
+                devLog('[clearDeck] City League deck cleared and removed from localStorage');
+            } else if (source === 'currentMeta') {
+                window.currentMetaDeck = {};
+                window.currentMetaDeckOrder = [];
+                window.currentMetaArchetype = null;
+                // CRITICAL: Remove from localStorage completely
+                localStorage.removeItem('currentMetaDeck');
+                devLog('[clearDeck] Current Meta deck cleared and removed from localStorage');
+            } else if (source === 'pastMeta') {
+                window.pastMetaDeck = {};
+                window.pastMetaDeckOrder = [];
+                window.pastMetaCurrentArchetype = null;
+                // CRITICAL: Remove from localStorage completely
+                localStorage.removeItem('pastMetaDeck');
+                devLog('[clearDeck] Past Meta deck cleared and removed from localStorage');
+            }
             
-            if (confirm(t('deck.clearConfirm'))) {
-                if (source === 'cityLeague') {
-                    window.cityLeagueDeck = {};
-                    window.cityLeagueDeckOrder = [];
-                    window.currentCityLeagueArchetype = null;
-                    // CRITICAL: Remove from localStorage completely
-                    localStorage.removeItem('cityLeagueDeck');
-                    devLog('[clearDeck] City League deck cleared and removed from localStorage');
-                } else if (source === 'currentMeta') {
-                    window.currentMetaDeck = {};
-                    window.currentMetaDeckOrder = [];
-                    window.currentMetaArchetype = null;
-                    // CRITICAL: Remove from localStorage completely
-                    localStorage.removeItem('currentMetaDeck');
-                    devLog('[clearDeck] Current Meta deck cleared and removed from localStorage');
-                } else if (source === 'pastMeta') {
-                    window.pastMetaDeck = {};
-                    window.pastMetaDeckOrder = [];
-                    window.pastMetaCurrentArchetype = null;
-                    // CRITICAL: Remove from localStorage completely
-                    localStorage.removeItem('pastMetaDeck');
-                    devLog('[clearDeck] Past Meta deck cleared and removed from localStorage');
-                }
-                
-                // CRITICAL: Clear all rarity preferences when clearing deck
-                rarityPreferences = {};
-                saveRarityPreferences();
-                
-                updateDeckDisplay(source);
-                
-                // Force re-render to remove all badges
-                const tabId = source === 'cityLeague' ? 'city-league-tab' : 'current-meta-tab';
-                if (document.getElementById(tabId) && document.getElementById(tabId).classList.contains('active')) {
-                    // Re-render the current view to update badges
-                    if (source === 'cityLeague') {
-                        renderCityLeagueDeckGrid(cityLeagueCardsFiltered, cityLeagueOverviewRarityMode);
-                    } else {
-                        renderCurrentMetaDeckGrid(currentMetaCardsFiltered, currentMetaOverviewRarityMode);
-                    }
-                }
+            // Nur die Seltenheitseinstellungen DIESER Quelle (Befund B1b).
+            const _wegSeltenheit = _deckLeerenSeltenheitAufraeumen(source, _geleertesDeck);
+            devLog('[clearDeck] Seltenheitseinstellungen entfernt: ' + _wegSeltenheit.length);
+
+            updateDeckDisplay(source);
+
+            // Abzeichen aus der Uebersicht nehmen — im EIGENEN Reiter.
+            _deckLeerenUebersichtNeu(source);
+
+            if (typeof showToast === 'function') {
+                showToast(_deckLeerenDe() ? 'Deck geleert.' : 'Deck cleared.', 'success', 2000);
             }
         }
         
@@ -1371,9 +1686,28 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                                + Object.values(allDecks.pastMeta.deck).reduce((s,c)=>s+c,0);
                 if (totalCards > 0) {
                     localStorage.setItem('autosave_deck', JSON.stringify(allDecks));
-                } else {
-                    localStorage.removeItem('autosave_deck');
                 }
+                /* BEFUND B1 (Teil c): hier stand ein
+                   localStorage.removeItem('autosave_deck'), sobald alle
+                   drei Decks leer waren — also genau in dem Moment, in dem
+                   die drei Einzelschluessel schon entfernt sind und diese
+                   Aufnahme die LETZTE Kopie ist.
+
+                   GEMESSEN, bevor entschieden wurde: der einzige Leser der
+                   Aufnahme steht am Kopf dieser Datei (Z. 5-27) und legt
+                   sie nach window._pendingAutosave. Ueber js/ und
+                   index.html gesucht hat window._pendingAutosave NULL
+                   Leser — es gibt in dieser Anwendung KEINE
+                   Wiederherstellung. Eine zu erfinden ist nicht Teil
+                   dieser Aufgabe.
+
+                   Damit ist das Loeschen ohne jeden Nutzen und mit genau
+                   einem Nachteil: es vernichtet die letzte Kopie. Also
+                   bleibt die Aufnahme stehen. Ueberschrieben wird sie
+                   nur von einem Stand, der wirklich Karten enthaelt;
+                   beim naechsten vollstaendigen Laden raeumt sie
+                   ohnehin app-init.js (Z. 8) weg. Angesagt werden muss
+                   dem Nutzer nichts, weil ihm nichts genommen wird. */
             } catch(e) { /* ignore autosave errors */ }
 
             // Refresh overview badges and opening hand stats on the next frame.
@@ -3161,9 +3495,14 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
          *  imageViewModal's <h3> if a caller stamped a deck name there
          *  directly. */
         function _getActiveGridDeckName() {
-            const clTab = document.getElementById('city-league-tab');
-            const cmTab = document.getElementById('current-meta-tab');
-            const pmTab = document.getElementById('past-meta-tab');
+            /* Dieselben erfundenen Reiter-Kennungen wie in clearDeck
+               (Befund C1, 07.09.2026): 'city-league-tab' & Co. stehen
+               nirgends in index.html, alle drei Abfragen lieferten
+               immer null, und der Bildkopf fiel still auf "Deck"
+               zurueck. Die Reiter heissen wie in DECK_REITER. */
+            const clTab = document.getElementById(DECK_REITER.cityLeague);
+            const cmTab = document.getElementById(DECK_REITER.currentMeta);
+            const pmTab = document.getElementById(DECK_REITER.pastMeta);
 
             if (clTab && clTab.classList.contains('active')) {
                 return window.currentCityLeagueArchetype || 'City League Deck';
@@ -7862,16 +8201,24 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                             const _n = Number(_dqA.n_lists || 0);
                             const _t = Number(_dqA.n_turniere || 0);
                             const _nm = (_dqA.turniere && _dqA.turniere[0]) ? _dqA.turniere[0] : '';
+                            /* Auch hier der Nenner: "aus 8 Listen" ist
+                               "aus 8 Tag-2-Listen von 32 Piloten (Feld
+                               797)". Der Halbsatz kommt aus derselben
+                               Quelle wie Toast und Audit-Zeile. */
+                            const _mcbQ = window.MostConsistencyBuilder;
+                            const _basisQ = (_mcbQ && typeof _mcbQ.datenbasisSatz === 'function')
+                                ? _mcbQ.datenbasisSatz(Object.assign({}, _dqA, { n_lists: _n }))
+                                : `${_n} Tag-2-Listen`;
                             const _wo = _t === 1
-                                ? `aus ${_n} Listen eines einzigen Turniers${_nm ? ` (${_nm}` : ''}${_ankerDatum ? `${_nm ? ', ' : ' ('}${_ankerDatum}` : ''}${_nm || _ankerDatum ? ')' : ''}`
-                                : `aus ${_n} Listen von ${_t} Turnieren${_ankerDatum ? `, zuletzt ${_ankerDatum}` : ''}`;
+                                ? `aus ${_basisQ} eines einzigen Turniers${_nm ? ` (${_nm}` : ''}${_ankerDatum ? `${_nm ? ', ' : ' ('}${_ankerDatum}` : ''}${_nm || _ankerDatum ? ')' : ''}`
+                                : `aus ${_basisQ} von ${_t} Turnieren${_ankerDatum ? `, zuletzt ${_ankerDatum}` : ''}`;
                             const _alt = (cands.length > 1)
                                 ? ` Die nächste Wahl war ${cands[1].name || '—'} mit `
                                   + `${Number(((cands[1].weightedShare || 0) * 100)).toFixed(1).replace('.', ',')} %.`
                                 : '';
                             return `${_aceTraceEntry.chosen || ''} steht in `
                                  + `${Number(((cands[0] && cands[0].weightedShare || 0) * 100)).toFixed(1).replace('.', ',')} % `
-                                 + `der ausgewerteten Präsenzlisten — ${_wo}.`
+                                 + `der ausgewerteten Präsenz-Tag-2-Listen — ${_wo}.`
                                  + (_ankerAlter != null ? ` Das ist ${_ankerAlter} Tage her.` : '')
                                  + _alt;
                         })(),
@@ -7907,6 +8254,20 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                     const _dqq = result.dataQuality || {};
                     const _nT  = Number(_dqq.n_turniere || 0);
                     const _nL  = Number(_dqEntry.n_lists || _dqq.n_lists || 0);
+                    /* 07.09.2026: "Datenbasis: 8 Listen" nannte den
+                       Zaehler ohne den Nenner. Die Quelle fuehrt nur
+                       Tag-2-Listen, also sind es 8 von 32 Piloten bei
+                       797 Spielern im Feld. Beide Zusatzzahlen kommen
+                       aus dataQuality (Quelle: labs_tournament_decks.csv,
+                       `player_count` und `total_players`); fehlt eine,
+                       faellt sie weg — geraten wird nichts. */
+                    const _mcbA = window.MostConsistencyBuilder;
+                    const _basisSatz = (_mcbA && typeof _mcbA.datenbasisSatz === 'function')
+                        ? _mcbA.datenbasisSatz(Object.assign({}, _dqq, { n_lists: _nL }))
+                        : `${_nL} Tag-2-Listen`;
+                    const _basisHinweis = (_mcbA && typeof _mcbA.datenbasisHinweis === 'function')
+                        ? _mcbA.datenbasisHinweis(Object.assign({}, _dqq, { n_lists: _nL }))
+                        : '';
                     const _teile = [];
                     if (_nT === 1) {
                         _teile.push('alle aus EINEM Turnier'
@@ -7923,10 +8284,11 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                     const _duenn = _dqEntry.decision === 'data_too_thin' || _nT === 1 || _nL < 12;
                     auditFindings.push({
                         level:   _duenn ? 'warn' : 'info',
-                        message: `Datenbasis: ${_nL} Listen`
+                        message: `Datenbasis: ${_basisSatz}`
                                + (_teile.length ? ' — ' + _teile.join(' · ') : '')
                                + (_dqq.total_weight != null ? ` (Gewicht ${Number(_dqq.total_weight).toFixed(2)})` : ''),
-                        hint:    (_duenn
+                        hint:    (_basisHinweis ? _basisHinweis + ' ' : '')
+                               + (_duenn
                                     ? 'Eine Stichprobe dieser Größe trägt die Kernkarten, '
                                       + 'nicht die letzten Tech-Plätze — die sind hier eine '
                                       + 'Momentaufnahme, keine Empfehlung. '
@@ -8043,7 +8405,15 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                     archetype:    archetype || '',
                     generated_at: new Date().toISOString(),
                     deck_size:    liveTotal,
-                    algo_desc:    `MostConsistencyBuilder (Phase Y.2) — 6-phase per-decklist success-weighted build · Core @ ${(result.coreThreshold * 100).toFixed(0)}% · ${result.dataQuality.n_lists || 0} lists analyzed.`,
+                    // "lists analyzed" ohne Nenner las sich wie "so viele
+                    // Leute spielen das Deck". Die Quelle fuehrt nur
+                    // Tag-2-Listen — derselbe Satz wie im Toast, nur
+                    // englisch, weil dieser Bericht englisch ist.
+                    algo_desc:    `MostConsistencyBuilder (Phase Y.2) — 6-phase per-decklist success-weighted build · Core @ ${(result.coreThreshold * 100).toFixed(0)}% · `
+                                + ((window.MostConsistencyBuilder && typeof window.MostConsistencyBuilder.datenbasisSatz === 'function')
+                                    ? window.MostConsistencyBuilder.datenbasisSatz(result.dataQuality, 'en')
+                                    : `${result.dataQuality.n_lists || 0} day-2 lists`)
+                                + ' analyzed.',
                     layers: {
                         meta_boost:       false,
                         time_decay:       false,
@@ -8104,10 +8474,20 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
             }
 
             if (typeof showToast === 'function') {
+                /* "8 Listen ausgewertet" war die halbe Zahl (07.09.2026).
+                   Die Quelle fuehrt nur Tag-2-Listen; bei Mega Excadrill
+                   sind das 8 von 32 Piloten in einem Feld von 797. Der
+                   Satz kommt aus MostConsistencyBuilder.datenbasisSatz(),
+                   damit alle vier Anzeigen dieselbe Formulierung tragen
+                   und keine den Hinweis einzeln verlieren kann. */
+                const _mcb = window.MostConsistencyBuilder;
+                const _basis = (_mcb && typeof _mcb.datenbasisSatz === 'function')
+                    ? _mcb.datenbasisSatz(result.dataQuality)
+                    : `${result.dataQuality.n_lists} Tag-2-Listen`;
                 showToast(
                     `✓ ${archetype}: ${liveTotal}/60 Karten · `
                     + `Core @ ${(result.coreThreshold * 100).toFixed(0)} % · `
-                    + `${result.dataQuality.n_lists} Listen ausgewertet`,
+                    + `${_basis}`,
                     'success', 4000
                 );
             }

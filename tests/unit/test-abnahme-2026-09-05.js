@@ -260,7 +260,23 @@ describe('Meta Call: jede Quote trägt ihren Nenner', () => {
     });
 
     it('die kleinen WR-Chips tragen ihre Partienzahl', () => {
-        assert.match(METACALL, /function _wrChip\(wert, partien\)/);
+        /* 07.09.2026: der Chip hat einen dritten Parameter bekommen —
+           die Konvention, nach der die Zahl gerechnet ist (auf derselben
+           Deckzeile stehen zwei "WR", die verschiedene Formeln meinen).
+           Die Zusage dieses Tests ist unveraendert: der NENNER muss
+           dran sein. Sie wird jetzt am laufenden Chip geprueft statt an
+           seiner Unterschrift, damit die naechste Erweiterung sie nicht
+           wieder rot macht. */
+        assert.match(METACALL, /function _wrChip\(wert, partien/);
+        const anfang = METACALL.indexOf('function _wrChip(');
+        const ende = METACALL.indexOf('\n  }', anfang);
+        const chip = new Function('window', 'esc', '_wrKonventionsTitel',
+            METACALL.slice(anfang, ende + 4) + ' return _wrChip;')(
+            { zahlLokal: (n) => String(n) }, (x) => String(x), () => '');
+        assert.equal(chip(46.4, 1181), ' (WR 46 % · 1181)',
+            'ein WR-Chip rendert wieder ohne Nenner');
+        assert.equal(chip(46.4, 0), ' (WR 46 %)');
+        assert.equal(chip(null, 9), '');
         assert.ok(!/\(WR \$\{fmt\(/.test(METACALL),
             'ein WR-Chip rendert wieder ohne Nenner');
     });

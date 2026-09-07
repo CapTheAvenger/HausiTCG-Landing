@@ -205,6 +205,107 @@
             pending: false,
             lastSignature: ''
         };
+
+        /* ── Warum die Kartenliste einen Grund braucht ────────────────
+         *
+         * Zwei Zustaende der Kartenuebersicht sagten bis zum 07.09.2026
+         * nichts ueber sich selbst. Beide werden hier vermerkt und in
+         * renderCardDatabase() ausgesprochen — ein leeres oder
+         * unerwartetes Ergebnis muss seinen Grund nennen.
+         *
+         *   window._cdbLeerGrund     warum KEINE Karte uebrig blieb
+         *   window._cdbDruckHinweis  warum "Standard-Druck" gerade nicht wirkt
+         *
+         * Am window und nicht als Modulvariable, aus zwei Gruenden: die
+         * Zusicherungen unter tests/unit/ schneiden einzelne Regionen aus
+         * renderCardDatabase heraus und fuehren sie fuer sich aus — eine
+         * Modulvariable waere dort ein ReferenceError statt eines Wertes —
+         * und ein Zustand, den die Oberflaeche ausspricht, soll auch von
+         * aussen ablesbar sein.
+         */
+        window._cdbLeerGrund = '';
+        window._cdbDruckHinweis = false;
+
+        /* ── "Haupt-Pokémon" war eine Worthaelfte ─────────────────────
+         *
+         * GEMESSEN am 07.09.2026 an den echten Daten (city_league_analysis.csv,
+         * tournament_cards_data_cards_TEF-PBL.csv, current_meta_card_data.csv):
+         * die Filterliste "Haupt-Pokémon" trug 43 Eintraege, davon zwoelf
+         * Namensfragmente — "Basic", "Cynthia's", "Ethan's", "Festival",
+         * "Hop's", "Lillie's", "Mega", "N's", "Other", "Raging", "Rocket's",
+         * "Steven's". "Excadrill" und "Zoroark" standen NICHT darin, obwohl es
+         * die Archetypen "Mega Excadrill", "N's Zoroark" und "Blaziken Zoroark"
+         * gibt. Ursache: `cleanedArchetype.split(' ')[0]` — das erste Wort.
+         *
+         * Das erste Wort ist bei drei Bauarten von Archetypnamen das falsche:
+         *
+         *   "N's Zoroark"        Besitzer-Praefix, der Trainer heisst N
+         *   "Mega Excadrill"     Formwort vor der Art
+         *   "Raging Bolt Ogerpon"  die Art selbst ist zweiteilig
+         *
+         * Die ersten beiden loesen sich durch Abstreifen. Die dritte NICHT:
+         * ob "Raging Bolt" oder "Raging" die Art ist, steht nicht im
+         * Archetypnamen. Es steht in den KARTENNAMEN derselben Daten
+         * ("raging bolt ex"), und genau die werden gefragt — geraten wird
+         * nichts. Bestaetigt kein Kartenname einen Wortanfang, bleibt der
+         * GANZE Rest stehen ("Basic Box M", "Festival Lead") statt einer
+         * Haelfte davon: ein vollstaendiger Name, den die Daten hergeben,
+         * ist ehrlicher als ein Fragment, das sie nicht hergeben.
+         */
+        const HAUPT_FORMWORTE = /^(mega|alolan|galarian|hisuian|paldean|primal|shadow|dark|light|ancient|future|origin)\s+/i;
+
+        function hauptPokemonAusArchetyp(archetyp) {
+            const roh = String(archetyp || '').trim();
+            if (!roh) return '';
+            if (!window.archetypMainPokemonMap) window.archetypMainPokemonMap = new Map();
+            const gemerkt = window.archetypMainPokemonMap.get(roh);
+            if (gemerkt !== undefined) return gemerkt;
+
+            // 1. Besitzer-Praefix ab: "N's Zoroark" -> "Zoroark".
+            let rest = (typeof window.stripTrainerOwnerPrefix === 'function')
+                ? String(window.stripTrainerOwnerPrefix(roh).base || '').trim()
+                : roh;
+            // 2. Formwort ab: "Mega Excadrill" -> "Excadrill".
+            rest = rest.replace(HAUPT_FORMWORTE, '').trim();
+            if (!rest) rest = roh;
+
+            // 3. Der LAENGSTE Wortanfang, den ein geladener Kartenname belegt.
+            //    "Raging Bolt Ogerpon" -> "Raging Bolt" (Karte "raging bolt ex"),
+            //    nicht "Raging".
+            const worte = rest.split(/\s+/).filter(Boolean);
+            const karten = window.cardDeckCoverageMap;
+            let gewaehlt = '';
+            if (karten && karten.size > 0 && worte.length > 1) {
+                for (let n = worte.length; n >= 1 && !gewaehlt; n--) {
+                    const kandidat = worte.slice(0, n).join(' ');
+                    const klein = kandidat.toLowerCase();
+                    for (const name of karten.keys()) {
+                        if (name === klein || name.startsWith(klein + ' ')) { gewaehlt = kandidat; break; }
+                    }
+                }
+            }
+            /* Bestaetigt kein Kartenname einen Wortanfang, bleibt es beim
+             * ersten Wort DES BEREINIGTEN Namens. Das ist nicht dasselbe wie
+             * frueher: aus "Mega Excadrill" wird jetzt "Excadrill" und nicht
+             * "Mega". Gemessen bleiben drei Eintraege uebrig, die keine
+             * Pokémon sind — "Basic", "Festival", "Other". Die stammen aus
+             * Sammelbezeichnungen der Quelle ("Basic Box M", "Festival Lead",
+             * "Other"); ein Pokémon steht dort nicht drin, und eines zu
+             * erfinden waere schlimmer als der Sammelname. */
+            if (!gewaehlt) gewaehlt = worte[0] || rest;
+
+            /* Kartennamen tragen den Kartentyp mit ("beedrill ex"), ein
+             * Haupt-Pokémon nicht. Dieselbe Endungsliste wie
+             * getBasePokemonName() weiter unten in dieser Datei. */
+            const ohneTyp = gewaehlt
+                .replace(/\s+(vstar|vmax|vunion|v-union|ex|gx|v|lv\.x|legend|sp|radiant)$/i, '')
+                .trim();
+            if (ohneTyp) gewaehlt = ohneTyp;
+
+            window.archetypMainPokemonMap.set(roh, gewaehlt);
+            return gewaehlt;
+        }
+        window.hauptPokemonAusArchetyp = hauptPokemonAusArchetyp;
         const cardsVirtualState = {
             observer: null,
             slots: [],
@@ -599,8 +700,48 @@
             window.allArchetypes = new Set();
             window.allMetas = new Set();
             
-            const archetypeKeysSeen = new Set(); // Track which archetypes we've already counted (GLOBAL across sources)
-            
+            window.archetypMainPokemonMap = new Map(); // Archetyp -> Haupt-Pokémon, siehe hauptPokemonAusArchetyp()
+
+            /* ── Erhebungen ──────────────────────────────────────────────
+             *
+             * Eine Abdeckung ist immer eine Aussage ueber EINE Erhebung:
+             * "von den N Decks, die diese eine Auswertung gezaehlt hat,
+             * spielen n die Karte". Ueber zwei Erhebungen zu summieren
+             * ergibt keine Quote, sondern eine Zahl ohne Bedeutung.
+             *
+             * GEMESSEN am 07.09.2026 in der Live-Konfiguration (mit
+             * window.getCurrentMetaFormat aus index.html, das alle drei
+             * Quellenlabel auf TEF-PBL abbildet): DREI Erhebungen fallen
+             * auf denselben Schluessel —
+             *
+             *   Tournament / TEF-PBL        27 Archetypen,  143 Decks
+             *   Current Meta / Meta Live    60 Archetypen, 1187 Decks
+             *   Current Meta / Meta Play!   34 Archetypen,  253 Decks
+             *
+             * 32 von 66 Archetypen melden dabei verschieden viele Decks
+             * (Dragapult 22 / 20 / 46). Solange der Zaehler ueber die
+             * Erhebungen summiert wurde, standen 243 von 948
+             * Karte-Archetyp-Paaren UEBER jeder Einzelerhebung und 12
+             * DARUNTER — beides Zahlen, die in keiner Quelle stehen.
+             *
+             * Deshalb wird ab hier je Erhebung getrennt mitgeschrieben.
+             * Gepruefte Voraussetzung: innerhalb EINER Erhebung ist
+             * total_decks_in_archetype je Archetyp konstant (gemessen:
+             * 0 Abweichungen bei 121 Erhebung-Archetyp-Paaren) — die
+             * Erhebung ist also wirklich eine Erhebung und nicht selbst
+             * ein Gemisch.
+             *
+             * Schluessel: Quelle + das ROHE Formatlabel der Zeile. Genau
+             * das trennt "Meta Live" von "Meta Play!", die beide auf
+             * TEF-PBL normalisiert werden.
+             */
+            window.erhebungen = new Map(); // Map<erhebungId, {id, quelle, label, archetypen: Map<archetypeKey, decks>, decksGesamt}>
+
+            /* Frueher stand hier `const archetypeKeysSeen = new Set()`: die
+             * ERSTE Zeile eines Archetyps setzte seine Deckzahl, jede weitere
+             * wurde verworfen. Genau daraus entstand die Abdeckung ueber
+             * 100 % — siehe den Block ueber window.archetypeDeckCounts unten. */
+
             try {
                 // Load City League, Tournament AND Current Meta data for comprehensive coverage
                 const dataSources = [
@@ -657,19 +798,87 @@
                             const deckCountWithThisCard = parsedDeckCount || parsedDeckInclusion || (parsedMaxCount > 0 ? 1 : 0);
                             const totalDecksInArchetype = parseInt(row.total_decks_in_archetype) || deckCountWithThisCard;
                             
-                            // Store total deck count for this archetype (only once per archetype)
-                            if (!archetypeKeysSeen.has(archetypeKey)) {
-                                archetypeKeysSeen.add(archetypeKey);
-                                window.archetypeDeckCounts.set(archetypeKey, {
-                                    totalDecks: totalDecksInArchetype,
-                                    tournamentDates: new Set()
-                                });
-                                totalDecksCount += totalDecksInArchetype;
+                            /* ── Der Nenner der Abdeckung ────────────────────
+                             *
+                             * GEMESSEN am 07.09.2026 gegen die echten Dateien:
+                             * die Abdeckungsplakette zeigte Werte bis 225 %.
+                             * 501 von 4.115 Archetyp-Eintraegen hatten einen
+                             * Zaehler ueber ihrem Nenner; mit gesetztem
+                             * Archetyp-Filter waren 6 von 66 Archetypen ueber
+                             * 100 %, z. B.
+                             *
+                             *   TEF-POR|Dragapult   Nenner 22, Zaehler 46
+                             *
+                             * Nachverfolgt: den Nenner 22 setzte die ERSTE Zeile
+                             * dieses Schluessels (Quelle "Tournament", Karte
+                             * POR 62). Den Zaehler 46 summierten spaeter zwei
+                             * Zeilen der Quelle "Current Meta" — Dreepy TWM 128
+                             * mit 20 von 20 Decks und Dreepy ASC 158 mit 46 von
+                             * 46 Decks. Dieselbe Karte, derselbe Archetyp, zwei
+                             * Schnappschuesse verschiedener Groesse.
+                             *
+                             * Die alte Deckelung `Math.min(totalDecksInArchetype,
+                             * ...)` griff dabei ins Leere: sie deckelte gegen die
+                             * Groesse DIESER Zeile (46), waehrend der Nenner aus
+                             * einer anderen Zeile stammte (22).
+                             *
+                             * Zwei Aenderungen, beide ohne erfundene Zahl:
+                             *   1. Der Nenner ist die GROESSTE gemeldete
+                             *      Archetypgroesse — die einzige, die alle
+                             *      beitragenden Zaehler tragen kann. Die erste
+                             *      gelesene Zeile war willkuerlich.
+                             *   2. Jede gemeldete Groesse und jede Quelle werden
+                             *      mitgeschrieben. Melden die Quellen
+                             *      verschiedene Groessen, sagt die Plakette das
+                             *      (calculateDynamicCoverage -> uneinheitlich).
+                             */
+                            /* Die Erhebung dieser Zeile: Quelle + ROHES Label.
+                             * Nach der Normalisierung heissen "Meta Live" und
+                             * "Meta Play!" beide TEF-PBL; sie sind aber zwei
+                             * getrennte Auswertungen mit eigenen Deckzahlen,
+                             * und genau die duerfen nicht verschmelzen. */
+                            const erhebungLabel = String(row.meta || row.format || '').trim() || resolvedMeta;
+                            const erhebungId = `${source.name} / ${erhebungLabel}`;
+                            let erhebung = window.erhebungen.get(erhebungId);
+                            if (!erhebung) {
+                                erhebung = {
+                                    id: erhebungId,
+                                    quelle: source.name,
+                                    label: erhebungLabel,
+                                    format: resolvedMeta,
+                                    archetypen: new Map(), // archetypeKey -> Decks in dieser Erhebung
+                                    decksGesamt: 0
+                                };
+                                window.erhebungen.set(erhebungId, erhebung);
                             }
-                            
+                            const bisher = erhebung.archetypen.get(archetypeKey) || 0;
+                            if (totalDecksInArchetype > bisher) {
+                                erhebung.decksGesamt += (totalDecksInArchetype - bisher);
+                                erhebung.archetypen.set(archetypeKey, totalDecksInArchetype);
+                            }
+
+                            let archetypEintrag = window.archetypeDeckCounts.get(archetypeKey);
+                            if (!archetypEintrag) {
+                                archetypEintrag = {
+                                    totalDecks: 0,
+                                    tournamentDates: new Set(),
+                                    gemeldeteGroessen: new Set(),
+                                    quellen: new Set()
+                                };
+                                window.archetypeDeckCounts.set(archetypeKey, archetypEintrag);
+                            }
+                            if (totalDecksInArchetype > 0) {
+                                archetypEintrag.gemeldeteGroessen.add(totalDecksInArchetype);
+                                archetypEintrag.quellen.add(source.name);
+                            }
+                            if (totalDecksInArchetype > archetypEintrag.totalDecks) {
+                                totalDecksCount += (totalDecksInArchetype - archetypEintrag.totalDecks);
+                                archetypEintrag.totalDecks = totalDecksInArchetype;
+                            }
+
                             // Track tournament dates for this archetype
-                            if (tournamentDate && window.archetypeDeckCounts.has(archetypeKey)) {
-                                window.archetypeDeckCounts.get(archetypeKey).tournamentDates.add(tournamentDate);
+                            if (tournamentDate) {
+                                archetypEintrag.tournamentDates.add(tournamentDate);
                             }
                             
                             // Track which archetype-decks this card appears in
@@ -679,7 +888,12 @@
                                     archetypes: new Set(),
                                     tournamentDates: new Set(), // All tournament dates where this card appeared
                                     setCode: row.set_code || null, // Store set code for release date lookup
-                                    maxCountOverall: 0 // Track the overall maximum count across all archetypes
+                                    maxCountOverall: 0, // Track the overall maximum count across all archetypes
+                                    /* Dieselben Zahlen wie in archetypesWithCard,
+                                     * aber nach Erhebung getrennt. Nur diese
+                                     * Ebene wird gerechnet — siehe die Notiz an
+                                     * window.erhebungen weiter oben. */
+                                    proErhebung: new Map() // Map<erhebungId, Map<archetypeKey, {deckCount, ...}>>
                                 });
                             }
                             
@@ -699,13 +913,32 @@
                                 cardStats.maxCountOverall = maxCountInDeck;
                             }
                             
-                            // Store how many decks of this archetype have THIS SPECIFIC CARD
-                            // Multiple prints of the same card (e.g. PAL 172 + BRS 132 of Boss's Orders)
-                            // are SUM-merged so the coverage reflects ALL decks playing ANY print.
-                            // Cap at totalDecksInArchetype to prevent exceeding 100%.
+                            /* Store how many decks of this archetype have THIS SPECIFIC CARD.
+                             * Multiple prints of the same card (e.g. PAL 172 + BRS 132 of
+                             * Boss's Orders) are SUM-merged so the coverage reflects ALL
+                             * decks playing ANY print — INNERHALB EINER ERHEBUNG.
+                             *
+                             * Ueber Erhebungen hinweg wird nicht mehr summiert. Die
+                             * folgende Gesamtsumme in archetypesWithCard bleibt nur fuer
+                             * die Druckwahl (deduplizierte Kartenliste) stehen, wo es um
+                             * das haeufigste set_code geht und nicht um eine Quote; die
+                             * Abdeckung liest ausschliesslich proErhebung. */
+                            let erhebungKarten = cardStats.proErhebung.get(erhebungId);
+                            if (!erhebungKarten) {
+                                erhebungKarten = new Map();
+                                cardStats.proErhebung.set(erhebungId, erhebungKarten);
+                            }
+                            const vorher = erhebungKarten.get(archetypeKey);
+                            erhebungKarten.set(archetypeKey, {
+                                deckCount: (vorher ? vorher.deckCount : 0) + deckCountWithThisCard,
+                                tournamentDate: tournamentDate || (vorher ? vorher.tournamentDate : null),
+                                maxCount: Math.max(maxCountInDeck, vorher ? vorher.maxCount : 0),
+                                setCode: row.set_code || (vorher ? vorher.setCode : null)
+                            });
+
                             const currentEntry = cardStats.archetypesWithCard.get(archetypeKey);
                             const currentCount = currentEntry ? currentEntry.deckCount : 0;
-                            const combinedCount = Math.min(totalDecksInArchetype, currentCount + deckCountWithThisCard);
+                            const combinedCount = currentCount + deckCountWithThisCard;
                             cardStats.archetypesWithCard.set(archetypeKey, {
                                 deckCount: combinedCount,
                                 tournamentDate: tournamentDate || (currentEntry ? currentEntry.tournamentDate : null),
@@ -714,17 +947,14 @@
                             });
                             cardStats.archetypes.add(cleanedArchetype);
                             
-                            // NEW: Populate filter maps
-                            // Extract main Pokemon (first word of archetype)
-                            const mainPokemon = cleanedArchetype.split(' ')[0].trim();
-                            if (mainPokemon) {
-                                window.allMainPokemons.add(mainPokemon);
-                                if (!window.mainPokemonCardsMap.has(mainPokemon)) {
-                                    window.mainPokemonCardsMap.set(mainPokemon, new Set());
-                                }
-                                window.mainPokemonCardsMap.get(mainPokemon).add(cardName);
-                            }
-                            
+                            /* Die Haupt-Pokémon-Karte wird NICHT mehr hier gefuellt.
+                             * hauptPokemonAusArchetyp() befragt die Kartennamen, und
+                             * die stehen erst fest, wenn alle Quellen gelesen sind —
+                             * mitten in der Schleife haette "Raging Bolt Ogerpon" je
+                             * nach Zeilenreihenfolge mal "Raging Bolt" und mal
+                             * "Raging" ergeben. Der Aufbau folgt unten in einem
+                             * zweiten Durchgang. */
+
                             // Track archetype
                             window.allArchetypes.add(cleanedArchetype);
                             if (!window.archetypeCardsMap.has(cleanedArchetype)) {
@@ -758,7 +988,23 @@
                 
                 // Set total unique decks from all sources combined
                 window.totalUniqueDecks = totalDecksCount;
-                
+
+                /* Zweiter Durchgang: die Haupt-Pokémon. Erst jetzt stehen alle
+                 * Kartennamen fest, die hauptPokemonAusArchetyp() befragt. */
+                window.archetypMainPokemonMap = new Map();
+                window.allMainPokemons = new Set();
+                window.mainPokemonCardsMap = new Map();
+                window.archetypeCardsMap.forEach((kartenDesArchetyps, archetyp) => {
+                    const haupt = hauptPokemonAusArchetyp(archetyp);
+                    if (!haupt) return;
+                    window.allMainPokemons.add(haupt);
+                    if (!window.mainPokemonCardsMap.has(haupt)) {
+                        window.mainPokemonCardsMap.set(haupt, new Set());
+                    }
+                    const ziel = window.mainPokemonCardsMap.get(haupt);
+                    kartenDesArchetyps.forEach(k => ziel.add(k));
+                });
+
                 devLog(`[Deck Coverage] Total unique decks: ${window.totalUniqueDecks}`);
                 devLog(`[Deck Coverage] Cards with coverage data: ${window.cardDeckCoverageMap.size}`);
                 devLog(`[Filter Data] Main Pokemons: ${window.allMainPokemons.size}, Archetypes: ${window.allArchetypes.size}, Metas: ${window.allMetas.size}`);
@@ -1649,6 +1895,26 @@
             const sortOrderSelect = document.getElementById('cardSortOrder');
             const sortOrder = sortOrderSelect ? sortOrderSelect.value : 'set';
 
+            /* ── "Nur City League" gab 0 Karten ohne ein Wort dazu ─────
+             *
+             * GEMESSEN am 07.09.2026 (F6.5): data/city_league_analysis.csv
+             * ist 304 Byte gross und enthaelt NUR die Kopfzeile.
+             * window.cityLeagueCardsSet bleibt deshalb leer, jede Karte
+             * faellt durch den Filter, und die Ansicht sagte lediglich
+             * "Keine Karten gefunden - Filtereinstellungen anpassen" - ein
+             * Rat, der hier nicht hilft: kein Filter schafft Daten herbei,
+             * die es nicht gibt.
+             *
+             * Die Option bleibt waehlbar, sie ist richtig, sobald die
+             * Saison wieder laeuft. Der Wortlaut ist der, den die Seite
+             * fuer denselben Zustand schon fuehrt (js/app-city-league.js,
+             * cityLeagueOffSeasonHtml): ein Zustand, zwei Ansichten, ein
+             * Satz. */
+            const _clLeer = !window.cityLeagueCardsSet || window.cityLeagueCardsSet.size === 0;
+            window._cdbLeerGrund = (selectedMetas.indexOf('city_league') !== -1 && _clLeer)
+                ? 'city-league-saisonpause'
+                : '';
+
             const signature = JSON.stringify({
                 searchTerm,
                 selectedMetas,
@@ -1760,6 +2026,12 @@
                 // Meta/Format filter (Total, All Playables, City League)
                 // NOTE: Meta-Zeiträume (meta:XXX) are handled later in "Meta Filter" section
                 const basicMetaFilters = selectedMetas.filter(m => !m.startsWith('meta:'));
+                /* Hier stand `_cityLeagueGewaehlt = ...` — eine Zuweisung an
+                 * einen nirgends deklarierten Namen. In einer Datei unter
+                 * 'use strict' waere das ein ReferenceError, sonst ein
+                 * stilles globales Feld; gelesen wurde es an keiner Stelle.
+                 * Der Leerzustand entscheidet ueber selectedMetas selbst
+                 * (siehe _cdbLeerGrund weiter unten). */
                 if (basicMetaFilters.length > 0) {
                     let metaMatch = false;
                     const cardNameNorm = normalizeCardName(card.name);
@@ -2030,6 +2302,21 @@
             // Deduplicate cards (same card name, different prints) - prefer print from coverage data
             // Only deduplicate if showOnlyOnePrint is enabled AND no search term active
             // When user searches for a specific card, always show all prints
+            /* ── "Alle Drucke" und "Standard-Druck" zeigten dasselbe ──
+             *
+             * BEFUND (07.09.2026, F6.16b): bei aktiver Namenssuche liefern
+             * beide Knoepfe dieselben Treffer. Vermutet wurde ein Fehler in
+             * setPrintView(); nachgelesen ist es DIESE Zeile — die
+             * Zusammenlegung wird bei gesetztem Suchbegriff uebersprungen,
+             * absichtlich, damit die gesuchte Karte nicht mit ihren eigenen
+             * Drucken verschwindet. Die Entscheidung bleibt: wer nach einer
+             * Karte sucht, will ihre Drucke sehen.
+             *
+             * Falsch war nur, dass niemand es gesagt hat. Der Knopf blieb
+             * hervorgehoben, als sei "Standard-Druck" in Kraft, und war es
+             * nicht. Das ist der stille Ausfall, nicht die Regel selbst —
+             * also steht der Grund jetzt in der Ergebniszeile. */
+            window._cdbDruckHinweis = Boolean(showOnlyOnePrint && searchTerm);
             if (showOnlyOnePrint && !searchTerm) {
                 deduplicateCardsForDisplay(window.filteredCardsData);
             }
@@ -2192,7 +2479,9 @@
                     
                     coverageData.archetypesWithCard.forEach((entry, archetypeKey) => {
                         const [meta, archetype] = archetypeKey.split('|');
-                        const mainPokemon = archetype.split(' ')[0];
+                        // Dieselbe Regel wie in der Filterliste, sonst waehlt die
+                        // Druckwahl nach einer Worthaelfte aus (siehe hauptPokemonAusArchetyp).
+                        const mainPokemon = hauptPokemonAusArchetyp(archetype);
                         
                         // Check if this archetype matches active filters
                         let matchesFilters = true;
@@ -2555,12 +2844,43 @@
                 }
                 return fallback;
             };
+            /* Der Grund, warum "Standard-Druck" gerade nicht zusammenlegt.
+               Der Knopf bleibt hervorgehoben, also muss der Satz es sagen —
+               sonst sieht es aus, als taete der Knopf nichts. (F6.16b)
+
+               BEFUND 07.09.2026: der Satz stand ERST hinter dem
+               Leerzustand, der vorher mit `return` aussteigt. Eine Suche
+               mit "Standard-Druck" und null Treffern nannte den Grund
+               deshalb nicht — also genau der Fall, in dem er am meisten
+               fehlt. Er wird jetzt VOR dem Leerzustand gebildet und in
+               beiden Ausgaengen angehaengt. */
+            const druckSatz = (typeof window !== 'undefined' && window._cdbDruckHinweis)
+                ? ((typeof getLang === 'function' && getLang() === 'de')
+                    ? ' \u00b7 Bei aktiver Suche zeigen beide Ansichten alle Drucke, damit die gesuchte Karte nicht wegf\u00e4llt.'
+                    : ' \u00b7 While a search is active both views show every print, so the searched card is not hidden.')
+                : '';
+
             if (cards.length === 0) {
-                const emptyTitle = _cdbT('cdb.noCardsFound', 'No Cards Found');
-                const emptyDesc = _cdbT('cdb.adjustFilters', 'Try adjusting your filter settings');
+                let emptyTitle = _cdbT('cdb.noCardsFound', 'No Cards Found');
+                let emptyDesc = _cdbT('cdb.adjustFilters', 'Try adjusting your filter settings');
                 const zeroLabel = _cdbT('cdb.zeroCardsFound', '0 cards found');
-                content.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--ink-2);"><h2>${emptyTitle}</h2><p style="font-weight: 500;">${emptyDesc}</p></div>`;
-                resultsInfo.textContent = zeroLabel;
+                /* Ein leeres Ergebnis muss seinen Grund nennen. Bei
+                   "Nur City League" ist der Grund bekannt und benannt:
+                   die Quelldatei traegt nur ihre Kopfzeile, weil die
+                   japanische City League zwischen zwei Set-Rotationen
+                   pausiert. Wortlaut wie in js/app-city-league.js. */
+                if (window._cdbLeerGrund === 'city-league-saisonpause') {
+                    emptyTitle = _cdbLang === 'de' ? 'Saisonpause in Japan' : 'Off-season in Japan';
+                    emptyDesc = _cdbLang === 'de'
+                        ? 'Die City League pausiert zwischen zwei Set-Rotationen. Sobald das erste '
+                          + 'Turnier im neuen Format gescrapt ist, stehen die Karten hier wieder. '
+                          + 'Kein Filter fehlt \u2014 es fehlen die Daten.'
+                        : 'The City League pauses between set rotations. Cards return here as soon '
+                          + 'as the first tournament in the new format has been scraped. '
+                          + 'No filter is missing \u2014 the data is.';
+                }
+                content.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--ink-2);"><h2>${escapeHtml(emptyTitle)}</h2><p style="font-weight: 500;">${escapeHtml(emptyDesc)}</p></div>`;
+                resultsInfo.textContent = zeroLabel + druckSatz;
                 return;
             }
 
@@ -2674,6 +2994,10 @@
                     + kachelSatz;
             }
             
+            /* Der Druck-Hinweis haengt an BEIDEN Zweigen, also einmal
+               danach statt zweimal darin. */
+            if (druckSatz) resultsInfo.textContent += druckSatz;
+
             // Create pagination controls
             const paginationTop = createPaginationControls(cards.length, totalPages);
             
@@ -3212,8 +3536,57 @@
                 const coveragePctLabel = (percentage > 0 && percentage < 0.1)
                     ? _zahlNachSprache(0.1, 1).replace(/^/, '<')
                     : _zahlNachSprache(percentage, 1);
-                coverageDisplay = `<div class="card-database-coverage" style="background: ${coverageColor};" title="${deckCount} Decks / ${archetypeCount} Archetypes${maxCount > 0 ? ' · Max: ' + maxCount + 'x copies per deck' : ''}">
-                    ${coverageIcon} ${coveragePctLabel}% Coverage${maxCountText}
+                /* BEFUND (07.09.2026, gegen die echten Dateien in der
+                   Live-Konfiguration gemessen): die Plakette zeigte Anteile,
+                   die in keiner Quelle standen — 243 von 948 Karte-Archetyp-
+                   Paaren lagen UEBER jeder Einzelerhebung, 12 darunter, und
+                   in der Spitze stand 270,0 %. Ursache war das Summieren
+                   ueber drei Erhebungen, die auf denselben Formatschluessel
+                   fallen (Einzelheiten an window.erhebungen).
+
+                   Gerechnet wird jetzt in EINER Erhebung, und die Plakette
+                   schreibt hin, in welcher und gegen welchen Nenner. Wo
+                   weitere Erhebungen dieselbe Karte anders melden, werden
+                   sie beim Namen genannt: eine Marke wuerde nur andeuten,
+                   dass etwas nicht stimmt, und offenlassen, was. */
+                const _covDe = (typeof getLang === 'function' && getLang() === 'de');
+                const _erhebung = coverageStats.erhebung || '';
+                const _nenner = coverageStats.totalDecks || 0;
+                const _weitere = Array.isArray(coverageStats.weitereErhebungen)
+                    ? coverageStats.weitereErhebungen : [];
+                /* Der Bruch steht SICHTBAR auf der Plakette: eine Prozentzahl
+                   ohne Nenner laesst "1 von 1 Deck" wie eine Verbreitung von
+                   100 % aussehen. */
+                const herkunftZeile = (_erhebung
+                    ? `${deckCount}/${_nenner} · ${_erhebung}`
+                    : `${deckCount}/${_nenner}`) + maxCountText;
+                const _weitereSatz = _weitere.length > 0
+                    ? (_covDe ? ' · Weitere Erhebungen: ' : ' · Other surveys: ')
+                      + _weitere.map(w => `${w.name} ${w.deckCount}/${w.totalDecks}`
+                          + ` (${_zahlNachSprache(w.percentage, 1)} %)`).join(', ')
+                    : '';
+                /* Die Marke steht NUR fuer den einen Fall, in dem der Wert
+                   nachweislich eine Obergrenze ist: die Summe ueber die
+                   Drucke derselben Karte uebersteigt in DIESER Erhebung die
+                   Archetypgroesse, ein Deck spielt also mehrere Drucke. */
+                const obergrenzeMarke = coverageStats.gedeckelt ? '\u2264\u2009' : '';
+                const obergrenzeSatz = coverageStats.gedeckelt
+                    ? (_covDe
+                        ? ' · Mehrere Drucke dieser Karte wurden zusammengezählt und ergeben '
+                          + 'mehr Decks, als der Archetyp hat: mindestens ein Deck spielt zwei '
+                          + 'Drucke. Angezeigt ist die Obergrenze.'
+                        : ' · Several prints of this card were added up and exceed the '
+                          + 'archetype size: at least one deck plays two prints. The value '
+                          + 'shown is an upper bound.')
+                    : '';
+                const herkunftSatz = _erhebung
+                    ? (_covDe
+                        ? `Erhebung: ${_erhebung} — ${deckCount} von ${_nenner} Decks`
+                        : `Survey: ${_erhebung} — ${deckCount} of ${_nenner} decks`)
+                    : `${deckCount} / ${_nenner} Decks`;
+                coverageDisplay = `<div class="card-database-coverage" style="background: ${coverageColor};" title="${escapeHtml(herkunftSatz)} · ${archetypeCount} Archetypes${maxCount > 0 ? ' · Max: ' + maxCount + 'x copies per deck' : ''}${escapeHtml(obergrenzeSatz)}${escapeHtml(_weitereSatz)}">
+                    ${coverageIcon} ${obergrenzeMarke}${coveragePctLabel}% Coverage
+                    <span class="card-database-coverage-quelle" style="display:block; font-weight:400; font-size:0.85em; opacity:0.92;">${escapeHtml(herkunftZeile)}</span>
                 </div>`;
             }
             const limitlessButton = (card.set && card.number)
@@ -3372,6 +3745,34 @@
             return new Date(releaseDateStr);
         }
 
+        /* ── Die Abdeckung einer Karte ───────────────────────────────────
+         *
+         * WELCHE ERHEBUNG GEZEIGT WIRD — und warum.
+         *
+         * Auf denselben Formatschluessel fallen live drei Erhebungen
+         * (Tournament / TEF-PBL, Current Meta / Meta Live, Current Meta /
+         * Meta Play!; Einzelheiten an window.erhebungen). "Die des
+         * laufenden Formats" unterscheidet sie nicht: alle drei tragen
+         * TEF-PBL. Gezeigt wird deshalb die GROESSTE — die mit den
+         * meisten Decks unter den gerade betrachteten Archetypen. Drei
+         * Gruende:
+         *
+         *   1. Sie ist die breiteste Stichprobe (live 1.187 Decks gegen
+         *      253 und 143), also der belastbarste Anteil.
+         *   2. Zaehler und Nenner stammen dadurch garantiert aus
+         *      derselben Auswertung. Genau das war vorher nicht so.
+         *   3. Die Wahl haengt NUR an den Filtern, nicht an der Karte.
+         *      Alle Plaketten einer Seite stammen dadurch aus derselben
+         *      Erhebung; wuerde je Karte die Erhebung gewaehlt, in der
+         *      sie am besten dasteht, waere die Seite systematisch zu
+         *      hoch. Bei Gleichstand entscheidet die Einfuegereihenfolge,
+         *      also die Reihenfolge der Quellen — stabil ueber Neuladen.
+         *
+         * Die anderen Erhebungen verschwinden nicht — sie stehen als
+         * `weitereErhebungen` im Ergebnis und werden an der Plakette
+         * genannt (Name und Bruch), damit ein abweichender Wert
+         * sichtbar bleibt, statt von einer Marke angedeutet zu werden.
+         */
         function calculateDynamicCoverage(cardName) {
             if (!window.cardDeckCoverageMap || !window.archetypeDeckCounts) {
                 return null;
@@ -3396,44 +3797,7 @@
             const allExistingArchetypeKeys = Array.from(window.archetypeDeckCounts.keys());
             
             let decksFilteredByDate = 0; // Track how many decks were filtered out by date
-            
-            // If no filters are active, use all decks from the global calculation
-            if (selectedMainPokemons.length === 0 && selectedArchetypes.length === 0 && selectedMetaFilters.length === 0) {
-                let totalDecksWithCard = 0;
-                let filteredMaxCount = 0;
-                cardStats.archetypesWithCard.forEach((entry, archetypeKey) => {
-                    const deckCount = typeof entry === 'number' ? entry : (entry.deckCount || 0);
-                    const maxCount = typeof entry === 'number' ? 0 : (entry.maxCount || 0);
-                    const tournamentDate = parseTournamentDate(entry.tournamentDate || null);
-                    const [meta, archetype] = archetypeKey.split('|');
-                    
-                    // Temporal filtering: Only filter if we have BOTH a card release date AND a tournament date
-                    // City League data often has NO tournament_date, so we treat it as "current meta"
-                    if (cardReleaseDate && tournamentDate) {
-                        if (tournamentDate < cardReleaseDate) {
-                            decksFilteredByDate++;
-                            return; // Skip this entry
-                        }
-                    }
-                    // If no tournament date (like City League), we DON'T filter - assume it's current
-                    
-                    totalDecksWithCard += deckCount;
-                    filteredMaxCount = Math.max(filteredMaxCount, maxCount);
-                });
-                
-                if (window.totalUniqueDecks) {
-                    const percentage = (totalDecksWithCard / window.totalUniqueDecks) * 100;
-                    return {
-                        percentage: percentage,
-                        deckCount: totalDecksWithCard,
-                        archetypeCount: cardStats.archetypes.size,
-                        totalDecks: window.totalUniqueDecks,
-                        maxCount: filteredMaxCount
-                    };
-                }
-                return null;
-            }
-            
+
             // Filter archetype keys based on active filters
             const filteredArchetypeKeys = allExistingArchetypeKeys.filter(archetypeKey => {
                 // archetypeKey format: "meta|archetype"
@@ -3455,7 +3819,7 @@
                 
                 // Check main pokemon filter
                 if (selectedMainPokemons.length > 0) {
-                    const mainPokemon = archetype.split(' ')[0].trim();
+                    const mainPokemon = hauptPokemonAusArchetyp(archetype);
                     if (!selectedMainPokemons.includes(mainPokemon)) {
                         return false;
                     }
@@ -3463,23 +3827,16 @@
                     // IMPORTANT: When filtering by Main Pokemon, only count archetypes
                     // that have AT LEAST ONE card matching the main pokemon name
                     // This filters out incomplete data where the main pokemon cards weren't scraped
-                    const hasMainPokemonCard = Array.from(window.cardDeckCoverageMap.keys()).some(cardName => {
-                        const cardStats = window.cardDeckCoverageMap.get(cardName);
+                    const hasMainPokemonCard = Array.from(window.cardDeckCoverageMap.keys()).some(kartenName => {
+                        const andereKarte = window.cardDeckCoverageMap.get(kartenName);
                         // Check if this card name contains the main pokemon name
                         // AND this archetype has this card
-                        return cardName.includes(mainPokemon.toLowerCase()) && 
-                               cardStats.archetypesWithCard.has(archetypeKey);
+                        return kartenName.includes(mainPokemon.toLowerCase()) &&
+                               andereKarte.archetypesWithCard.has(archetypeKey);
                     });
                     
                     if (!hasMainPokemonCard) {
-                        if (cardNameLower === 'hawlucha' && archetypeKey.includes('Dragapult')) {
-                            devLog(`[Coverage Debug Hawlucha Filter] Excluding archetype ${archetypeKey} - no card with '${mainPokemon.toLowerCase()}' in name found`);
-                        }
                         return false; // Skip archetypes with no main pokemon cards
-                    } else {
-                        if (cardNameLower === 'hawlucha' && archetypeKey.includes('Dragapult')) {
-                            devLog(`[Coverage Debug Hawlucha Filter] Including archetype ${archetypeKey} - has main pokemon card`);
-                        }
                     }
                 }
                 
@@ -3489,142 +3846,151 @@
             if (filteredArchetypeKeys.length === 0) {
                 return null;
             }
-            
-            if (cardNameLower === 'hawlucha') {
-                const dragapultKeys = filteredArchetypeKeys.filter(k => k.includes('Dragapult'));
-                devLog(`[Coverage Debug Hawlucha Filter] Filtered Dragapult Archetypes (${dragapultKeys.length}): ${dragapultKeys.slice(0, 5).join(', ')}${dragapultKeys.length > 5 ? ` ... and ${dragapultKeys.length - 5} more` : ''}`);
-                
-                const hawluchaKeys = Array.from(cardStats.archetypesWithCard.keys());
-                const hawluchaDragKeys = hawluchaKeys.filter(k => k.includes('Dragapult'));
-                devLog(`[Coverage Debug Hawlucha Filter] Hawlucha's Dragapult Archetypes (${hawluchaDragKeys.length}): ${hawluchaDragKeys.join(', ')}`);
-                
-                // Check which Hawlucha archetypes are NOT in filtered keys
-                const missingKeys = hawluchaKeys.filter(k => !filteredArchetypeKeys.includes(k) && k.includes('Dragapult'));
-                if (missingKeys.length > 0) {
-                    devLog(`[Coverage Debug Hawlucha Filter] Hawlucha archetypes MISSING from filtered list (${missingKeys.length}): ${missingKeys.join(', ')}`);
-                } else {
-                    devLog(`[Coverage Debug Hawlucha Filter] All Hawlucha Dragapult archetypes are in filtered list!`);
-                }
+
+            const erhebungen = window.erhebungen instanceof Map ? window.erhebungen : new Map();
+            if (erhebungen.size === 0) {
+                // Ohne Erhebungen laesst sich kein Anteil belegen. Keine Zahl
+                // ist hier richtiger als eine hingeschriebene.
+                return null;
             }
-            
-            // Count total decks in filtered archetypes
-            let totalFilteredDecks = 0;
-            filteredArchetypeKeys.forEach(archetypeKey => {
-                const archetypeData = window.archetypeDeckCounts.get(archetypeKey);
-                const deckCount = typeof archetypeData === 'number' ? archetypeData : (archetypeData.totalDecks || 0);
-                
-                // DON'T apply temporal filtering here - we want to count ALL decks in the archetype
-                // regardless of when the card was released. Temporal filtering is only for decksWithCard.
-                totalFilteredDecks += deckCount;
-            });
-            
-            // Count how many decks have this card
-            let decksWithCard = 0;
-            let filteredMaxCount = 0;
-            const matchingArchetypes = new Set();
-            
-            if (cardNameLower === 'hawlucha') {
-                devLog(`[Coverage Debug Hawlucha Count] Starting deck count. cardStats.archetypesWithCard has ${cardStats.archetypesWithCard.size} entries`);
-                const releaseDate = getCardReleaseDate(cardStats);
-                devLog(`[Coverage Debug Hawlucha Count] Card release date: ${releaseDate ? releaseDate.toISOString().split('T')[0] : 'NULL'}, setCode: ${cardStats.setCode}`);
-            }
-            
-            let hawluchaDebugInfo = [];
-            
-            cardStats.archetypesWithCard.forEach((entry, archetypeKey) => {
-                const isIncluded = filteredArchetypeKeys.includes(archetypeKey);
-                
-                if (cardNameLower === 'hawlucha' && archetypeKey.includes('Dragapult')) {
-                    const deckCount = typeof entry === 'number' ? entry : (entry.deckCount || 0);
-                    hawluchaDebugInfo.push(`${archetypeKey}:included=${isIncluded},deckCount=${deckCount}`);
-                }
-                
-                if (isIncluded) {
-                    const deckCount = typeof entry === 'number' ? entry : (entry.deckCount || 0);
-                    const tournamentDate = parseTournamentDate(entry.tournamentDate || null);
-                    
-                    // Get the release date for THIS specific entry's set code, not the global one
-                    const entrySetCode = (typeof entry === 'object' && entry.setCode) ? entry.setCode : cardStats.setCode;
+
+            /* Eine Erhebung ausrechnen: Zaehler, Nenner, Archetypen —
+             * ausschliesslich aus ihren eigenen Zeilen. */
+            function rechne(erhebung) {
+                /* Kennt diese Erhebung die Karte gar nicht, ist das KEIN
+                 * fehlender Wert, sondern eine gemessene Null: in beiden
+                 * Quelldateien steht keine einzige Zeile mit 0 Decks
+                 * (gemessen 07.09.2026: 0 von 879 und 0 von 4.484). Eine
+                 * nicht gespielte Karte wird schlicht nicht aufgefuehrt.
+                 * Die Erhebung bleibt deshalb waehlbar und liefert 0. */
+                const kartenZeilen = (cardStats.proErhebung instanceof Map
+                    ? cardStats.proErhebung.get(erhebung.id)
+                    : null) || new Map();
+
+                let nenner = 0;
+                let zaehler = 0;
+                let maxCount = 0;
+                let gedeckelt = false;
+                const archetypen = new Set();
+
+                filteredArchetypeKeys.forEach(archetypeKey => {
+                    const groesse = erhebung.archetypen.get(archetypeKey);
+                    if (!groesse) return; // Diese Erhebung kennt den Archetyp nicht.
+                    nenner += groesse;
+
+                    const eintrag = kartenZeilen.get(archetypeKey);
+                    if (!eintrag) return;
+
+                    const tournamentDate = parseTournamentDate(eintrag.tournamentDate || null);
+                    const entrySetCode = eintrag.setCode || cardStats.setCode;
                     const entryReleaseDateStr = window.SET_RELEASE_DATES[entrySetCode] || window.SET_RELEASE_DATES['DEFAULT'];
                     const entryReleaseDate = entrySetCode ? new Date(entryReleaseDateStr) : cardReleaseDate;
-                    
-                    if (cardNameLower === 'hawlucha') {
-                        devLog(`[Coverage Debug Hawlucha Count] ? ${archetypeKey}: deckCount=${deckCount}, tournamentDate=${entry.tournamentDate || 'N/A'}, entrySetCode=${entrySetCode}, releaseDate=${entryReleaseDate ? entryReleaseDate.toISOString().split('T')[0] : 'NULL'}`);
+                    // Temporal filtering: only when BOTH dates are known.
+                    // City League rows carry no tournament_date and count as current.
+                    if (entryReleaseDate && tournamentDate && tournamentDate < entryReleaseDate) {
+                        decksFilteredByDate++;
+                        return;
                     }
-                    
-                    // Temporal filtering: Use the entry's specific set code release date
-                    // Only filter if we have BOTH a card release date AND a tournament date
-                    // City League data often has NO tournament_date, so we treat it as "current meta"
-                    if (entryReleaseDate && tournamentDate) {
-                        if (tournamentDate < entryReleaseDate) {
-                            if (cardNameLower === 'hawlucha') {
-                                devLog(`[Coverage Debug Hawlucha Count] ? FILTERED OUT: ${archetypeKey} (tournament ${tournamentDate.toISOString().split('T')[0]} < release ${entryReleaseDate.toISOString().split('T')[0]})`);
-                            }
-                            return; // Skip this entry
-                        }
+
+                    /* Mehrere DRUCKE derselben Karte werden zusammengezaehlt
+                     * (gewollt: wer die Karte in irgendeinem Druck spielt,
+                     * zaehlt). Spielt ein Deck zwei Drucke, zaehlt es dabei
+                     * zweimal — dann steht die Summe ueber der Archetypgroesse.
+                     * Gemessen 07.09.2026: 9 von 5.351 Erhebung-Karte-Archetyp-
+                     * Faellen, alle in "Tournament / TEF-PBL" (z. B. Slowking /
+                     * slowpoke 12 bei 11 Decks). Mehr Decks als der Archetyp hat
+                     * gibt es nicht; der wahre Wert liegt zwischen dem groessten
+                     * Einzeldruck und der Archetypgroesse. Angezeigt wird die
+                     * Obergrenze, und die Plakette sagt genau das. */
+                    const roh = eintrag.deckCount || 0;
+                    if (roh > groesse) {
+                        gedeckelt = true;
+                        zaehler += groesse;
+                    } else {
+                        zaehler += roh;
                     }
-                    // If no tournament date, we DON'T filter - assume it's current
-                    
-                    decksWithCard += deckCount;
-                    filteredMaxCount = Math.max(filteredMaxCount, (typeof entry === 'number' ? 0 : (entry.maxCount || 0)));
-                    // Extract archetype from archetypeKey (format: meta|archetype)
+                    maxCount = Math.max(maxCount, eintrag.maxCount || 0);
                     const archetype = archetypeKey.split('|')[1];
-                    if (archetype) {
-                        matchingArchetypes.add(archetype);
-                    }
-                }
+                    if (archetype) archetypen.add(archetype);
+                });
+
+                if (nenner <= 0) return null;
+                return {
+                    erhebung: erhebung,
+                    nenner: nenner,
+                    zaehler: zaehler,
+                    maxCount: maxCount,
+                    gedeckelt: gedeckelt,
+                    archetypen: archetypen,
+                    prozent: (zaehler / nenner) * 100
+                };
+            }
+
+            const kandidaten = [];
+            erhebungen.forEach(erhebung => {
+                const r = rechne(erhebung);
+                if (r) kandidaten.push(r);
             });
-            
-            if (cardNameLower === 'hawlucha' && hawluchaDebugInfo.length > 0) {
-                devLog(`[Coverage Debug Hawlucha Count] Dragapult archetypes checked: ${hawluchaDebugInfo.join(' | ')}`);
+            if (kandidaten.length === 0) return null;
+
+            // Groesste Erhebung = meiste Decks unter den gefilterten Archetypen.
+            // Bei Gleichstand bleibt die zuerst gelesene stehen (stabil).
+            let gewaehlt = kandidaten[0];
+            for (const k of kandidaten) {
+                if (k.nenner > gewaehlt.nenner) gewaehlt = k;
             }
-            
-            const percentage = totalFilteredDecks > 0 ? (decksWithCard / totalFilteredDecks) * 100 : 0;
-            
-            if (cardNameLower === 'hawlucha') {
-                devLog(`[Coverage Debug Hawlucha] Final: ${decksWithCard}/${totalFilteredDecks} = ${percentage.toFixed(1)}%, matching archetypes: ${matchingArchetypes.size}, filtered keys: ${filteredArchetypeKeys.length}`);
-            }
-            
+
+            /* Genannt werden die anderen Erhebungen nur dort, wo sie
+             * ABWEICHEN — auf die Stelle genau, die die Plakette zeigt.
+             * Drei Erhebungen unter jeder Karte aufzuzaehlen, die alle
+             * dasselbe sagen, macht die Abweichung unsichtbar. */
+            const _stelle = (p) => Math.round(p * 10);
+            const weitereErhebungen = kandidaten
+                .filter(k => k !== gewaehlt && _stelle(k.prozent) !== _stelle(gewaehlt.prozent))
+                .map(k => ({
+                    name: k.erhebung.id,
+                    deckCount: k.zaehler,
+                    totalDecks: k.nenner,
+                    percentage: k.prozent
+                }));
+
+            const percentage = gewaehlt.prozent;
+
             // Enhanced debug logging with temporal filtering info
-            if (cardNameLower.includes('dragapult') || cardNameLower.includes('poke pad') || cardNameLower.includes('poke pad')) {
-                let debugMsg = `[Coverage Debug] ${cardName}: ${decksWithCard}/${totalFilteredDecks} decks = ${percentage.toFixed(1)}% | Archetypes: ${matchingArchetypes.size}/${filteredArchetypeKeys.length}`;
-                
+            if (cardNameLower.includes('dragapult') || cardNameLower.includes('poke pad')) {
+                let debugMsg = `[Coverage Debug] ${cardName}: ${gewaehlt.zaehler}/${gewaehlt.nenner} decks = ${percentage.toFixed(1)}%`
+                    + ` | Erhebung: ${gewaehlt.erhebung.id} | Archetypes: ${gewaehlt.archetypen.size}/${filteredArchetypeKeys.length}`;
                 if (cardReleaseDate) {
                     debugMsg += ` | Release: ${cardReleaseDate.toISOString().split('T')[0]}`;
                 }
                 if (decksFilteredByDate > 0) {
                     debugMsg += ` | Filtered (before release): ${decksFilteredByDate}`;
                 }
-                
-                const samples = Array.from(cardStats.archetypesWithCard.keys()).filter(k => filteredArchetypeKeys.includes(k)).slice(0, 3).map(k => {
-                    const entry = cardStats.archetypesWithCard.get(k);
-                    const count = typeof entry === 'number' ? entry : (entry.deckCount || 0);
-                    const archetypeData = window.archetypeDeckCounts.get(k);
-                    const total = typeof archetypeData === 'number' ? archetypeData : (archetypeData.totalDecks || 0);
-                    const dateStr = entry.tournamentDate || 'N/A';
-                    return `${k}(${count}/${total}, ${dateStr})`;
-                }).join(', ');
-                
-                debugMsg += ` | Samples: ${samples}`;
-                
-                // Show which archetypes DON'T have this card
-                const archetypesWithoutCard = filteredArchetypeKeys.filter(k => !cardStats.archetypesWithCard.has(k));
-                if (archetypesWithoutCard.length > 0) {
-                    debugMsg += ` | Missing from: ${archetypesWithoutCard.slice(0, 3).join(', ')}`;
+                if (weitereErhebungen.length > 0) {
+                    debugMsg += ` | weitere: ` + weitereErhebungen
+                        .map(w => `${w.name} ${w.deckCount}/${w.totalDecks}`).join(', ');
                 }
-                
                 devLog(debugMsg);
             }
             
             return {
                 percentage: percentage,
-                deckCount: decksWithCard,
-                archetypeCount: matchingArchetypes.size,
-                totalDecks: totalFilteredDecks,
-                maxCount: filteredMaxCount
+                deckCount: gewaehlt.zaehler,
+                archetypeCount: gewaehlt.archetypen.size,
+                totalDecks: gewaehlt.nenner,
+                maxCount: gewaehlt.maxCount,
+                /* Woher die Zahl stammt — die Plakette schreibt es hin. */
+                erhebung: gewaehlt.erhebung.id,
+                erhebungQuelle: gewaehlt.erhebung.quelle,
+                erhebungLabel: gewaehlt.erhebung.label,
+                weitereErhebungen: weitereErhebungen,
+                /* true genau dann, wenn innerhalb DIESER Erhebung die Summe
+                 * ueber die Drucke die Archetypgroesse ueberstieg. Dann und
+                 * nur dann ist der Wert eine Obergrenze. */
+                gedeckelt: gewaehlt.gedeckelt
             };
         }
-        
+
         function openRaritySwitcherFromDB(cardName, set, number, anzeigeZiel) {
             // Create a deckKey format that openRaritySwitcher expects
             const deckKey = `${cardName} (${set} ${number})`;

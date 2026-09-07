@@ -515,6 +515,20 @@
                 formatSelect.dispatchEvent(new Event('change', { bubbles: true }));
             }
 
+            /* BEFUND C2 (07.09.2026): das kuenstliche `change` oben ist
+               die EINZIGE Bruecke zwischen dieser Optionsliste und der
+               Zeile, die ds-filter.js darueber baut — und es steht im
+               `if`-Zweig. Bleibt das Manifest leer, wird die Zeile nie
+               nachgezogen und zeigt weiter den Platzhalter, waehrend
+               unten sieben Formate stehen. Gemessen in
+               tests/unit/test-ds-filter-formate.js: ohne diesen Aufruf
+               "Knopfleiste mit 1 Knopf" gegen "Quelle hat 7 Optionen".
+               abgleichen() zeichnet nur bei echtem Unterschied neu. */
+            if (window.DsFilter && typeof window.DsFilter.abgleichen === 'function') {
+                try { window.DsFilter.abgleichen(); }
+                catch (e) { devLog('[Past Meta] Formatzeile nicht abgeglichen:', e); }
+            }
+
             // Load only the selected format's chunk (lazy)
             pastMetaDecks = [];
             await _loadPastMetaChunksIfNeeded(defaultFormat, pastMetaSetOrderMap, tournamentsByDate);
@@ -1268,10 +1282,22 @@
             
             // Update counts
             const totalCards = getPastMetaSummaryTotalCount(sortedCards);
-            // Befund J (30.08.2026): "Cards" und "Total" standen fest auf
-            // Englisch, waehrend die City-League-Ansicht an derselben
-            // Stelle bereits "33 Karten / 60 Gesamt" schreibt.
-            document.getElementById('pastMetaCardCount').textContent = `${sortedCards.length} ${t('cl.cards')}`;
+            /* Befund J (30.08.2026): "Cards" und "Total" standen fest auf
+               Englisch, waehrend die City-League-Ansicht an derselben
+               Stelle bereits "33 Karten / 60 Gesamt" schreibt.
+
+               BEFUND C3 (07.09.2026): HIER STAND DER ZWEITE SCHREIBER des
+               Zaehlers — `sortedCards.length`, also die Zahl der KARTEN in
+               den Daten. Daneben schrieb uebersichtKachelnFiltern die Zahl
+               der SICHTBAREN KACHELN in dasselbe Feld. Zwei verschiedene
+               Groessen, abwechselnd: nach dem Leeren der Suche stand 34, der
+               Typfilter machte 24 daraus, und mitten im Schub-Aufbau stand
+               "0 Karten" ueber 24 Kacheln. Der Zaehler gehoert jetzt
+               ausschliesslich window.uebersichtZaehlerSchreiben
+               (js/deck-analysis-shared.js); geschrieben wird er unten von
+               dem Zeichner, der das Raster bzw. die Tabelle wirklich
+               gefuellt hat. Die SUMME daneben bleibt hier: sie ist eine
+               andere Zahl (Deckgroesse), kein zweiter Kartenzaehler. */
             /* Der Trenner bekommt links Luft. Zusammengesetzt las sich das
             // als "42 Karten/ 60 Gesamt" — der Schraegstrich klebte am
             // Wort davor, weil die beiden Spans direkt aneinanderstiessen. */
@@ -1288,7 +1314,23 @@
         function renderPastMetaTableView(cards) {
             document.getElementById('pastMetaDeckTableView').classList.remove('d-none');
             document.getElementById('pastMetaDeckVisual').classList.add('d-none');
-            
+
+            /* Der Zaehler zaehlt, was zu sehen ist (Befund C3). In der
+               Tabellenansicht sind das die Zeilen — eine je Karte. Das
+               Raster ist hier leer, also darf auch niemand seine Kacheln
+               zaehlen: die Sollmarke wird geloescht. */
+            const _gitterTab = document.getElementById('pastMetaDeckGrid');
+            if (_gitterTab && _gitterTab.removeAttribute) {
+                _gitterTab.removeAttribute(window.UEBERSICHT_ZAEHLER_MARKE || 'data-kacheln-soll');
+            }
+            if (typeof window.uebersichtZaehlerSchreiben === 'function') {
+                window.uebersichtZaehlerSchreiben('pastMetaCardCount', {
+                    anzahl: cards.length,
+                    kartenWort: t('cl.cards'),
+                    quelle: 'renderPastMetaTableView'
+                });
+            }
+
             const tableContainer = document.getElementById('pastMetaDeckTable');
             
             if (cards.length === 0) {
@@ -1331,8 +1373,29 @@
             
             if (cards.length === 0) {
                 // Befund C (30.08.2026): festes 'No cards found'.
-                gridContainer.innerHTML = '<p style="text-align: center; color: #444; padding: 20px; font-weight: 500;">'
-                    + escapeHtml(t('cl.noCardsFound')) + '</p>';
+                if (gridContainer) {
+                    gridContainer.innerHTML = '<p style="text-align: center; color: #444; padding: 20px; font-weight: 500;">'
+                        + escapeHtml(t('cl.noCardsFound')) + '</p>';
+                    /* BEFUND B6 (Pruefagent, 07.09.2026) — REGRESSION.
+                       Dieser Zweig kehrte zurueck, ohne die Sollmarke zu
+                       loeschen. Gemessen: voll (34/34) -> "34 Karten";
+                       danach Leerzeichnung -> Sollmarke blieb "34";
+                       naechster Filterlauf -> "0 / 34 Karten …" mit "Das
+                       Raster wird noch aufgebaut", obwohl nichts
+                       aufgebaut wird. Vorher stand hier "0 Karten".
+                       Es kommt nichts mehr nach, also faellt die Marke. */
+                    gridContainer.removeAttribute(
+                        window.UEBERSICHT_ZAEHLER_MARKE || 'data-kacheln-soll');
+                }
+                // Und der Zaehler geht ueber den EINEN Schreiber, damit
+                // nicht der Stand des vorigen Archetyps stehen bleibt.
+                if (typeof window.uebersichtZaehlerSchreiben === 'function') {
+                    window.uebersichtZaehlerSchreiben('pastMetaCardCount', {
+                        anzahl: 0,
+                        kartenWort: t('cl.cards'),
+                        quelle: 'renderPastMetaGridView(leer)'
+                    });
+                }
                 return;
             }
             
@@ -1586,17 +1649,57 @@
             // Increment generation counter to cancel any in-flight batch from a previous render call
             const renderGen = ++_pastMetaRenderGen;
             const BATCH_SIZE = 12;
+
+            /* BEFUND C3 (07.09.2026): der Zaehler darf nicht mitten im
+               Schub gezaehlt werden. Das Raster sagt deshalb an, wie
+               viele Kacheln es am Ende tragen wird — solange weniger da
+               sind, weist der Zaehler das als Aufbau aus statt eine
+               falsche Endzahl zu zeigen. Nachgezogen wird ZWEIMAL: einmal
+               direkt nach dem ersten Schub (dort entsteht der
+               Aufbau-Ausweis "12 / 34 Karten …" — vorher stand hier noch
+               die Zahl des vorigen Archetyps) und einmal, wenn der letzte
+               Schub drin ist; das ist die Stelle, an der die Endzahl
+               entsteht. */
+            gridContainer.setAttribute(
+                window.UEBERSICHT_ZAEHLER_MARKE || 'data-kacheln-soll', String(cardHtmls.length));
+
+            function _pastMetaZaehlerNachziehen() {
+                // Generationswaechter: laeuft schon ein neuerer Zeichenlauf,
+                // darf dieser hier den Zaehler nicht mehr anfassen — sonst
+                // schreibt der alte Archetyp ueber den neuen.
+                if (renderGen !== _pastMetaRenderGen) return;
+                if (typeof window.filterPastMetaOverviewCards === 'function') {
+                    window.filterPastMetaOverviewCards();
+                }
+            }
+
             gridContainer.innerHTML = cardHtmls.slice(0, BATCH_SIZE).join('');
             if (cardHtmls.length > BATCH_SIZE) {
+                /* BEFUND "Zwischenzustand ohne Ausweis" (Pruefagent,
+                   07.09.2026): zwischen dem ersten Schub und dem
+                   Nachziehen schrieb niemand den Zaehler. Gemessen:
+                   Archetyp A fertig -> "34 Karten"; Archetyp B beginnt zu
+                   zeichnen -> Zaehler steht weiter auf "34 Karten",
+                   waehrend im Raster 5 Kacheln liegen, OHNE Aufbau-Ausweis.
+                   Der Ausweis erschien nur, wenn zufaellig jemand mitten
+                   im Aufbau filterte.
+                   Der erste Schub zieht den Zaehler deshalb sofort nach.
+                   Weil die Sollmarke schon steht und weniger Kacheln da
+                   sind, ist das Ergebnis der Aufbau-Ausweis
+                   "12 / 34 Karten …" — und nicht die Zahl des vorigen
+                   Archetyps. */
+                _pastMetaZaehlerNachziehen();
                 let offset = BATCH_SIZE;
                 (function renderNextBatch() {
                     if (renderGen !== _pastMetaRenderGen) return; // stale render — abort
-                    if (offset >= cardHtmls.length) return;
+                    if (offset >= cardHtmls.length) { _pastMetaZaehlerNachziehen(); return; }
                     const batch = cardHtmls.slice(offset, offset + BATCH_SIZE);
                     gridContainer.insertAdjacentHTML('beforeend', batch.join(''));
                     offset += BATCH_SIZE;
                     requestAnimationFrame(renderNextBatch);
                 })();
+            } else {
+                _pastMetaZaehlerNachziehen();
             }
         }
         
@@ -2550,18 +2653,58 @@ document.addEventListener('languageChanged', function () {
         el.textContent = txt + ' €';
     });
 
-    var paare = [
-        ['pastMetaCardCount', 'cl.cards'],
-        ['cityLeagueCardCount', 'cl.cards'],
+    /* BEFUND B5 (Pruefagent, 07.09.2026): dieser Block war ein ZWEITER
+     * SCHREIBER am Kartenzaehler. Er las die erste Zahl aus dem Text und
+     * schrieb `zahl + ' ' + t('cl.cards')' zurueck. Gemessen:
+     * "12 / 34 Karten …" wurde beim Sprachwechsel zu "12 Karten" — aus
+     * einem gekennzeichneten Zwischenstand wurde eine behauptete
+     * Endzahl, und der Aufbau-Hinweis am title blieb dabei stehen.
+     *
+     * Die Summe daneben ("/ 60 Gesamt") ist eine andere Groesse und darf
+     * hier weiter direkt gesetzt werden. Der ZAEHLER geht ab jetzt
+     * ausschliesslich ueber window.uebersichtZaehlerSchreiben
+     * (js/deck-analysis-shared.js) — und ein Aufbau-Ausweis bleibt ein
+     * Aufbau-Ausweis, nur eben in der neuen Sprache.
+     */
+    var summen = [
         ['pastMetaCardCountSummary', 'cl.total'],
         ['cityLeagueCardCountSummary', 'cl.total'],
     ];
-    paare.forEach(function (paar) {
+    summen.forEach(function (paar) {
         var el = document.getElementById(paar[0]);
         if (!el) return;
         var zahl = (el.textContent.match(/[\d.,]+/) || ['0'])[0];
         var wort = (typeof t === 'function') ? t(paar[1]) : '';
-        var schraeg = /Summary$/.test(paar[0]) ? '/ ' : '';
-        el.textContent = schraeg + zahl + ' ' + wort;
+        el.textContent = '/ ' + zahl + ' ' + wort;
+    });
+
+    ['pastMetaCardCount', 'cityLeagueCardCount'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        /* Ohne den gemeinsamen Schreiber wird hier GAR NICHTS getan:
+           lieber ein Wort in der alten Sprache als eine Zahl, die
+           ihren Vorbehalt verloren hat. */
+        if (typeof window.uebersichtZaehlerSchreiben !== 'function') return;
+        var wort = (typeof t === 'function') ? t('cl.cards') : '';
+        var roh = String(el.textContent);
+        var aufbau = roh.match(/^\s*(\d+)\s*\/\s*(\d+)\b/);
+        if (aufbau) {
+            window.uebersichtZaehlerSchreiben(id, {
+                anzahl: parseInt(aufbau[1], 10),
+                soll: parseInt(aufbau[2], 10),
+                unvollstaendig: true,
+                kartenWort: wort,
+                quelle: 'languageChanged'
+            });
+            return;
+        }
+        var m = roh.match(/\d[\d.,]*/);
+        if (!m) return;
+        window.uebersichtZaehlerSchreiben(id, {
+            anzahl: parseInt(m[0].replace(/[.,]/g, ''), 10),
+            unvollstaendig: false,
+            kartenWort: wort,
+            quelle: 'languageChanged'
+        });
     });
 });

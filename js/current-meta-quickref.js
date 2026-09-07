@@ -314,6 +314,10 @@
     let tournamentId = '';
     let tournamentName = '';
     let totalDecksInArchetype = 0;
+    // Die Feldgroesse stand schon in der Datei und wurde bisher nur als
+    // Sortier-Tiebreak gelesen und danach weggeworfen. Sie ist der
+    // Nenner, der unter der Kachel fehlte — siehe _renderRefHeader.
+    let totalPlayers = 0;
     for (const r of winnerRows) {
       const name = String(r.card_name || '').trim();
       if (!name) continue;
@@ -334,6 +338,8 @@
       if (!tournamentName) tournamentName = String(r.tournament_name || '').trim();
       const td = parseInt(r.total_decks_in_archetype || '0', 10) || 0;
       if (td > totalDecksInArchetype) totalDecksInArchetype = td;
+      const tp = parseInt(r.total_players || '0', 10) || 0;
+      if (tp > totalPlayers) totalPlayers = tp;
     }
     if (cards.length === 0) return null;
 
@@ -342,6 +348,7 @@
       tournament_name:  tournamentName,
       tournament_date:  latestDate,
       total_decks_in_archetype: totalDecksInArchetype,
+      total_players:    totalPlayers,
       cards: _legalizeOnlineBuild(_consolidateCards(cards)),
     };
   }
@@ -597,6 +604,44 @@
       const recordBlock = games > 0
         ? `<span class="past-meta-best-record"${_qWpHinweis ? ` title="${_escHtml(_qWpHinweis)}"` : ''}>${ref.wins || 0}-${ref.losses || 0}-${ref.ties || 0} · ${_qWpStr}</span>`
         : '';
+      /* WOVON IST DAS "#37"? (07.09.2026)
+         Diese Kachel kommt aus data/tournament_decklists_per_player.csv
+         ueber MostConsistencyBuilder — und die Datei fuehrt je Turnier
+         AUSSCHLIESSLICH das Tag-2-Feld. Nachgezaehlt: Worlds 0071 hat
+         797 Spieler, 143 davon day2=1 in data/player_continuity.csv,
+         und die CSV fuehrt genau diese 143 auf den Plaetzen 1-143.
+         "#37" ohne diese Einordnung liest sich wie Platz 37 von 143.
+         Vorbild ist die Kachel in js/app-past-meta.js:1160-1184.
+
+         Die beiden Zusatzzahlen kommen aus labs_tournament_decks.csv
+         (`player_count` je Archetyp, `total_players` je Turnier) ueber
+         MostConsistencyBuilder.turnierFeld() — sie werden GEHOLT, nicht
+         abgeschrieben. Gibt die Datei nichts her, steht dort nur das
+         Wort Tag 2 und keine geratene Feldgroesse. */
+      const _mcbM = global.MostConsistencyBuilder;
+      const _feldM = (_mcbM && typeof _mcbM.turnierFeld === 'function')
+        ? _mcbM.turnierFeld(ref.tournament_id, ref.deck_archetype)
+        : { feldgroesse: null, n_piloten: null };
+      const deM = (typeof getLang === 'function') ? getLang() === 'de' : true;
+      const _zahlM = (x) => deM ? String(x).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : String(x);
+      let _tag2M = deM ? 'Tag-2-Liste' : 'day-2 list';
+      if (_feldM.n_piloten !== null) {
+        _tag2M += deM
+          ? ` — ${_zahlM(_feldM.n_piloten)} Piloten`
+          : ` — ${_zahlM(_feldM.n_piloten)} pilots`;
+      }
+      if (_feldM.feldgroesse !== null) {
+        _tag2M += deM
+          ? `, Feld ${_zahlM(_feldM.feldgroesse)}`
+          : `, field ${_zahlM(_feldM.feldgroesse)}`;
+      }
+      const _titelM = deM
+        ? 'Limitless veroeffentlicht Decklisten erst ab Tag 2. Diese Liste stammt '
+          + 'aus dem Top Cut, nicht aus dem ganzen Feld — die Platzierung ist die '
+          + 'im Gesamtfeld, die veroeffentlichten Listen sind nur die des Cuts.'
+        : 'Limitless publishes decklists from day 2 onward. This list comes from the '
+          + 'top cut, not the whole field — the placement is field-wide, the published '
+          + 'lists are the cut only.';
       return `
         <div class="past-meta-best-header" style="background: linear-gradient(135deg, var(--tint-warn) 0%, var(--tint-warn) 100%);">
           <div class="past-meta-best-headline">
@@ -604,7 +649,7 @@
             <span class="past-meta-best-name">${_escHtml(ref.player_name || '')}</span>
             ${recordBlock}
           </div>
-          <div class="past-meta-best-sub">${_escHtml(tournName)} · ${_escHtml(ref.tournament_date)} · ${total} ${_escHtml(cardsLbl)}</div>
+          <div class="past-meta-best-sub" title="${_escHtml(_titelM)}">${_escHtml(tournName)} · ${_escHtml(ref.tournament_date)} · ${_escHtml(_tag2M)} · ${total} ${_escHtml(cardsLbl)}</div>
         </div>`;
     }
     // Online — REAL best-placed decklist (place + player + record) when the
@@ -672,12 +717,55 @@
       : _n === 1
         ? _tt('cm.quickRefEineListe', 'a single list — not an aggregate')
         : `${_n} ${_tt('cm.quickRefListen', 'lists')}`;
+
+    /* HIER STEHT ABSICHTLICH NICHT "TAG 2" (07.09.2026).
+       Der Auftrag lautete, beide Listenzahlen als Tag-2-Zahlen zu
+       kennzeichnen. Fuer die Major-Kachel oben stimmt das. Diese
+       Kachel liest aber data/online_tournament_dated_cards.csv, und
+       Online-Turniere haben keinen Tag 2. Nachgezaehlt in derselben
+       Datei (321 Turniere, Spalten total_players und
+       total_decks_in_archetype): bei KEINEM einzigen Turnier ergibt
+       die Summe der Archetyp-Decks die Spielerzahl. Das groesste
+       Beispiel: "WORLDS OF DOOM! 2026! DAY ONE!" vom 15.08.2026 hat
+       909 Spieler und 17 veroeffentlichte Listen ueber 15 Archetypen.
+       Es ist also eine noch duennere Stichprobe als der Tag-2-Cut —
+       nur eben aus einem anderen Grund. Das Wort Tag 2 hier
+       hinzuschreiben waere eine falsche Quellenangabe.
+
+       Was stattdessen dazukommt, ist der Nenner: total_players steht
+       in derselben Zeile derselben Datei und wird von dort geholt.
+       Fehlt er, steht dort nur die Listenzahl — geraten wird nichts. */
+    const _tpRoh = Number(ref.total_players);
+    const _tp = Number.isFinite(_tpRoh) && _tpRoh > 0 ? _tpRoh : null;
+    const deO = (typeof getLang === 'function') ? getLang() === 'de' : true;
+    const _zahlO = (x) => deO ? String(x).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : String(x);
+    // Bei genau einer Liste ist `_decksLbl` schon ein ganzer Satz
+    // ("eine einzige Liste — kein Aggregat"); dann wird der Nenner mit
+    // einem Trenner angehaengt statt mitten hineingeschrieben.
+    const _trenn = _n === 1 ? ' · ' : ' ';
+    const _feldLbl = _tp === null
+      ? ''
+      : (deO
+          ? `${_trenn}von ${_zahlO(_tp)} Spielern im Feld`
+          : `${_trenn}of ${_zahlO(_tp)} players in the field`);
+    const _titelO = deO
+      ? 'Online-Turniere veroeffentlichen nur einen kleinen Teil ihrer Listen — '
+        + 'nicht das Feld und auch keinen Tag-2-Cut. Nachgezaehlt in '
+        + 'data/online_tournament_dated_cards.csv: bei keinem der 321 erfassten '
+        + 'Turniere decken die veroeffentlichten Listen das Feld ab (groesstes '
+        + 'Beispiel: 909 Spieler, 17 Listen). Der typische Build steht also auf '
+        + 'dieser Stichprobe, nicht auf dem Online-Meta.'
+      : 'Online tournaments publish only a small share of their lists — neither the '
+        + 'field nor a day-2 cut. Counted in data/online_tournament_dated_cards.csv: '
+        + 'in none of the 321 recorded tournaments do the published lists cover the '
+        + 'field (largest example: 909 players, 17 lists). The typical build rests on '
+        + 'that sample, not on the online meta.';
     return `
       <div class="past-meta-best-header" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);">
         <div class="past-meta-best-headline">
           <span class="past-meta-best-name">${_escHtml(tournName || 'Limitless Online')}</span>
         </div>
-        <div class="past-meta-best-sub">${_escHtml(ref.tournament_date)} · ${_escHtml(_decksLbl)} · ${total} ${_escHtml(cardsLbl)}</div>
+        <div class="past-meta-best-sub" title="${_escHtml(_titelO)}">${_escHtml(ref.tournament_date)} · ${_escHtml(_decksLbl + _feldLbl)} · ${total} ${_escHtml(cardsLbl)}</div>
       </div>`;
   }
 
@@ -910,5 +998,13 @@
   global._currentMetaQuickRefInternals = {
     findBestMajorList,
     findBestOnlineBuild,
+    // Seit 07.09.2026 zusaetzlich: die Kopfzeile beider Kacheln traegt
+    // die Einordnung der Listenzahl (Tag 2 bei Major, gemessene
+    // Feldgroesse bei Online). tests/unit/test-tag2-grundgesamtheit.js
+    // ruft sie AUS und prueft den erzeugten Text, statt den Quelltext
+    // zu greppen — ein Grep haette die falsche Quellenangabe "Tag 2"
+    // auf der Online-Kachel nicht bemerkt.
+    _renderRefHeader,
+    _findSynthesizedOnlineBuild,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

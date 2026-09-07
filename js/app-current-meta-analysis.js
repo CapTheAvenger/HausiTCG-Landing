@@ -1087,6 +1087,66 @@
             return neu || '';
         }
 
+        /* ── Welche Datei steckt hinter dem Ladeschluessel? ───────────
+         *
+         * BEFUND B1 (Abnahme 07.09.2026): unter "Used in Top 256" stand
+         * sichtbar "Quelle: data/tournament_cards_data_cards.csv".
+         * DIESE DATEI GIBT ES NICHT.
+         *
+         * `tournament_cards_data_cards.csv` ist der LOGISCHE Schluessel,
+         * mit dem loadCSV() gerufen wird. _loadTournamentCardsChunked()
+         * (js/app-core.js, Z. 2545 ff.) loest ihn ueber
+         * data/tournament_cards_manifest.json und `current_set` aus
+         * data/format_window.json auf EINE Formatdatei auf.
+         *
+         * Nachgezaehlt am 07.09.2026: `ls data/tournament_cards_data_cards*`
+         * ergibt 16 Dateien, jede mit Formatsuffix, KEINE ohne. Fuer das
+         * laufende Format TEF-PBL ist es
+         * data/tournament_cards_data_cards_TEF-PBL.csv.
+         *
+         * Dieselbe Datei wusste es an anderer Stelle laengst besser
+         * (_cmMajorLeerGrund, Kommentar oben) — die Angabe unter der
+         * Liste war abgeschrieben und damit falsch.
+         *
+         * Deshalb wird sie hier ZUR LAUFZEIT ermittelt, auf demselben Weg
+         * wie der Lader. Laesst sie sich nicht aufloesen, wird KEIN Name
+         * genannt: ein geratener Dateiname waere derselbe Fehler noch
+         * einmal.
+         *
+         * @returns {Promise<{pfad: string|null, format: string|null}>}
+         */
+        let _cmTurnierDatei = undefined;
+        async function _cmTurnierKartenDatei() {
+            if (_cmTurnierDatei !== undefined) return _cmTurnierDatei;
+            const basis = (typeof BASE_PATH === 'string' && BASE_PATH) ? BASE_PATH : 'data/';
+            let ergebnis = { pfad: null, format: null };
+            try {
+                const fenster = await _cmHoleFormatFenster();
+                const set = String((fenster && fenster.current_set) || '').trim().toUpperCase();
+                const r = await fetch(basis + 'tournament_cards_manifest.json?t=' + Date.now());
+                const manifest = (r && r.ok) ? await r.json() : null;
+                /* Die Auswahl selbst wird NICHT nachgebaut. Zwei
+                   Deklarationen derselben Regel laufen auseinander, sobald
+                   eine angefasst wird — genau der Fehler, der in
+                   js/app-meta-cards.js schon einmal beschrieben steht.
+                   Also dieselbe Funktion, die der Lader benutzt. */
+                const waehle = (typeof window !== 'undefined'
+                    && typeof window.waehleAktuellenChunk === 'function')
+                    ? window.waehleAktuellenChunk : null;
+                if (set && manifest && waehle) {
+                    const treffer = waehle(manifest, set);
+                    if (Array.isArray(treffer) && treffer.length === 1 && treffer[0]) {
+                        const schluessel = await _cmFormatSchluessel();
+                        ergebnis = { pfad: basis + treffer[0], format: schluessel || set };
+                    }
+                }
+            } catch (_e) {
+                /* Kein Name ist besser als ein falscher. */
+            }
+            _cmTurnierDatei = ergebnis;
+            return ergebnis;
+        }
+
         /**
          * Warum ist die Major-Liste leer?
          *
@@ -1597,6 +1657,216 @@
             return agg;
         }
 
+        /* ── JEDE KENNZAHL NENNT NENNER UND QUELLE (Befund H6, 07.09.2026) ──
+         *
+         * GEMESSEN auf der Live-Seite: die drei Kacheln der "Deck
+         * Statistics" und die Liste "Used in Top 256" trugen weder title
+         * noch aria-label noch eine Fussnote. "Matchup gegen Top 20 ·
+         * 47,05 % (20 MU)" sagt nicht, was 20 MU sind, wie viele Partien
+         * dahinterstehen, aus welcher Datei die Zahl kommt und welchen
+         * Zeitraum sie abdeckt.
+         *
+         * index.html ist in dieser Runde gesperrt, die Kacheln entstehen
+         * dort. Also wird der Text an der Stelle gesetzt, an der die ZAHL
+         * entsteht — hier. Der Hinweis haengt sichtbar unter dem Wert und
+         * zusaetzlich als title/aria-label an der Kachel: ein reines title
+         * erscheint nur beim Verweilen mit der Maus, also auf keinem
+         * Telefon. Dieselbe Begruendung steht in js/app-archetype-card.js
+         * ueber tile().
+         *
+         * DIE STILE STEHEN INLINE, WEIL css/ EBENFALLS GESPERRT IST. Sobald
+         * eine Klasse dafuer existiert, gehoert das dorthin.
+         */
+        function _cmKennzahlHinweis(wertId, text) {
+            const wertEl = document.getElementById(wertId);
+            if (!wertEl) return null;
+            const kachel = (typeof wertEl.closest === 'function'
+                ? wertEl.closest('.current-meta-stat-card') : null) || wertEl.parentElement;
+            if (kachel) {
+                kachel.setAttribute('title', text);
+                kachel.setAttribute('aria-label', text);
+            }
+            const fussId = wertId + 'Fussnote';
+            let fuss = document.getElementById(fussId);
+            if (!fuss) {
+                if (typeof document.createElement !== 'function') return null;
+                fuss = document.createElement('div');
+                fuss.id = fussId;
+                fuss.className = 'cm-stat-fussnote';
+                fuss.setAttribute('style',
+                    'margin-top:6px;font-size:0.72em;line-height:1.35;color:var(--ink-2, #555);');
+                if (kachel && typeof kachel.appendChild === 'function') kachel.appendChild(fuss);
+                else return null;
+            }
+            fuss.textContent = text;
+            return fuss;
+        }
+
+        /**
+         * Der Fussnotentext der Win-%-Kachel.
+         *
+         * Der Nenner ist die Bilanz DERSELBEN Zeile: wins + losses + ties
+         * aus data/limitless_online_decks.csv. Nachgezaehlt am 07.09.2026
+         * ueber alle 136 Zeilen der Datei — in 135 davon ergibt
+         * wins / (wins + losses + ties) die Spalte win_rate_numeric auf
+         * 0,02 Punkte genau (Dragapult: 7.943 / 14.861 = 53,4486 gegen
+         * 53,45 in der Datei). Die eine Ausnahme ist Wailord (168-267-1 →
+         * 38,53 gegen 38,65 in der Spalte); deshalb sagt der Text NICHT
+         * "so ist es gerechnet", sondern nennt die angezeigte Spalte und
+         * die Bilanz daneben, damit beides nachprueft werden kann.
+         */
+        function _cmWinrateFussnote(eintrag) {
+            const de = (typeof getLang === 'function') && getLang() === 'de';
+            const z = (v) => {
+                const n = (typeof parseLocaleNumber === 'function')
+                    ? parseLocaleNumber(v, NaN) : parseFloat(String(v).replace(',', '.'));
+                return Number.isFinite(n) ? n : null;
+            };
+            const w = eintrag ? z(eintrag.wins) : null;
+            const l = eintrag ? z(eintrag.losses) : null;
+            const u = eintrag ? z(eintrag.ties) : null;
+            const hatBilanz = w != null && l != null && u != null;
+            const n = hatBilanz ? (w + l + u) : null;
+            const zahl = (x) => (typeof zahlLokal === 'function')
+                ? zahlLokal(x, 0) : String(Math.round(x));
+            const nenner = hatBilanz
+                ? (de
+                    ? `Nenner: ${zahl(n)} Matches (Bilanz ${zahl(w)}–${zahl(l)}–${zahl(u)}, S–N–U).`
+                    : `Denominator: ${zahl(n)} games (record ${zahl(w)}–${zahl(l)}–${zahl(u)}, W–L–T).`)
+                : (de
+                    ? 'Nenner: die Bilanzspalten dieser Zeile fehlen — ohne sie ist die Grundgesamtheit nicht nachzählbar.'
+                    : 'Denominator: this row carries no record columns — without them the base cannot be counted.');
+            return de
+                ? `Win % = Siege ÷ alle Matches. ${nenner} Quelle: data/limitless_online_decks.csv, `
+                  + `Spalte win_rate_numeric. Zeitraum: Gesamtstand des letzten Scraper-Laufs — `
+                  + `die Datei führt kein Turnierdatum, das Datenfenster „Daten ab“ wirkt hier nicht.`
+                : `Win % = wins ÷ all games. ${nenner} Source: data/limitless_online_decks.csv, `
+                  + `column win_rate_numeric. Period: cumulative for the latest scraper run — `
+                  + `the file carries no tournament date, so the “data from” window does not apply here.`;
+        }
+
+        /**
+         * Der Schnitt der Kachel "Matchup vs Top 20" — Text UND Nenner
+         * aus EINEM Durchgang durch dieselben Zeilen.
+         *
+         * Bis zum 07.09.2026 stand diese Rechnung mitten in
+         * loadCurrentMetaDeckData(). Sie war von aussen nicht aufrufbar,
+         * und die beiden Nenner, die darunter angezeigt werden, hingen an
+         * zwei losen Variablen (Mutationen M1/M2: vertauscht ergab das
+         * "Nenner: 20 Matches" neben "47,05 % (20 MU)", ohne dass eine
+         * Zusicherung fiel).
+         *
+         * @param {Array}  deckStats    Zeilen aus data/limitless_online_decks.csv
+         * @param {Array}  matchupData  Zeilen aus data/limitless_online_decks_matchups.csv
+         * @param {string} cleanArch    Deckname, durch matchKey normalisiert
+         * @param {Function} matchKey   derselbe Normalisierer wie oben
+         * @returns {{text: string, paarungen: number, partien: number,
+         *            spiegelPartien: number}}
+         */
+        function _cmTop20Schnitt(deckStats, matchupData, cleanArch, matchKey) {
+            const leer = { text: '-', paarungen: 0, partien: 0, spiegelPartien: 0 };
+            const stats = Array.isArray(deckStats) ? deckStats : [];
+            const mus = Array.isArray(matchupData) ? matchupData : [];
+            if (!stats.length || !mus.length) return leer;
+
+            // Get top 20 decks by rank
+            const top20Decks = stats
+                .filter(d => d.rank && parseInt(d.rank) <= 20)
+                .map(d => d.deck_name);
+
+            // Get matchups against top 20 — use the same set-code-aware
+            // matcher we used for the deck-stat lookup above so
+            // "Crustle Dri" lines up with matchup-grid rows emitted under
+            // the bare "Crustle" key.
+            const relevant = mus.filter(m =>
+                m.deck_name && matchKey(m.deck_name) === cleanArch &&
+                m.opponent && top20Decks.some(deck => deck && deck.toLowerCase() === m.opponent.toLowerCase())
+            );
+            if (!relevant.length) return leer;
+
+            let partien = 0;
+            let siege = 0;
+            let spiegelPartien = 0;
+            relevant.forEach(m => {
+                const games = parseInt(m.total_games) || 0;
+                const winRate = parseLocaleNumber(m.win_rate || '0', 0);
+                partien += games;
+                siege += (games * winRate / 100);
+                /* Der Spiegel zaehlt mit — und das muss dastehen.
+                   Gemessen am 07.09.2026 fuer Mega Excadrill:
+                   1.032 der 10.361 Partien sind die Spiegelpaarung
+                   (Bilanz 512-512-8, also per Bauart 50,0 %). Ohne sie
+                   sind es 19 Paarungen, 9.329 Partien und 46,72 % statt
+                   47,05 %. Herausgerechnet wird nichts — der Spiegel ist
+                   eine echte Paarung gegen ein Top-20-Deck; verschwiegen
+                   wird er auch nicht mehr. */
+                if (matchKey(String(m.opponent || '')) === cleanArch) spiegelPartien += games;
+            });
+            if (!(partien > 0)) return leer;
+
+            /* Der Name `_wr` ist verdrahtet: tests/unit/test-schlussabnahme-30-08.js
+               prueft, dass die Zahl durch zahlLokal() geht und nicht durch
+               toFixed(2) — sonst stuende im deutschen Text wieder ein Punkt. */
+            const _wr = siege / partien * 100;
+            const schnitt = (typeof zahlLokal === 'function') ? zahlLokal(_wr, 2) : _wr.toFixed(2);
+            return {
+                text: `${schnitt} % (${relevant.length} MU)`,
+                paarungen: relevant.length,
+                partien: partien,
+                spiegelPartien: spiegelPartien,
+            };
+        }
+
+        /**
+         * Der Fussnotentext der Kachel "Matchup vs Top 20".
+         *
+         * @param {{paarungen: number, partien: number, spiegelPartien: number}} s
+         *        genau das Ergebnis von _cmTop20Schnitt() — EIN Wert, damit
+         *        Kachel und Nenner nicht auseinanderlaufen koennen.
+         *        `paarungen` ist die Zahl in "(N MU)", `partien` die Summe
+         *        total_games dieser Paarungen, also der Nenner des
+         *        gewichteten Schnitts.
+         */
+        function _cmMatchupFussnote(s) {
+            const de = (typeof getLang === 'function') && getLang() === 'de';
+            const paarungen = (s && s.paarungen) || 0;
+            const partien = (s && s.partien) || 0;
+            const spiegel = (s && s.spiegelPartien) || 0;
+            const zahl = (x) => (typeof zahlLokal === 'function')
+                ? zahlLokal(x, 0) : String(Math.round(x));
+            if (!(partien > 0)) {
+                return de
+                    ? 'Keine Paarung dieses Decks gegen die Ränge 1–20 in '
+                      + 'data/limitless_online_decks_matchups.csv — deshalb steht hier ein Strich.'
+                    : 'No pairing of this deck against ranks 1–20 in '
+                      + 'data/limitless_online_decks_matchups.csv — hence the dash.';
+            }
+            /* Der Spiegel steckt mit drin. Er ist per Bauart 50 % und
+               zieht den Schnitt zur Mitte; wie stark, sagt seine
+               Partienzahl. Ungesagt war das eine Auslassung. */
+            const spiegelSatz = spiegel > 0
+                ? (de
+                    ? ` Die Spiegelpaarung zählt mit: ${zahl(spiegel)} der ${zahl(partien)} Matches. `
+                      + `Sie liegt per Bauart bei 50 % und zieht den Schnitt entsprechend zur Mitte.`
+                    : ` The mirror is included: ${zahl(spiegel)} of the ${zahl(partien)} games. `
+                      + `By construction it sits at 50 % and pulls the average towards the middle.`)
+                : (de
+                    ? ' Eine Spiegelpaarung ist nicht dabei.'
+                    : ' No mirror pairing is included.');
+            return (de
+                ? `Partiengewichteter Schnitt über ${zahl(paarungen)} Paarungen gegen die Ränge 1–20. `
+                  + `Nenner: ${zahl(partien)} Matches (Summe total_games dieser Paarungen). `
+                  + `Quelle: data/limitless_online_decks_matchups.csv (win_rate, total_games); `
+                  + `die Ränge aus data/limitless_online_decks.csv (Spalte rank). `
+                  + `Zeitraum: Gesamtstand des letzten Scraper-Laufs, nicht nach Datum eingegrenzt.`
+                : `Game-weighted average over ${zahl(paarungen)} pairings against ranks 1–20. `
+                  + `Denominator: ${zahl(partien)} games (sum of total_games for those pairings). `
+                  + `Source: data/limitless_online_decks_matchups.csv (win_rate, total_games); `
+                  + `ranks from data/limitless_online_decks.csv (column rank). `
+                  + `Period: cumulative for the latest scraper run, not narrowed by date.`)
+                + spiegelSatz;
+        }
+
         // Load deck data with format filtering
         async function loadCurrentMetaDeckData(archetype) {
             // First user interaction with this tab — hide the empty-state guidance
@@ -1952,51 +2222,32 @@
                         : String(deckStatEntry.win_rate);
                 }
                 
-                // Calculate matchup vs Top 20
-                let matchupVsTop20 = '-';
-                const matchupData = window.currentMetaMatchupData || [];
-                if (deckStats.length > 0 && matchupData.length > 0) {
-                    // Get top 20 decks by rank
-                    const top20Decks = deckStats
-                        .filter(d => d.rank && parseInt(d.rank) <= 20)
-                        .map(d => d.deck_name);
-                    
-                    // Get matchups against top 20 — use the same set-code-
-                    // aware matcher we used for the deck-stat lookup above
-                    // so "Crustle Dri" lines up with matchup-grid rows
-                    // emitted under the bare "Crustle" key.
-                    const relevantMatchups = matchupData.filter(m =>
-                        m.deck_name && matchKey(m.deck_name) === cleanArch &&
-                        m.opponent && top20Decks.some(deck => deck && deck.toLowerCase() === m.opponent.toLowerCase())
-                    );
-                    
-                    if (relevantMatchups.length > 0) {
-                        // Calculate weighted average winrate
-                        let totalGames = 0;
-                        let totalWins = 0;
-                        
-                        relevantMatchups.forEach(m => {
-                            const games = parseInt(m.total_games) || 0;
-                            const winRate = parseLocaleNumber(m.win_rate || '0', 0);
-                            totalGames += games;
-                            totalWins += (games * winRate / 100);
-                        });
-                        
-                        if (totalGames > 0) {
-                            const _wr = totalWins / totalGames * 100;
-                            const avgWinrate = (typeof zahlLokal === 'function')
-                                ? zahlLokal(_wr, 2) : _wr.toFixed(2);
-                            matchupVsTop20 = `${avgWinrate} % (${relevantMatchups.length} MU)`;
-                        }
-                    }
-                }
-                
+                /* Kachel und Fussnote kommen aus EINEM Aufruf.
+                   MUTATIONEN M1/M2 (Abnahme 07.09.2026): `_muPaarungen`
+                   und `_muPartien` waren an nichts gebunden. Vertauscht
+                   man sie, steht neben "47,05 % (20 MU)" die Zeile
+                   "Nenner: 20 Matches" — und keine Zusicherung fiel um,
+                   weil die Rechnung tief in dieser Ladefunktion sass und
+                   nirgends ausgefuehrt werden konnte. Jetzt ist sie eine
+                   eigene Funktion, die Text UND Nenner aus denselben
+                   Zeilen liefert. */
+                const _top20 = _cmTop20Schnitt(deckStats, window.currentMetaMatchupData || [],
+                    cleanArch, matchKey);
+                const matchupVsTop20 = _top20.text;
+
                 // Update stats
                 updateDeckStatsByIds({
                     currentMetaStatCards: `${uniqueCards} / ${totalCardsInDeck}`,
                     currentMetaStatWinrate: winrate,
                     currentMetaStatMatchup: matchupVsTop20
                 }, 'currentMetaStatsSection');
+
+                /* Befund H6: die beiden Quoten trugen keinerlei Erklaerung.
+                   Jetzt steht unter jeder, was gezaehlt wurde, wie gross
+                   der Nenner ist, aus welcher Datei und welchem Feld die
+                   Zahl kommt und welchen Zeitraum sie abdeckt. */
+                _cmKennzahlHinweis('currentMetaStatWinrate', _cmWinrateFussnote(deckStatEntry));
+                _cmKennzahlHinweis('currentMetaStatMatchup', _cmMatchupFussnote(_top20));
                 
                 // Render matchups
                 renderCurrentMetaMatchups(archetype);
@@ -2126,13 +2377,61 @@
             };
             const tourList = Array.from(tourMap.values()).sort((a, b) => parseDate(b.date) - parseDate(a.date));
 
+            /* Befund H6 (07.09.2026): die Ueberschrift "Used in Top 256"
+               stand ohne jede Angabe da. Was ist die Zahl vor dem Turnier?
+               Woher kommt sie? Welchen Zeitraum umfasst die Liste?
+
+               Nachgezaehlt am Code darueber: die Zahl ist die Summe der
+               Decklisten dieses Archetyps je Turnier — je Schnappschuss-
+               Etikett das Maximum von total_decks_in_archetype, dann
+               addiert (die beiden Dateiformate stehen im Kommentar oben).
+               Die Liste laeuft ueber genau die Turniere, die
+               filterTournamentRowsByMetaDate() im aktuellen Meta-Fenster
+               laesst — das Datenfenster "Daten ab" wirkt hier NICHT: es
+               greift in loadCurrentMetaDeckData() auf eine oertliche
+               Kopie der Zeilen, nicht auf window.currentMetaTournamentCardsData,
+               aus der diese Liste liest. Das steht so da, statt einen
+               gefilterten Zeitraum zu behaupten. */
+            const _de256 = (typeof getLang === 'function') && getLang() === 'de';
+            const _summe256 = tourList.reduce((a, x) => a + (x.count || 0), 0);
+            /* B1: die Quelle wird geholt, nicht abgeschrieben. Siehe
+               _cmTurnierKartenDatei() — "tournament_cards_data_cards.csv"
+               ohne Formatsuffix existiert nicht. */
+            const _datei256 = await _cmTurnierKartenDatei();
+            const _quelle256 = _de256
+                ? (_datei256.pfad
+                    ? `Quelle: ${_datei256.pfad} — genau die Formatdatei, die der Lader für ${_datei256.format} holt. `
+                    : `Quelle: die Turnierkarten-Datei des laufenden Formats. Welche es ist, ließ sich hier nicht auflösen `
+                      + `(data/tournament_cards_manifest.json oder data/format_window.json nicht lesbar) — deshalb steht hier kein Dateiname. `)
+                : (_datei256.pfad
+                    ? `Source: ${_datei256.pfad} — the very format file the loader fetches for ${_datei256.format}. `
+                    : `Source: the tournament-cards file of the current format. Which one it is could not be resolved here `
+                      + `(data/tournament_cards_manifest.json or data/format_window.json unreadable) — hence no file name. `);
+            const _hinweis256 = _de256
+                ? `Zahl vor dem Turniernamen = Decklisten dieses Archetyps in den Top 256 dieses Turniers `
+                  + `(Summe über die Schnappschuss-Etikette, Spalte total_decks_in_archetype). `
+                  + _quelle256
+                  + `Zeitraum: ${tourList.length} ${tourList.length === 1 ? 'Turnier' : 'Turniere'} im aktuellen Meta-Fenster, zusammen ${_summe256} Listen. `
+                  + `Das Datenfenster „Daten ab“ wirkt auf diese Liste nicht.`
+                : `The number before each event = decklists of this archetype in that event's top 256 `
+                  + `(sum over snapshot labels, column total_decks_in_archetype). `
+                  + _quelle256
+                  + `Period: ${tourList.length} ${tourList.length === 1 ? 'event' : 'events'} in the current meta window, ${_summe256} lists in total. `
+                  + `The “data from” window does not apply to this list.`;
             listEl.innerHTML = tourList.map(t =>
                 `<div class="top256-entry">` +
                 `<span class="top256-count">${t.count}\u00d7</span>` +
                 `<span class="top256-tournament">${t.name}</span>` +
                 (t.date ? `<span class="top256-date">(${t.date})</span>` : '') +
                 `</div>`
-            ).join('');
+            ).join('')
+            + `<div class="top256-herkunft" style="margin-top:8px;font-size:0.72em;line-height:1.35;color:var(--ink-2, #555);">`
+            + escapeHtml(_hinweis256) + `</div>`;
+            const _titel256 = document.querySelector('.current-meta-top256-title');
+            if (_titel256) {
+                _titel256.setAttribute('title', _hinweis256);
+                _titel256.setAttribute('aria-label', _hinweis256);
+            }
             section.classList.remove('d-none');
         }
 
@@ -3560,6 +3859,282 @@
         // Ebene, spaeteres Laden - es ueberschrieb still die Fassung
         // aus app-utils.js. Jetzt gibt es nur noch die eine dort.
 
+        /* ── DIE GEGNERSUCHE LIEST DIE REGISTRY, NICHT MEHR window.matchupData_* ──
+         *
+         * BEFUND A-F4.25 / A-F4.26 (07.09.2026, live gemessen): das
+         * Auswahlfeld unter "Gegner-Matchup auswaehlen" blieb leer, und das
+         * Matchup-Detail darunter erschien nie — nicht einmal der
+         * "keine Daten"-Zweig.
+         *
+         * ZWEI URSACHEN, BEIDE NACHGEMESSEN.
+         *
+         * 1. Der Block hier las `window['matchupData_' + Deckname]`. Diese
+         *    Globals gibt es seit dem Umbau in js/app-meta-cards.js nicht
+         *    mehr: dort stand frueher ein <script>-Block aus der
+         *    Scraper-HTML, der sie setzte (829 KB HTML fuer 50 KB Daten,
+         *    ausgefuehrt wie eval). Er ist ersatzlos entfallen; die
+         *    Matchups kommen jetzt aus derselben Quelle als CSV und liegen
+         *    in `window._matchupRegistry` (app-meta-cards.js, Z. 1333).
+         *    `grep -rn "matchupData_" js/` findet nur noch LESENDE Stellen —
+         *    keine einzige, die sie schreibt.
+         *
+         * 2. Selbst ein Treffer waere unsichtbar geblieben. Der Behaelter
+         *    #currentMetaMatchupDetails traegt in css/city-league.css:1219
+         *    `display: none` auf der GRUNDKLASSE, und die Anzeigefunktion
+         *    entfernte nur `d-none` — eine Klasse, die dort nie stand.
+         *    Nachgesehen: es gibt keine zweite Regel fuer diese Klasse in
+         *    css/ und keine im Markup. Also wird die Anzeige hier per
+         *    Inline-Stil erzwungen. Das ist genau das Muster, das dieses
+         *    Projekt sich sonst als Falle notiert (js/deck-analysis-shared.js)
+         *    — hier ist es die einzige verbleibende Moeglichkeit, weil
+         *    css/ und index.html in dieser Runde gesperrt sind. Steht der
+         *    Behaelter eines Tages ohne `display:none` da, schadet der
+         *    Inline-Stil nicht.
+         *
+         * DIE QUELLE IST IN BEIDEN FAELLEN DIESELBE DATEI:
+         * data/limitless_online_decks_matchups.csv. Die Registry ist der
+         * erste Weg (sie traegt Bilanz und Partienzahl bereits aufbereitet);
+         * fehlt sie, weil app-meta-cards.js auf dieser Seite noch nicht
+         * gelaufen ist, greift derselbe Datensatz aus
+         * window.currentMetaMatchupData — die Rohzeilen, die DIESE Datei
+         * oben selbst laedt. Kein dritter Zahlenweg.
+         *
+         * GEMESSEN am 07.09.2026 an data/limitless_online_decks_matchups.csv:
+         * 1.716 Zeilen, 100 Decks. data/limitless_online_decks.csv fuehrt
+         * 136 Decks — 36 davon haben KEINE einzige Matchup-Zeile. Fuer die
+         * sagt die Oberflaeche das jetzt hin, mit Deckname und Dateiname,
+         * statt ein leeres Feld anzubieten.
+         */
+
+        /** Gross-/Kleinschreibung egal, sonst exakt. Wie findKey() in
+         *  js/app-archetype-card.js — die Tierliste schreibt klein. */
+        function _cmRegistrySchluessel(reg, name) {
+            if (!reg || !name) return null;
+            if (reg[name]) return name;
+            const gesucht = String(name).toLowerCase();
+            return Object.keys(reg).find(k => k.toLowerCase() === gesucht) || null;
+        }
+
+        /**
+         * EINE Schreibweise fuer die Win % einer Paarung.
+         *
+         * BEFUND B3 (Abnahme 07.09.2026): dieselbe Zahl kam in zwei
+         * Schreibweisen auf dieselbe Stelle. Der Registry-Weg reichte
+         * `win_rate` aus js/app-meta-cards.js durch — dort gebaut als
+         * `wrNum.toFixed(2) + '%'`, also "68.73%" mit PUNKT. Der
+         * CSV-Rueckfall haengte das Prozentzeichen an den Rohwert der
+         * Datei, die "68,73" mit KOMMA fuehrt. Angezeigt wurden beide
+         * unveraendert in derselben Zelle (selectCurrentMetaOpponent).
+         * Im deutschen Text ist der Punkt konventionswidrig.
+         *
+         * js/app-meta-cards.js gehoert einem anderen Arbeitspaket, also
+         * wird der Rohwert dort NICHT angefasst: die Anzeige wird hier
+         * aus `win_rate_numeric` gebildet — der Zahl, die beide Wege
+         * ohnehin schon fuehren. Damit gibt es genau eine Stelle, an der
+         * die Schreibweise entsteht.
+         *
+         * @param {number} zahl  Win % als Zahl (68.73)
+         * @param {*} roh        Rohwert, nur als Rueckfall wenn `zahl`
+         *                       keine Zahl ist — geraten wird nichts.
+         */
+        function _cmWinProzentText(zahl, roh) {
+            /* Number(null) ist 0 — ein fehlender Wert darf hier nicht als
+               "0,00 %" dastehen. Dieselbe Vorsichtsmassnahme wie in
+               zahlLokal() (js/app-utils.js). */
+            if (zahl === null || zahl === undefined || zahl === '') {
+                return String(roh == null ? '' : roh);
+            }
+            const n = Number(zahl);
+            if (!Number.isFinite(n)) return String(roh == null ? '' : roh);
+            const de = (typeof getLang === 'function') && getLang() === 'de';
+            const s = (typeof zahlLokal === 'function') ? zahlLokal(n, 2) : n.toFixed(2);
+            return de ? `${s} %` : `${s}%`;
+        }
+
+        /**
+         * Die Gegnerliste eines Archetyps, aus der Registry oder ersatzweise
+         * aus den Rohzeilen derselben CSV.
+         *
+         * @returns {{liste: Array, quelle: string}} quelle ist
+         *          'registry' | 'csv' | 'keine' — sie steht spaeter im
+         *          Hinweis, damit nachvollziehbar bleibt, woher die Zahlen
+         *          kommen.
+         */
+        function currentMetaGegnerliste(archetype) {
+            if (!archetype) return { liste: [], quelle: 'keine' };
+            const ohneEx = (typeof stripExSuffix === 'function')
+                ? stripExSuffix(archetype) : archetype;
+
+            // 1. Registry (js/app-meta-cards.js). Erst der Name wie
+            //    ausgewaehlt, dann ohne "ex" — Limitless fuehrt
+            //    "Ceruledge", das Auswahlfeld kennt "Ceruledge Ex".
+            const reg = (typeof window !== 'undefined' && window._matchupRegistry) || null;
+            if (reg) {
+                const key = _cmRegistrySchluessel(reg, archetype)
+                         || _cmRegistrySchluessel(reg, ohneEx);
+                if (key && reg[key]) {
+                    const liste = Object.keys(reg[key]).filter(Boolean).sort().map(gegner => {
+                        const e = reg[key][gegner] || {};
+                        return {
+                            opponent: gegner,
+                            // B3: EINE Schreibweise, aus der Zahl gebildet.
+                            win_rate: _cmWinProzentText(e.win_rate_numeric, e.win_rate),
+                            win_rate_numeric: e.win_rate_numeric,
+                            record: e.record,
+                            total_games: e.total_games,
+                        };
+                    });
+                    if (liste.length) return { liste, quelle: 'registry' };
+                }
+            }
+
+            // 2. Dieselbe Datei als Rohzeilen — window.currentMetaMatchupData
+            //    wird oben in loadCurrentMetaAnalysis() aus
+            //    limitless_online_decks_matchups.csv geladen.
+            const rows = (typeof window !== 'undefined') ? window.currentMetaMatchupData : null;
+            if (Array.isArray(rows) && rows.length) {
+                const ziel = String(archetype).trim().toLowerCase();
+                const zielOhneEx = String(ohneEx).trim().toLowerCase();
+                const liste = rows.filter(r => {
+                    const d = String(r.deck_name || '').trim().toLowerCase();
+                    return d === ziel || d === zielOhneEx;
+                }).map(r => {
+                    const zahl = (typeof parseLocaleNumber === 'function')
+                        ? parseLocaleNumber(r.win_rate || '0', 0) : 0;
+                    return {
+                        opponent: String(r.opponent || '').trim(),
+                        win_rate: _cmWinProzentText(zahl, r.win_rate),
+                        win_rate_numeric: zahl,
+                        record: r.record,
+                        total_games: parseInt(r.total_games || '0', 10) || 0,
+                    };
+                }).filter(m => m.opponent)
+                  .sort((a, b) => a.opponent.localeCompare(b.opponent));
+                if (liste.length) return { liste, quelle: 'csv' };
+            }
+
+            /* BEFUND B2 (Abnahme 07.09.2026): hier stand fuer JEDEN
+               leeren Ausgang 'keine', und der Text darunter behauptete
+               dann, das Deck komme in der Datei nicht vor. Ausgefuehrt
+               ohne Registry UND ohne window.currentMetaMatchupData stand
+               fuer Dragapult auf der Seite, es gebe dort keine
+               Gegner-Paarungen — die Datei fuehrt fuer Dragapult 20.
+               Bei einem echten Ladefehler ist das eine nachweislich
+               falsche Aussage ueber eine Datei.
+
+               Also drei leere Zustaende statt einem, und jeder sagt, was
+               er wirklich weiss:
+                 'keine'         geladene Zeilen da, dieses Deck nicht drin
+                 'leer-geladen'  geladen, aber die Zeilenmenge ist leer
+                 'nicht-geladen' es liegt gar keine Zeilenmenge vor */
+            if (!Array.isArray(rows)) return { liste: [], quelle: 'nicht-geladen' };
+            if (rows.length === 0) return { liste: [], quelle: 'leer-geladen' };
+            return { liste: [], quelle: 'keine' };
+        }
+
+        /**
+         * Der leere Ausgang der Gegnerliste, in Worten.
+         *
+         * Getrennt von der Anzeige, damit er ausgefuehrt geprueft werden
+         * kann — und damit an EINER Stelle steht, welcher Zustand welchen
+         * Satz bekommt.
+         */
+        function _cmGegnerLeerText(archetype, quelle) {
+            const de = (typeof getLang === 'function') && getLang() === 'de';
+            const q = 'data/limitless_online_decks_matchups.csv';
+            if (quelle === 'nicht-geladen') {
+                return de
+                    ? `Die Gegner-Paarungen sind auf dieser Seite noch nicht geladen (${q}). `
+                      + `Über die Gegner von „${archetype}“ sagt die leere Auswahl deshalb nichts — `
+                      + `das ist ein Ladezustand, kein Befund über das Deck.`
+                    : `Opponent pairings have not been loaded on this page yet (${q}). `
+                      + `The empty list therefore says nothing about “${archetype}” — `
+                      + `this is a loading state, not a finding about the deck.`;
+            }
+            if (quelle === 'leer-geladen') {
+                return de
+                    ? `${q} wurde geladen, enthält aber keine einzige Zeile. `
+                      + `Deshalb steht hier für „${archetype}“ nichts — geprüft ist damit nur die Datei, nicht das Deck.`
+                    : `${q} was loaded but carries no rows at all. `
+                      + `Hence nothing for “${archetype}” — that tests the file, not the deck.`;
+            }
+            return de
+                ? `Für „${archetype}“ stehen in ${q} keine Gegner-Paarungen. Deshalb ist die Auswahl leer — es ist kein Ladefehler.`
+                : `No opponent pairings for “${archetype}” in ${q}. That is why the list is empty — not a loading error.`;
+        }
+
+        /**
+         * Fuellt Auswahlfeld und Zwischenspeicher der Gegnersuche.
+         *
+         * Wird auf JEDEM Weg durch renderCurrentMetaMatchups() aufgerufen —
+         * auch auf dem CSV-Ersatzweg und dem Weg ohne Daten. Vorher stand
+         * dieser Block hinter zwei `return`s: fuer jedes Deck, das nicht in
+         * der vorgeladenen Scraper-HTML steht, wurde er nie erreicht.
+         */
+        function fuelleCurrentMetaGegnerauswahl(archetype) {
+            const dropdown = document.getElementById('currentMetaOpponentDropdown');
+            const detailsEl = document.getElementById('currentMetaMatchupDetails');
+            const sucheEl = document.getElementById('currentMetaOpponentSearch');
+            if (!dropdown) return { liste: [], quelle: 'keine' };
+
+            const de = (typeof getLang === 'function') && getLang() === 'de';
+            const { liste, quelle } = currentMetaGegnerliste(archetype);
+            window.currentMetaDeckMatchups = liste;
+            window.currentMetaDeckMatchupsQuelle = quelle;
+
+            if (sucheEl) sucheEl.value = '';
+            const versteckt = document.getElementById('currentMetaOpponentSelected');
+            if (versteckt) versteckt.value = '';
+
+            if (!liste.length) {
+                /* STILLE AUSFAELLE SIND VERBOTEN. Ein leeres Auswahlfeld
+                   sieht aus wie ein Ladefehler; der wahre Grund ist meist,
+                   dass dieses Deck in der Matchup-Datei gar nicht vorkommt
+                   (36 von 136 Decks, gemessen am 07.09.2026). Also steht
+                   der Grund da, mit Deckname und Datei.
+
+                   WELCHER Grund, entscheidet _cmGegnerLeerText() aus dem
+                   Zustand — bis zum Befund B2 stand hier fuer jeden
+                   leeren Ausgang derselbe Satz, auch fuer den Ladefehler. */
+                const text = _cmGegnerLeerText(archetype, quelle);
+                dropdown.innerHTML = '<div class="cm-gegner-leer" style="padding: 10px; color: var(--ink-2, #444); font-weight: 500;">'
+                    + escapeHtml(text) + '</div>';
+                if (detailsEl) {
+                    detailsEl.innerHTML = '<p class="cm-gegner-leer-hinweis" style="margin:0; color: var(--ink-2, #444); font-weight:500;">'
+                        + escapeHtml(text) + '</p>';
+                    detailsEl.classList.remove('d-none');
+                    // Siehe Kopf dieses Blocks: die Grundklasse traegt
+                    // display:none in css/city-league.css.
+                    detailsEl.style.display = 'block';
+                }
+                return { liste, quelle };
+            }
+
+            /* ZWEIMAL MASKIEREN, UND ZWAR IN DIESER REIHENFOLGE.
+               Der Name landet im onclick-Attribut: erst als
+               JS-Zeichenkette (Apostroph), dann als Attributwert (spitze
+               Klammern, Anfuehrungszeichen). Die alte Fassung schrieb
+               '${opponent}' voellig roh hinein — Deck- und Gegnernamen
+               kommen aus einer Scraper-Datei, nicht aus dem Repo. */
+            dropdown.innerHTML = liste.map(m => {
+                const jsName = escapeHtml(escapeJsStr(m.opponent));
+                return `<div class="opponent-option" data-value="${escapeHtml(m.opponent)}"`
+                    + ` onclick="selectCurrentMetaOpponent(this, '${jsName}')"`
+                    + ` style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; transition: background 0.2s;">`
+                    + `${escapeHtml(m.opponent)}</div>`;
+            }).join('');
+
+            // Das Detail gehoert erst nach einer Auswahl dorthin. Ein
+            // stehengebliebenes Detail des vorigen Decks waere schlimmer
+            // als keins.
+            if (detailsEl) {
+                detailsEl.innerHTML = '';
+                detailsEl.classList.add('d-none');
+                detailsEl.style.display = 'none';
+            }
+            return { liste, quelle };
+        }
+
         // Render best/worst matchups for Current Meta - extract directly from loaded HTML (1:1 copy)
         function renderCurrentMetaMatchups(archetype) {
             const deckStats = window.currentMetaDeckStats || [];
@@ -3567,6 +4142,13 @@
             const bestTable = document.getElementById('currentMetaBestMatchups');
             const worstTable = document.getElementById('currentMetaWorstMatchups');
             const titleEl = document.getElementById('currentMetaMatchupsTitle');
+
+            /* ZUERST die Gegnerauswahl, dann alles andere. Sie haengt nicht
+               an der vorgeladenen Scraper-HTML, sondern an der Matchup-CSV,
+               und muss deshalb auch auf den Wegen gefuellt werden, die
+               weiter unten vorzeitig zurueckkehren (A-F4.25/A-F4.26). */
+            const gegner = fuelleCurrentMetaGegnerauswahl(archetype);
+            devLog(`[Current Meta] Gegnerauswahl ${archetype}: ${gegner.liste.length} Paarungen (Quelle: ${gegner.quelle})`);
             
             // Find the matchup tables directly from the loaded HTML content (1:1 same as Current Meta Tab)
             const currentMetaContent = document.getElementById('currentMetaContent');
@@ -3610,7 +4192,23 @@
                    roter Konsoleneintrag pro datenarmem Deck verdeckt die
                    echten Fehler. Gemeldet wird jetzt als Hinweis. */
                 devLog(`Keine Matchup-Daten fuer: ${archetype} (weder HTML-Abschnitt noch CSV)`);
-                matchupsSection.classList.add('d-none');
+                /* BEFUND A-F4.26 (07.09.2026): hier wurde der ganze
+                   Abschnitt versteckt. Fuer ein Deck ohne Paarungen sah
+                   die Seite damit genauso aus wie bei einem Ladefehler —
+                   nichts da, kein Wort dazu. Der Abschnitt bleibt jetzt
+                   stehen und sagt, was fehlt und wo es fehlt; die
+                   Gegnerauswahl darueber traegt denselben Satz. */
+                const _de = (typeof getLang === 'function') && getLang() === 'de';
+                const _leer = '<tr><td colspan="3" style="text-align: center; padding: 20px;">'
+                    + escapeHtml(t('heatmap.noData')) + '</td></tr>';
+                if (bestTable) bestTable.innerHTML = _leer;
+                if (worstTable) worstTable.innerHTML = _leer;
+                if (titleEl) {
+                    titleEl.textContent = _de
+                        ? `${archetype} — keine Gegner-Paarungen in data/limitless_online_decks_matchups.csv`
+                        : `${archetype} — no opponent pairings in data/limitless_online_decks_matchups.csv`;
+                }
+                matchupsSection.classList.remove('d-none');
                 return;
             }
             
@@ -3682,40 +4280,6 @@
                 worstTable.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px;">' + t('heatmap.noData') + '</td></tr>';
             }
             
-            // Populate opponent dropdown from window.matchupData (for search feature)
-            // Try stripped name first (Limitless uses "Ceruledge", dropdown may have "Ceruledge Ex")
-            const cleanArchForVar = stripExSuffix(archetype);
-            const deckNameForVar = cleanArchForVar.replace(/\s+/g, '_').replace(/'/g, '');
-            const varName = 'matchupData_' + deckNameForVar;
-            let matchupData = window[varName];
-            // Fallback: try original archetype name in case data uses the Ex variant
-            if (!matchupData) {
-                const fallbackVar = 'matchupData_' + archetype.replace(/\s+/g, '_').replace(/'/g, '');
-                matchupData = window[fallbackVar];
-            }
-            
-            const dropdown = document.getElementById('currentMetaOpponentDropdown');
-            if (matchupData) {
-                const allOpponents = Object.keys(matchupData).filter(o => o).sort();
-                let dropdownHtml = '';
-                allOpponents.forEach(opponent => {
-                    dropdownHtml += `<div class="opponent-option" data-value="${opponent}" onclick="selectCurrentMetaOpponent(this, '${opponent}')" style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; transition: background 0.2s;">${opponent}</div>`;
-                });
-                dropdown.innerHTML = dropdownHtml;
-                
-                // Store for filtering
-                window.currentMetaDeckMatchups = Object.entries(matchupData).map(([opponent, data]) => ({
-                    opponent: opponent,
-                    win_rate: data.win_rate,
-                    win_rate_numeric: data.win_rate_numeric,
-                    record: data.record,
-                    total_games: data.total_games
-                }));
-            } else {
-                dropdown.innerHTML = '<div style="padding: 10px; color: #444; font-weight: 500;">' + t('heatmap.noData') + '</div>';
-                window.currentMetaDeckMatchups = [];
-            }
-            
             matchupsSection.classList.remove('d-none');
         }
         
@@ -3770,6 +4334,16 @@
                    Festfarben (#2c3e50, #333), die im Dunkelmodus dunkel
                    auf dunkel stehen. Beschriftung kommt jetzt aus i18n,
                    Farbe aus den Tokens. */
+                /* Nenner und Quelle unter die drei Zahlen. Ohne sie steht
+                   dort eine Quote ohne Grundgesamtheit — genau der Fehler,
+                   den diese Seite an anderen Stellen schon abgearbeitet
+                   hat (Befund H6, 07.09.2026). "Win %" ist die
+                   Limitless-Bezeichnung und heisst hier ueberall so. */
+                const _de = (typeof getLang === 'function') && getLang() === 'de';
+                const _spiele = parseInt(totalGames, 10);
+                const _herkunft = _de
+                    ? `Win % = Siege ÷ entschiedene Partien, gerechnet von Limitless. Bilanz ${record} aus ${Number.isFinite(_spiele) ? _spiele : totalGames} Partien. Quelle: data/limitless_online_decks_matchups.csv (Spalten win_rate, record, total_games), Gesamtstand des letzten Scraper-Laufs — nicht nach Datum eingegrenzt.`
+                    : `Win % = wins ÷ decided games, as reported by Limitless. Record ${record} from ${Number.isFinite(_spiele) ? _spiele : totalGames} games. Source: data/limitless_online_decks_matchups.csv (columns win_rate, record, total_games), cumulative for the latest scraper run — not narrowed by date.`;
                 detailsEl.innerHTML = `
                     <h4 style="margin-top: 0; color: var(--ink);">${t('matchup.vsTitle').replace('{n}', escapeHtml(opponent))}</h4>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 10px;">
@@ -3786,13 +4360,19 @@
                             <span style="font-size: 1.5em; color: var(--ink);">${escapeHtml(totalGames)}</span>
                         </div>
                     </div>
+                    <p class="cm-matchup-herkunft" style="margin: 10px 0 0; font-size: 0.85em; color: var(--ink-2);">${escapeHtml(_herkunft)}</p>
                 `;
                 detailsEl.classList.remove('d-none');
+                // css/city-league.css:1219 setzt display:none auf der
+                // Grundklasse — ohne diese Zeile bleibt das Detail auch
+                // nach einer Auswahl unsichtbar (Befund A-F4.26).
+                detailsEl.style.display = 'block';
             } else {
                 // Befund C (30.08.2026): festes 'No matchup data found'.
                 detailsEl.innerHTML = '<p style="color: #444; text-align: center; font-weight: 500;">'
                     + escapeHtml(t('cm.noMatchupData')) + '</p>';
                 detailsEl.classList.remove('d-none');
+                detailsEl.style.display = 'block';
             }
         }
         
@@ -3844,18 +4424,70 @@
             }
             
             updateCurrentMetaCardCounts(filteredCards.length, filteredTotal, allTotal);
+
         }
         
+        /**
+         * BEFUND B4 (Abnahme 07.09.2026): diese Funktion schrieb
+         * `countEl.textContent` selbst und ging damit am gemeinsamen
+         * Schreiber uebersichtZaehlerSchreiben() (js/deck-analysis-shared.js)
+         * vorbei — genau die zweite Wahrheit, die dort im Kopf als
+         * Befund C3 beschrieben steht.
+         *
+         * Gemessen: bei aktivem Typfilter "Item" stand fuenf Frames lang
+         * "70 Karten" statt "24 Karten", und ohne den Vorbehalt "Raster
+         * wird noch aufgebaut", den der gemeinsame Schreiber setzt.
+         *
+         * Ab jetzt schreibt diesen Zaehler NIEMAND mehr direkt:
+         *
+         *   Rasteransicht  -> filterCurrentMetaOverviewCards(), also
+         *                     uebersichtKachelnFiltern(). Der zaehlt, was
+         *                     wirklich sichtbar ist, und meldet den Aufbau
+         *                     als Aufbau. Genau dafuer traegt das Raster
+         *                     seine Sollmarke.
+         *   Tabellenansicht -> uebersichtZaehlerSchreiben() mit der
+         *                     Zeilenzahl. Dort gibt es keine Kacheln; die
+         *                     Sollmarke des leeren Rasters wird geloescht,
+         *                     sonst meldete der naechste Lauf einen Aufbau,
+         *                     der nie kommt (Vorbild js/app-past-meta.js).
+         *
+         * Die SUMME daneben bleibt hier: sie ist die Deckgroesse, eine
+         * andere Zahl, und kein zweiter Kartenzaehler.
+         */
         function updateCurrentMetaCardCounts(uniqueCount, filteredTotal, allTotal) {
-            const countEl = document.getElementById('currentMetaCardCount');
             const summaryEl = document.getElementById('currentMetaCardCountSummary');
-            
+
             // Befund J (30.08.2026): der Nenner stand fest auf "Total",
             // waehrend die City-League-Ansicht daneben schon t('cl.total')
             // benutzt und "60 Gesamt" schreibt. Gleiche Zahl, gleiche
             // Stelle, zwei Sprachen.
-            if (countEl) countEl.textContent = `${uniqueCount} ${t('cl.cards')}`;
             if (summaryEl) summaryEl.textContent = `/ ${filteredTotal} ${t('cl.total')}`;
+
+            const tabelle = document.getElementById('currentMetaDeckTableView');
+            const tabelleAktiv = !!(tabelle && tabelle.classList
+                && !tabelle.classList.contains('d-none'));
+            const gitter = document.getElementById('currentMetaDeckGrid');
+            const suchfeld = document.getElementById('currentMetaOverviewSearch');
+
+            /* Der Rasterweg nur, wenn uebersichtKachelnFiltern ueberhaupt
+               zaehlen KANN: es steigt ohne Suchfeld oder ohne Raster
+               wortlos aus, und dann bliebe der Zaehler stehen. */
+            if (!tabelleAktiv && gitter && suchfeld
+                && typeof filterCurrentMetaOverviewCards === 'function') {
+                filterCurrentMetaOverviewCards();
+                return;
+            }
+
+            if (gitter && gitter.removeAttribute) {
+                gitter.removeAttribute(window.UEBERSICHT_ZAEHLER_MARKE || 'data-kacheln-soll');
+            }
+            if (typeof window.uebersichtZaehlerSchreiben === 'function') {
+                window.uebersichtZaehlerSchreiben('currentMetaCardCount', {
+                    anzahl: uniqueCount,
+                    kartenWort: t('cl.cards'),
+                    quelle: 'updateCurrentMetaCardCounts',
+                });
+            }
         }
         
         // Set overview rarity mode
@@ -3979,12 +4611,43 @@
         }
         
         // Render grid view
+        /**
+         * Den Kachelfilter nach dem letzten Schub EINMAL nachziehen.
+         *
+         * BEFUND A2-Zwilling (07.09.2026): setCurrentMetaOverviewRarityMode()
+         * ruft applyCurrentMetaFilter(), das Gitter wird neu geschrieben, und
+         * damit sind alle Kacheln wieder sichtbar — der Typfilter ist weg,
+         * seine Schaltflaeche bleibt aber `btn-active` und
+         * `currentMetaOverviewCardTypeFilter` steht weiter auf z. B. 'Item'.
+         * Dasselbe gilt fuer das Suchfeld daneben.
+         *
+         * Steht als eigene Funktion da und nicht als Abschluss im Zeichner,
+         * damit sie ohne den 700-Zeilen-Zeichner geprueft werden kann.
+         *
+         * @param {number} renderGen  Der Lauf, zu dem der Aufruf gehoert.
+         *        Ein veralteter Lauf darf nicht mehr filtern: sonst schreibt
+         *        der abgebrochene Deckwechsel seine Zahl ueber die des
+         *        neuen.
+         * @returns {boolean} ob wirklich gefiltert wurde.
+         */
+        function _currentMetaFilterNachziehen(renderGen) {
+            if (renderGen !== _currentMetaRenderGen) return false;
+            if (typeof filterCurrentMetaOverviewCards !== 'function') return false;
+            filterCurrentMetaOverviewCards();
+            return true;
+        }
+
         function renderCurrentMetaDeckGrid(cards) {
             const visualContainer = document.getElementById('currentMetaDeckVisual');
             const gridContainer = document.getElementById('currentMetaDeckGrid');
             if (!gridContainer) return;
 
             if (!Array.isArray(cards) || cards.length === 0) {
+                /* Die Ansage "so viele Kacheln kommen noch" muss weg,
+                   sonst meldet der naechste Filterlauf einen Aufbau, der
+                   nie kommt (Vorbild js/app-past-meta.js:1324). */
+                gridContainer.removeAttribute(
+                    window.UEBERSICHT_ZAEHLER_MARKE || 'data-kacheln-soll');
                 // Frueher: getEmptyStateHtml() ohne Argumente. Das traf
                 // die gleichnamige Funktion aus app-city-league.js und
                 // sagte deshalb "Turnierdaten" statt "Deckliste".
@@ -4315,6 +4978,26 @@
             const renderGen = ++_currentMetaRenderGen;
             const BATCH_SIZE = 12;
 
+            /* ── DER TYPFILTER MUSS DEN NEUAUFBAU UEBERLEBEN ────────────
+             * BEFUND A2-Zwilling (07.09.2026): setCurrentMetaOverviewRarityMode()
+             * ruft applyCurrentMetaFilter(), das hier landet und das Gitter
+             * neu schreibt. Alle Kacheln sind danach wieder sichtbar — der
+             * Typfilter ist weg, seine Schaltflaeche bleibt aber
+             * `btn-active`, und `currentMetaOverviewCardTypeFilter` steht
+             * weiter auf z. B. 'Item'. Das Suchfeld daneben verpufft auf
+             * dieselbe Weise, ohne sich zu leeren.
+             *
+             * Nachgezogen wird beim ZEICHNER, nicht beim Aufrufer: die
+             * Kacheln kommen in Schueben von zwoelf je Frame. Wer sofort
+             * nach dem ersten Schub filtert, filtert zwoelf von siebzig und
+             * schreibt "12 Karten" in den Zaehler — genau der Befund C3,
+             * den js/deck-analysis-shared.js beschreibt. Deshalb dieselbe
+             * Loesung wie in js/app-past-meta.js:1630 ff.: das Raster sagt
+             * an, wie viele Kacheln es am Ende traegt, und der Filter
+             * laeuft EINMAL, wenn der letzte Schub drin ist. */
+            gridContainer.setAttribute(
+                window.UEBERSICHT_ZAEHLER_MARKE || 'data-kacheln-soll', String(cardHtmls.length));
+
             if (!useSkeletonLayout) {
                 const flatHtmls = cardHtmls.map(c => c.html);
                 gridContainer.innerHTML = flatHtmls.slice(0, BATCH_SIZE).join('');
@@ -4322,12 +5005,14 @@
                     let offset = BATCH_SIZE;
                     (function renderNextBatch() {
                         if (renderGen !== _currentMetaRenderGen) return;
-                        if (offset >= flatHtmls.length) return;
+                        if (offset >= flatHtmls.length) { _currentMetaFilterNachziehen(renderGen); return; }
                         const batch = flatHtmls.slice(offset, offset + BATCH_SIZE);
                         gridContainer.insertAdjacentHTML('beforeend', batch.join(''));
                         offset += BATCH_SIZE;
                         requestAnimationFrame(renderNextBatch);
                     })();
+                } else {
+                    _currentMetaFilterNachziehen(renderGen);
                 }
             } else {
                 // Same bucketing as City League — Ace Spec gets the
@@ -4380,6 +5065,9 @@
                         t('cl.skelNiche') || 'Situational'} <span class="meta-card-skeleton-hint">${
                         t('cl.skelNicheHint') || '(rare picks \u2014 click to collapse)'}</span>`, nicheItems, { collapsible: true })}
                 </div>`;
+                // Die Skelett-Fassung schreibt in einem Zug, also gleich
+                // hier nachziehen.
+                _currentMetaFilterNachziehen(renderGen);
             }
             document.getElementById('currentMetaDeckTableView')?.classList.add('d-none');
             visualContainer.classList.remove('d-none');
@@ -4515,7 +5203,34 @@
                     const avgCountOverall = Math.max(0, avgCountOverallValue).toFixed(2).replace('.', ',');
                     const decksWithCardDisplay = Math.round(Math.max(0, decksWithCard));
                     const totalDecksDisplay = Math.round(Math.max(0, totalDecksInArchetype));
-                
+
+                    /* Befund H6 (07.09.2026): "Usage Share: 92,3 %" stand
+                       ohne title, ohne aria-label und ohne Nenner da. Der
+                       Nenner ist die Zahl der Listen dieses Archetyps —
+                       sie stand zwei Felder weiter als "Deck Count", aber
+                       nichts sagte, dass es derselbe Nenner ist.
+
+                       Nachgerechnet an der Datei: percentage_in_archetype
+                       ist deck_inclusion_count ÷ total_decks_in_archetype;
+                       genau diese beiden Zahlen stehen jetzt in Klammern
+                       hinter der Quote. Fehlt die Spalte, rechnet der
+                       Code darueber aus denselben zwei Feldern — die
+                       Klammer stimmt also in beiden Faellen. */
+                    const _deShare = (typeof getLang === 'function') && getLang() === 'de';
+                    const _shareHinweis = _deShare
+                        ? `Anteil der Listen dieses Archetyps, die diese Karte führen: `
+                          + `${decksWithCardDisplay} von ${totalDecksDisplay} Listen. `
+                          + `Quelle: data/current_meta_card_data.csv, Spalte percentage_in_archetype `
+                          + `(= deck_inclusion_count ÷ total_decks_in_archetype). `
+                          + `Zeitraum: die Turnierzeilen, die der aktive Turnierfilter und das `
+                          + `Datenfenster „Daten ab“ übrig lassen.`
+                        : `Share of this archetype's lists that run this card: `
+                          + `${decksWithCardDisplay} of ${totalDecksDisplay} lists. `
+                          + `Source: data/current_meta_card_data.csv, column percentage_in_archetype `
+                          + `(= deck_inclusion_count ÷ total_decks_in_archetype). `
+                          + `Period: the tournament rows left by the active tournament filter and `
+                          + `the “data from” window.`;
+
                     html += `
                         <div class="card-table-row" data-card-name="${cardName.toLowerCase()}" style="display: flex; align-items: center; background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); gap: 20px;">
                             <div style="flex-shrink: 0; position: relative; width: 120px;">
@@ -4527,7 +5242,7 @@
                                 <h3 style="margin: 0 0 8px 0; font-size: 1.2em; color: #333;">${cardName}</h3>
                                 <div style="color: #333; font-size: 0.9em; margin-bottom: 10px; font-weight: 600;">${setCode} ${setNumber}</div>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 10px;">
-                                    <div><span style="color: #555; font-size: 0.85em; font-weight: 600;">Usage Share:</span> <span style="font-weight: 600; color: #667eea; margin-left: 5px;">${percentage}%</span></div>
+                                    <div title="${escapeHtml(_shareHinweis)}"><span style="color: #555; font-size: 0.85em; font-weight: 600;">Usage Share:</span> <span style="font-weight: 600; color: #667eea; margin-left: 5px;">${percentage}%</span> <span style="color: #555; font-size: 0.78em; font-weight: 500;">(${decksWithCardDisplay} / ${totalDecksDisplay})</span></div>
                                     <div><span style="color: #555; font-size: 0.85em; font-weight: 600;">Ø Count (if used):</span> <span style="font-weight: 600; color: var(--tint-ok-ink); margin-left: 5px;">${avgCount}x</span></div>
                                     <div><span style="color: #555; font-size: 0.85em; font-weight: 600;">Ø Count (overall):</span> <span style="font-weight: 600; color: #f39c12; margin-left: 5px;">${avgCountOverall}x</span></div>
                                     <div><span style="color: #555; font-size: 0.85em; font-weight: 600;">Deck Count:</span> <span style="font-weight: 600; color: #333; margin-left: 5px;">${decksWithCardDisplay} / ${totalDecksDisplay}</span></div>

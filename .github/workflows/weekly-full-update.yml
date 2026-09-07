@@ -291,9 +291,26 @@ jobs:
               if [ "$rc" -ne 0 ]; then
                   echo "::warning::Scraper $step exited with $rc (continuing batch)"
                   rc_summary+=("FAIL $step (rc=$rc)")
+                  echo "FAIL $step (rc=$rc)" >> "$RUNNER_TEMP/rc_batch.txt"
               else
                   rc_summary+=("OK   $step")
+                  echo "OK   $step" >> "$RUNNER_TEMP/rc_batch.txt"
               fi
+              # Warum der rc hier ZWEIMAL landet: `rc_summary` entscheidet
+              # unten, ob dieser Schritt den Lauf rot faerbt — das ist die
+              # Frage "ist der Batch als Ganzes gescheitert". rc_batch.txt
+              # dagegen wird vom Bilanzschritt in data/_job_heartbeats.json
+              # fortgeschrieben und beantwortet je Scraper die andere Frage:
+              # "lief DIESER Job, und wann zuletzt erfolgreich" — unabhaengig
+              # davon, ob sich seine Datei geaendert hat.
+              #
+              # Bis zum 07.09.2026 hinterliess diese Schleife keinen
+              # Herzschlag. Damit war die gesamte Online-Seite der
+              # Datengrundlage unbewacht: limitless_online_scraper,
+              # online_tournament_scraper und current_meta_analysis_scraper
+              # konnten Lauf um Lauf scheitern, ohne dass der Waechter am
+              # naechsten Morgen etwas anderes als ein unveraendertes
+              # Dateidatum gesehen haette.
               # Mid-batch mirror: all_cards_scraper writes the freshly-
               # scraped card master DB to backend/core/data/ (its native
               # output dir), but the very next steps — cardmarket_id_mapper
@@ -380,9 +397,38 @@ jobs:
       # Staende), schreibt es ::warning:: und endet mit 0. Die Seite
       # faellt dann auf den Kumulativstand zurueck, der weiter in
       # derselben Datei steht.
+      #
+      # KEIN `continue-on-error` mehr (07.09.2026). Der Unterschied ist
+      # nicht kosmetisch: `continue-on-error: true` laesst den Schritt
+      # scheitern UND den Lauf gruen bleiben, ohne dass irgendwo Buch
+      # gefuehrt wird. Genau dieser Schritt schreibt aber die aktuellste
+      # Zahl der ganzen Seite — den Anteil im laufenden 14-Tage-Fenster,
+      # der im Meta Call 12-30 % des prognostizierten Anteils traegt.
+      # Faellt er aus, bleibt limitless_online_fenster.csv unveraendert
+      # stehen, die Seite rechnet weiter mit einem alten Fenster und
+      # nichts widerspricht.
+      #
+      # Nicht blockierend bleibt er trotzdem — aber nach dem Muster, das
+      # die drei Schritte darunter seit dem 21.08.2026 verwenden: `set +e`,
+      # rc sichern, in die Bilanz schreiben, `exit 0`. Damit ist der
+      # Ausfall an drei Stellen sichtbar statt an keiner: in der Bilanz des
+      # Laufs (::warning:: / ab zwei Ausfaellen ::error::), im Herzschlag
+      # (Status FAIL) und am naechsten Morgen im Waechter, der den
+      # Stillstand der Datei meldet.
       - name: Online-Fenster (14 Tage) bauen
-        continue-on-error: true
-        run: python3 scripts/build_online_fenster.py --apply
+        run: |
+          set +e
+          echo "::group::scripts/build_online_fenster.py"
+          python3 scripts/build_online_fenster.py --apply
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+              echo "::warning::build_online_fenster exited with $rc"
+              echo "FAIL scripts/build_online_fenster.py (rc=$rc)" >> "$RUNNER_TEMP/rc_extra.txt"
+          else
+              echo "OK   scripts/build_online_fenster.py" >> "$RUNNER_TEMP/rc_extra.txt"
+          fi
+          echo "::endgroup::"
+          exit 0
 
       - name: Run labs tournament scraper (deck list + matchups)
         env:
@@ -536,7 +582,22 @@ jobs:
             cat "$bilanz"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          python3 - "$bilanz" <<'PYHEARTBEAT'
+          # Der Herzschlag bekommt ZWEI Quellen (07.09.2026):
+          #   rc_extra.txt  — die nicht blockierenden Einzelschritte. Nur ihre
+          #                   Ausfaelle faerben den Lauf (oben gezaehlt).
+          #   rc_batch.txt  — jeder Scraper aus dem Schritt "Run scrapers".
+          #                   Dessen Ausfaelle wertet der Schritt selbst aus;
+          #                   hier interessiert nur "lief der Job, und wann
+          #                   zuletzt erfolgreich". Ohne diese Quelle war die
+          #                   gesamte Online-Seite der Datengrundlage
+          #                   (limitless_online, online_tournament,
+          #                   current_meta_analysis) ohne jeden Herzschlag.
+          batch="$RUNNER_TEMP/rc_batch.txt"
+          if [ -f "$batch" ]; then
+              echo "── Bilanz der Scraper-Schleife (nur Herzschlag) ──"
+              cat "$batch"
+          fi
+          python3 - "$bilanz" "$batch" <<'PYHEARTBEAT'
           import json, os, sys, datetime
           pfad = os.path.join('data', '_job_heartbeats.json')
           try:
@@ -547,7 +608,12 @@ jobs:
           if not isinstance(stand, dict):
               stand = {}
           jetzt = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-          with open(sys.argv[1], encoding='utf-8') as f:
+          quellen = [q for q in sys.argv[1:] if q and os.path.isfile(q)]
+          if not quellen:
+              print('  Keine Bilanzdatei gefunden — kein Herzschlag geschrieben.')
+              raise SystemExit(0)
+          for quelle in quellen:
+            with open(quelle, encoding='utf-8') as f:
               for zeile in f:
                   teile = zeile.split()
                   if len(teile) < 2:

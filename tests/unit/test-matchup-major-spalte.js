@@ -52,6 +52,43 @@ const ohneKomm = (s) => s.replace(/\/\*[\s\S]*?\*\//g, ' ')
 
 const karte = lies(path.join('js', 'app-archetype-card.js'));
 const karteK = ohneKomm(karte);
+
+/* ── Die Praesenzzelle AUSGEFUEHRT ───────────────────────────────────
+ *
+ * Bis zum 07.09.2026 waren die Zusicherungen dieser Datei Regex auf den
+ * Quelltext. Die Abnahme hat gezeigt, was das nicht faengt: eine
+ * Zusicherung auf die Zeichenfolge einer Verzweigung bleibt gruen,
+ * solange die Zeichen irgendwo stehen, und faellt, sobald jemand
+ * dieselbe Entscheidung sauber in eine Funktion zieht. Beides ist das
+ * Gegenteil von dem, was sie pruefen soll. Also wird die Entscheidung
+ * jetzt aufgerufen. */
+function schneideAus(quelle, kopf) {
+    const i = quelle.indexOf(kopf);
+    assert.notStrictEqual(i, -1, 'nicht gefunden: ' + kopf);
+    let tiefe = 0;
+    for (let j = quelle.indexOf('{', i); j < quelle.length; j++) {
+        if (quelle[j] === '{') tiefe++;
+        else if (quelle[j] === '}') { tiefe--; if (tiefe === 0) return quelle.slice(i, j + 1); }
+    }
+    throw new Error('Klammern gehen nicht auf: ' + kopf);
+}
+
+const PZ = new Function('MIN_PRAESENZ_PARTIEN', [
+    'const esc = (x) => String(x == null ? "" : x)',
+    '    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");',
+    'const L = (k, d) => d;',
+    'const fmt = (n, dp) => Number(n).toFixed(dp == null ? 1 : dp).replace(".", ",");',
+    schneideAus(karte, 'function praesenzBilanz(m)'),
+    schneideAus(karte, 'function praesenzZelle(m, de)'),
+    schneideAus(karte, 'function praesenzZellen(m, de)'),
+    'return { praesenzZelle, praesenzZellen };',
+].join('\n'))(30);
+
+/** Eine Paarungszeile, wie matchupsFor() sie liefert. */
+const paarung = (extra) => Object.assign({
+    opponent: 'Dragapult', majorWr: null, majorWrRoh: null, majorBilanzDa: false,
+    majorSiege: null, majorNiederlagen: null, majorUnentschieden: null, majorAnzahl: null,
+}, extra);
 const meta = ohneKomm(lies(path.join('js', 'app-current-meta.js')));
 
 describe('Die Datei wird nur einmal gelesen', () => {
@@ -215,14 +252,26 @@ describe('Beide Spalten heissen WR, weil beide WR rechnen', () => {
         assert.ok(/bilanzDa\s*:/.test(rumpf),
             'das Register schreibt bilanzDa nicht mehr — dann unterscheidet '
             + 'niemand "keine Bilanz" von "keine entschiedene Partie"');
-        assert.ok(/m\.majorBilanzDa\s*$|m\.majorBilanzDa\s*\n?\s*\?/m.test(karteK)
-            || /\(m\.majorBilanzDa/.test(karteK),
-            'die Karte verzweigt nicht mehr an majorBilanzDa');
-        const i = karteK.indexOf('arc.muMajorNurRemis');
-        assert.ok(i > 0, 'der Satz fuer "alle unentschieden" wird nicht mehr benutzt');
-        assert.ok(karteK.slice(Math.max(0, i - 400), i).indexOf('majorBilanzDa') >= 0,
-            'der Satz fuer "alle unentschieden" haengt nicht mehr an der '
-            + 'Unterscheidung — dann steht er auch dort, wo die Bilanz fehlt');
+        /* AUSGEFUEHRT. Dieselbe Zeile, einmal mit und einmal ohne
+           Bilanz — sie muessen zwei verschiedene Saetze bekommen.
+           40 Partien, damit die Mindeststichprobe nicht dazwischenfunkt. */
+        const remis = PZ.praesenzZelle(paarung({
+            majorAnzahl: 40, majorBilanzDa: true, majorWr: null,
+            majorSiege: 0, majorNiederlagen: 0, majorUnentschieden: 40,
+        }), true);
+        assert.strictEqual(remis.art, 'nur-remis');
+        assert.ok(/unentschieden/i.test(remis.titel),
+            'der Satz nennt den Grund nicht: ' + remis.titel.slice(0, 80));
+        assert.strictEqual(remis.inhalt, '–');
+
+        const ohne = PZ.praesenzZelle(paarung({
+            majorAnzahl: 40, majorBilanzDa: false, majorWr: null,
+        }), true);
+        assert.strictEqual(ohne.art, 'ohne-bilanz');
+        assert.notStrictEqual(ohne.titel, remis.titel,
+            'beide Gruende bekommen denselben Satz — dann schickt der eine '
+            + 'den Leser auf die Suche nach einem Datenfehler, den es nicht gibt');
+        assert.ok(/ohne Bilanz/i.test(ohne.titel), ohne.titel.slice(0, 80));
     });
 
     it('ohne Bilanz steht ein Strich, keine geschaetzte Zahl', () => {
@@ -234,8 +283,10 @@ describe('Beide Spalten heissen WR, weil beide WR rechnen', () => {
         const i18n = lies(path.join('js', 'i18n.js'));
         const e = [...i18n.matchAll(/'arc\.muMajorOhneBilanz':\s*'([^']*)'/g)].map(x => x[1]);
         assert.strictEqual(e.length, 2, 'der Hinweis fehlt in einer Sprache');
-        assert.ok(/m\.majorWr == null \? '–'/.test(karteK),
+        const z = PZ.praesenzZelle(paarung({ majorAnzahl: 40, majorBilanzDa: false }), true);
+        assert.strictEqual(z.inhalt, '–',
             'eine Paarung ohne Bilanz zeigt keinen Strich mehr');
+        assert.ok(!/\d/.test(z.inhalt), 'in der Zelle steht eine geschaetzte Zahl');
     });
 });
 
@@ -286,24 +337,50 @@ describe('Die Partienzahl steht daneben', () => {
             'die Spalte mit den Praesenzpartien ist weg — Grimmsnarl Froslass '
             + 'steht mit 100,0 % auf ZWEI Partien da, und ohne die Zahl '
             + 'daneben sieht das aus wie ein Ergebnis');
-        assert.ok(/m\.majorAnzahl == null \? '–' : m\.majorAnzahl/.test(karteK),
-            'die Partienzahl wird nicht mehr ausgegeben');
+        const mit = PZ.praesenzZellen(paarung({
+            majorAnzahl: 52, majorBilanzDa: true, majorWr: 45.5, majorWrRoh: 45.5,
+            majorSiege: 21, majorNiederlagen: 23, majorUnentschieden: 8,
+        }), true);
+        assert.ok(/>52</.test(mit), 'die Partienzahl wird nicht mehr ausgegeben');
+        const ohnePaarung = PZ.praesenzZellen(paarung({}), true);
+        assert.ok(/arc-mu-major-n[^>]*>–</.test(ohnePaarung),
+            'eine fehlende Praesenzpaarung wird nicht mehr als fehlend gezeigt — '
+            + 'eine 0 liest sich als "nie gewonnen"');
+        assert.ok(!/>0</.test(ohnePaarung), 'aus "keine Paarung" ist eine 0 geworden');
     });
 
     it('duenne Paarungen werden markiert', () => {
-        assert.ok(/m\.majorAnzahl != null && m\.majorAnzahl < 10/.test(karteK),
+        /* Die Schwelle heisst seit dem 07.09.2026 MIN_PRAESENZ_PARTIEN
+           und ist von 10 auf 30 gestiegen — dieselbe Zahl, ab der
+           ueberhaupt ein Prozentwert erscheint. Geprueft wird die
+           Wirkung, nicht die Schreibweise. */
+        const duenn = PZ.praesenzZellen(paarung({
+            majorAnzahl: 9, majorBilanzDa: true, majorWr: 88.9, majorWrRoh: 88.9,
+            majorSiege: 8, majorNiederlagen: 1, majorUnentschieden: 0,
+        }), true);
+        assert.ok(/arc-mu-major-duenn/.test(duenn),
             'die Markierung fuer duenne Paarungen ist weg');
+        const dick = PZ.praesenzZellen(paarung({
+            majorAnzahl: 52, majorBilanzDa: true, majorWr: 45.5, majorWrRoh: 45.5,
+            majorSiege: 21, majorNiederlagen: 23, majorUnentschieden: 8,
+        }), true);
+        assert.ok(!/arc-mu-major-duenn/.test(dick),
+            'eine belastbare Paarung wird faelschlich als duenn markiert');
         const css = ohneKomm(lies(path.join('css', 'styles.css')));
         assert.ok(/\.arc-mu-major-duenn\s*\{[^}]*font-style/.test(css),
             'die Markierung fehlt im Stylesheet');
     });
 
     it('fehlende Paarungen zeigen einen Strich, keine Null', () => {
-        assert.ok(/m\.majorWr == null \? '–'/.test(karteK),
+        const z = PZ.praesenzZelle(paarung({}), true);
+        assert.strictEqual(z.art, 'fehlt');
+        assert.strictEqual(z.inhalt, '–',
             'eine fehlende Praesenzpaarung wird nicht mehr als fehlend gezeigt — '
             + 'eine 0 liest sich als "nie gewonnen"');
-        assert.ok(/arc\.muMajorFehlt/.test(karte),
+        assert.ok(/Keine Präsenzpartien/.test(z.titel),
             'der Hinweis fuer fehlende Paarungen ist weg');
+        assert.ok(/arc\.muMajorFehlt/.test(karte),
+            'der i18n-Schluessel fuer fehlende Paarungen ist weg');
     });
 });
 
@@ -642,5 +719,194 @@ describe('Die acht Spalten passen, oder die Tabelle scrollt', () => {
         assert.ok(Number(mb[1]) >= summe,
             `die Mindestbreite steht auf ${mb[1]} px, die gesetzten `
             + `Spaltenbreiten summieren sich aber auf ${summe} px`);
+    });
+});
+
+// ── Mindeststichprobe für eine Präsenz-Paarung (07.09.2026) ─────────
+
+describe('Unter der Mindeststichprobe steht die Bilanz, kein Prozentwert', () => {
+
+    /* DER ANLASS, gemessen an data/labs_tournament_matchups_TEF-PBL.csv
+       (day_filter = overall): Mega Excadrill führt 27 Gegner, GENAU EINER
+       erreicht 30 Partien (Dragapult, 52). "vs Crustle 88,89 %" stand auf
+       9 Partien, "vs Grimmsnarl Froslass 100 %" auf 2.
+
+       Die Schwelle ist abgelesen, nicht gewählt: bei n Partien verschiebt
+       eine einzige Partie die Quote um 100/n Punkte — 3,3 bei 30, 11,1
+       bei 9, ganze 50 bei 2. Die Zahlen unten sind GESETZT; keine davon
+       ist ein Wochenwert. */
+
+    it('die Schwelle steht als eine Konstante im Modul', () => {
+        assert.ok(/const MIN_PRAESENZ_PARTIEN = 30;/.test(karteK),
+            'die Mindeststichprobe steht nicht mehr in EINER Konstante — '
+            + 'dann laufen Zelle, Hinweis und Fußzeile auseinander');
+    });
+
+    it('9 Partien: Bilanz und Fallzahl, kein Prozentwert', () => {
+        const m = paarung({
+            majorAnzahl: 9, majorBilanzDa: true, majorWr: 82.4, majorWrRoh: 88.9,
+            majorSiege: 8, majorNiederlagen: 1, majorUnentschieden: 0,
+        });
+        const z = PZ.praesenzZelle(m, true);
+        assert.strictEqual(z.art, 'unter-schwelle');
+        assert.strictEqual(z.inhalt, '8–1–0', 'die Rohbilanz steht nicht in der Zelle');
+        assert.ok(!/%/.test(z.inhalt), 'unter der Schwelle steht wieder ein Prozentwert');
+        assert.ok(!/82|88/.test(z.inhalt), 'die Quote steht doch in der Zelle');
+        // Die Fallzahl steht in der Nachbarspalte.
+        assert.ok(/>9</.test(PZ.praesenzZellen(m, true)), 'die Fallzahl fehlt daneben');
+        // Und der Hinweis nennt Schwelle und Grund.
+        assert.ok(/30/.test(z.titel), 'die Schwelle wird im Hinweis nicht genannt');
+        assert.ok(/11,1 Punkte/.test(z.titel),
+            'der Hinweis rechnet nicht vor, was eine einzelne Partie ausmacht');
+    });
+
+    it('2 Partien: dasselbe, und ganz sicher keine 100 %', () => {
+        const z = PZ.praesenzZelle(paarung({
+            majorAnzahl: 2, majorBilanzDa: true, majorWr: 65, majorWrRoh: 100,
+            majorSiege: 2, majorNiederlagen: 0, majorUnentschieden: 0,
+        }), true);
+        assert.strictEqual(z.art, 'unter-schwelle');
+        assert.strictEqual(z.inhalt, '2–0–0');
+        assert.ok(!/100/.test(z.inhalt));
+        assert.ok(/50,0 Punkte/.test(z.titel));
+    });
+
+    it('genau 30 Partien: ab hier steht die Quote', () => {
+        /* Die Grenze selbst — sonst könnte sie um eins verrutschen,
+           ohne dass etwas rot wird. */
+        const z = PZ.praesenzZelle(paarung({
+            majorAnzahl: 30, majorBilanzDa: true, majorWr: 55.5, majorWrRoh: 56.7,
+            majorSiege: 17, majorNiederlagen: 13, majorUnentschieden: 0,
+        }), true);
+        assert.strictEqual(z.art, 'quote');
+        assert.strictEqual(z.inhalt, '55,5 %');
+        const knapp = PZ.praesenzZelle(paarung({
+            majorAnzahl: 29, majorBilanzDa: true, majorWr: 55.5, majorWrRoh: 56.7,
+            majorSiege: 16, majorNiederlagen: 13, majorUnentschieden: 0,
+        }), true);
+        assert.strictEqual(knapp.art, 'unter-schwelle',
+            'die Schwelle greift eine Partie zu spät');
+    });
+
+    it('52 Partien (Dragapult): die Quote, wie bisher', () => {
+        const z = PZ.praesenzZelle(paarung({
+            majorAnzahl: 52, majorBilanzDa: true, majorWr: 47.2, majorWrRoh: 47.7,
+            majorSiege: 21, majorNiederlagen: 23, majorUnentschieden: 8,
+        }), true);
+        assert.strictEqual(z.art, 'quote');
+        assert.strictEqual(z.inhalt, '47,2 %');
+        assert.ok(/21–23–8/.test(z.titel), 'die Bilanz fehlt im Hinweis');
+    });
+
+    it('die doppelt verbuchte Spiegelpartie wird benannt, nicht verschwiegen', () => {
+        /* Gemessen: in 15 Zeilen der Datei (alle Spiegelpaarungen) ist
+           vs_count ≠ Siege + Niederlagen + Unentschieden, weil jede
+           Spiegelpartie für beide Seiten verbucht ist — Basic Box gegen
+           sich selbst: 24 Partien, Bilanz 24-24-0. */
+        const z = PZ.praesenzZelle(paarung({
+            opponent: 'Basic Box', majorAnzahl: 24, majorBilanzDa: true,
+            majorWr: 50, majorWrRoh: 50,
+            majorSiege: 24, majorNiederlagen: 24, majorUnentschieden: 0,
+        }), true);
+        assert.ok(/48 Einzelergebnisse auf 24 Partien/.test(z.titel),
+            'dass Bilanzsumme und Partienzahl auseinandergehen, steht nirgends');
+        const sauber = PZ.praesenzZelle(paarung({
+            majorAnzahl: 52, majorBilanzDa: true, majorWr: 47.2, majorWrRoh: 47.7,
+            majorSiege: 21, majorNiederlagen: 23, majorUnentschieden: 8,
+        }), true);
+        assert.ok(!/Einzelergebnisse/.test(sauber.titel),
+            'der Hinweis erscheint auch dort, wo die Zahlen zusammenpassen');
+    });
+
+    it('unter der Schwelle wird die Zelle auch als solche markiert', () => {
+        const html = PZ.praesenzZellen(paarung({
+            majorAnzahl: 9, majorBilanzDa: true, majorWr: 82.4, majorWrRoh: 88.9,
+            majorSiege: 8, majorNiederlagen: 1, majorUnentschieden: 0,
+        }), true);
+        assert.ok(/arc-mu-major-bilanz/.test(html),
+            'die Zelle mit der Rohbilanz trägt keine eigene Klasse');
+        assert.ok(/arc-mu-n-low/.test(html), 'die Fallzahl wird nicht gedämpft');
+    });
+
+    it('englisch sagt dasselbe', () => {
+        const z = PZ.praesenzZelle(paarung({
+            majorAnzahl: 9, majorBilanzDa: true, majorWr: 82.4, majorWrRoh: 88.9,
+            majorSiege: 8, majorNiederlagen: 1, majorUnentschieden: 0,
+        }), false);
+        assert.strictEqual(z.inhalt, '8–1–0');
+        assert.ok(/Record 8–1–0/.test(z.titel));
+        assert.ok(/Below 30 games/.test(z.titel));
+    });
+});
+
+describe('Die Schwelle steht sichtbar unter der Tabelle', () => {
+
+    /* Ohne diesen Satz müsste ein Leser raten, warum in einer Zeile
+       "8–1–0" und in der nächsten "47,2 %" steht. Geprüft wird die
+       gerenderte Tabelle, nicht der Quelltext. */
+    function tabelle(zeilen) {
+        const quelle = [
+            'const isDe = () => true;',
+            'const esc = (s) => String(s == null ? "" : s)',
+            '    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")',
+            '    .replace(/"/g, "&quot;").replace(/\'/g, "&#39;");',
+            'const L = (k, d) => d;',
+            'const fmt = (n, dp) => Number(n).toFixed(dp == null ? 1 : dp).replace(".", ",");',
+            'const THIN_GAMES = 20;',
+            'const MIN_PRAESENZ_PARTIEN = 30;',
+            'const window = { WinRateKonvention: null };',
+            'const shadeFor = () => "";',
+            'const barFor = () => ({ pct: 0, cls: "" });',
+            'const matchupsFor = () => ZEILEN;',
+            schneideAus(karte, 'function praesenzBilanz(m)'),
+            schneideAus(karte, 'function praesenzZelle(m, de)'),
+            schneideAus(karte, 'function praesenzZellen(m, de)'),
+            schneideAus(karte, 'function matchupTableHtml(name, opts)'),
+            'return matchupTableHtml;',
+        ].join('\n');
+        return new Function('ZEILEN', quelle)(zeilen)('Mega Excadrill', {});
+    }
+    const zeile = (extra) => Object.assign({
+        opponent: 'X', winRate: 52, winRateRoh: 52, games: 40,
+        wins: 20, losses: 18, ties: 2, thin: false,
+        majorWr: null, majorWrRoh: null, majorBilanzDa: false,
+        majorSiege: null, majorNiederlagen: null, majorUnentschieden: null,
+        majorAnzahl: null,
+    }, extra);
+
+    const DUENN = zeile({
+        opponent: 'Crustle', majorAnzahl: 9, majorBilanzDa: true,
+        majorWr: 82.4, majorWrRoh: 88.9,
+        majorSiege: 8, majorNiederlagen: 1, majorUnentschieden: 0,
+    });
+    const DICK = zeile({
+        opponent: 'Dragapult', majorAnzahl: 52, majorBilanzDa: true,
+        majorWr: 47.2, majorWrRoh: 47.7,
+        majorSiege: 21, majorNiederlagen: 23, majorUnentschieden: 8,
+    });
+
+    it('liegt eine Zeile darunter, steht der Satz mit Schwelle und Anzahl da', () => {
+        const html = tabelle([DICK, DUENN]);
+        assert.ok(/arc-mu-note-praesenz/.test(html), 'die Zeile fehlt ganz');
+        assert.ok(/ab 30 Präsenzpartien/.test(html), 'die Schwelle wird nicht genannt');
+        assert.ok(/3,3 Punkte/.test(html),
+            'die Begründung der Schwelle steht nicht daneben');
+        assert.ok(/1 von 2 Zeilen/.test(html),
+            'wie viele Zeilen betroffen sind, steht nicht da');
+        // Und beides steht wirklich in der Tabelle.
+        assert.ok(/8–1–0/.test(html), 'die Rohbilanz der dünnen Zeile fehlt');
+        assert.ok(/47,2 %/.test(html), 'die Quote der belastbaren Zeile fehlt');
+    });
+
+    it('liegt keine Zeile darunter, bleibt der Satz weg', () => {
+        const html = tabelle([DICK]);
+        assert.ok(!/arc-mu-note-praesenz/.test(html),
+            'der Satz erscheint auch dort, wo er nichts erklärt');
+    });
+
+    it('ohne Präsenzspalten gibt es auch keinen Satz dazu', () => {
+        const html = tabelle([zeile({}), zeile({ opponent: 'Y' })]);
+        assert.ok(!/arc-mu-note-praesenz/.test(html));
+        assert.ok(!/arc-mu-major/.test(html), 'die leeren Präsenzspalten sind zurück');
     });
 });

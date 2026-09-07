@@ -927,6 +927,19 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
             }
         }
         
+        /**
+         * Der Mindestanteil an der Listenzahl des GROESSTEN Archetyps, den
+         * ein Archetyp erreichen muss, damit er in den beiden
+         * Performance-Rubriken mitzaehlt.
+         *
+         * BEFUND B4 (07.09.2026): diese Zahl stand dreimal da — zweimal als
+         * `* 0.1` in der Rechnung und einmal als "10 %" im Satz, der sie
+         * erklaert. Der Satz konnte also von der Filterung abwandern, ohne
+         * dass etwas rot wurde. Jetzt steht sie einmal hier, und der Satz
+         * bekommt sie hineingereicht.
+         */
+        const CL_MINDEST_ANTEIL_GROESSTER = 0.1;
+
         // Cached city league sort results (invalidated when data changes)
         let _cityLeagueSortCache = null;
         let _cityLeagueSortDataRef = null;
@@ -966,7 +979,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                 .sort((a, b) => parseInt(a.count_change) - parseInt(b.count_change));
             
             const maxCountForThreshold = Math.max(...data.map(d => parseInt(d.new_count || 0)));
-            const countThreshold = maxCountForThreshold * 0.1;
+            const countThreshold = maxCountForThreshold * CL_MINDEST_ANTEIL_GROESSTER;
             
             const improvers = data
                 .filter(d => parseLocaleNumber(d.avg_placement_change || '0', 0) < 0 && parseInt(d.new_count || 0) >= countThreshold)
@@ -983,7 +996,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
             // PERFORMANCE: compute and cache all derived sorts here so renderCityLeagueTable never re-sorts
             const topByCount = sorted.slice(0, 3);
             const maxCount = parseInt(topByCount[0]?.new_count || 0);
-            const minCountThreshold = maxCount * 0.1;
+            const minCountThreshold = maxCount * CL_MINDEST_ANTEIL_GROESSTER;
             const topByPlacement = [...data]
                 .filter(d => parseInt(d.new_count || 0) >= minCountThreshold)
                 .sort((a, b) => parseLocaleNumber(a.new_avg_placement || '0', 0) - parseLocaleNumber(b.new_avg_placement || '0', 0))
@@ -1003,17 +1016,158 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                 sorted, topByCount, topByPlacement, top10New,
                 top10Old: keinVorzeitraum ? [] : top10Old,
                 keinVorzeitraum,
+                /* BEFUND B4 (07.09.2026): die Mindestlistenzahl im
+                   Leerzustands-Hinweis war unten ein zweites Mal gerechnet
+                   (`maxCount * 0.1`). Die Mutation `* 0.5` hat das
+                   ueberlebt, weil niemand die genannte Schwelle mit der
+                   GEFILTERTEN verglichen hat. Jetzt gibt es sie einmal:
+                   genau den Wert, mit dem improvers/decliners oben
+                   gefiltert wurden, wandert hier heraus. */
+                countThreshold,
             };
             return _cityLeagueSortCache;
         }
         
+        /**
+         * Warum unter der Kartenreihe nichts mehr kommt.
+         *
+         * BEFUND A-F2.11 bis F2.13 / H1 (gemessen 07.09.2026): die Rubriken
+         * "Seltener gespielt", "Performance verbessert" und "Performance
+         * verschlechtert" fehlten ersatzlos, ebenso Aufsteiger, neue und
+         * verschwundene Archetypen. Kein Rechenfehler — die Tabellen werden
+         * nur bei `decreased.length > 0` usw. gerendert, und ohne
+         * Vorzeitraum ist jede dieser Listen leer. Es fehlte der ERKLAERTE
+         * Leerzustand: eine leere Liste, die ihren Grund nicht nennt, sieht
+         * aus wie eine kaputte Seite.
+         *
+         * Der Hinweis erfindet nichts. Jede Zahl darin wird hineingereicht:
+         * die Zahl der Archetypen, der Zeitraum und die Turnierzahl aus
+         * derselben Quelle, aus der die Karte "Datenquelle" darueber liest.
+         *
+         * @param {{keinVorzeitraum:boolean, archetypen:number, neu:number,
+         *          zeitraum:string, turniere:number, mindestListen:number,
+         *          mindestAnteil:number,
+         *          leer:{seltener:boolean, haeufiger:boolean, verbessert:boolean,
+         *                verschlechtert:boolean, aufsteiger:boolean,
+         *                neuTabelle:boolean, verschwunden:boolean},
+         *          vorhanden:{haeufiger:number, neuTabelle:number,
+         *                     verschwunden:number}}} o
+         * @returns {string} '' wenn nichts fehlt, sonst ein erklaerender Block
+         */
+        function cityLeagueVergleichLeerHinweis(o) {
+            const de = (typeof getLang === 'function' ? getLang() : 'de') === 'de';
+            const l = (o && o.leer) || {};
+            const namen = de
+                ? { seltener: '„Seltener gespielt“', haeufiger: '„Häufiger gespielt“',
+                    verbessert: '„Performance verbessert“',
+                    verschlechtert: '„Performance verschlechtert“',
+                    aufsteiger: 'Auf- und Absteiger der Top 10',
+                    neuTabelle: 'neue Archetypen', verschwunden: 'verschwundene Archetypen' }
+                : { seltener: '“Popularity Decreases”', haeufiger: '“Popularity Increases”',
+                    verbessert: '“Performance Improvers”',
+                    verschlechtert: '“Performance Decliners”',
+                    aufsteiger: 'top-10 entries and exits',
+                    neuTabelle: 'new archetypes', verschwunden: 'disappeared archetypes' };
+
+            const fehlend = Object.keys(namen).filter(k => l[k]).map(k => namen[k]);
+
+            /* DREI RUBRIKEN HAT DIESE SEITE UEBERHAUPT NICHT ALS TABELLE.
+               getCityLeagueSortedSections() rechnet `increased`,
+               `newArchetypes` und `disappeared` aus, und renderCityLeagueTable
+               zeigt keine davon. Solange sie leer sind, faellt das mit dem
+               Rest unter denselben Grund. Sind sie es NICHT, waere Schweigen
+               der eigentliche stille Ausfall: dann liegen Daten vor, die
+               nirgends stehen. Also werden sie genannt, mit ihrer Zahl. */
+            const v = (o && o.vorhanden) || {};
+            const ungezeigt = ['haeufiger', 'neuTabelle', 'verschwunden']
+                .filter(k => !l[k] && Number(v[k] || 0) > 0)
+                .map(k => namen[k] + ' (' + Number(v[k]) + ')');
+
+            if (fehlend.length === 0 && ungezeigt.length === 0) return '';
+
+            const aufzaehlen = (xs) => xs.length === 1
+                ? xs[0]
+                : xs.slice(0, -1).join(', ') + (de ? ' und ' : ' and ') + xs[xs.length - 1];
+            const liste = fehlend.length ? aufzaehlen(fehlend) : '';
+
+            const zahl = (x) => Number(x || 0).toLocaleString(de ? 'de-DE' : 'en-US');
+            /* BEFUND B4: hier stand "10 %" als Literal, waehrend oben mit
+               CL_MINDEST_ANTEIL_GROESSTER gefiltert wurde. Ganze Prozente
+               ohne Komma, gebrochene mit — 0,1 -> "10", 0,125 -> "12,5". */
+            const prozent = (x) => {
+                const n = Number(x) * 100;
+                if (!Number.isFinite(n)) return '?';
+                const t = Number(n.toFixed(2)).toString();
+                return de ? t.replace('.', ',') : t;
+            };
+            const zeitraum = (o.zeitraum && String(o.zeitraum).trim())
+                ? String(o.zeitraum).trim()
+                : (de ? 'im Datensatz nicht angegeben' : 'not stated in the data set');
+
+            /* Zwei verschiedene Gruende, zwei verschiedene Saetze. Beide
+               nennen den Zeitraum, den die Seite WIRKLICH hat — ohne den
+               ist "kein Vorzeitraum" eine Behauptung ohne Bezug. */
+            const grund = o.keinVorzeitraum
+                ? (de
+                    ? ('Es gibt keinen Vorzeitraum in den Daten: alle ' + zahl(o.archetypen)
+                       + ' Archetypen tragen eine alte Listenzahl von 0, davon sind ' + zahl(o.neu)
+                       + ' ausdrücklich als NEU verzeichnet. Ohne eine zweite Messung gibt es nichts, '
+                       + 'wogegen verglichen werden könnte — jede dieser Rubriken wäre erfunden.')
+                    : ('There is no prior window in the data: all ' + zahl(o.archetypen)
+                       + ' archetypes carry an old list count of 0, ' + zahl(o.neu)
+                       + ' of them flagged NEW. With no second measurement there is nothing to compare '
+                       + 'against — every one of these sections would be invented.'))
+                : (de
+                    ? ('Ein Vorzeitraum liegt vor, aber keine Zeile erfüllt die Bedingungen dieser '
+                       + 'Rubriken: für die beiden Performance-Rubriken zählen nur Archetypen mit '
+                       + 'mindestens ' + zahl(Math.ceil(o.mindestListen || 0))
+                       + ' Listen (' + prozent(o.mindestAnteil) + ' % des größten Archetyps).')
+                    : ('A prior window exists, but no row meets the criteria of these sections: the two '
+                       + 'performance sections only count archetypes with at least '
+                       + zahl(Math.ceil(o.mindestListen || 0)) + ' lists ('
+                       + prozent(o.mindestAnteil) + ' % of the largest archetype).'));
+
+            const bestand = de
+                ? ('Was dieser Reiter hat: Zeitraum ' + zeitraum + ', ' + zahl(o.turniere)
+                   + (Number(o.turniere) === 1 ? ' Turnier, ' : ' Turniere, ') + zahl(o.archetypen)
+                   + ' Archetypen.')
+                : ('What this tab does have: period ' + zeitraum + ', ' + zahl(o.turniere)
+                   + (Number(o.turniere) === 1 ? ' tournament, ' : ' tournaments, ') + zahl(o.archetypen)
+                   + ' archetypes.');
+
+            const saetze = [];
+            if (fehlend.length) {
+                saetze.push(de ? ('Hier fehlen ' + liste + '.') : ('Missing here: ' + liste + '.'));
+                saetze.push(grund);
+            }
+            if (ungezeigt.length) {
+                saetze.push(de
+                    ? ('Ohne Tabelle auf dieser Seite, obwohl Daten vorliegen: '
+                       + aufzaehlen(ungezeigt) + '. Die Zahl in Klammern ist die Zahl der Archetypen; '
+                       + 'die vollständige Vergleichstabelle weiter unten führt sie.')
+                    : ('Present in the data but shown in no table here: '
+                       + aufzaehlen(ungezeigt) + '. The number in brackets is the archetype count; '
+                       + 'the full comparison table below lists them.'));
+            }
+            saetze.push(bestand);
+
+            const e = (typeof escapeHtml === 'function') ? escapeHtml : (x) => String(x);
+            return '<div class="city-league-info-table-block">'
+                 + '<h2 class="city-league-info-table-title">'
+                 + e(de ? 'Warum hier keine Vergleichstabellen stehen' : 'Why no comparison tables are shown')
+                 + '</h2>'
+                 + '<div class="city-league-info-combined-explanation" role="status">'
+                 + saetze.map(e).join(' ')
+                 + '</div></div>';
+        }
+
         // Render City League table with full structure matching original HTML
         function renderCityLeagueTable(tournamentCount = 0, dateRange = '') {
             const content = document.getElementById('cityLeagueContent');
             if (!content || !cityLeagueData || cityLeagueData.length === 0) return;
             
             // Use cached sort results
-            const { newArchetypes, disappeared, increased, decreased, improvers, decliners, sorted, topByCount, topByPlacement, top10New, top10Old, keinVorzeitraum } = getCityLeagueSortedSections(cityLeagueData);
+            const { newArchetypes, disappeared, increased, decreased, improvers, decliners, sorted, topByCount, topByPlacement, top10New, top10Old, keinVorzeitraum, countThreshold } = getCityLeagueSortedSections(cityLeagueData);
             const totalArchetypes = cityLeagueData.length;
             
             // Generate timestamp
@@ -1026,8 +1180,6 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                 year: 'numeric', month: '2-digit', day: '2-digit', 
                 hour: '2-digit', minute: '2-digit', second: '2-digit' 
             });
-            
-            const maxCount = parseInt(topByCount[0]?.new_count || 0);
             
             // Ohne Vorzeitraum ist auch "aufgestiegen" eine Behauptung:
             // top10Old ist leer, also waere JEDER Archetyp ein Aufsteiger.
@@ -1067,6 +1219,43 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                     </div>
                 </div>`;
             
+            /* BEFUND A-F2.11 bis F2.13 / H1: bis zum 07.09.2026 folgte hier
+               direkt die erste bedingte Tabelle — und wenn keine davon
+               gerendert wurde, stand zwischen den Karten oben und der
+               Vergleichstabelle unten nichts. Kein Hinweis, kein Grund.
+               Jetzt sagt die Seite, was fehlt und warum.
+
+               BEFUND B4 (07.09.2026): die Schwelle war hier als
+               `maxCount * 0.1` nachgerechnet und der Prozentsatz im Satz
+               als "10 %" ausgeschrieben. Beide Mutationen (`* 0.5` und
+               `neu: 0`) haben das ueberlebt. Jetzt kommt der Wert, mit dem
+               getCityLeagueSortedSections() improvers/decliners WIRKLICH
+               gefiltert hat, aus deren Zwischenspeicher — und der
+               Prozentsatz aus derselben Konstante. */
+            html += cityLeagueVergleichLeerHinweis({
+                keinVorzeitraum: keinVorzeitraum,
+                archetypen: totalArchetypes,
+                neu: newArchetypes.length,
+                zeitraum: dateRange,
+                turniere: tournamentCount || 0,
+                mindestListen: countThreshold,
+                mindestAnteil: CL_MINDEST_ANTEIL_GROESSTER,
+                leer: {
+                    seltener:       decreased.length === 0,
+                    haeufiger:      increased.length === 0,
+                    verbessert:     improvers.length === 0,
+                    verschlechtert: decliners.length === 0,
+                    aufsteiger:     entries.length === 0 && exits.length === 0,
+                    neuTabelle:     newArchetypes.length === 0,
+                    verschwunden:   disappeared.length === 0
+                },
+                vorhanden: {
+                    haeufiger:    increased.length,
+                    neuTabelle:   newArchetypes.length,
+                    verschwunden: disappeared.length
+                }
+            });
+
             // Add conditional tables
             if (decreased.length > 0) {
                 html += `
@@ -3670,6 +3859,23 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
             if (cards && cards.length > 0) {
                 debugVersionSelectionLog('Re-rendering grid with mode:', mode);
                 applyCityLeagueFilter();  // Use filter function to preserve percentage filter
+                // BEFUND A2 / A-F3.13b und A-F3.11 (live gemessen 07.09.2026):
+                // applyCityLeagueFilter() baut das Gitter neu auf und schreibt den
+                // Zaehler mit der Zahl der EINDEUTIGEN Karten. Der Typfilter und die
+                // Suche leben aber in filterOverviewCards() — sie setzen d-none auf
+                // die Kacheln, und erst dort (js/deck-analysis-shared.js:100) nennt
+                // der Zaehler die SICHTBAREN Kacheln.
+                //
+                // Ohne diesen zweiten Aufruf blieb nach dem Wechsel des
+                // Seltenheitsmodus der Knopf "Spez. Energie" hervorgehoben, waehrend
+                // das Gitter wieder alle Karten zeigte, und der Zaehler stand auf
+                // "33 Karten" ueber 206 Drucken. Beides sprang erst beim naechsten
+                // Klick auf einen Typfilter nach — also genau dann, wenn
+                // filterOverviewCards() das erste Mal wieder lief.
+                //
+                // Dieselbe Reihenfolge benutzt toggleDeckGridView() seit jeher
+                // (aufbauen, dann nachfiltern). Hier fehlte sie.
+                filterOverviewCards();
             } else {
                 debugVersionSelectionLog('[WARN] No cards available to render - mode saved for when deck is selected');
             }

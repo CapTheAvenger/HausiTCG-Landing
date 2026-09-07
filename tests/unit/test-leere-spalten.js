@@ -89,6 +89,12 @@ function tabelleMit(zeilen) {
         'const shadeFor = () => "";',
         'const barFor = () => ({ pct: 0, cls: "" });',
         'const matchupsFor = () => ZEILEN;',
+        // Die Praesenzspalten baut seit dem 07.09.2026 eine eigene
+        // Funktion — sie traegt die Mindeststichprobe.
+        'const MIN_PRAESENZ_PARTIEN = 30;',
+        schneide('praesenzBilanz'),
+        schneide('praesenzZelle'),
+        schneide('praesenzZellen'),
         schneide('matchupTableHtml'),
         'return matchupTableHtml;',
     ].join('\n');

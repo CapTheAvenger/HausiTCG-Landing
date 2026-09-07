@@ -897,12 +897,54 @@
     opacity: 1;
     background: rgba(59, 76, 202, 0.08);
 }
-.past-meta-cards-type-btn.active {
+/* BEFUND C4 / A-F4.45-47 (gemessen 07.09.2026): "Alle" blieb blau,
+   waehrend der geklickte Typknopf ungewaehlt aussah. index.html setzt
+   das active fest ins Markup (Z. 1319/1918), umgeschaltet wird aber
+   ueber btn-active / btn-inactive (js/app-city-league.js,
+   setPastMetaOverviewCardTypeFilter bzw.
+   setCurrentMetaOverviewCardTypeFilter), und .btn-active in
+   css/ui-components.css:632 setzt nur Deckkraft und Schatten.
+   Also: btn-active bekommt dieselbe sichtbare Hervorhebung wie das feste
+   active, und abgewaehlt wird ueber die Neutralregel darunter — so bleibt
+   "Alle" vor dem ersten Klick markiert und verliert die Markierung beim
+   ersten Klick auf einen anderen Typ. Vergangenes Meta. */
+.past-meta-cards-type-btn.active,
+.past-meta-cards-type-btn.btn-active {
     background: var(--pokemon-blue, #3B4CCA);
     color: #fff;
     opacity: 1;
     font-weight: 800;
-    box-shadow: 0 2px 8px rgba(59, 76, 202, 0.25);
+    /* B3: box-shadow ist EINE Eigenschaft. Ohne !important gewann fuer
+       btn-active der Ring aus css/ui-components.css:632 und der eigene
+       Schlagschatten war weg; mit !important allein waere der Ring weg.
+       Beide zusammen in einer Liste — so sehen die beiden gewaehlten
+       Zustaende (festes active vor dem ersten Klick, btn-active danach)
+       endlich gleich aus. Gemessen 07.09.2026: vorher Ring gegen
+       Schlagschatten, also ein Farbsprung beim ersten Klick. */
+    box-shadow: 0 0 0 2px #3B4CCA33, 0 2px 8px rgba(59, 76, 202, 0.25) !important;
+}
+/* NACHMESSUNG B1 (07.09.2026): abgewaehlt braucht eine eigene Regel, kein
+   :not(). Ein :not() schaltet nur die eigene Zeile ab; was danach gewinnt,
+   entscheidet die Kaskade — hier waere das der Grundzustand, im
+   .btn-toggle-item-Fall daneben aber .btn-success mit !important. Damit
+   beide Leisten nach derselben Regel arbeiten und jede Zeile gemessen ist,
+   steht die Neutralstellung auch hier als eigene Regel: gleiche
+   Spezifitaet (0,2,0), spaeter in der Quelle, also gewinnt sie fuer
+   "active + btn-inactive" — den Zustand, den index.html (Z. 1319/1918)
+   zusammen mit setPastMetaOverviewCardTypeFilter bzw.
+   setCurrentMetaOverviewCardTypeFilter wirklich erzeugt. Deckkraft und
+   Schatten kommen weiter aus .btn-inactive (css/ui-components.css:638). */
+.past-meta-cards-type-btn.btn-inactive {
+    background: transparent;
+    /* ohne diese Zeile bliebe das #fff der Hervorhebung stehen (0,2,0 gegen
+       0,1,0 der Grundregel) — weisse Schrift auf durchsichtigem Grund.
+       Derselbe Wert wie in der Grundregel darueber. */
+    color: var(--ink-2);
+    /* .btn-inactive in css/ui-components.css:638 setzt box-shadow: none
+       zwar mit !important, aber nur mit 0,1,0 — gegen das !important der
+       Hervorhebung darueber (0,2,0) verliert es. Also hier, gleiche
+       Spezifitaet, spaeter in der Quelle. */
+    box-shadow: none !important;
 }
 .past-meta-cards-rarity-toggle {
     display: flex;
@@ -1314,12 +1356,54 @@
     opacity: 1;
     background: rgba(59, 76, 202, 0.08);
 }
-.current-meta-cards-type-btn.active {
+/* BEFUND C4 / A-F4.45-47 (gemessen 07.09.2026): "Alle" blieb blau,
+   waehrend der geklickte Typknopf ungewaehlt aussah. index.html setzt
+   das active fest ins Markup (Z. 1319/1918), umgeschaltet wird aber
+   ueber btn-active / btn-inactive (js/app-city-league.js,
+   setPastMetaOverviewCardTypeFilter bzw.
+   setCurrentMetaOverviewCardTypeFilter), und .btn-active in
+   css/ui-components.css:632 setzt nur Deckkraft und Schatten.
+   Also: btn-active bekommt dieselbe sichtbare Hervorhebung wie das feste
+   active, und abgewaehlt wird ueber die Neutralregel darunter — so bleibt
+   "Alle" vor dem ersten Klick markiert und verliert die Markierung beim
+   ersten Klick auf einen anderen Typ. Laufendes Meta. */
+.current-meta-cards-type-btn.active,
+.current-meta-cards-type-btn.btn-active {
     background: var(--pokemon-blue, #3B4CCA);
     color: #fff;
     opacity: 1;
     font-weight: 800;
-    box-shadow: 0 2px 8px rgba(59, 76, 202, 0.25);
+    /* B3: box-shadow ist EINE Eigenschaft. Ohne !important gewann fuer
+       btn-active der Ring aus css/ui-components.css:632 und der eigene
+       Schlagschatten war weg; mit !important allein waere der Ring weg.
+       Beide zusammen in einer Liste — so sehen die beiden gewaehlten
+       Zustaende (festes active vor dem ersten Klick, btn-active danach)
+       endlich gleich aus. Gemessen 07.09.2026: vorher Ring gegen
+       Schlagschatten, also ein Farbsprung beim ersten Klick. */
+    box-shadow: 0 0 0 2px #3B4CCA33, 0 2px 8px rgba(59, 76, 202, 0.25) !important;
+}
+/* NACHMESSUNG B1 (07.09.2026): abgewaehlt braucht eine eigene Regel, kein
+   :not(). Ein :not() schaltet nur die eigene Zeile ab; was danach gewinnt,
+   entscheidet die Kaskade — hier waere das der Grundzustand, im
+   .btn-toggle-item-Fall daneben aber .btn-success mit !important. Damit
+   beide Leisten nach derselben Regel arbeiten und jede Zeile gemessen ist,
+   steht die Neutralstellung auch hier als eigene Regel: gleiche
+   Spezifitaet (0,2,0), spaeter in der Quelle, also gewinnt sie fuer
+   "active + btn-inactive" — den Zustand, den index.html (Z. 1319/1918)
+   zusammen mit setPastMetaOverviewCardTypeFilter bzw.
+   setCurrentMetaOverviewCardTypeFilter wirklich erzeugt. Deckkraft und
+   Schatten kommen weiter aus .btn-inactive (css/ui-components.css:638). */
+.current-meta-cards-type-btn.btn-inactive {
+    background: transparent;
+    /* ohne diese Zeile bliebe das #fff der Hervorhebung stehen (0,2,0 gegen
+       0,1,0 der Grundregel) — weisse Schrift auf durchsichtigem Grund.
+       Derselbe Wert wie in der Grundregel darueber. */
+    color: var(--ink-3);
+    /* .btn-inactive in css/ui-components.css:638 setzt box-shadow: none
+       zwar mit !important, aber nur mit 0,1,0 — gegen das !important der
+       Hervorhebung darueber (0,2,0) verliert es. Also hier, gleiche
+       Spezifitaet, spaeter in der Quelle. */
+    box-shadow: none !important;
 }
 .current-meta-cards-rarity-toggle {
     display: flex;

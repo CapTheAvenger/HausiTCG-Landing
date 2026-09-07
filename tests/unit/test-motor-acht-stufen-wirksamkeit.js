@@ -963,7 +963,34 @@ describe('Stufe 5.3 — der Piloten-Daempfer: kleine Pilotenpools zaehlen wenige
 
 describe('Stufe 5.3 — die Matchup-Korrektur: Turnierpiloten statt Online-Enthusiasten', () => {
 
-    const RECHNUNG = CLIP + '\n' + funktionAusQuelle('_computeMatchupAdjustments')
+    /* UMGEBAUT AM 07.09.2026. Die Rechnung steckt seither in der reinen
+       Funktion `_p53Delta`; `_computeMatchupAdjustments` ruft sie nur
+       noch. Grund war ein zweiter stiller Groessenwechsel: bis dahin zog
+       die Stelle zwei S/(S+N+U)-Quoten voneinander ab, obwohl online
+       1,29 % und auf Papier 11,05 % der Partien unentschieden enden —
+       dieselbe FORMEL, aber nicht dieselbe GROESSE. Gerechnet wird jetzt
+       in S/(S+N), wo sich der Unentschieden-Anteil herauskuerzt, und der
+       Schub wird auch in dieser Konvention angewandt.
+
+       Die Zusagen dieses Blocks sind dieselben geblieben (Klammer,
+       Pilotenboden, Mindestabstand, "die Korrektur erreicht den
+       Simulator", Gegenprobe mit neutraler Klammer); nur lesen sie ihre
+       Zahlen jetzt aus den neuen Stellen. Dazu kommt die Zusage, die es
+       vorher nicht gab: der Schub verschiebt die S/(S+N)-Quote der
+       Paarung um genau (adjA − adjB). Die ausfuehrliche Nachrechnung
+       steht in tests/unit/test-p53-konvention.js. */
+
+    // Die echte Konvention — der Motor ruft sie, also darf der Test sie
+    // nicht nachbauen.
+    const WK = (() => {
+        const win = { getLang: () => 'de' };
+        new Function('window', fs.readFileSync(
+            path.join(__dirname, '..', '..', 'js', 'win-rate-konvention.js'), 'utf8'))(win);
+        return win.WinRateKonvention;
+    })();
+
+    const RECHNUNG = CLIP + '\n' + funktionAusQuelle('_p53Delta')
+        + '\n' + funktionAusQuelle('_computeMatchupAdjustments')
         + '\nglobalThis.__f = _computeMatchupAdjustments;';
 
     // Endmarke seit 05.09.2026: die Rueckgabe traegt zusaetzlich den
@@ -973,7 +1000,11 @@ describe('Stufe 5.3 — die Matchup-Korrektur: Turnierpiloten statt Online-Enthu
         'return { pWin, pTie, pLoss, partien: base.partien || 0 };')
         + 'return { pWin, pTie, pLoss };';
 
-    function rechne(decks, letzteMajors, ersetzen) {
+    /* Ein Deck, das online mit `onlineWinPct` (S/(S+N+U)) dasteht und
+       dessen Online-Unentschieden-Anteil `uOnline` betraegt, sowie eine
+       Papierbilanz. Beides wird hier GESETZT, damit die Zusagen unten
+       nicht an der Datenlage dieser Woche haengen. */
+    function rechne(decks, letzteMajors, uAnteile, ersetzen) {
         let code = RECHNUNG;
         if (ersetzen) {
             assert.ok(code.includes(ersetzen[0]), 'die Klammer der Korrektur ist nicht mehr auffindbar');
@@ -983,7 +1014,11 @@ describe('Stufe 5.3 — die Matchup-Korrektur: Turnierpiloten statt Online-Enthu
             _deckWRAdjustment: {},
             _shareList: decks,
             _lastMajorByDeck: letzteMajors,
+            _onlineUnentschiedenAnteil: (k) => (uAnteile && uAnteile[k] != null)
+                ? { anteil: uAnteile[k], quelle: 'gesetzt' } : null,
             normalize: s => String(s).trim().toLowerCase(),
+            window: { WinRateKonvention: WK },
+            Number,
         });
         ctx.__f();
         return ctx._deckWRAdjustment;
@@ -1003,7 +1038,7 @@ describe('Stufe 5.3 — die Matchup-Korrektur: Turnierpiloten statt Online-Enthu
         // was Enthusiasten schaffen, nicht mit dem, was Turnierpiloten
         // schaffen.
         const [lo, hi] = literale(
-            /const delta = _clip\(lm\.winPct - onlineWr, (-?\d+), (\d+)\);/,
+            /delta: _clip\(roh, (-?\d+), (\d+)\),/,
             'die Klammer der WR-Korrektur');
         assert.ok(hi > 0 && lo === -hi,
             `die Klammer [${lo}, ${hi}] ist nicht mehr symmetrisch — eine `
@@ -1019,23 +1054,53 @@ describe('Stufe 5.3 — die Matchup-Korrektur: Turnierpiloten statt Online-Enthu
             + 'ist die Labs-WR selbst das Rauschen, das sie korrigieren soll');
     });
 
+    it('beide Seiten der Differenz stehen in der Quelle als ohneUnentschieden', () => {
+        /* Ohne diese Zusage waere der Umbau vom 07.09.2026 durch eine
+           einzige geaenderte Zeichenkette rueckgaengig zu machen, ohne
+           dass eine Zahl auffiele. */
+        const stelle = funktionAusQuelle('_p53Delta');
+        const treffer = (stelle.match(/konvention: 'ohneUnentschieden'/g) || []).length;
+        assert.equal(treffer, 2,
+            'die Differenz laeuft nicht mehr mit BEIDEN Seiten in der Konvention '
+            + 'ohneUnentschieden durch WinRateKonvention.differenz()');
+        assert.ok(/nachOhneUnentschieden/.test(stelle),
+            'die Online-Seite wird nicht mehr umgerechnet — dann steht wieder '
+            + 'S/(S+N+U) gegen S/(S+N)');
+    });
+
     it('nachgerechnet: Crustle wird um die volle Klammer nach unten korrigiert', () => {
-        const [lo] = literale(/const delta = _clip\(lm\.winPct - onlineWr, (-?\d+), (\d+)\);/,
+        const [lo] = literale(/delta: _clip\(roh, (-?\d+), (\d+)\),/,
             'die Klammer der WR-Korrektur');
+        // 67 % online bei 2 % Unentschieden sind 68,37 % ohne
+        // Unentschieden; 43,3 % Papier stehen hier schon in dieser
+        // Konvention. 25,1 pp Abstand, also die volle Klammer.
         const map = rechne(
             [{ name: 'Crustle', onlineWinPct: 67 }],
-            { crustle: { day1Players: 40, winPct: 43.3 } });
+            { crustle: { day1Players: 40, winPct: 43.3, winPctOhneU: 43.3 } },
+            { crustle: 0.02 });
         assert.equal(map.crustle, lo,
             `die Korrektur fuer Crustle steht bei ${map.crustle} statt bei der `
-            + 'Klammer — 43,3 % Labs gegen 67 % online sind 23,7 pp Abstand');
+            + 'Klammer — 43,3 % Papier gegen 68,4 % online sind 25,1 pp Abstand');
     });
 
     it('nachgerechnet: die Korrektur erreicht den Simulator', () => {
         const basis = { pWin: 0.60, pTie: 0.02, pLoss: 0.38 };
         const r = wende(basis, { a: -12 });
-        assert.ok(Math.abs(r.pWin - 0.48) < 1e-9,
-            `die korrigierte Gewinnquote steht bei ${r.pWin} statt 0,48 — die `
+        /* Der Schub geht seit dem 07.09.2026 auf die S/(S+N)-Quote, nicht
+           mehr auf pWin: 0,60/0,98 = 61,2245 % minus 12 pp = 49,2245 %,
+           mal (1 − pTie) = 0,482400. Vorher stand hier 0,48 — der
+           Unterschied ist genau der Faktor (1 − pTie), und er ist der
+           Grund fuer den Umbau: nur so ueberlebt der Schub die
+           Umstellung auf die Praesenz-Unentschieden-Quote in calcDay2
+           unveraendert. */
+        const quoteVorher = basis.pWin / (basis.pWin + basis.pLoss);
+        const erwartet = (quoteVorher - 0.12) * (1 - basis.pTie);
+        assert.ok(Math.abs(r.pWin - erwartet) < 1e-9,
+            `die korrigierte Gewinnquote steht bei ${r.pWin} statt ${erwartet} — die `
             + 'Korrektur wird gerechnet und dann nicht angewandt');
+        const quoteNachher = r.pWin / (r.pWin + r.pLoss);
+        assert.ok(Math.abs((quoteNachher - quoteVorher) * 100 + 12) < 1e-9,
+            'die S/(S+N)-Quote verschiebt sich nicht um genau die Korrektur');
         assert.ok(Math.abs(r.pWin + r.pTie + r.pLoss - 1) < 1e-9,
             'die drei Wahrscheinlichkeiten summieren nicht mehr auf 1');
         // Ohne Korrektur bleibt die Basis unangetastet — Objektidentitaet.
@@ -1043,26 +1108,43 @@ describe('Stufe 5.3 — die Matchup-Korrektur: Turnierpiloten statt Online-Enthu
     });
 
     it('kleine Stichproben und kleine Abstaende werden verworfen', () => {
-        const [minAbstand] = literale(/if \(Math\.abs\(delta\) < ([\d.]+)\) return;/,
+        const [minAbstand] = literale(/if \(Math\.abs\(res\.delta\) < ([\d.]+)\) return;/,
             'der Mindestabstand der WR-Korrektur');
         const zuKlein = rechne(
             [{ name: 'Winzling', onlineWinPct: 60 }],
-            { winzling: { day1Players: 5, winPct: 40 } });
+            { winzling: { day1Players: 5, winPct: 40, winPctOhneU: 40 } },
+            { winzling: 0.02 });
         assert.deepEqual(zuKlein, {},
             'ein Major mit fuenf Piloten korrigiert wieder den Simulator');
+        // Online 50 % bei 0 % Unentschieden sind auch ohne Unentschieden 50 %.
         const knapp = rechne(
             [{ name: 'Knapp', onlineWinPct: 50 }],
-            { knapp: { day1Players: 40, winPct: 50 + minAbstand / 2 } });
+            { knapp: { day1Players: 40, winPct: 50, winPctOhneU: 50 + minAbstand / 2 } },
+            { knapp: 0 });
         assert.deepEqual(knapp, {},
             `ein Abstand unter ${minAbstand} pp wird wieder eingetragen — die `
             + 'Karte fuellt sich dann mit Rauschen');
     });
 
+    it('ohne gemessene Online-Bilanz wird nichts geschoben', () => {
+        /* LEER IST LEER. Fehlt der Unentschieden-Anteil, laesst sich die
+           Online-Quote nicht in die vergleichbare Konvention bringen —
+           dann bleibt das Deck ohne Schub, statt dass die alte,
+           unvergleichbare Differenz durchrutscht. */
+        const map = rechne(
+            [{ name: 'Crustle', onlineWinPct: 67 }],
+            { crustle: { day1Players: 40, winPct: 43.3, winPctOhneU: 43.3 } },
+            null);
+        assert.deepEqual(map, {},
+            'ohne Online-Unentschieden-Anteil kam trotzdem ein Schub heraus');
+    });
+
     it('Gegenprobe: mit Klammer auf null verschwindet die Korrektur', () => {
         const map = rechne(
             [{ name: 'Crustle', onlineWinPct: 67 }],
-            { crustle: { day1Players: 40, winPct: 43.3 } },
-            ['_clip(lm.winPct - onlineWr, -12, 12)', '_clip(lm.winPct - onlineWr, 0, 0)']);
+            { crustle: { day1Players: 40, winPct: 43.3, winPctOhneU: 43.3 } },
+            { crustle: 0.02 },
+            ['_clip(roh, -12, 12)', '_clip(roh, 0, 0)']);
         assert.deepEqual(map, {},
             'genau das ist die Mutation, gegen die die Zusagen oben stehen');
     });

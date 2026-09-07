@@ -130,6 +130,38 @@
      * von 44 Decks. Jetzt teilen sich beide diese eine Konstante. */
     const DAY2_MIN_ANTRITTE = 5;
 
+    /* MINDESTSTICHPROBE FUER EINE PRAESENZ-PAARUNG (07.09.2026).
+     *
+     * Gilt NUR fuer die Spalte "Major-WR" der Matchup-Tabelle, also fuer
+     * eine einzelne Paarung — nicht fuer die Deck-Kachel daneben. Deren
+     * Schwelle ist MAJOR_DUENN_PARTIEN und bleibt, was sie ist.
+     *
+     * DER BEFUND. Im laufenden Format TEF-PBL gibt es genau EIN
+     * Praesenzturnier. In data/labs_tournament_matchups_TEF-PBL.csv
+     * (day_filter = overall) fuehrt Mega Excadrill 27 Gegner. Davon
+     * erreicht GENAU EINER 30 Partien: Dragapult mit 52. Daneben stand
+     * "vs Crustle 88,89 %" auf 9 Partien (Bilanz 8-1-0) und "vs
+     * Grimmsnarl Froslass 100 %" auf 2.
+     *
+     * WARUM 30. Die Schwelle ist kein Geschmack, sondern eine Ablesung:
+     * bei n Partien verschiebt EINE einzelne Partie die Quote um
+     * 100/n Punkte. Bei 30 sind das 3,3 Punkte — die erste
+     * Nachkommastelle, die die Zelle anzeigt, steht dann noch fuer
+     * etwas. Bei 9 Partien sind es 11,1 Punkte je Partie, bei 2 ganze
+     * 50: dort beschreibt die Prozentangabe nicht das Matchup, sondern
+     * den Zufall eines Nachmittags.
+     *
+     * WAS STATTDESSEN DASTEHT. Nicht "zu wenige" und kein leeres Feld —
+     * genau das hat der Betreiber am 02.09.2026 zu Recht bemaengelt
+     * ("es gibt Major Daten warum werden sie nicht genutzt?"). Sondern
+     * die ROHBILANZ und die Fallzahl: "8-1-0 aus 9". Das ist MEHR
+     * Information als die Quote, nicht weniger, und es laesst sich nicht
+     * mit einer belastbaren Quote verwechseln.
+     *
+     * Die Schwelle steht im Text unter der Tabelle, damit niemand raten
+     * muss, ab wann eine Zahl erscheint. */
+    const MIN_PRAESENZ_PARTIEN = 30;
+
     let _decks = null;          // deck_name -> { share, winRate, count }
     let _conv = null;           // computeConversionPerformance() result
     /* Stehen hinter _conv gezaehlte oder gewichtete Antritte? Der
@@ -137,6 +169,10 @@
     let _convGezaehlt = false;
     let _major = null;          // deck_name -> { share, winRate, ... } | {} wenn kein Major
     let _majorMu = null;        // deck_name -> { gegner -> { anzahl, punkte } }
+    /* Welchen Zeitraum decken die Major-Zahlen ab? Aus den geladenen
+       Zeilen selbst gelesen (Spalte tournament_date), nicht geschaetzt.
+       { key, von, bis, turniere } oder null, wenn kein Auszug da ist. */
+    let _majorZeitraum = null;
     let _loading = null;
     let _openDeck = null;       // name of the deck currently shown
 
@@ -279,15 +315,27 @@
             .then(v => {
                 const kennt = v && Array.isArray(v.meta_keys) && v.meta_keys.indexOf(key) !== -1;
                 if (!kennt) return '';
+                _majorZeitraum = { key: key, von: null, bis: null, turniere: 0 };
                 return fetch(`${base}labs_tournament_decks_${key}.csv${stamp}`)
                     .then(r => r.ok ? r.text() : '');
             })
             .then(txt => {
                 const raus = {};
                 if (!txt) return raus;
+                /* Der Zeitraum der Praesenzzahlen kommt aus den Zeilen,
+                   die tatsaechlich geladen wurden — sonst stuende an der
+                   Kachel ein Datum, das niemand nachzaehlen kann. */
+                const _turniere = new Set();
                 for (const r of parseCsv(txt, ',')) {
                     const name = String(r.deck_name || '').trim();
                     if (!name) continue;
+                    const tag = String(r.tournament_date || '').trim();
+                    if (_majorZeitraum && /^\d{4}-\d{2}-\d{2}$/.test(tag)) {
+                        if (!_majorZeitraum.von || tag < _majorZeitraum.von) _majorZeitraum.von = tag;
+                        if (!_majorZeitraum.bis || tag > _majorZeitraum.bis) _majorZeitraum.bis = tag;
+                    }
+                    const tid = String(r.tournament_id || r.tournament_name || '').trim();
+                    if (tid) _turniere.add(tid);
                     const s = num(r.wins), n_ = num(r.losses), u = num(r.ties);
                     const partien = s + n_ + u;
                     const d1 = num(r.day1_players);
@@ -305,6 +353,7 @@
                     e.day2 += d2;
                     e.turniere += 1;
                 }
+                if (_majorZeitraum) _majorZeitraum.turniere = _turniere.size;
                 for (const k of Object.keys(raus)) {
                     const e = raus[k];
                     // Siege durch ALLE Partien — dieselbe Rechnung wie online.
@@ -610,7 +659,7 @@
             </div>`;
     }
 
-    function tilesHtml(name) {
+    function tilesHtml(name, variante) {
         const de = isDe();
         const d = _decks[findKey(_decks, name)] || null;
         // Ohne Leerzeichen hinter dem Pfeil: es steckte im span mit
@@ -845,7 +894,83 @@
                         ? 'Für dieses Format gibt es noch kein Präsenzturnier mit diesem Deck. Day 2 ist eine reine Präsenzgröße.'
                         : 'No in-person event with this deck in this format yet. Day 2 is in-person only.'));
 
-        return `<div class="arc-tiles arc-tiles--vier">${rep}${wr}${conv}${d2}</div>`;
+        return `<div class="arc-tiles arc-tiles--vier">${rep}${wr}${conv}${d2}</div>`
+             + zeitraumHtml(variante);
+    }
+
+    /* ── WELCHEN ZEITRAUM ZEIGEN DIESE VIER KACHELN? ────────────────────
+     *
+     * BEFUND A-F4.7 (07.09.2026, live gemessen): das Datenfenster
+     * "Daten ab" der Deck-Analyse wirkt auf die Kartenuebersicht, aber
+     * nicht auf diese Kacheln — Anteil, Win %, Top-8 und Day-2 bleiben
+     * bei jedem Fensterwechsel identisch. `grep currentMetaDateFrom` in
+     * dieser Datei: 0 Treffer.
+     *
+     * WARUM DAS SO BLEIBT (nachgesehen, nicht angenommen):
+     *
+     *   data/limitless_online_decks.csv   Spalten: rank, deck_name, count,
+     *       share, share_numeric, wins, losses, ties, win_rate,
+     *       win_rate_numeric. KEIN Datumsfeld, keine Turnierzeile — die
+     *       Datei ist ein fertig aufsummierter Stand des Onlinefeldes.
+     *       Anteil und Win % lassen sich daraus fuer kein Fenster neu
+     *       rechnen.
+     *   data/online_tournament_top8_decks.csv   fuehrt genau EIN Datum je
+     *       Deck (last_seen_date); die Antritte und Top-8-Zahlen daneben
+     *       sind ueber alle Turniere aufsummiert. Eine Quote fuer ein
+     *       Fenster ist daraus nicht zu gewinnen.
+     *   data/online_tournament_dated_cards.csv  hat zwar tournament_date je
+     *       Zeile, aber keine Bilanz (keine wins/losses/ties), keine
+     *       Top-8- und keine Day-2-Spalte. Man koennte daraus einen
+     *       gefensterten ANTEIL bilden — auf einer anderen
+     *       Grundgesamtheit als die drei Zahlen daneben. Genau das ist der
+     *       Fehler, den diese Datei an zwei Stellen schon beschrieben
+     *       abgearbeitet hat: eine Zahl, die still ihre Grundgesamtheit
+     *       wechselt, waehrend die Nachbarzahl es nicht tut.
+     *
+     * Also der zweite zulaessige Weg: das Fenster wirkt hier nicht, und
+     * das STEHT JETZT DA — mit Datei und, wo die Daten es hergeben, mit
+     * dem Zeitraum, den sie wirklich abdecken. Der Satz zum Datenfenster
+     * erscheint nur in der eingebetteten Fassung; nur dort gibt es das
+     * Bedienelement, auf das er sich bezieht.
+     */
+    function zeitraumHtml(variante) {
+        const de = isDe();
+        const z = _majorZeitraum;
+        const online = de
+            ? 'Anteil, Win % und Top-8-Quote: data/limitless_online_decks.csv und '
+              + 'data/online_tournament_top8_decks.csv — Gesamtstand des Onlinefeldes, '
+              + 'ohne Turnierdatum je Zeile.'
+            : 'Share, Win % and top-8 rate: data/limitless_online_decks.csv and '
+              + 'data/online_tournament_top8_decks.csv — cumulative online field, '
+              + 'no per-row tournament date.';
+        let major;
+        if (z && z.von && z.bis) {
+            const spanne = (z.von === z.bis)
+                ? (de ? `vom ${z.von}` : `on ${z.von}`)
+                : (de ? `vom ${z.von} bis ${z.bis}` : `from ${z.von} to ${z.bis}`);
+            major = de
+                ? `Major-Zahlen und Day 2: data/labs_tournament_decks_${z.key}.csv — `
+                  + `${z.turniere} ${z.turniere === 1 ? 'Turnier' : 'Turniere'} ${spanne}.`
+                : `Major figures and day 2: data/labs_tournament_decks_${z.key}.csv — `
+                  + `${z.turniere} ${z.turniere === 1 ? 'event' : 'events'} ${spanne}.`;
+        } else {
+            major = de
+                ? 'Für dieses Format liegt kein Präsenzturnier-Auszug vor.'
+                : 'No in-person event extract for this format.';
+        }
+        const fenster = (variante === 'embed')
+            ? (de
+                ? ' Das Datenfenster „Daten ab“ über der Kartenübersicht wirkt auf diese vier Kacheln nicht — '
+                  + 'die zugrunde liegenden Dateien führen kein Datum je Zeile.'
+                : ' The “data from” window above the card overview does not affect these four tiles — '
+                  + 'the underlying files carry no per-row date.')
+            : '';
+        const text = (de ? 'Zeitraum: ' : 'Period: ') + online + ' ' + major + fenster;
+        /* Der Stil steht inline, weil css/ in dieser Runde gesperrt ist.
+           Sobald es eine Regel .arc-zeitraum gibt, gehoert er dorthin. */
+        return `<p class="arc-zeitraum" title="${esc(text)}"`
+             + ` style="margin:8px 0 0;font-size:0.72em;line-height:1.35;color:var(--ink-2, #555);">`
+             + `${esc(text)}</p>`;
     }
 
     // Four quantised steps, not a ramp: at every step the text colour is
@@ -876,6 +1001,124 @@
         const pct = Math.min(1, Math.abs(delta) / BAR_FULL_AT) * 50;
         if (pct < 0.5) return { cls: '', pct: 0 };
         return { cls: delta >= 0 ? 'arc-mu-wr-up' : 'arc-mu-wr-down', pct };
+    }
+
+    /** Bilanz als "8–1–0", mit "?" fuer jedes fehlende Glied. */
+    function praesenzBilanz(m) {
+        return [
+            m.majorSiege == null ? '?' : m.majorSiege,
+            m.majorNiederlagen == null ? '?' : m.majorNiederlagen,
+            m.majorUnentschieden == null ? '?' : m.majorUnentschieden,
+        ].join('–');
+    }
+
+    /**
+     * Die Praesenz-Paarung einer Zeile: was in der Zelle steht und warum.
+     *
+     * Getrennt vom HTML, damit die Entscheidung ausgefuehrt geprueft
+     * werden kann statt am Quelltext.
+     *
+     * Vier Ausgaenge:
+     *   'fehlt'        keine Praesenzpartien fuer diese Paarung
+     *   'ohne-bilanz'  Partien da, aber keine Siege/Niederlagen in der Quelle
+     *   'unter-schwelle' Partien da, aber weniger als MIN_PRAESENZ_PARTIEN:
+     *                  ROHBILANZ und Fallzahl statt eines Prozentwerts
+     *   'quote'        genug Partien: die Quote, wie bisher
+     *
+     * @returns {{art: string, inhalt: string, titel: string}}
+     */
+    function praesenzZelle(m, de) {
+        const n = m.majorAnzahl;
+        if (n == null) {
+            return {
+                art: 'fehlt',
+                inhalt: '–',
+                titel: L('arc.muMajorFehlt', de
+                    ? 'Keine Präsenzpartien für diese Paarung.'
+                    : 'No in-person games for this pairing.'),
+            };
+        }
+        const bilanz = praesenzBilanz(m);
+        /* Die Quelle bucht jede Spiegelpartie fuer BEIDE Seiten: gemessen
+           am 07.09.2026 stimmt in data/labs_tournament_matchups_TEF-PBL.csv
+           in 15 Zeilen — allen Spiegelpaarungen — `vs_count` nicht mit
+           Siegen + Niederlagen + Unentschieden ueberein (Basic Box gegen
+           sich selbst: 24 Partien, Bilanz 24-24-0). Wo die beiden Zahlen
+           auseinandergehen, steht das jetzt dabei, statt dass der Leser
+           es fuer einen Tippfehler haelt. */
+        const summe = (m.majorSiege == null || m.majorNiederlagen == null
+            || m.majorUnentschieden == null)
+            ? null
+            : (m.majorSiege + m.majorNiederlagen + m.majorUnentschieden);
+        const spiegelSatz = (summe != null && summe !== n)
+            ? (de
+                ? ` Die Quelle zählt hier ${summe} Einzelergebnisse auf ${n} Partien — jede Spiegelpartie ist für beide Seiten verbucht.`
+                : ` The source books ${summe} results on ${n} games — each mirror game is counted for both sides.`)
+            : '';
+
+        if (!m.majorBilanzDa) {
+            return {
+                art: 'ohne-bilanz',
+                inhalt: '–',
+                titel: L('arc.muMajorOhneBilanz', de
+                    ? '{n} Präsenzpartien, aber ohne Bilanz in der Quelle — ohne Siege und Niederlagen lässt sich keine Win Rate bilden. Deshalb steht hier ein Strich statt einer geschätzten Zahl.'
+                    : '{n} in-person games, but the source row carries no record — without wins and losses there is no win rate to show. Hence the dash instead of an estimate.')
+                    .replace('{n}', String(n)) + spiegelSatz,
+            };
+        }
+
+        if (n < MIN_PRAESENZ_PARTIEN) {
+            /* MINDESTSTICHPROBE. Kein Prozentwert, sondern das, was
+               wirklich gezaehlt wurde. Siehe MIN_PRAESENZ_PARTIEN. */
+            return {
+                art: 'unter-schwelle',
+                inhalt: esc(bilanz),
+                titel: (de
+                    ? `Bilanz ${bilanz} (S–N–U) aus ${n} Präsenzpartien. Unter ${MIN_PRAESENZ_PARTIEN} Partien steht hier kein Prozentwert: `
+                      + `bei ${n} Partien verschiebt eine einzige Partie die Quote um ${fmt(100 / n)} Punkte. `
+                      + `Die Bilanz sagt dasselbe, ohne eine Genauigkeit zu behaupten, die die Stichprobe nicht trägt.`
+                    : `Record ${bilanz} (W–L–T) from ${n} in-person games. Below ${MIN_PRAESENZ_PARTIEN} games no percentage is shown: `
+                      + `at ${n} games a single game moves the rate by ${fmt(100 / n)} points. `
+                      + `The record says the same without claiming a precision the sample cannot carry.`)
+                    + spiegelSatz,
+            };
+        }
+
+        if (m.majorWr == null) {
+            /* Bilanz da, Partien genug — und trotzdem keine Quote: alle
+               Partien unentschieden. S/(S+N) hat dann keinen Nenner. */
+            return {
+                art: 'nur-remis',
+                inhalt: '–',
+                titel: L('arc.muMajorNurRemis', de
+                    ? '{n} Präsenzpartien, alle unentschieden ({b}). Diese Win Rate zählt Siege gegen entschiedene Partien — entschieden ist hier keine. Ein Wert stünde für nichts.'
+                    : '{n} in-person games, all drawn ({b}). This win rate counts wins against decided games — none here were decided. A number would stand for nothing.')
+                    .replace('{n}', String(n)).replace('{b}', bilanz) + spiegelSatz,
+            };
+        }
+
+        return {
+            art: 'quote',
+            inhalt: esc(fmt(m.majorWr)) + ' %',
+            titel: L('arc.muMajorTip', de
+                ? '{w} aus {n} Präsenzpartien (Bilanz {b}). Dieselbe Rechnung wie die Spalte links: Siege ÷ entschiedene Partien, mit demselben Ausgleich für dünne Paarungen. Roh {r} %.'
+                : '{w} from {n} in-person games (record {b}). Same calculation as the column on the left: wins ÷ decided games, with the same allowance for thin pairings. Raw {r} %.')
+                .replace('{w}', fmt(m.majorWr) + ' %')
+                .replace('{n}', String(n))
+                .replace('{b}', bilanz)
+                .replace('{r}', fmt(m.majorWrRoh)) + spiegelSatz,
+        };
+    }
+
+    /** Die beiden Praesenzspalten einer Zeile als HTML. */
+    function praesenzZellen(m, de) {
+        const z = praesenzZelle(m, de);
+        const duenn = (m.majorAnzahl != null && m.majorAnzahl < MIN_PRAESENZ_PARTIEN);
+        return `<td class="arc-mu-major${duenn ? ' arc-mu-major-duenn' : ''}${
+                z.art === 'unter-schwelle' ? ' arc-mu-major-bilanz' : ''
+            }" title="${esc(z.titel)}">${z.inhalt}</td>`
+            + `<td class="arc-mu-major-n${duenn ? ' arc-mu-n-low' : ''}">${
+                m.majorAnzahl == null ? '–' : m.majorAnzahl}</td>`;
     }
 
     function matchupTableHtml(name, opts) {
@@ -931,36 +1174,7 @@
                     <td class="arc-mu-w">${m.wins == null ? '–' : m.wins}</td>
                     <td class="arc-mu-l">${m.losses == null ? '–' : m.losses}</td>
                     <td class="arc-mu-u">${m.ties == null ? '–' : m.ties}</td>
-                    ${!hatMajor ? '' : `<td class="arc-mu-major${
-                        (m.majorAnzahl != null && m.majorAnzahl < 10) ? ' arc-mu-major-duenn' : ''
-                    }" title="${esc(m.majorWr == null
-                        ? (m.majorAnzahl == null
-                            ? L('arc.muMajorFehlt', de
-                                ? 'Keine Präsenzpartien für diese Paarung.'
-                                : 'No in-person games for this pairing.')
-                            : (m.majorBilanzDa
-                                ? L('arc.muMajorNurRemis', de
-                                    ? '{n} Präsenzpartien, alle unentschieden ({b}). Diese Win Rate zählt Siege gegen entschiedene Partien — entschieden ist hier keine. Ein Wert stünde für nichts.'
-                                    : '{n} in-person games, all drawn ({b}). This win rate counts wins against decided games — none here were decided. A number would stand for nothing.')
-                                    .replace('{n}', String(m.majorAnzahl))
-                                    .replace('{b}', [m.majorSiege, m.majorNiederlagen,
-                                        m.majorUnentschieden == null ? '?' : m.majorUnentschieden].join('–'))
-                                : L('arc.muMajorOhneBilanz', de
-                                    ? '{n} Präsenzpartien, aber ohne Bilanz in der Quelle — ohne Siege und Niederlagen lässt sich keine Win Rate bilden. Deshalb steht hier ein Strich statt einer geschätzten Zahl.'
-                                    : '{n} in-person games, but the source row carries no record — without wins and losses there is no win rate to show. Hence the dash instead of an estimate.')
-                                    .replace('{n}', String(m.majorAnzahl))))
-                        : L('arc.muMajorTip', de
-                            ? '{w} aus {n} Präsenzpartien (Bilanz {b}). Dieselbe Rechnung wie die Spalte links: Siege ÷ entschiedene Partien, mit demselben Ausgleich für dünne Paarungen. Roh {r} %.'
-                            : '{w} from {n} in-person games (record {b}). Same calculation as the column on the left: wins ÷ decided games, with the same allowance for thin pairings. Raw {r} %.')
-                            .replace('{w}', fmt(m.majorWr) + ' %')
-                            .replace('{n}', String(m.majorAnzahl))
-                            .replace('{b}', [m.majorSiege, m.majorNiederlagen,
-                                m.majorUnentschieden == null ? '?' : m.majorUnentschieden].join('–'))
-                            .replace('{r}', fmt(m.majorWrRoh)))
-                    }">${m.majorWr == null ? '–' : esc(fmt(m.majorWr)) + ' %'}</td>
-                    <td class="arc-mu-major-n${
-                        (m.majorAnzahl != null && m.majorAnzahl < 10) ? ' arc-mu-n-low' : ''
-                    }">${m.majorAnzahl == null ? '–' : m.majorAnzahl}</td>`}
+                    ${!hatMajor ? '' : praesenzZellen(m, de)}
                 </tr>`;
         }).join('');
         const thinCount = rows.filter(m => m.thin).length;
@@ -969,6 +1183,31 @@
                 ? 'Blasse Zeilen: unter {n} Matches — die Quote ist dort kaum aussagekräftig.'
                 : 'Faded rows: fewer than {n} games — the rate says little there.')
                 .replace('{n}', String(THIN_GAMES)))}</p>`
+            : '';
+        /* DIE SCHWELLE STEHT DA, WO SIE WIRKT. Ohne diesen Satz muesste
+           ein Leser raten, warum in einer Zeile "8–1–0" und in der
+           naechsten "45,5 %" steht. Er erscheint nur, wenn die Spalte
+           ueberhaupt da ist und mindestens eine Zeile darunter liegt —
+           sonst waere er Laerm. Begruendung: siehe MIN_PRAESENZ_PARTIEN. */
+        const unterSchwelle = hatMajor
+            ? rows.filter(m => m.majorAnzahl != null && m.majorBilanzDa
+                && m.majorAnzahl < MIN_PRAESENZ_PARTIEN).length
+            : 0;
+        const praesenzNote = unterSchwelle
+            /* KEIN i18n-Schluessel: js/i18n.js gehoert einem anderen
+               Arbeitspaket. Zweisprachig inline ueber getLang(), wie es
+               das Projekt an Dutzenden Stellen macht. */
+            ? `<p class="arc-mu-note arc-mu-note-praesenz">${esc((de
+                ? 'Major-WR: erst ab {n} Präsenzpartien als Prozentwert. Darunter steht die Bilanz (S–N–U) '
+                  + 'und daneben die Partienzahl — bei {n} Partien verschiebt eine einzige Partie die Quote '
+                  + 'schon um {p} Punkte, darunter entsprechend mehr. Betroffen hier: {k} von {g} Zeilen.'
+                : 'Major WR: shown as a percentage only from {n} in-person games. Below that you get the record (W–L–T) '
+                  + 'next to the game count — at {n} games a single game already moves the rate by {p} points, '
+                  + 'and more below. Affected here: {k} of {g} rows.')
+                .replace(/\{n\}/g, String(MIN_PRAESENZ_PARTIEN))
+                .replace('{p}', fmt(100 / MIN_PRAESENZ_PARTIEN))
+                .replace('{k}', String(unterSchwelle))
+                .replace('{g}', String(rows.length)))}</p>`
             : '';
 
         const table = `
@@ -1035,7 +1274,7 @@
                    dass hier keine anfallen. */
                 : L('arc.muLegendeOhneMajor', de
                     ? 'WR = Win Rate · M = Matches · W/L/T = Siege / Niederlagen / Unentschieden. Präsenzturniere sind hier nicht dabei — für dieses Deck liegen in diesem Format keine vor.'
-                    : 'WR = win rate · M = matches · W/L/T = wins / losses / ties. In-person events are not included — there are none for this deck in this format.'))}</p>${note}`;
+                    : 'WR = win rate · M = matches · W/L/T = wins / losses / ties. In-person events are not included — there are none for this deck in this format.'))}</p>${note}${praesenzNote}`;
         if (!collapsed) return table;
         // Closed by default inline: the tiles are the scroll content, the
         // table is a reference you open when you need it. Otherwise a
@@ -1082,7 +1321,7 @@
                 ${shareBtn}
             </div>`;
         if (v === 'embed') {
-            return `${head}${tilesHtml(name)}`;
+            return `${head}${tilesHtml(name, v)}`;
         }
         const matchups = (v === 'inline')
             ? matchupTableHtml(name, { collapsible: true, preview: 8 })
@@ -1102,7 +1341,7 @@
         const attrs = v === 'overlay'
             ? ` role="dialog" aria-modal="true" aria-label="${esc(name)}"` : '';
         return `<div class="arc-card arc-card--${v}"${attrs}>
-                ${close}${head}${tilesHtml(name)}${matchups}${goto}
+                ${close}${head}${tilesHtml(name, v)}${matchups}${goto}
             </div>`;
     }
 
@@ -1294,6 +1533,9 @@
     // Exposed for tests; not part of the page's own API surface.
     window._archetypeCardInternals = {
         matchupsFor, parseSemicolonCsv, findKey, THIN_GAMES, factsFor,
+        // Fuer ausgefuehrte Zusicherungen: die Mindeststichprobe und die
+        // Entscheidung, die an ihr haengt (07.09.2026).
+        MIN_PRAESENZ_PARTIEN, praesenzZelle, praesenzZellen,
         setData: (decks, conv) => { _decks = decks; _conv = conv; },
         cardHtml, tilesHtml, matchupTableHtml, render, toneFor, shadeFor, barFor,
     };

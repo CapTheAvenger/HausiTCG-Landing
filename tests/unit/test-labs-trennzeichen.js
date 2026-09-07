@@ -111,8 +111,14 @@ describe('Die Labs-Daten aendern die Tier-Einteilung wirklich', () => {
             if (quelle[j] === '{') tiefe++;
             else if (quelle[j] === '}') { tiefe--; if (tiefe === 0) break; }
         }
+        /* BEFUND B2 (07.09.2026): computeTierScore() liest seine
+           Stellschrauben seither aus TIER_SCORE statt aus Literalen. Die
+           Deklaration wird deshalb MITGENOMMEN — ausgefuehrt, nicht
+           abgeschrieben; sonst prueft dieser Test wieder eine Kopie. */
+        const stellschrauben =
+            (/const TIER_SCORE = Object\.freeze\(\{[\s\S]*?\n\s*\}\);/.exec(quelle) || [''])[0];
         // eslint-disable-next-line no-new-func
-        return new Function('return (' + quelle.slice(i, j + 1) + ')')();
+        return new Function(stellschrauben + '\nreturn (' + quelle.slice(i, j + 1) + ');')();
     }
     const computeTierScore = ausQuelle('computeTierScore');
     const aggregateLabsRowsByDeck = ausQuelle('aggregateLabsRowsByDeck');

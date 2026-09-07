@@ -223,7 +223,17 @@ describe('small samples are tamed', () => {
 
     it('the prior matches the one already used in this file', () => {
         assert.equal(compute.CONV_PRIOR, 50);
-        assert.match(SRC, /const PRIOR_GAMES = 50/,
+        /* BEFUND B2 (07.09.2026): der Vorwert stand als `const PRIOR_GAMES
+           = 50` in computeTierScore und wurde hier als TEXT gesucht.
+           Seither steht er in TIER_SCORE — also wird die Deklaration
+           AUSGEFUEHRT und der Wert verglichen, statt eine Schreibweise zu
+           erwarten. Laeuft einer der beiden Vorwerte weg, faellt das hier
+           auf; wer sie bewusst trennt, muss diese Zeile anfassen. */
+        const dekl = /const TIER_SCORE = Object\.freeze\(\{[\s\S]*?\n\s*\}\);/.exec(SRC);
+        assert.ok(dekl, 'TIER_SCORE steht nicht mehr in js/app-tier-meta.js');
+        // eslint-disable-next-line no-new-func
+        const tierScore = new Function(dekl[0] + '\nreturn TIER_SCORE;')();
+        assert.equal(tierScore.PRIOR_GAMES, compute.CONV_PRIOR,
             'computeTierScore changed its prior — keep the two in step or say why');
     });
 });

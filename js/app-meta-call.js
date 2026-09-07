@@ -56,6 +56,24 @@ window.MetaCall = (function () {
                            // online_tournament_scraper. Always present;
                            // serves as the 20 % minority component in
                            // the 3-source blend below.
+  /* DIE ONLINE-BILANZ, ZEILENWEISE (07.09.2026).
+     `onlineWinPct` ist S/(S+N+U) und traegt damit die
+     Unentschieden-Quote des Online-Feldes in sich. Um sie gegen eine
+     Papierquote verrechnen zu koennen, braucht Predictor 5.3 den
+     Unentschieden-Anteil desselben Decks — sonst misst die Differenz
+     zum groessten Teil, wie oft ein Feld unentschieden spielt. Zwei
+     Quellen, in dieser Reihenfolge:
+       1. data/limitless_online_decks.csv — dieselbe Grundgesamtheit,
+          aus der auch win_rate_numeric kommt. Exakt.
+       2. die Summe der `record`-Spalten aus
+          data/limitless_online_decks_matchups.csv, die ohnehin geladen
+          wird. Deckt nur die gelisteten Gegner ab; gemessen ueber die
+          100 Decks, die in beiden Dateien stehen, weicht die daraus
+          gerechnete S/(S+N)-Quote im Median 0,05 pp und maximal 0,58 pp
+          von der exakten ab.
+     Fehlt beides, bekommt das Deck KEINEN Schub — geraten wird nicht. */
+  let _onlineBilanzByDeck   = {}; // normalize(deck) -> { s, n, u, quelle }
+  let _onlineMatchupBilanz  = {}; // normalize(deck) -> { s, n, u } aus der Matchup-Datei
   let _majorMatchupMap     = null; // overall day_filter (legacy / fallback anchor)
   let _majorMatchupMapDay1 = null; // day_filter='day1' rows — full Swiss field
   let _majorMatchupMapDay2 = null; // day_filter='day2' rows — cut-qualifying field
@@ -107,7 +125,54 @@ window.MetaCall = (function () {
   // so the floor stays — sparse pairs default to honest 50/50.
   const MAJOR_MATCHUP_MIN_GAMES_PAST = 3;
   const MAJOR_MATCHUP_TIE_RATE = 0.02;     // labs CSV doesn't carry tie rate; use the same default the online matrix uses
-  let _deckWRAdjustment = {}; // normalize(deck) -> pp delta (labs WR − online cumulative WR). Predictor 5.3 — corrects the matchup simulator for the gap between online-ladder WR (elite-pilot inflated) and major-tournament WR (typical pilot). See _computeMatchupAdjustments() and applied in getBaseMatchup().
+
+  /* ══════════════════════════════════════════════════════════════════
+     GEMESSENE FELDGROESSEN — AN EINER STELLE UND NACHPRUEFBAR
+
+     WARUM DIESE TABELLE EXISTIERT (07.09.2026). Bis heute standen die
+     Unentschieden-Quoten dieses Moduls in zwei Kommentarbloecken
+     ausgeschrieben: "10,95 % (gemessen in
+     data/labs_tournament_matchups_TEF-PBL.csv, 6.121 Partien)" und
+     "Limitless Online 1,28 % (2.248 von 174.954)". Beide waren zum
+     Zeitpunkt der Pruefung falsch — die Dateien sind seither
+     gewachsen, die Saetze nicht. Gerechnet wurde zwar nie mit diesen
+     Zahlen (die Quote kommt zur Laufzeit aus der Datei, siehe
+     `aggUnentschieden` und `_unentschiedenQuote`), aber ein Kommentar,
+     der eine Messung behauptet, die die Datei nicht mehr hergibt, ist
+     eine falsche Quellenangabe.
+
+     Jetzt stehen die Zahlen EINMAL, maschinenlesbar, und
+     tests/unit/test-praesenz-unentschieden-belegt.js rechnet jede
+     davon gegen ihre Datei nach. Laufen sie auseinander, wird der Test
+     rot statt der Kommentar still falsch. Wer die Zahlen anfasst,
+     ohne nachzumessen, merkt es sofort.
+
+     `toleranzPp` ist der Spielraum, in dem die Datei sich bewegen
+     darf, bevor der Eintrag nachgezogen werden muss.
+     ══════════════════════════════════════════════════════════════════ */
+  const BELEGTE_FELDQUOTEN = {
+    unentschiedenPraesenz: {
+      was:        'Anteil unentschiedener Partien im Praesenzfeld',
+      datei:      'data/labs_tournament_matchups_TEF-PBL.csv',
+      auswahl:    "day_filter='overall', Zeilen mit vs_wins/vs_losses",
+      anteilPz:   11.05,
+      partien:    6192,
+      toleranzPp: 0.30,
+      stand:      '07.09.2026',
+    },
+    unentschiedenOnline: {
+      was:        'Anteil unentschiedener Partien in den Limitless-Online-Turnieren',
+      datei:      'data/limitless_online_decks.csv',
+      auswahl:    'Summe ueber alle Zeilen (wins/losses/ties)',
+      anteilPz:   1.29,
+      partien:    180414,
+      toleranzPp: 0.10,
+      stand:      '07.09.2026',
+    },
+  };
+  if (typeof window !== 'undefined') window._mcBelegteFeldquoten = BELEGTE_FELDQUOTEN;
+
+  let _deckWRAdjustment = {}; // normalize(deck) -> pp delta in der Konvention S/(S+N) (Papier minus Online, beide ohne Unentschieden). Predictor 5.3 — corrects the matchup simulator for the gap between online-tournament play (elite-pilot inflated) and major-tournament play (typical pilot). See _p53Delta() / _computeMatchupAdjustments(), applied in getBaseMatchup().
   let _shareList  = null;  // [{name, onlineShare}] sorted desc — onlineShare is the
                             // PREDICTED share once Predictor 2.0 has run; the raw ladder
                             // share is kept on each entry as `ladderShare` for the badge.
@@ -1263,6 +1328,35 @@ window.MetaCall = (function () {
     return (s / partien) * 100;
   }
 
+  /**
+   * Siegquote der ENTSCHIEDENEN Partien einer Labs-Deckzeile: S/(S+N).
+   *
+   * WARUM ES DIESE ZWEITE GIBT (07.09.2026). `_labsDeckWr` rechnet
+   * S/(S+N+U) — dieselbe Formel wie die Online-Spalte, und trotzdem
+   * nicht dieselbe Groesse: die Zahl haengt daran, wie oft im Feld
+   * unentschieden gespielt wird, und das ist online (1,29 %) und auf
+   * Papier (11,05 % bei den Worlds in San Francisco) um den Faktor
+   * neun verschieden. Wer die beiden voneinander ABZIEHT, misst zum
+   * groessten Teil diesen Unterschied. S/(S+N) kuerzt ihn heraus.
+   *
+   * Angezeigt wird weiter `_labsDeckWr` — dort steht die Zahl allein
+   * und soll sagen, wie das Deck bei diesem Turnier abgeschnitten hat.
+   * Verrechnet wird diese hier. Siehe `_p53Delta`.
+   *
+   * @param {object} r        Zeile aus labs_tournament_decks.csv
+   * @param {string} praefix  '', 'day1_' oder 'day2_'
+   * @returns {number|null}   S/(S+N) in Prozent, oder null ohne Bilanz
+   */
+  function _labsDeckWrOhneU(r, praefix) {
+    var p = praefix || '';
+    var s = _labsGanz(r[p + 'wins']);
+    var n = _labsGanz(r[p + 'losses']);
+    if (s == null || n == null) return null;
+    var entschieden = s + n;
+    if (entschieden <= 0) return null;
+    return (s / entschieden) * 100;
+  }
+
   /** Partienzahl hinter _labsDeckWr — der Nenner, der mitgetragen wird. */
   function _labsDeckPartien(r, praefix) {
     var p = praefix || '';
@@ -1601,11 +1695,22 @@ window.MetaCall = (function () {
          — dieselbe, die js/win-rate-konvention.js am 20.08. entfernt und
          ausdruecklich nicht mehr auffuehrt.
 
-         Die Spalte darueber heisst woertlich "Win %". Auf dieser Seite
-         ist Win % seit jeher S/(S+N+U) — so rechnet
-         limitless_online_decks.csv, und so rechnet Limitless selbst:
-         Mega Excadrill 6.430-6.666-110 zeigt dort 48,69 %, und
-         6.430 / 13.206 = 48,69.
+         Was diese Spalte rechnet, ist S/(S+N+U) — so rechnet
+         limitless_online_decks.csv (win_rate_numeric), und so rechnet
+         Limitless in seiner Online-Deckuebersicht: Mega Excadrill steht
+         dort am 07.09.2026 auf 6.732-6.978-117 und zeigt 48,69 %;
+         6.732 / 13.827 = 48,69. (Beim Schreiben dieses Blocks am
+         01.09.2026 waren es 6.430-6.666-110 und dieselben 48,69 % —
+         die Bilanz waechst, die Rechnung bleibt.)
+
+         DER NAME DIESER SPALTE IST NICHT "Win %" (Nachtrag 07.09.2026).
+         Hier stand "Auf dieser Seite ist Win % seit jeher S/(S+N+U)".
+         Das gilt seit dem 05.09.2026 nicht mehr: an diesem Tag hat der
+         Betreiber "Win %" der Konvention (3S+U)/3n zugewiesen — der
+         Bezeichnung, unter der Limitless dieselbe Spalte fuehrt. Die
+         Rechnung hier ist unveraendert richtig, sie heisst nur anders;
+         den Namen holt sich die Anzeige aus
+         js/win-rate-konvention.js (siehe _frozenWrHinweis).
 
          WAS SICH DADURCH AENDERT, gemessen: alle 14 Epochen sortieren
          sich um, groesster Sprung 18 Plaetze (Mega Lopunny in SVI-ASC,
@@ -7110,6 +7215,10 @@ window.MetaCall = (function () {
               _lastMajorByDeck[k] = {
                 share:        share,
                 winPct:       _labsDeckWr(r, ''),
+                /* Dieselbe Bilanz in der Konvention, die Predictor 5.3
+                   verrechnen darf — siehe _labsDeckWrOhneU. */
+                winPctOhneU:  _labsDeckWrOhneU(r, ''),
+                winPctEntschieden: (_labsGanz(r.wins) || 0) + (_labsGanz(r.losses) || 0),
                 winPctPartien: _labsDeckPartien(r, ''),
                 players:      parseInt(r.player_count || '0', 10) || 0,
                 day1Players:  parseInt(r.day1_players || '0', 10) || 0,
@@ -7379,11 +7488,22 @@ window.MetaCall = (function () {
       const matchRows = parseCSV(await matchResp.text(), ';');
 
       _matchupMap = {};
+      _onlineMatchupBilanz = {};
       matchRows.forEach(r => {
         if (!r.deck_name || !r.opponent) return;
         const dk = normalize(r.deck_name);
         const ok = normalize(r.opponent);
         if (!_matchupMap[dk]) _matchupMap[dk] = {};
+        /* Die Bilanz laeuft hier ohnehin durch die Hand — sie wird
+           mitgezaehlt, damit Predictor 5.3 einen gemessenen
+           Unentschieden-Anteil hat, wenn die Deckdatei fehlt. */
+        if (r.record && r.record.includes('-')) {
+          const bz = r.record.split(/\s*-\s*/).map(x => parseInt(String(x).trim(), 10) || 0);
+          if (!_onlineMatchupBilanz[dk]) _onlineMatchupBilanz[dk] = { s: 0, n: 0, u: 0 };
+          _onlineMatchupBilanz[dk].s += (bz[0] || 0);
+          _onlineMatchupBilanz[dk].n += (bz[1] || 0);
+          _onlineMatchupBilanz[dk].u += (bz[2] || 0);
+        }
         /* ══════════════════════════════════════════════════════════
            ZWEI FEHLER AN EINER STELLE (06.09.2026, gemessen an
            data/limitless_online_decks_matchups.csv, 1.702 Zeilen).
@@ -7464,6 +7584,11 @@ window.MetaCall = (function () {
       // shift pWin by (adj[A] − adj[B]) / 100 so the simulator
       // reflects the tournament-pilot reality. Sample-size and
       // magnitude guards keep the correction conservative.
+      /* Erst die Bilanz holen, dann rechnen — ohne sie faellt der
+         Schub auf die Matchup-Naeherung zurueck (siehe
+         _onlineUnentschiedenAnteil). Ein Fehlschlag ist nicht
+         toedlich. */
+      try { await _ladeOnlineBilanz(); } catch (_e) { /* nicht toedlich */ }
       _computeMatchupAdjustments();
 
       // ── Der Rennlauf, den niemand gewinnen konnte (20.08.2026) ──
@@ -7559,14 +7684,24 @@ window.MetaCall = (function () {
              DER BEFUND (Agententeam B, 06.09.2026). calcDay2 rechnet ein
              PRAESENZTURNIER, zieht seine Unentschieden-Quote aber aus
              der ONLINE-Matrix (`base.pTie`) bzw. aus
-             MAJOR_MATCHUP_TIE_RATE = 0,02. Gemessen:
+             MAJOR_MATCHUP_TIE_RATE = 0,02.
 
-                 Limitless Online      1,28 %   (2.248 von 174.954)
-                 Worlds SF (TEF-PBL)  10,95 %   (aus dieser Datei)
-                 alle Majors zusammen 15,30 %
+             DIE ZAHLEN STEHEN IN BELEGTE_FELDQUOTEN, NICHT HIER
+             (07.09.2026). An dieser Stelle stand "Limitless Online
+             1,28 % (2.248 von 174.954) · Worlds SF (TEF-PBL) 10,95 %
+             · alle Majors zusammen 15,30 %". Nachgemessen am
+             07.09.2026 sind es 1,29 % (2.322 von 180.414) und 11,05 %
+             (684 von 6.192). Die dritte Zeile war schon damals keine
+             eigene Messung: die zwoelf abgeschlossenen Epochen tragen
+             keine Bilanz, deshalb IST "alle Majors zusammen" heute
+             dieselbe Zahl wie TEF-PBL — 11,05 % aus denselben 6.192
+             Partien. Sie ist ersatzlos gestrichen, weil sie sich aus
+             der Datei nicht herstellen laesst.
 
-             Auf Papier wird also fuenf- bis zwoelfmal haeufiger
-             unentschieden gespielt als online.
+             Auf Papier wird also rund neunmal haeufiger unentschieden
+             gespielt als online (BELEGTE_FELDQUOTEN, gegen die Dateien
+             nachgerechnet in
+             tests/unit/test-praesenz-unentschieden-belegt.js).
 
              WIE GROSS DIE WIRKUNG WIRKLICH IST — und warum die erste
              Schaetzung dazu falsch war. Der Befund kam mit der Rechnung
@@ -7598,7 +7733,9 @@ window.MetaCall = (function () {
              bleibt offen und gehoert nicht weggerechnet.
 
              Nebenbei nicht monoton: bei 15,3 % Unentschieden faellt die
-             Chance wieder auf 13,1 %. Mehr Unentschieden verschmaelert
+             Chance wieder auf 13,1 % (eine Rechnung ueber die Kette,
+             kein gemessener Feldwert — 15,3 % kommen in keiner Datei
+             mehr vor, siehe oben). Mehr Unentschieden verschmaelert
              die Verteilung (hilft) und senkt den Mittelwert (schadet);
              welches ueberwiegt, haengt an der Schwelle.
 
@@ -8172,31 +8309,143 @@ window.MetaCall = (function () {
   //   - Need a non-zero online WR (otherwise the delta is undefined).
   //   - Adjustment clamped to [-12, +12] pp so a freak outlier major
   //     can't swing the simulator wildly.
+  /**
+   * Die Online-Bilanz je Deck — Siege, Niederlagen UND Unentschieden.
+   *
+   * data/limitless_online_decks_comparison.csv, aus der `onlineWinPct`
+   * kommt, fuehrt nur die fertige Quote. Der Nenner dahinter steht in
+   * data/limitless_online_decks.csv, derselben Erhebung (Spalte
+   * win_rate_numeric der einen ist Spalte new_winrate der anderen).
+   * Ohne Datei bleibt die Karte leer und der Aufrufer nimmt die
+   * Naeherung aus der Matchup-Datei.
+   */
+  async function _ladeOnlineBilanz() {
+    _onlineBilanzByDeck = {};
+    const resp = await fetch('data/limitless_online_decks.csv?t=' + Date.now());
+    if (!resp.ok) return false;
+    const rows = parseCSV(await resp.text(), ';');
+    rows.forEach(r => {
+      if (!r.deck_name) return;
+      const s = parseInt(String(r.wins   || '').trim(), 10);
+      const n = parseInt(String(r.losses || '').trim(), 10);
+      const u = parseInt(String(r.ties   || '').trim(), 10);
+      if (!Number.isFinite(s) || !Number.isFinite(n)) return;
+      if (s + n <= 0) return;
+      _onlineBilanzByDeck[normalize(r.deck_name)] = {
+        s, n, u: Number.isFinite(u) ? u : 0, quelle: 'decks',
+      };
+    });
+    return Object.keys(_onlineBilanzByDeck).length > 0;
+  }
+
+  /**
+   * Der Unentschieden-Anteil eines Decks ONLINE, 0..1 — und woher er kommt.
+   * @returns {{anteil:number, quelle:string, partien:number}|null}
+   */
+  function _onlineUnentschiedenAnteil(k) {
+    const b = _onlineBilanzByDeck[k];
+    if (b && (b.s + b.n + b.u) > 0) {
+      return { anteil: b.u / (b.s + b.n + b.u), quelle: 'decks', partien: b.s + b.n + b.u };
+    }
+    const m = _onlineMatchupBilanz[k];
+    if (m && (m.s + m.n + m.u) > 0) {
+      return { anteil: m.u / (m.s + m.n + m.u), quelle: 'matchups', partien: m.s + m.n + m.u };
+    }
+    return null;
+  }
+
+  /**
+   * Predictor 5.3, die eigentliche Rechnung — als reine Funktion, damit
+   * sie einzeln nachgerechnet werden kann.
+   *
+   * DER BEFUND (07.09.2026). Am 05.09. wurde hier ein erster stiller
+   * Groessenwechsel behoben: es stand eine Matchpunktquote gegen eine
+   * Siegquote. Seitdem stehen auf beiden Seiten S/(S+N+U) — dieselbe
+   * FORMEL, und trotzdem nicht dieselbe GROESSE. S/(S+N+U) faellt, je
+   * oefter im Feld unentschieden gespielt wird, und die beiden Felder
+   * unterscheiden sich darin um den Faktor neun:
+   *
+   *     online (data/limitless_online_decks.csv)      1,29 %
+   *     Worlds SF (labs_tournament_matchups_TEF-PBL)  11,05 %
+   *
+   * Nachgemessen ueber die elf Decks, die beim letzten Major die
+   * 20-Spieler-Schwelle nehmen (Worlds San Francisco, tournament_id
+   * 0071):
+   *
+   *     in S/(S+N+U):  Mittel −5,86 pp, 10 von 11 negativ
+   *     in S/(S+N)  :  Mittel −1,17 pp,  8 von 11 negativ
+   *
+   * Das einheitliche Vorzeichen war die Unentschieden-Quote, nicht der
+   * Pilot. Fuer Mega Excadrill (112-122-20 auf Papier, 48,69 % online):
+   * −4,60 pp gegen −1,26 pp — drei Viertel des "Elite-Piloten-Effekts"
+   * waren eine Umrechnung.
+   *
+   * DIE RICHTUNG DER UMRECHNUNG. Umgerechnet wird auf S/(S+N), nicht
+   * auf S/(S+N+U). Nicht aus Geschmack: S/(S+N) ist die einzige der
+   * drei Hauskonventionen, in der sich der Unentschieden-Anteil
+   * herauskuerzt (S/(S+N+U) = S/(S+N) · (1−u)). Eine Umrechnung in die
+   * andere Richtung muesste eine der beiden Seiten in das
+   * Unentschieden-Regime der anderen versetzen — also unterstellen, wie
+   * oft ein Deck online unentschieden gespielt HAETTE, waere es bei
+   * Worlds angetreten. Das ist eine Annahme; das Herauskuerzen ist
+   * keine. Der zweite Grund steht bei der Anwendung in
+   * getBaseMatchup(): die Kette stellt jede Paarung spaeter ohnehin auf
+   * die Praesenz-Unentschieden-Quote um, und diese Umstellung laesst
+   * S/(S+N) unangetastet — ein Schub in dieser Konvention ueberlebt
+   * sie unveraendert, ein Schub auf pWin wuerde mitskaliert.
+   *
+   * @param {object} lm   Eintrag aus _lastMajorByDeck
+   * @param {number} onlineWinPctMitU  d.onlineWinPct, Konvention mitUnentschieden
+   * @param {object|null} uOnline  Rueckgabe von _onlineUnentschiedenAnteil
+   * @returns {{delta:number, papier:number, online:number, uOnlineQuelle:string}|null}
+   *          null, wenn eine der beiden Seiten fehlt — dann wird nicht
+   *          geschoben statt geraten.
+   */
+  function _p53Delta(lm, onlineWinPctMitU, uOnline) {
+    if (!lm || !(lm.winPctOhneU > 0)) return null;
+    if (!(onlineWinPctMitU > 0)) return null;
+    if (!uOnline || !(uOnline.anteil >= 0) || !(uOnline.anteil < 1)) return null;
+    const W = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+    const onlineOhneU = W
+      ? W.nachOhneUnentschieden(onlineWinPctMitU, uOnline.anteil)
+      : onlineWinPctMitU / (1 - uOnline.anteil);
+    if (!Number.isFinite(onlineOhneU) || !(onlineOhneU > 0)) return null;
+    /* Die Subtraktion geht durch WinRateKonvention.differenz(): die
+       verweigert sie, wenn die beiden Seiten nicht dieselbe Konvention
+       tragen. Genau dieser Fehler stand hier zweimal. */
+    const roh = W
+      ? W.differenz(
+          { wert: lm.winPctOhneU, konvention: 'ohneUnentschieden' },
+          { wert: onlineOhneU,    konvention: 'ohneUnentschieden' })
+      : (lm.winPctOhneU - onlineOhneU);
+    if (!Number.isFinite(roh)) return null;
+    return {
+      delta: _clip(roh, -12, 12),
+      papier: lm.winPctOhneU,
+      online: onlineOhneU,
+      uOnlineQuelle: uOnline.quelle,
+    };
+  }
+
   function _computeMatchupAdjustments() {
     _deckWRAdjustment = {};
     if (!_shareList) return;
     let count = 0;
+    let ohneBilanz = 0;
     _shareList.forEach(d => {
       const k = normalize(d.name);
       const lm = _lastMajorByDeck[k];
-      /* BEIDE SEITEN IN DERSELBEN KONVENTION (05.09.2026).
-         `lm.winPct` kommt jetzt aus der Bilanz als S/(S+N+U) — genau
-         die Rechnung, mit der auch `d.onlineWinPct` aus
-         limitless_online_decks.csv (win_rate_numeric) gebildet ist.
-         Vorher stand hier die Matchpunktquote gegen eine Win Rate:
-         ueber alle 1.155 Zeilen mit day1_players >= 20 war diese
-         Differenz IN JEDER ZEILE positiv (Mittel +5,11 pp), die
-         1,0-pp-Rauschsperre unten griff bei 99,91 % der Zeilen nicht.
-         Der "Elite-Piloten-Effekt" war zum grossen Teil eine
-         Einheitenumrechnung. */
-      if (!lm || !(lm.day1Players >= 20) || !(lm.winPct > 0)) return;
-      const onlineWr = d.onlineWinPct || 0;
-      if (onlineWr <= 0) return;
-      const delta = _clip(lm.winPct - onlineWr, -12, 12);
+      /* BEIDE SEITEN IN DERSELBEN KONVENTION — UND IN DER RICHTIGEN
+         (05.09.2026 / 07.09.2026). Die Begruendung steht vollstaendig
+         bei _p53Delta. Kurz: dieselbe Formel reicht nicht, wenn die
+         beiden Felder verschieden oft unentschieden spielen. */
+      if (!lm || !(lm.day1Players >= 20)) return;
+      const res = _p53Delta(lm, d.onlineWinPct || 0, _onlineUnentschiedenAnteil(k));
+      if (!res) { ohneBilanz++; return; }
       // Skip negligible deltas to keep the map small and the apply
       // path cheap.
-      if (Math.abs(delta) < 1.0) return;
-      _deckWRAdjustment[k] = delta;
+      if (Math.abs(res.delta) < 1.0) return;
+      _deckWRAdjustment[k] = res.delta;
       count++;
     });
     if (count > 0) {
@@ -8204,8 +8453,9 @@ window.MetaCall = (function () {
         .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
         .slice(0, 5)
         .map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v.toFixed(1)}pp`);
-      console.info('[MetaCall] predictor 5.3 — Matchup WR adjustments computed for',
-        count, 'decks. Largest:', top.join(', '));
+      console.info('[MetaCall] predictor 5.3 — Schub in S/(S+N) fuer',
+        count, 'Decks berechnet. Groesste:', top.join(', '),
+        ohneBilanz ? `· ${ohneBilanz} ohne Online-Bilanz uebersprungen` : '');
     }
   }
 
@@ -8527,22 +8777,43 @@ window.MetaCall = (function () {
     }
     // If sources.length === 0 → no labs data for this pair → leave
     // `base` as the online-only matchup. Caller proceeds normally.
-    // Predictor 5.3 — apply per-deck WR adjustments. adj is in pp,
-    // pWin is 0..1, so divide by 100 to convert. The delta is split
-    // between deckA "gets better" and deckB "gets worse"; we apply
-    // half as a shift to pWin to keep ties roughly invariant. Clamp
-    // to [0.05, 0.95] so the simulator never sees a degenerate
-    // matchup (zero or certain).
+    /* Predictor 5.3 — der Schub je Deck, angewandt.
+     *
+     * DER SCHUB IST EINE S/(S+N)-DIFFERENZ (07.09.2026, siehe
+     * _p53Delta), also wird er auch auf die S/(S+N)-Quote der Paarung
+     * gerechnet und nicht mehr auf pWin. Vorher stand hier
+     * `base.pWin + shift`: eine Differenz zweier Quoten OHNE
+     * Unentschieden wurde auf eine Wahrscheinlichkeit MIT
+     * Unentschieden addiert — derselbe stille Groessenwechsel, nur
+     * eine Ebene tiefer.
+     *
+     * Der praktische Unterschied ist nicht die eine Nachkommastelle
+     * (pWin ist um den Faktor 1−pTie kleiner), sondern was danach
+     * passiert: calcDay2 stellt jede Paarung ueber
+     * _mitPraesenzUnentschieden auf die gemessene
+     * Praesenz-Unentschieden-Quote um, und diese Umstellung LAESST
+     * S/(S+N) unveraendert und skaliert pWin. Ein Schub auf pWin
+     * wuerde dabei mitskaliert und haette am Ende eine andere Groesse
+     * als die gemessene Differenz; ein Schub auf die Quote kommt
+     * unveraendert an.
+     *
+     * Geklemmt wird die QUOTE auf [5 %, 95 %], damit die Kette nie
+     * eine schon entschiedene Paarung sieht.
+     */
     const adjA = _deckWRAdjustment[a] || 0;
     const adjB = _deckWRAdjustment[b] || 0;
     // Auf einen Platzhalter wird nichts geschoben — sonst wird aus
     // "wir wissen es nicht" eine Zahl mit Nachkommastelle.
     if (base.ohneMessung) return base;
     if (adjA === 0 && adjB === 0) return base;
-    const shift = (adjA - adjB) / 100;
-    const pWin = _clip(base.pWin + shift, 0.05, 0.95);
     const pTie = base.pTie;
-    const pLoss = Math.max(0, 1 - pWin - pTie);
+    const sn = (base.pWin || 0) + (base.pLoss || 0);
+    if (!(sn > 0)) return base;
+    const quoteVorher = base.pWin / sn;            // S/(S+N), 0..1
+    const quoteNachher = _clip(quoteVorher + (adjA - adjB) / 100, 0.05, 0.95);
+    const rest = Math.max(0, 1 - pTie);
+    const pWin = quoteNachher * rest;
+    const pLoss = Math.max(0, rest - pWin);
     return { pWin, pTie, pLoss, partien: base.partien || 0 };
   }
 
@@ -8734,9 +9005,16 @@ window.MetaCall = (function () {
    *
    * DER BEFUND (Agententeam B, 06.09.2026). calcDay2 rechnet ein
    * PRAESENZTURNIER, bezog seine Unentschieden-Quote aber aus der
-   * Online-Matrix — dort steht 1,28 %, weil online kaum unentschieden
-   * gespielt wird. Auf Papier sind es 10,95 % (gemessen in
-   * data/labs_tournament_matchups_TEF-PBL.csv, 6.121 Partien).
+   * Online-Matrix — dort steht 1,29 %, weil online kaum unentschieden
+   * gespielt wird. Auf Papier sind es 11,05 %.
+   *
+   * BEIDE ZAHLEN STEHEN IN BELEGTE_FELDQUOTEN und werden von
+   * tests/unit/test-praesenz-unentschieden-belegt.js gegen ihre Dateien
+   * nachgerechnet. Hier standen bis zum 07.09.2026 "1,28 %" und
+   * "10,95 % ... 6.121 Partien" — beides war ueberholt (heute 2.322 von
+   * 180.414 und 684 von 6.192). Gerechnet wurde nie mit diesen Zahlen;
+   * die Quote kommt aus der Datei. Aber eine Quellenangabe, die die
+   * Datei nicht mehr hergibt, ist keine Quellenangabe.
    *
    * Wirkung, nachgerechnet (8 Runden, 16 Punkte, S:N wie gemessen):
    * 12,9 % -> 14,0 %, also rund +1,1 pp. Die Rechnung, die daraus
@@ -8750,7 +9028,7 @@ window.MetaCall = (function () {
    * weggerechnet.
    *
    * Warum eine EINZIGE Quote und nicht die Quote je Paarung: online
-   * liegt der Schnitt bei 1,28 %, die meisten Paarungen haben null
+   * liegt der Schnitt bei 1,29 %, die meisten Paarungen haben null
    * Unentschieden. Diese Nullen mit Faktor neun hochzuskalieren waere
    * Rauschen mit Vorzeichen. Eine gemessene Feldquote ist die ehrlichere
    * Aussage.
@@ -10520,7 +10798,7 @@ window.MetaCall = (function () {
       return `<div class="mc-encounter-row">
         <div>
           <div class="mc-enc-name" title="${esc(deck.name)}">${esc(name)}${jTag}</div>
-          <div class="mc-enc-wr ${wrCls}" title="${esc(t('mc.wrNennerTitel'))}">WR ${wrPct}${_mcPz()}${wrN} · P(1×) ${p1.toFixed(0)}${_mcPz()} · P(2×) ${p2.toFixed(0)}${_mcPz()}</div>
+          <div class="mc-enc-wr ${wrCls}" title="${esc(t('mc.wrNennerTitel') + ' · ' + _wrKonventionsTitel('ohneUnentschieden'))}">WR ${wrPct}${_mcPz()}${wrN} · P(1×) ${p1.toFixed(0)}${_mcPz()} · P(2×) ${p2.toFixed(0)}${_mcPz()}</div>
         </div>
         <div class="mc-enc-bar-bg"><div class="mc-enc-bar-fill" style="width:${barW}%"></div></div>
         <div class="mc-enc-val">∅ ${_mcNum(lambda, 2)}</div>
@@ -11470,9 +11748,21 @@ window.MetaCall = (function () {
             ? ` · Predictor 5.3 für ${deck}: ${adj > 0 ? '+' : '−'}${_mcNum(Math.abs(adj), 2)} pp`
             : ` · Predictor 5.3 for ${deck}: ${adj > 0 ? '+' : '−'}${_mcNum(Math.abs(adj), 2)} pp`)
         : '';
+      /* DER TOOLTIP NANNTE DIE GROESSE NICHT, DIE ER BESCHREIBT
+         (07.09.2026). Hier stand "die gemessene Differenz zwischen der
+         Win % des Decks beim letzten Major und seiner kumulativen
+         Online-Win %". "Win %" ist im Haus der Name EINER von drei
+         Konventionen — und keine der beiden Seiten dieser Differenz
+         wird darin gerechnet. Beide werden auf S/(S+N) umgerechnet,
+         weil sich nur dort der Unentschieden-Anteil herauskuerzt (auf
+         Papier 11,05 %, online 1,29 %). Der Satz sagt das jetzt, und
+         die Formel kommt aus js/win-rate-konvention.js. */
+      const konv = (typeof window !== 'undefined' && window.WinRateKonvention)
+        ? window.WinRateKonvention.KONVENTIONEN.ohneUnentschieden.formel
+        : 'S / (S + N)';
       const titel = _mcIstDeutsch()
-        ? 'Nennwerte des Paarungs-Mixes. Fehlt für ein Deckpaar eine Quelle, werden die verbleibenden Gewichte auf 100 % hochgerechnet. Der Predictor-5.3-Wert ist die gemessene Differenz zwischen der Win % des Decks beim letzten Major und seiner kumulativen Online-Win % — sie wird in getBaseMatchup auf die Siegwahrscheinlichkeit aufgeschlagen.'
-        : 'Nominal weights of the matchup mix. When a source is missing for a pair, the remaining weights are renormalised to 100 %. The Predictor 5.3 value is the measured gap between the deck\u2019s Win % at the last major and its cumulative online Win % — getBaseMatchup adds it to the win probability.';
+        ? 'Nennwerte des Paarungs-Mixes. Fehlt für ein Deckpaar eine Quelle, werden die verbleibenden Gewichte auf 100 % hochgerechnet. Der Predictor-5.3-Wert ist die gemessene Differenz zwischen dem Abschneiden des Decks beim letzten Major und seinem Abschneiden in den Limitless-Online-Turnieren — beide Seiten in der Konvention ' + konv + ' (Siegquote ohne Unentschieden). Nur diese Konvention ist zwischen den beiden Feldern vergleichbar: auf Papier enden rund 11 % der Partien unentschieden, online rund 1 %, und eine Quote, die Unentschieden im Nenner führt, misst dann vor allem diesen Unterschied. Die Differenz wird in getBaseMatchup auf dieselbe Quote der Paarung aufgeschlagen.'
+        : 'Nominal weights of the matchup mix. When a source is missing for a pair, the remaining weights are renormalised to 100 %. The Predictor 5.3 value is the measured gap between how the deck did at the last major and how it does in Limitless online tournaments — both sides in the ' + konv + ' convention (win share excluding ties). Only that convention is comparable across the two fields: about 11 % of games on paper end in a tie versus about 1 % online, so any rate that keeps ties in the denominator would mostly measure that difference. getBaseMatchup adds the gap to the pair\u2019s rate in the same convention.';
       return ` <span class="mc-predictor-banner-gewichtung" title="${esc(titel)}">${esc(kern + schub)}</span>`;
     })();
 
@@ -11764,13 +12054,34 @@ window.MetaCall = (function () {
      (05.09.2026). Bis heute stand hier "(WR 46 %)" ohne Partienzahl,
      obwohl die Bilanz im selben Objekt liegt. 46 % aus 1.181 Partien
      und 46 % aus 9 sahen gleich aus. */
-  function _wrChip(wert, partien) {
+  /* UND JEDE QUOTE TRAEGT IHRE KONVENTION (07.09.2026). Auf derselben
+     Deckzeile stehen zwei Quoten, die beide "WR" heissen und nach
+     verschiedenen Formeln gerechnet sind: dieser Chip zeigt die
+     Papierquote aus der Labs-Bilanz, S/(S+N+U); die Begegnungsliste
+     ein paar Zeilen tiefer zeigt S/(S+N) (siehe `_anzeigeQuote`). Der
+     Unterschied ist nicht klein — bei den Worlds in San Francisco
+     enden 11,05 % der Partien unentschieden, das sind rund fuenf
+     Punkte. Der Kurzname und die Formel haengen deshalb als title an
+     der Zahl; die Texte kommen aus js/win-rate-konvention.js, damit
+     Name und Formel nicht wieder auseinanderlaufen koennen. */
+  function _wrKonventionsTitel(konventionId) {
+    const W = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+    if (!W) return '';
+    const k = W.hol(konventionId);
+    if (!k) return '';
+    return W.kurz(konventionId) + ' — ' + W.hinweis(konventionId);
+  }
+
+  function _wrChip(wert, partien, konventionId) {
     if (wert == null || !(wert > 0)) return '';
     const z = wert.toFixed(0).replace('.', ',');
     const n = (typeof partien === 'number' && partien > 0)
       ? ' · ' + window.zahlLokal(partien)
       : '';
-    return ` (WR ${z} %${n})`;
+    const titel = _wrKonventionsTitel(konventionId || 'mitUnentschieden');
+    return titel
+      ? ` (<span class="mc-wr-chip" title="${esc(titel)}">WR ${z} %${n}</span>)`
+      : ` (WR ${z} %${n})`;
   }
 
   function _intelStatTile(label, value, extra, extraCls) {
