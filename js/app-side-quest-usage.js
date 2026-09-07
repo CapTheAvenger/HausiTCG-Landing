@@ -60,6 +60,11 @@
             moves: 'Attacken', item: 'Item', ability: 'Fähigkeit', nature: 'Wesen',
             spread: 'Statuswertpunkte', mates: 'Teampartner',
             noShare: 'ohne Anteilswerte', more: (n) => `+${n} weitere`,
+            // Was der Doppel/Einzel-Umschalter tut — und was nicht.
+            formatWirkung: 'Doppel/Einzel wechselt die Nutzungsdaten rechts. Die Rangliste '
+                + 'bleibt gleich: die Replika-Teams sind Doppelkampf-Teams, eine Einzel-Rangliste '
+                + 'gibt die Datei nicht her.',
+            formatRangliste: 'Rangliste aus Doppelkampf-Teams',
             summeUeber: (v) => `Quelle summiert auf ${v} % — mehr als eins geht nicht`,
             summeUnter: (v) => `Quelle deckt nur ${v} % ab`,
             loading: 'Lade Nutzungsdaten …',
@@ -79,6 +84,10 @@
             moves: 'Moves', item: 'Held item', ability: 'Ability', nature: 'Nature',
             spread: 'Stat points', mates: 'Teammates',
             noShare: 'no share values', more: (n) => `+${n} more`,
+            formatWirkung: 'Doubles/Singles switches the usage data on the right. The ranking '
+                + 'stays the same: the replica teams are doubles teams, and the file holds no '
+                + 'singles ranking.',
+            formatRangliste: 'ranking from doubles teams',
             summeUeber: (v) => `source sums to ${v} % — more than one is impossible`,
             summeUnter: (v) => `source covers only ${v} %`,
             loading: 'Loading usage data …',
@@ -414,6 +423,7 @@
             </div>`).join('');
         return `<div class="sq-panel">
                 ${sectionLabel(label, `${rows.length}`)}
+                <p class="sq-note">${esc(L().formatWirkung)}</p>
                 <div class="sq-list">${body}</div>
             </div>`;
     }
@@ -459,16 +469,31 @@
                 esc(L().loading)}</div></div></div>`;
             return;
         }
+        /* ── Ein Umschalter, der die Liste nicht umschaltet (F11.21) ──
+         *
+         * GEMESSEN am 07.09.2026: Doppel/Einzel liess die Rangliste
+         * unveraendert. Nachverfolgt bis in die Daten —
+         * data/champions_replica_teams.json fuehrt 110 Teams, ALLE mit
+         * format "VGC Champions", und ihr _meta.title lautet "Pokémon
+         * Champions — Current Top Doubles Teams". Eine Trennung nach
+         * Format gibt die Datei nicht her; rankTeams() zaehlt deshalb
+         * formatunabhaengig, und das ist richtig.
+         *
+         * Falsch war, dass der Umschalter aussah, als filtere er die
+         * Liste. Er wirkt auf record() — also auf die Nutzungsdaten
+         * rechts, die champions_usage.json je Format wirklich fuehrt.
+         * Das steht jetzt daneben, statt dass ein wirkungsloser Klick
+         * den Leser raten laesst. */
         const seg = (val, label) =>
             `<button type="button" data-sq-format="${val}" class="${_format === val ? 'on' : ''}">${esc(label)}</button>`;
         host.innerHTML = `
             <div class="sq-console">
                 <div class="sq-top">
                     <span class="sq-brand">Champions <span>${esc(L().brand)}</span></span>
-                    <span class="sq-meta">${_teams.length} ${esc(L().pokemonCount)}</span>
+                    <span class="sq-meta">${_teams.length} ${esc(L().pokemonCount)} \u00b7 ${esc(L().formatRangliste)}</span>
                     <span class="sq-meta sq-source" title="${esc(quellHinweis())}">${esc(quellHinweis())}</span>
                     <span class="sq-spacer"></span>
-                    <span class="sq-seg">
+                    <span class="sq-seg" title="${esc(L().formatWirkung)}">
                         ${seg('doubles', L().doubles)}
                         ${seg('singles', L().singles)}
                     </span>
@@ -524,5 +549,11 @@
     window._sqUsageInternals = {
         rankTeams, usageSlug, tailNote, barRow, spreadPanel, matesPanel,
         setState: (u, t, ty) => { _usage = u; _teams = t; _typeOf = ty || {}; },
+        /* Derselbe Weg, den der Knopf nimmt — damit eine Zusicherung den
+         * Umschalter WIRKLICH umlegen kann statt nur seinen Text zu lesen.
+         * Der Knopf selbst haengt in wire() an einem DOM-Ereignis, und ein
+         * DOM gibt es unter node --test nicht (CI installiert nur
+         * papaparse). */
+        setFormat: (f) => { _format = f; render(); },
     };
 })();

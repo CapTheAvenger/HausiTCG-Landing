@@ -113,6 +113,46 @@
         return { sel: sel, opts: out, aktiv: sel.value };
     }
 
+    /* ── Warum es abgleichen() gibt ──────────────────────────────────
+     *
+     * BEFUND C2 / F16.3 (Live-Durchgang 07.09.2026), hier nachgemessen
+     * mit tests/unit/test-ds-filter-formate.js:
+     *
+     *   1) direkt nach dem Laden   Knopfleiste mit 1 Knopf:
+     *                              "-- Alle Formate --"
+     *   2) nach dem Nachfuellen    Knopfleiste mit 1 Knopf:
+     *                              "-- Alle Formate --"
+     *      waehrend die Quelle #pastMetaFormatFilter 7 Optionen fuehrt.
+     *
+     * Die Zeile wird EINMAL aus den Optionen der Quelle gebaut. Past
+     * Meta fuellt seine sieben Formate aber erst nach, wenn der Reiter
+     * geladen hat (js/app-past-meta.js, resetSelectWithPlaceholder +
+     * manifest.meta_keys). Ein Nachfuellen loest KEIN change-Ereignis
+     * aus — horcheAufQuellen() hoert nur auf `change` und hat davon
+     * nichts gemerkt. Ergebnis: oben eine Zeile mit einem toten
+     * Platzhalterknopf, unten sieben Formate. Zwei Formatanzeigen, die
+     * sich widersprechen, und die obere zieht nicht mit.
+     *
+     * abgleichen() vergleicht deshalb den ABDRUCK der Quelle (Werte,
+     * Beschriftungen, Sperren, aktive Wahl) mit dem, was die gezeichnete
+     * Zeile tragt, und zeichnet nur bei Unterschied neu. Angestossen
+     * wird es von drei Seiten: vom change-Ereignis, von einem
+     * MutationObserver auf der Optionsliste, und ausdruecklich von dem
+     * Code, der die Optionen fuellt (window.DsFilter.abgleichen).
+     */
+    function abdruck(raum) {
+        var f = formate(raum);
+        if (!f) return raum.key + '\u2016(ohne Auswahl)';
+        /* Der GRUND einer Sperre steht mit im Abdruck: er wird als title
+           an den Knopf gehaengt, ist also Teil dessen, was gezeichnet
+           wurde. Ohne ihn behielte ein Knopf seinen alten Grund, wenn
+           die Sperre bleibt und nur die Begruendung wechselt
+           (z. B. beim Sprachwechsel). */
+        return raum.key + '\u2016' + f.aktiv + '\u2016' + f.opts.map(function (o) {
+            return o.wert + '\u241f' + o.text + (o.gesperrt ? '\u241f!' + (o.grund || '') : '');
+        }).join('\u241e');
+    }
+
     function baueZeile(raum) {
         var d = de();
         var wrap = document.createElement('div');
@@ -188,6 +228,15 @@
                 op.value = o.wert;
                 op.textContent = o.text;
                 if (o.wert === f.aktiv) op.selected = true;
+                /* BEFUND B8, Zusatz (vorbestehend): im Auswahlfeld-Zweig
+                   wurde `o.gesperrt` nicht auf die Kopie uebertragen —
+                   ab fuenf Optionen war eine gesperrte Option oben also
+                   waehlbar, unten nicht. Die Knopfleiste darunter macht
+                   es seit dem 30.08.2026 richtig; hier fehlte es. */
+                if (o.gesperrt) {
+                    op.disabled = true;
+                    if (o.grund) op.title = o.grund;
+                }
                 sl.appendChild(op);
             });
             sl.addEventListener('change', function () {
@@ -243,6 +292,8 @@
         if (!anker || !anker.parentElement) return;
         var alt = anker.parentElement.querySelector(':scope > .ds-filter');
         var neu = baueZeile(raum);
+        // Woraus diese Zeile gebaut wurde — abgleichen() liest es zurueck.
+        neu.setAttribute('data-ds-abdruck', abdruck(raum));
         if (alt) {
             anker.parentElement.replaceChild(neu, alt);
         } else {
@@ -282,6 +333,16 @@
             if (!behaelter) {
                 behaelter = q.closest('.ds-filter-huelle');
                 if (!behaelter) {
+                    // Ohne Elternknoten laesst sich nichts umhaengen. Das
+                    // Feld bleibt dann sichtbar — lieber zwei sichtbare
+                    // Felder als ein Absturz, der die ganze Zeile
+                    // mitnimmt (die Ausnahme haette zeichne() beendet).
+                    if (!q.parentElement) {
+                        if (typeof console !== 'undefined' && console.warn) {
+                            console.warn('[ds-filter] "' + r.quelle + '" haengt an keinem Elternknoten \u2014 nicht verdeckt');
+                        }
+                        return;
+                    }
                     behaelter = document.createElement('span');
                     behaelter.className = 'ds-filter-huelle';
                     q.parentElement.insertBefore(behaelter, q);
@@ -346,6 +407,22 @@
         horcheAufQuellen();
     }
 
+    /** Den Abgleich anstossen, ohne je den Aufrufer zu blockieren. */
+    function planeAbgleich() {
+        try { setTimeout(abgleichen, 30); } catch (e) { /* nie blockieren */ }
+    }
+
+    /** Der Zugriff fuer `name`, am Objekt selbst oder auf seiner Kette. */
+    function eigenschaftZugriff(obj, name) {
+        var k = obj;
+        while (k) {
+            var d = Object.getOwnPropertyDescriptor(k, name);
+            if (d) return d;
+            k = Object.getPrototypeOf(k);
+        }
+        return null;
+    }
+
     // Wird bei jedem zeichne() erneut aufgerufen: die Auswahlfelder
     // entstehen teils erst, wenn der Reiter das erste Mal geladen hat.
     // Der Merker verhindert Doppelanmeldungen.
@@ -356,9 +433,95 @@
                 if (!el || el.__dsFilterHorcht) return;
                 el.__dsFilterHorcht = true;
                 el.addEventListener('change', function () {
-                    try { setTimeout(zeichne, 30); } catch (e) { /* nie die Auswahl blockieren */ }
+                    try { setTimeout(abgleichen, 30); } catch (e) { /* nie die Auswahl blockieren */ }
                 });
+                /* ── BEFUND B8 (Pruefagent, 07.09.2026) ──────────────────
+                 *
+                 * Der Beobachter horchte nur auf `childList`. Drei Wege
+                 * lagen daneben, jeder einzeln gemessen (Aenderung -> alle
+                 * Uhren abarbeiten -> Leiste unveraendert; danach
+                 * abgleichen() von Hand -> korrekt):
+                 *
+                 *   option.disabled = true + title
+                 *       js/app-city-league.js sperrt in der Saisonpause
+                 *       die Option `current`. Die gesperrte Option blieb
+                 *       oben anklickbar.
+                 *   option.textContent
+                 *       js/i18n.js beschriftet die Optionen beim
+                 *       Sprachwechsel um. Die Leiste behielt die alten
+                 *       Beschriftungen.
+                 *
+                 * Beides sind im Browser echte Mutationen — sie brauchen
+                 * nur `attributes`, `characterData` und `subtree`, weil sie
+                 * an den OPTIONEN haengen, nicht am Auswahlfeld.
+                 */
+                if (typeof MutationObserver === 'function') {
+                    try {
+                        new MutationObserver(function () { planeAbgleich(); })
+                            .observe(el, {
+                                childList: true, subtree: true, characterData: true,
+                                /* `attributeFilter` ist kein Feinschliff,
+                                   sondern noetig: zeichne() setzt an DIESEM
+                                   Feld selbst tabindex und aria-hidden. Ohne
+                                   den Filter loeste jeder eigene Zeichenlauf
+                                   den naechsten Abgleich aus — eine Schleife
+                                   aus Selbstgespraechen, und ein Test haette
+                                   dann jede Aenderung "bemerkt", auch eine,
+                                   die der Beobachter gar nicht sieht. */
+                                attributes: true,
+                                attributeFilter: ['disabled', 'title', 'label', 'value']
+                            });
+                    } catch (e) { /* Beobachter ist Zugabe, kein Muss */ }
+                }
+                /* Der dritte Weg ist ueberhaupt keine Mutation:
+                 *
+                 *   select.value = '…'
+                 *       js/app-city-league.js (switchCityLeagueFormat) und
+                 *       js/app-init.js setzen den Wert per JavaScript. Das
+                 *       aendert `selected` an einer Option, loest kein
+                 *       `change` aus und ist im Baum nicht sichtbar — kein
+                 *       Beobachter der Welt sieht das. Und es ist OHNE
+                 *       Zutun am beobachteten Feld erreichbar: aendert der
+                 *       Nutzer #cityLeagueFormatSelectAnalysis, setzt
+                 *       switchCityLeagueFormat den Wert von
+                 *       #cityLeagueFormatSelect still mit. Die Leiste zeigte
+                 *       danach den falschen aktiven Knopf.
+                 *
+                 * Also wird der Schreibzugriff auf `value` an genau diesem
+                 * Feld umschlossen — gelesen und geschrieben wird weiter
+                 * das Original, es sagt jetzt nur Bescheid. Faellt diese
+                 * Datei aus, ist das Feld unveraendert.
+                 */
+                try {
+                    var zugriff = eigenschaftZugriff(el, 'value');
+                    if (zugriff && typeof zugriff.set === 'function' && zugriff.configurable !== false) {
+                        Object.defineProperty(el, 'value', {
+                            configurable: true,
+                            enumerable: zugriff.enumerable,
+                            get: function () { return zugriff.get.call(this); },
+                            set: function (v) { zugriff.set.call(this, v); planeAbgleich(); }
+                        });
+                    }
+                } catch (e) { /* auch das ist Zugabe, kein Muss */ }
             });
+    }
+
+    /**
+     * Zeichnet die Zeile neu, WENN sich die Quelle veraendert hat.
+     * @returns {boolean} true, wenn neu gezeichnet wurde.
+     */
+    function abgleichen() {
+        horcheAufQuellen();
+        var tab = aktiverTab();
+        var raum = raumFuerTab(tab);
+        if (!raum) return false;
+        var anker = document.querySelector(ANKER[tab]);
+        if (!anker || !anker.parentElement) return false;
+        var zeile = anker.parentElement.querySelector(':scope > .ds-filter');
+        var jetzt = abdruck(raum);
+        if (zeile && zeile.getAttribute('data-ds-abdruck') === jetzt) return false;
+        zeichne();
+        return true;
     }
 
     if (document.readyState === 'loading') {
@@ -367,5 +530,5 @@
         start();
     }
 
-    window.DsFilter = { zeichne: zeichne };
+    window.DsFilter = { zeichne: zeichne, abgleichen: abgleichen, abdruck: abdruck };
 })();

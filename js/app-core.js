@@ -317,6 +317,37 @@ const BASE_PATH = './data/';
             }
         };
 
+        /* ── Der Hilfe-Dialog war eine Sackgasse (07.09.2026, C7/B13/F19.1) ──
+         *
+         * GEMESSEN: #helpModal traegt role="dialog" und aria-modal="true",
+         * hatte aber weder einen keydown-Zuhoerer noch eine Fokusfuehrung.
+         * Folgen, alle drei nachgestellt:
+         *
+         *   * Escape schloss nichts. Wer keine Maus benutzt, kam nur ueber
+         *     Tab bis zum Schliessen-Knopf — und der lag hinter dem
+         *     gesamten uebrigen Seiteninhalt.
+         *   * Der Fokus blieb beim Hilfe-Knopf DAHINTER stehen. Eine
+         *     Sprachausgabe las weiter die Seite unter dem Dialog vor;
+         *     aria-modal="true" behauptet dabei das Gegenteil.
+         *   * Nach dem Schliessen war der Fokus verloren — die naechste
+         *     Tab-Taste begann wieder am Seitenanfang.
+         *
+         * Drei Zusagen, die ein Dialog einhalten muss, und mehr nicht:
+         * Escape schliesst, der Fokus geht hinein, der Fokus kommt zurueck.
+         * Dazu die Tab-Falle, sonst waere "aria-modal" weiter eine
+         * Behauptung.
+         */
+        let _hilfeVorherFokus = null;
+        let _hilfeTastenZuhoerer = null;
+
+        function _hilfeFokusierbare(modal) {
+            const auswahl = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+            return Array.prototype.filter.call(
+                modal.querySelectorAll(auswahl),
+                (el) => !el.disabled && el.getAttribute('aria-hidden') !== 'true'
+            );
+        }
+
         function openTabHelp(tabId) {
             const lang = typeof window.getLang === 'function' ? window.getLang() : 'en';
             const helpSet = lang === 'de' ? TAB_HELP_CONTENT_DE : TAB_HELP_CONTENT;
@@ -327,11 +358,62 @@ const BASE_PATH = './data/';
             modal.querySelector('.help-modal-title').textContent = help.title;
             modal.querySelector('.help-modal-body').innerHTML = help.html;
             modal.classList.add('active');
+
+            /* BEFUND 07.09.2026: hier stand eine unbedingte Zuweisung. Ein
+             * zweites openTabHelp() OHNE Schliessen dazwischen merkte sich
+             * den Fokus, der da schon im Dialog lag — beim Schliessen landete
+             * er dann auf dem verdeckten Schliessen-Knopf statt auf der
+             * Stelle, von der aus geoeffnet wurde. Gemerkt wird nur, was
+             * ausserhalb des Dialogs liegt. */
+            const _fokusJetzt = document.activeElement || null;
+            if (!modal.contains(_fokusJetzt)) {
+                _hilfeVorherFokus = _fokusJetzt;
+            }
+
+            const zuerst = modal.querySelector('.help-modal-close') || modal;
+            if (zuerst && typeof zuerst.focus === 'function') zuerst.focus();
+
+            if (_hilfeTastenZuhoerer) {
+                document.removeEventListener('keydown', _hilfeTastenZuhoerer, true);
+            }
+            _hilfeTastenZuhoerer = function (e) {
+                if (e.key === 'Escape' || e.key === 'Esc') {
+                    e.preventDefault();
+                    closeHelpModal();
+                    return;
+                }
+                if (e.key !== 'Tab') return;
+                // Tab-Falle: ein Dialog mit aria-modal="true" darf den Fokus
+                // nicht an die Seite dahinter abgeben.
+                const kette = _hilfeFokusierbare(modal);
+                if (kette.length === 0) { e.preventDefault(); return; }
+                const erst = kette[0];
+                const letzt = kette[kette.length - 1];
+                const jetzt = document.activeElement;
+                if (e.shiftKey && (jetzt === erst || !modal.contains(jetzt))) {
+                    e.preventDefault();
+                    if (typeof letzt.focus === 'function') letzt.focus();
+                } else if (!e.shiftKey && (jetzt === letzt || !modal.contains(jetzt))) {
+                    e.preventDefault();
+                    if (typeof erst.focus === 'function') erst.focus();
+                }
+            };
+            document.addEventListener('keydown', _hilfeTastenZuhoerer, true);
         }
 
         function closeHelpModal() {
             const modal = document.getElementById('helpModal');
             if (modal) modal.classList.remove('active');
+            if (_hilfeTastenZuhoerer) {
+                document.removeEventListener('keydown', _hilfeTastenZuhoerer, true);
+                _hilfeTastenZuhoerer = null;
+            }
+            // Zurueck, woher der Fokus kam — sonst faengt die naechste
+            // Tab-Taste wieder am Seitenanfang an.
+            if (_hilfeVorherFokus && typeof _hilfeVorherFokus.focus === 'function') {
+                _hilfeVorherFokus.focus();
+            }
+            _hilfeVorherFokus = null;
         }
 
         // ============================================================
@@ -1633,7 +1715,25 @@ const BASE_PATH = './data/';
             // Update browser tab title with the actual section name. For hub
             // sub-tabs, prefer the side-menu label (e.g. "Deck Analysis (Japan)")
             // so the title reflects the specific area, not the hub.
-            const menuLabelEl = document.querySelector(`.menu-item[data-tab-id="${tabName}"] .menu-item-label`);
+            /* ── Titel und Abzeichen sagten Verschiedenes (07.09.2026, A-F0.2c) ──
+             *
+             * GEMESSEN fuer `current-meta`: der Reitertitel des Fensters
+             * lautete "Overview – Pokémon TCG Hub", das Abzeichen daneben
+             * "Current Meta (Global)". Ursache: es gibt ZWEI Menuepunkte mit
+             * data-tab-id="current-meta" — den Rueckweg zur Startseite
+             * (#menu-btn-meta-analysis-hub, Beschriftung "Overview") und den
+             * Punkt der Ansicht selbst (#menu-btn-current-meta). Ein
+             * querySelector nimmt den ersten, also den Rueckweg;
+             * js/inline-init.js beschriftet das Abzeichen dagegen ueber
+             * `menu-btn-<tabName>` und ueberschreibt danach den hier
+             * gesetzten Wert. Zwei Wege, ein Bild, zwei Namen.
+             *
+             * Gefragt wird deshalb zuerst DERSELBE Knopf, den auch das
+             * Abzeichen nimmt. Nur wenn es den nicht gibt, bleibt es beim
+             * bisherigen Weg ueber data-tab-id. */
+            const menuKnopfEl = document.getElementById('menu-btn-' + tabName);
+            const menuLabelEl = (menuKnopfEl && menuKnopfEl.querySelector('.menu-item-label'))
+                || document.querySelector(`.menu-item[data-tab-id="${tabName}"] .menu-item-label`);
             /* BEFUND (Schlussabnahme 30.08.2026): fuer die Kachelseite gibt
                es keinen Menuepunkt mit `data-tab-id="meta-analysis-hub"`
                (der Knopf oben zeigt auf current-meta). menuLabelEl war
@@ -1642,8 +1742,22 @@ const BASE_PATH = './data/';
                stehen, waehrend die Kachelseite offen war.
                Ohne Menuepunkt nimmt der Titel die Ueberschrift der
                Ansicht selbst; die steht ohnehin in jedem Reiter. */
+            /* ── Und der Reiter `admin` behielt den Titel des vorigen (A-F0.2b) ──
+             *
+             * GEMESSEN: fuer `admin` gibt es keinen Menuepunkt, und seine
+             * Ueberschrift ist `<h2 id="adminTitel">Datenlücken</h2>` — ohne
+             * data-i18n. Die Abfrage unten verlangte data-i18n, fand nichts,
+             * `titleText` blieb leer, und `if (titleText)` liess Titel UND
+             * Abzeichen auf dem Stand der vorher geoeffneten Ansicht stehen.
+             * Nachgestellt mit dem echten Block: Titel und Abzeichen behielten
+             * beide ihren alten Wert.
+             *
+             * Also wird zweitens nach einer Ueberschrift OHNE data-i18n
+             * gefragt. Eine Ueberschrift ohne Uebersetzungsmarke ist eine
+             * Ueberschrift; sie zu ignorieren war der Fehler. */
             const ueberschriftEl = !menuLabelEl
-                ? document.querySelector(`#${tabName} h2 [data-i18n], #${tabName} h1 [data-i18n]`)
+                ? (document.querySelector(`#${tabName} h2 [data-i18n], #${tabName} h1 [data-i18n]`)
+                    || document.querySelector(`#${tabName} h2, #${tabName} h1`))
                 : null;
             const titleText = menuLabelEl
                 ? menuLabelEl.textContent.trim()
@@ -1658,6 +1772,25 @@ const BASE_PATH = './data/';
                     // pill there so it doesn't mislead (see inline-init.js
                     // companion change for the menu-driven path).
                     badge.style.display = tabName === 'meta-analysis-hub' ? 'none' : '';
+                }
+            } else {
+                /* Kein Menuepunkt, keine Ueberschrift, kein Knopf: dann ist
+                 * der Name dieser Ansicht nicht bekannt. Der Titel der VORIGEN
+                 * stehen zu lassen waere die einzige Antwort, die sicher
+                 * falsch ist — Lesezeichen und Verlauf trugen sonst den Namen
+                 * einer Ansicht, die gar nicht offen ist.
+                 *
+                 * BEFUND 07.09.2026: hier stand NUR document.title. Das
+                 * Abzeichen #current-tab-title behielt den Namen der vorigen
+                 * Ansicht — also genau die Uneinigkeit zwischen Fenstertitel
+                 * und Abzeichen, gegen die der Zweig gebaut wurde, nur eine
+                 * Stelle weiter. Ein Abzeichen ohne bekannten Namen zeigt
+                 * gar nichts, statt einen falschen Namen zu zeigen. */
+                document.title = 'Pokémon TCG Hub';
+                const badge = document.getElementById('current-tab-title');
+                if (badge) {
+                    badge.textContent = '';
+                    badge.style.display = 'none';
                 }
             }
         }

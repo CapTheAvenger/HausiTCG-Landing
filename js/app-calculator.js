@@ -54,16 +54,113 @@
      * kurz markiert — die Rechnung und das, was dasteht, sagen wieder
      * dasselbe.
      */
-    function leseUndKlemme(id, fallback, min, max) {
+    /* ── Zwei Nachbesserungen vom 07.09.2026, beide gemessen ──────────
+     *
+     * (1) DAS LEERE FELD RECHNETE STILL WEITER (F13.3b). Gemessen: Feld
+     *     "Karten im Deck" geleert, Kopien 4, gezogen 7 →
+     *
+     *       Feld:      ""              (leer, ohne Titel, ohne Hinweis)
+     *       Fusszeile: "4 von 60 Karten, 7 gezogen"
+     *       Ergebnis:  "39,95 %"
+     *
+     *     Gerechnet wurde mit 60, obwohl nirgends 60 stand: `String(el.value)
+     *     .trim() !== ''` schloss den Leerfall aus, und getInputNumber()
+     *     lieferte den Ersatzwert stumm.
+     *
+     *     NICHT behoben wird das, indem die 60 ins Feld geschrieben wird.
+     *     Ein leeres Feld ist der Normalzustand beim Tippen — wer 60 loescht,
+     *     um 59 einzugeben, bekaeme die 60 im selben Tastendruck zurueck.
+     *     Genau davor steht seit dem 20.08.2026 eine Zusicherung
+     *     ("ein leeres Feld bleibt leer — dort tippt gerade jemand",
+     *     tests/unit/test-rechenfehler.js), und sie hat recht.
+     *
+     *     Der Ausfall ist die STILLE, nicht der Ersatzwert. Also wird er
+     *     benannt: eine Zeile unter den Eingabefeldern sagt, welches Feld
+     *     leer ist und mit welcher Zahl gerechnet wurde, und das Feld traegt
+     *     denselben Satz als Titel. Das Feld selbst bleibt unberuehrt.
+     *
+     * (2) DIE KLEMM-KASKADE ZERSTOERTE DREI EINGABEN (F13.3c). Gemessen:
+     *     Deck 1, Kopien 4, gezogen 7, in der Hand 2 → alle vier Felder
+     *     standen danach auf 1. Zurueck auf Deck 60: Kopien 1, gezogen 1,
+     *     in der Hand 1 — die 4, die 7 und die 2 waren fort.
+     *
+     *     Ursache ist nicht das Klemmen, sondern WAS geklemmt wurde. Eine
+     *     Untergrenze wie "mindestens 1 Kopie" gilt immer; die Obergrenze
+     *     "hoechstens so viele wie das Deck gross ist" gilt nur, solange die
+     *     Deckgroesse so klein ist. Ein Wert, der nur an einer FREMDEN
+     *     Eingabe scheitert, darf die eigene nicht ueberschreiben — sonst
+     *     macht ein Tippfehler im ersten Feld die anderen drei kaputt.
+     *
+     *     Untere und eigene Grenzen werden also weiter ins Feld geschrieben,
+     *     abhaengige Obergrenzen nicht. Gerechnet wird trotzdem mit dem
+     *     geklemmten Wert, und der steht im Titel des Feldes und in der
+     *     Fusszeile unter dem Ergebnis. `schreibeObergrenze` sagt, welche
+     *     der beiden Sorten die Obergrenze ist.
+     */
+    function feldName(id) {
+        var lab = document.querySelector('label[for="' + id + '"]');
+        var txt = lab ? String(lab.textContent || '').trim() : '';
+        return txt || id;
+    }
+
+    function leseUndKlemme(id, fallback, min, max, schreibeObergrenze) {
         const el = document.getElementById(id);
         const roh = getInputNumber(id, fallback);
         const wert = clamp(roh, min, max);
-        if (el && roh !== wert && String(el.value).trim() !== '') {
-            el.value = String(wert);
+        const de = (typeof getLang === 'function' && getLang() === 'de');
+        /* BEFUND 07.09.2026: getInputNumber() liest mit parseInt. Aus "6.5"
+         * wird damit 6, und weil 6 im gueltigen Bereich liegt, galt
+         * roh === wert — der Zweig ganz unten nahm den Titel WEG. Auf dem
+         * Bildschirm stand 6.5, gerechnet wurde mit 6, und nichts sagte es.
+         * Eine halbe Karte gibt es nicht; abgeschnitten wird weiter, aber
+         * es steht jetzt dabei. Erkannt wird es am Feldtext selbst, nicht
+         * an einem Merker von aussen. */
+        const rohText = el ? String(el.value).trim() : '';
+        const rohZahl = rohText === '' ? NaN : Number(rohText.replace(',', '.'));
+        const abgeschnitten = Number.isFinite(rohZahl) && rohZahl !== roh;
+
+        if (el && String(el.value).trim() === '') {
+            /* Das Feld bleibt leer — dort tippt gerade jemand. Aber es sagt,
+             * womit die Rechnung daneben gerade laeuft. Gesammelt wird das
+             * NICHT hier: vorgabeHinweisZeigen() sieht selbst nach, welche
+             * Felder leer sind. So bleibt diese Funktion ohne Seitenkanal
+             * und laesst sich fuer sich allein ausfuehren. */
+            el.setAttribute('title', de
+                ? `Feld leer — gerechnet wird mit dem Vorgabewert ${wert}.`
+                : `Field empty — the calculation uses the default ${wert}.`);
+            return wert;
+        }
+
+        if (el && roh !== wert) {
+            const nurObergrenze = (roh > max && roh >= min);
+            const fremdeGrenze = (nurObergrenze && schreibeObergrenze === false);
+            if (!fremdeGrenze) {
+                el.value = String(wert);
+            }
             el.classList.add('calc-input-geklemmt');
-            el.setAttribute('title', (typeof getLang === 'function' && getLang() === 'de')
-                ? `Wert auf den gültigen Bereich ${min}–${max} gesetzt — gerechnet wird mit ${wert}.`
-                : `Value set to the valid range ${min}–${max} — the calculation uses ${wert}.`);
+            el.setAttribute('title', fremdeGrenze
+                ? (de
+                    ? `${roh} passt nicht zu den anderen Eingaben — gerechnet wird mit ${wert}. `
+                      + `Die Eingabe bleibt stehen und gilt wieder, sobald die Obergrenze ${roh} zulässt.`
+                    : `${roh} does not fit the other inputs — the calculation uses ${wert}. `
+                      + `Your entry stays and applies again as soon as the limit allows ${roh}.`)
+                : (de
+                    ? `Wert auf den gültigen Bereich ${min}–${max} gesetzt — gerechnet wird mit ${wert}.`
+                    : `Value set to the valid range ${min}–${max} — the calculation uses ${wert}.`));
+            clearTimeout(el._klemmTimer);
+            el._klemmTimer = setTimeout(() => {
+                el.classList.remove('calc-input-geklemmt');
+            }, 1600);
+        } else if (el && abgeschnitten) {
+            /* Der Wert liegt im gueltigen Bereich, ist aber nicht der, der im
+             * Feld steht. Dasselbe Aussehen wie beim Klemmen, damit die Stelle
+             * auffaellt — und ein Satz, der beide Zahlen nennt. */
+            el.classList.add('calc-input-geklemmt');
+            el.setAttribute('title', de
+                ? `${rohText} ist keine ganze Zahl — gerechnet wird mit ${wert}. `
+                  + 'Karten gibt es nur ganz.'
+                : `${rohText} is not a whole number — the calculation uses ${wert}. `
+                  + 'Cards come in whole units.');
             clearTimeout(el._klemmTimer);
             el._klemmTimer = setTimeout(() => {
                 el.classList.remove('calc-input-geklemmt');
@@ -73,6 +170,57 @@
             el.removeAttribute('title');
         }
         return wert;
+    }
+
+    /* Die Zeile unter den Eingabefeldern. index.html traegt sie nicht (die
+     * Datei gehoert diesem Paket nicht), also legt das Modul sie einmal an
+     * und benutzt die Klassen, die die Fusszeilen daneben schon haben. */
+    function vorgabeHinweisZeigen(paare) {
+        var wirt = document.querySelector('#calculator .calc-params');
+        if (!wirt) return;
+        var leere = (paare || []).filter(function (p) {
+            var el = document.getElementById(p[0]);
+            return el && String(el.value).trim() === '';
+        });
+        /* Felder, in denen etwas ANDERES steht als das, womit gerechnet wird
+         * — "6.5" im Feld, 6 in der Rechnung. Dieselbe Pruefung wie in
+         * leseUndKlemme, wieder ohne Merker von aussen. */
+        var abgeschnittene = (paare || []).filter(function (p) {
+            var el = document.getElementById(p[0]);
+            if (!el) return false;
+            var txt = String(el.value).trim();
+            if (txt === '') return false;
+            var zahl = Number(txt.replace(',', '.'));
+            return Number.isFinite(zahl) && zahl !== p[1];
+        });
+        var zeile = document.getElementById('calc-vorgabe-hinweis');
+        if (!zeile) {
+            if (!leere.length && !abgeschnittene.length) return;
+            zeile = document.createElement('div');
+            zeile.id = 'calc-vorgabe-hinweis';
+            zeile.className = 'calc-result-note calc-result-fuss';
+            zeile.setAttribute('role', 'status');
+            wirt.appendChild(zeile);
+        }
+        if (!leere.length && !abgeschnittene.length) { zeile.textContent = ''; return; }
+        var de = (typeof getLang === 'function' && getLang() === 'de');
+        var saetze = [];
+        if (leere.length) {
+            saetze.push((de
+                ? 'Leeres Feld — gerechnet wird mit dem Vorgabewert: '
+                : 'Empty field — the calculation uses the default: ')
+                + leere.map(function (p) { return feldName(p[0]) + ' = ' + p[1]; }).join(' · '));
+        }
+        if (abgeschnittene.length) {
+            saetze.push((de
+                ? 'Keine ganze Zahl — gerechnet wird mit: '
+                : 'Not a whole number — the calculation uses: ')
+                + abgeschnittene.map(function (p) {
+                    var el = document.getElementById(p[0]);
+                    return feldName(p[0]) + ' ' + String(el.value).trim() + ' → ' + p[1];
+                }).join(' · '));
+        }
+        zeile.textContent = saetze.join(' · ');
     }
 
     function getInputNumber(id, fallback) {
@@ -90,10 +238,14 @@
             const inHandEl = document.getElementById('calc-in-hand');
             if (!deckSizeEl || !copiesEl || !drawnEl || !inHandEl) return;
 
-        const deckSize = leseUndKlemme('calc-deck-size', 60, 1, 99);
-        const copies = leseUndKlemme('calc-copies', 1, 1, deckSize);
-        const drawn = leseUndKlemme('calc-drawn', 7, 1, deckSize);
-        const inHand = leseUndKlemme('calc-in-hand', 0, 0, copies);
+        /* Nur die Deckgroesse hat eine eigene Obergrenze (99 Karten passen in
+         * kein Deck). Die drei anderen haengen mit ihrer Obergrenze an der
+         * Deckgroesse bzw. an den Kopien — dort wird nicht zurueckgeschrieben,
+         * siehe die Notiz an leseUndKlemme. */
+        const deckSize = leseUndKlemme('calc-deck-size', 60, 1, 99, true);
+        const copies = leseUndKlemme('calc-copies', 1, 1, deckSize, false);
+        const drawn = leseUndKlemme('calc-drawn', 7, 1, deckSize, false);
+        const inHand = leseUndKlemme('calc-in-hand', 0, 0, copies, false);
 
         // Verbleibende Karten im Deck nach Hand und Preisen
         const remaining = Math.max(deckSize - drawn - 6, 0);
@@ -163,6 +315,14 @@
         setzeFuss('calc-fuss-topdeck', de
             ? copiesLeft + ' von ' + unseen + ' ungesehenen Karten'
             : copiesLeft + ' of ' + unseen + ' unseen cards');
+
+        // Und die Zeile, die leere Felder beim Namen nennt (F13.3b).
+        vorgabeHinweisZeigen([
+            ['calc-deck-size', deckSize],
+            ['calc-copies', copies],
+            ['calc-drawn', drawn],
+            ['calc-in-hand', inHand]
+        ]);
 
         // Farbe der Hauptanzeige
             const drawEl = document.getElementById('res-draw');

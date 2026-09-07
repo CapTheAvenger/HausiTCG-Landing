@@ -1420,6 +1420,41 @@
             return (1 - probZero) * 100;
         }
 
+        /* Ein Satz statt eines leeren Kastens (Befund A-F3.37 / A-F4.63 / C11).
+         *
+         * Die Handstatistik hat sich in zwei Faellen weggeblendet oder
+         * eine Zahl behauptet, die sie nicht hatte. GEMESSEN am
+         * 07.09.2026 (tests/unit/test-handstatistik.js, die echte
+         * Funktion im Sandkasten):
+         *
+         *   leeres Deck                 style.display = 'none',
+         *                               innerHTML 0 Zeichen — genau das
+         *                               Bild "die Statistik ist leer".
+         *   60 Karten, Kartendatenbank
+         *   NICHT geladen               "Basis auf der Hand 0,0 %",
+         *                               "Mulligan 100,0 %" — 643 Zeichen
+         *                               erfundene Statistik. window.
+         *                               allCardsDatabase wird erst von
+         *                               loadAllCardsDatabase() gesetzt
+         *                               (app-core.js:3004); ohne sie
+         *                               findet die Schleife kein
+         *                               einziges Basis-Pokemon und
+         *                               rechnet mit basicCount = 0
+         *                               weiter.
+         *
+         * Beides ist jetzt ein sichtbarer Grund. Wo die Kartenarten
+         * fehlen, steht keine Prozentzahl — dieselbe Regel, die
+         * js/draw-simulator.js in _simIstBasis() schon fuehrt:
+         * "unbekannt" ist nicht "kein Basis-Pokemon".
+         */
+        function _handStatsHinweis(el, textDe, textEn) {
+            const de = (typeof getLang === 'function' && getLang() === 'de');
+            el.innerHTML = '<div class="hand-stats-hinweis" role="status" aria-live="polite"'
+                + ' style="font-size:0.85em;color:#777;padding:2px 0;">&#127922; '
+                + (de ? textDe : textEn) + '</div>';
+            el.style.display = 'block';
+        }
+
         function updateOpeningHandStats(source) {
             const elId = source === 'cityLeague' ? 'cityLeagueHandStats'
                 : source === 'currentMeta' ? 'currentMetaHandStats' : 'pastMetaHandStats';
@@ -1427,26 +1462,107 @@
             if (!el) return;
             const deck = source === 'cityLeague' ? window.cityLeagueDeck
                 : source === 'currentMeta' ? window.currentMetaDeck : window.pastMetaDeck;
-            const N = Object.values(deck || {}).reduce((s, c) => s + c, 0);
-            if (N === 0) { el.style.display = 'none'; return; }
+            /* BEFUND B7, Nebenbefund (vorbestehend): N war die SUMME aller
+               Eintraege. Ein Deck {A:4, B:-4} ergab N === 0 und damit
+               "noch keine Karten im Deck", obwohl vier Karten drin lagen.
+               Gezaehlt werden jetzt nur die positiven Eintraege — genau
+               die, die die Schleife unten auch verarbeitet. Negative
+               Eintraege sind kaputte Daten; sie werden gezaehlt und
+               benannt statt stillschweigend gegengerechnet. */
+            const _eintraege = Object.entries(deck || {});
+            const N = _eintraege.reduce((s, e) => s + (Number(e[1]) > 0 ? Number(e[1]) : 0), 0);
+            const _kaputt = _eintraege.filter(e => Number(e[1]) < 0).length;
+            if (N === 0) {
+                // Frueher: el.style.display = 'none'. Ein leerer Kasten
+                // sagt nicht, ob die Rechnung fehlt oder das Deck.
+                _handStatsHinweis(el,
+                    'Er\u00f6ffnungshand: noch keine Karten im Deck \u2014 die Rechnung startet ab der ersten Karte.',
+                    'Opening hand: no cards in the deck yet \u2014 the calculation starts with the first card.');
+                return;
+            }
             // Count Basic Pokémon using the card database
             let basicCount = 0;
-            const db = window.allCardsDatabase || [];
+            let unbekannt = 0;
+            const db = Array.isArray(window.allCardsDatabase) ? window.allCardsDatabase : [];
+            if (!db.length) {
+                // Ohne Kartenarten gibt es keine Basis-Pokemon-Zahl. Eine
+                // 0 hier waere keine Messung, sondern eine Behauptung.
+                _handStatsHinweis(el,
+                    'Er\u00f6ffnungshand: die Kartendatenbank ist noch nicht geladen \u2014 ohne die Kartenarten l\u00e4sst sich die Mulligan-Chance nicht rechnen.',
+                    'Opening hand: the card database has not loaded yet \u2014 without card types the mulligan chance cannot be computed.');
+                return;
+            }
             Object.entries(deck).forEach(([key, count]) => {
                 if (count <= 0) return;
                 let cardType = null;
                 const setMatch = key.match(/\(([A-Z0-9-]+)\s+([^\)]+)\)$/);
-                if (setMatch && db.length) {
+                if (setMatch) {
                     const found = db.find(c => c.set === setMatch[1] && c.number === setMatch[2]);
                     if (found) cardType = found.type;
                 }
-                if (!cardType && db.length) {
+                if (!cardType) {
                     const name = key.replace(/\s*\(.*\)$/, '').trim();
                     const found = db.find(c => c.name === name);
                     if (found) cardType = found.type;
                 }
+                if (cardType === null) { unbekannt += count; return; }
                 if (cardType === 'Basic') basicCount += count;
             });
+            /* ── BEFUND B7 (Pruefagent, 07.09.2026) ──────────────────────
+             *
+             * Die "Mulligan 100,0 %" war nicht weg, nur verschoben.
+             * Gemessen: Kartendatenbank VORHANDEN, aber keine der 60
+             * Deckkarten darin auffindbar -> "Basis auf der Hand 0.0 %",
+             * "Mulligan 100.0 %". Die Wache prueft nur db.length === 0.
+             *
+             * Genau dieser Fall ist im Past-Meta-Reiter der REGELFALL beim
+             * Laden: js/app-core.js (Z. 3012-3020) legt zuerst nur den
+             * Standard-Chunk in window.allCardsDatabase und laedt den Rest
+             * im Hintergrund nach; window.cardDBFullyLoaded wird erst am
+             * Ende gesetzt. Ein Past-Meta-Deck besteht per Definition aus
+             * Karten ausserhalb des Standard-Pools — die Datenbank ist also
+             * da und trotzdem ist keine Karte des Decks bestimmbar.
+             *
+             * DIE GRENZE, hier gesetzt: es wird KEINE Prozentzahl gezeigt,
+             * solange auch nur EINE Deckkarte unbestimmbar ist.
+             * Begruendung: basicCount ist die einzige Groesse, aus der die
+             * Mulligan-Chance folgt. Jede unbestimmbare Karte kann Basis
+             * sein oder nicht; sie verschiebt das Ergebnis in BEIDE
+             * Richtungen. Die frueher gezeigte Zahl unterstellte
+             * stillschweigend "unbekannt = kein Basis-Pokemon" — das ist
+             * keine Untergrenze, das ist eine Annahme in Prozent. Eine
+             * Grenze wie "ab 90 % bestimmbar wird gerechnet" waere
+             * ebenfalls eine Setzung, aber eine, die eine erfundene Zahl
+             * durchlaesst. Also: alles oder ein Grund.
+             *
+             * Der Grund nennt beide Faelle getrennt, weil die Abhilfe eine
+             * andere ist: laedt die Datenbank noch, hilft Warten; ist sie
+             * vollstaendig, fehlen die Karten wirklich.
+             */
+            if (unbekannt > 0) {
+                const vollstaendig = (window.cardDBFullyLoaded === true);
+                const grundDe = vollstaendig
+                    ? `Er\u00f6ffnungshand: ${unbekannt} Karten unbestimmbar (von ${N}) \u2014 diese Karten stehen nicht in der Kartendatenbank, ohne ihre Kartenart l\u00e4sst sich die Mulligan-Chance nicht rechnen.`
+                    : `Er\u00f6ffnungshand: ${unbekannt} Karten unbestimmbar (von ${N}) \u2014 die Kartendatenbank ist erst teilweise geladen. Die Mulligan-Chance erscheint, sobald alle Deckkarten bestimmbar sind.`;
+                const grundEn = vollstaendig
+                    ? `Opening hand: ${unbekannt} cards undetermined (of ${N}) \u2014 these cards are missing from the card database; without their card type the mulligan chance cannot be computed.`
+                    : `Opening hand: ${unbekannt} cards undetermined (of ${N}) \u2014 the card database is only partly loaded. The mulligan chance appears once every deck card can be determined.`;
+                _handStatsHinweis(el, grundDe, grundEn);
+                return;
+            }
+            /* Hier ist jede Deckkarte bestimmbar. Der frueher an dieser
+               Stelle angehaengte Zusatz "\u00b7 N Karten unbestimmbar" ist
+               damit entfallen — mitsamt dem fehlenden Leerzeichen vor dem
+               Trennpunkt, das der Pruefagent als Nebenbefund gemeldet hat
+               ("60 Karten\u00b7 40 Karten unbestimmbar"). */
+            const _kaputtHtml = _kaputt > 0
+                ? `<span style="color:#e67e22;" title="${(typeof getLang === 'function' && getLang() === 'de')
+                    ? 'Diese Eintraege haben eine negative Anzahl. Sie sind nicht mitgerechnet.'
+                    : 'These entries carry a negative count. They are not included in the calculation.'}"> ${
+                    (typeof getLang === 'function' && getLang() === 'de')
+                        ? `\u00b7 ${_kaputt} Eintr\u00e4ge mit negativer Anzahl \u00fcbergangen`
+                        : `\u00b7 ${_kaputt} entries with a negative count skipped`}</span>`
+                : '';
             const probBasic = hypergeomProbAtLeastOne(N, basicCount, 7);
             const probBrick = 1 - probBasic;
             const basicColor = probBasic >= 0.90 ? '#27ae60' : probBasic >= 0.75 ? '#e67e22' : '#e74c3c';
@@ -1464,7 +1580,7 @@
                 <span style="font-weight:600;color:#555;">&#127922; ${t('draw.openingHand')}</span>
                 <span title="${t('draw.basicInHandTitle')}" style="background:${basicColor};color:white;padding:3px 12px;border-radius:12px;font-weight:700;cursor:default;">${t('draw.basicInHand')} ${_pz(probBasic)}</span>
                 <span title="${t('draw.mulliganTitle')}" style="background:${brickColor};color:white;padding:3px 12px;border-radius:12px;font-weight:700;cursor:default;">${t('draw.mulliganLabel')} ${_pz(probBrick)}</span>
-                <span style="color:#999;">${t('draw.basicsOfCards').replace('{b}', basicCount).replace('{n}', N)}</span>
+                <span style="color:#999;">${t('draw.basicsOfCards').replace('{b}', basicCount).replace('{n}', N)}</span>${_kaputtHtml}
             </div>`;
             el.style.display = 'block';
         }

@@ -40,57 +40,96 @@
          * landed Mega Greninja (6 % share, 44 % WR) in Tier 1 just
          * because it was popular. This score blends three signals:
          *
-         *   1. Online play share (capped at 15 %)            — popularity
+         *   1. Online play share, capped                    — popularity
          *   2. Online winrate, Bayesian-shrunk to handle      — quality, with
-         *      small samples (prior: 30 games at 50 % WR)      small-N protection
+         *      small samples                                    small-N protection
          *   3. Labs tournament performance, when the meta's   — strongest signal
          *      labs CSV is loaded: aggregate WR + Day-2 conv    when available
          *
-         * Bayesian shrinkage uses a 50-game prior at 50 % so a
-         * 5-game-100 %-WR fluke collapses to ~54.5 %, not 100 % — which
-         * is the other half of the user's complaint ("ein Deck was nur
-         * 5x zu nem Turnier geht und alle gewinnt … ist ja kein Tier 1").
-         * The min-count gate downstream still excludes tiny samples
-         * from Tier 1/2/3 outright; the shrinkage only protects against
-         * a small-sample WR-overflow contaminating the score ranking.
+         * JEDE Zahl dieser drei Bestandteile steht in TIER_SCORE unten und
+         * NUR dort — dieser Kommentar nennt keine mehr. Bis zum 07.09.2026
+         * stand hier "prior: 30 games at 50 % WR" neben einem Code, der mit
+         * 50 rechnete; genau davor schuetzt eine einzige Quelle.
          *
-         * Labs branch is opt-in: pass `labsByName = null` (or a deck
-         * not in the dict / with games < 15) and the score collapses
-         * to share + adjusted-WR. Same caller path for both modes.
+         * Die Bayes-Glaettung zieht kleine Stichproben zum Vorwert: ein
+         * Deck mit 5 Partien und 100 % Win % faellt auf gut 54 % statt auf
+         * 100 zu bleiben — die andere Haelfte der Beschwerde ("ein Deck was
+         * nur 5x zu nem Turnier geht und alle gewinnt … ist ja kein Tier
+         * 1"). Das Mindestlisten-Tor weiter unten schliesst duenne Decks
+         * ohnehin aus Tier 1-3 aus; die Glaettung verhindert nur, dass eine
+         * Ausreisserquote die Reihenfolge verzerrt.
+         *
+         * Labs branch is opt-in: pass `labsByName = null` (or a deck not in
+         * the dict / below TIER_SCORE.LABS_MIN_PARTIEN games) and the score
+         * collapses to share + adjusted-WR. Same caller path for both.
          *
          * @param {{share:number, winrate:number, new_count:number, archetype:string}} deck
          * @param {Object<string,{games:number,winPct:number,day2Conv:number,players:number}>|null} labsByName
          * @returns {{score:number, adjWR:number, labsHit:boolean,
          *            shareComp:number, wrComp:number, labsComp:number}}
          */
+        /**
+         * Die Stellschrauben von computeTierScore() an EINER Stelle.
+         *
+         * BEFUND B2 (07.09.2026): sie standen zweimal da — einmal als
+         * Literal in der Rechnung, einmal als Literal im Aufruf von
+         * cmTierGrundlageZeile(). 11 der 17 Zahlen im Erklaersatz waren
+         * abgeschrieben statt durchgereicht; vier Mutationen
+         * (PRIOR_GAMES 50 -> 80, Anteilsdeckel 15 -> 25, Labs-Schwelle
+         * 15 -> 40, die Literale an der Aufrufstelle) liefen gruen durch,
+         * und die Seite haette danach Schwellen genannt, mit denen nicht
+         * gerechnet wird. Jetzt gibt es die Zahl nur einmal: hier.
+         *
+         * Object.freeze ist kein Schmuck — es macht aus "bitte nicht
+         * ueberschreiben" eine Zusicherung, die tests/unit/
+         * test-cm-tier-grundlage.js ausfuehrt.
+         */
+        const TIER_SCORE = Object.freeze({
+            /** Bayes-Vorwert: so viele Partien bei 50 % Win %. */
+            PRIOR_GAMES: 50,
+            /** Anteil: Deckel in Prozentpunkten, dann Gewicht. 0..9 */
+            ANTEIL_DECKEL: 15, ANTEIL_GEWICHT: 0.6,
+            /** Win % ueber 50: Deckel in pp, dann Gewicht. 0..8 */
+            WR_DECKEL: 10, WR_GEWICHT: 0.8,
+            /** Ab so vielen Partien je Deck zaehlt die Turnierdatei mit. */
+            LABS_MIN_PARTIEN: 15,
+            /** Turnier-Win % ueber 50: Deckel in pp, dann Gewicht. */
+            LABS_WR_DECKEL: 12, LABS_WR_GEWICHT: 1.5,
+            /** Tag-2-Quote: Deckel als Anteil, dann Gewicht. */
+            TAG2_DECKEL: 0.4, TAG2_GEWICHT: 8
+        });
+
         function computeTierScore(deck, labsByName) {
             const share = Math.max(0, Number(deck.share) || 0);
             const rawWR = Math.max(0, Number(deck.winrate) || 0);
             const games = Math.max(0, Number(deck.new_count) || 0);
 
-            const PRIOR_GAMES = 50;
             const wins = games * (rawWR / 100);
             const adjWR = games > 0
-                ? (wins + PRIOR_GAMES * 0.5) / (games + PRIOR_GAMES) * 100
+                ? (wins + TIER_SCORE.PRIOR_GAMES * 0.5) / (games + TIER_SCORE.PRIOR_GAMES) * 100
                 : 50;
 
-            const shareComp = Math.min(share, 15) * 0.6;                  // 0..9
-            const wrComp = Math.max(0, Math.min(adjWR - 50, 10)) * 0.8;   // 0..8
+            const shareComp = Math.min(share, TIER_SCORE.ANTEIL_DECKEL) * TIER_SCORE.ANTEIL_GEWICHT;
+            const wrComp = Math.max(0, Math.min(adjWR - 50, TIER_SCORE.WR_DECKEL)) * TIER_SCORE.WR_GEWICHT;
 
             let labsComp = 0;
             let labsHit = false;
             if (labsByName && deck.archetype) {
                 const ent = labsByName[deck.archetype]
                          || labsByName[String(deck.archetype).trim()];
-                if (ent && ent.games >= 15) {
+                if (ent && ent.games >= TIER_SCORE.LABS_MIN_PARTIEN) {
                     labsHit = true;
-                    // Labs WR over 50, capped at +12 pp, weight 1.5
+                    // Labs WR over 50, capped, weighted higher
                     // (tournament data is a stronger trust signal).
-                    const labsWRComp = Math.max(0, Math.min((ent.winPct || 0) - 50, 12)) * 1.5;
+                    const labsWRComp = Math.max(0,
+                        Math.min((ent.winPct || 0) - 50, TIER_SCORE.LABS_WR_DECKEL))
+                        * TIER_SCORE.LABS_WR_GEWICHT;
                     // Day-2 conversion: "actually converts entries
-                    // into a deep run". 0..0.4 covers the realistic
+                    // into a deep run". The cap covers the realistic
                     // range across TEF-CRI / TEF-POR data.
-                    const day2Comp = Math.max(0, Math.min(ent.day2Conv || 0, 0.4)) * 8;
+                    const day2Comp = Math.max(0,
+                        Math.min(ent.day2Conv || 0, TIER_SCORE.TAG2_DECKEL))
+                        * TIER_SCORE.TAG2_GEWICHT;
                     labsComp = labsWRComp + day2Comp;
                 }
             }
@@ -99,6 +138,102 @@
                 score: shareComp + wrComp + labsComp,
                 adjWR, labsHit, shareComp, wrComp, labsComp,
             };
+        }
+
+        /**
+         * Woraus die Tier-Einteilung des laufenden Metas entsteht — eine
+         * Zeile, die es vorher nicht gab.
+         *
+         * BEFUND C6 / F15.19-F15.24 (07.09.2026): die Reihenfolge folgt
+         * computeTierScore(), also einem zusammengesetzten Wert, und auf der
+         * Seite stand dazu kein Wort. Sichtbar wurde das an Mega Excadrill
+         * (7,3 % Anteil) UNTER Slowking (5,5 %) — fuer jemanden, der die
+         * Liste fuer eine Rangfolge nach Anteil haelt, sieht das nach einem
+         * Rechenfehler aus. Der japanische Reiter hat so eine Zeile seit
+         * jeher ('tier.clBasis'), hier fehlte sie.
+         *
+         * Die Zahlen kommen NICHT aus diesem Text, sondern aus den
+         * Konstanten der Einteilung: sie werden hineingereicht. Aendert
+         * jemand T1_MIN_WR oder TIER_SCORE.PRIOR_GAMES, aendert sich der
+         * Satz mit. tests/unit/test-cm-tier-grundlage.js fuehrt beides aus
+         * — die Rechnung UND diesen Satz — und vergleicht sie miteinander,
+         * statt beide gegen dieselbe abgeschriebene Zahl zu halten.
+         *
+         * @param {{t1Max:number, t2Max:number, t3Max:number,
+         *          minShare:number, minWR:number,
+         *          mindestAnteilGroesster:number,
+         *          mindestListen:number, groessteListenzahl:number,
+         *          labsAktiv:boolean, labsMinPartien:number,
+         *          vorPartien:number, anteilDeckel:number, anteilGewicht:number,
+         *          wrDeckel:number, wrGewicht:number,
+         *          labsWrDeckel:number, labsWrGewicht:number,
+         *          tag2Deckel:number, tag2Gewicht:number}} g
+         * @returns {string} ein fertiger <p>-Absatz
+         */
+        function cmTierGrundlageZeile(g) {
+            const de = (typeof getLang === 'function' ? getLang() : 'de') === 'de';
+            const z = (x, st) => {
+                const n = Number(x);
+                if (!Number.isFinite(n)) return '?';
+                const s = n.toFixed(st == null ? 1 : st);
+                return de ? s.replace('.', ',') : s;
+            };
+            const ganz = (x) => Number(x).toLocaleString(de ? 'de-DE' : 'en-US');
+
+            /* Ohne Turnierdatei fehlt der staerkste der drei Anteile. Das
+             * gehoert dazugesagt — sonst erklaert der Satz einen Wert, der
+             * so gar nicht gerechnet wurde. */
+            const labsDe = g.labsAktiv
+                ? ('und, wo eine Turnierdatei vorliegt (ab ' + ganz(g.labsMinPartien)
+                   + ' Partien je Deck), dem Turnier-Win % über 50 (bis +' + z(g.labsWrDeckel, 0)
+                   + ' pp, Gewicht ' + z(g.labsWrGewicht, 1) + ') samt Tag-2-Quote (bis '
+                   + z(g.tag2Deckel, 2) + ', Gewicht ' + z(g.tag2Gewicht, 0) + ')')
+                : 'Für dieses Meta liegt KEINE Turnierdatei vor — der dritte Anteil (Turnier-Win % und Tag-2-Quote) fehlt, gerechnet wurde nur aus Anteil und Win %';
+            const labsEn = g.labsAktiv
+                ? ('and, where a tournament file exists (from ' + ganz(g.labsMinPartien)
+                   + ' games per deck), tournament Win % above 50 (up to +' + z(g.labsWrDeckel, 0)
+                   + ' pp, weight ' + z(g.labsWrGewicht, 1) + ') plus day-2 conversion (up to '
+                   + z(g.tag2Deckel, 2) + ', weight ' + z(g.tag2Gewicht, 0) + ')')
+                : 'No tournament file exists for this meta — the third component (tournament Win % and day-2 conversion) is missing; the score used share and Win % only';
+
+            /* BEFUND B6 (07.09.2026): hier stand "der Listenzahl des
+               Rang-1-Decks". Gerechnet wird aber mit dem Maximum ueber alle
+               new_count — dem groessten Archetyp des Felds, nicht dem nach
+               Score erstplatzierten Deck. Heute ist das dasselbe Deck, bei
+               anderen Daten nicht. Der Nachbartext in
+               js/app-city-league.js sagt es seit jeher richtig. */
+            const listenDe = g.groessteListenzahl > 0
+                ? (' Alle drei Stufen verlangen mindestens ' + z(g.mindestAnteilGroesster, 0)
+                   + ' % der Listenzahl des größten Archetyps, hier ' + ganz(Math.ceil(g.mindestListen))
+                   + ' von ' + ganz(g.groessteListenzahl) + ' Listen.')
+                : '';
+            const listenEn = g.groessteListenzahl > 0
+                ? (' All three tiers require at least ' + z(g.mindestAnteilGroesster, 0)
+                   + ' % of the largest archetype\u2019s list count, here ' + ganz(Math.ceil(g.mindestListen))
+                   + ' of ' + ganz(g.groessteListenzahl) + ' lists.')
+                : '';
+
+            const text = de
+                ? ('Grundlage der Reihenfolge: nicht der Meta-Anteil allein, sondern ein '
+                   + 'zusammengesetzter Wert aus Anteil (bis ' + z(g.anteilDeckel, 0) + ' %, Gewicht '
+                   + z(g.anteilGewicht, 1) + '), Win % über 50 (bis +' + z(g.wrDeckel, 0) + ' pp, Gewicht '
+                   + z(g.wrGewicht, 1) + '; geglättet gegen einen Vorwert von ' + ganz(g.vorPartien)
+                   + ' Partien bei 50 %)' + (g.labsAktiv ? ' ' : '. ') + labsDe + '. '
+                   + 'Tier 1 fasst höchstens ' + ganz(g.t1Max) + ' Decks und verlangt zusätzlich mindestens '
+                   + z(g.minShare, 1) + ' % Anteil und ' + z(g.minWR, 1) + ' % Win %; Tier 2 höchstens '
+                   + ganz(g.t2Max) + ', Tier 3 höchstens ' + ganz(g.t3Max) + '.' + listenDe
+                   + ' Deshalb kann ein Deck mit höherem Anteil unter einem mit niedrigerem stehen.')
+                : ('Basis of this order: not meta share alone, but a composite score of share (up to '
+                   + z(g.anteilDeckel, 0) + ' %, weight ' + z(g.anteilGewicht, 1) + '), Win % above 50 (up to +'
+                   + z(g.wrDeckel, 0) + ' pp, weight ' + z(g.wrGewicht, 1) + '; shrunk against a prior of '
+                   + ganz(g.vorPartien) + ' games at 50 %)' + (g.labsAktiv ? ' ' : '. ') + labsEn + '. '
+                   + 'Tier 1 holds at most ' + ganz(g.t1Max) + ' decks and additionally requires at least '
+                   + z(g.minShare, 1) + ' % share and ' + z(g.minWR, 1) + ' % Win %; Tier 2 at most '
+                   + ganz(g.t2Max) + ', Tier 3 at most ' + ganz(g.t3Max) + '.' + listenEn
+                   + ' That is why a deck with a higher share can sit below one with a lower share.');
+
+            const sicher = (typeof escapeHtml === 'function') ? escapeHtml(text) : text;
+            return '<p class="tier-grundlage">' + sicher + '</p>';
         }
 
         /**
@@ -853,24 +988,48 @@
             // ueberhaupt behaupten kann — darunter gibt es keinen Pfeil.
             const CL_MIN_DIFF_PFEIL = 0.5;
 
-            // 3. Within each tier sort by avg_placement ascending (lower = better).
+            // 3. Within each tier sort by list count descending.
             //
-            // Ausser im Rogue-Block. Dort stehen die Archetypen mit den
-            // duennsten Stichproben, und eine Sortierung nach Oe-Platzierung
-            // stellt genau die nach oben, die aus einer einzigen Liste
-            // bestehen: am gemessenen Datenstand fuehrten drei Decks mit je
-            // EINER Liste und Platzierung 1,00 den Block an, und 170 von 284
-            // Rogue-Decks zeigten eine bessere Platzierung als das
-            // schlechteste Tier-3-Deck (Dusknoir Mega Diancie, 9,46 aus 98
-            // Listen). Nicht weil sie besser waeren, sondern weil ein
-            // Einzelergebnis keinen Mittelwert hat, gegen den es zurueckfaellt.
-            // Der Rogue-Block sortiert deshalb nach Listenzahl.
+            // Bis zum 07.09.2026 stand hier "sort by avg_placement ascending",
+            // ausser im Rogue-Block. Der Grund fuer die Ausnahme galt in
+            // Wahrheit ueberall: eine Sortierung nach Oe-Platzierung stellt
+            // die Decks mit den duennsten Stichproben nach oben. Am
+            // gemessenen Datenstand fuehrten im Rogue-Block drei Decks mit je
+            // EINER Liste und Platzierung 1,00, und 170 von 284 Rogue-Decks
+            // zeigten eine bessere Platzierung als das schlechteste
+            // Tier-3-Deck (Dusknoir Mega Diancie, 9,46 aus 98 Listen). Nicht
+            // weil sie besser waeren, sondern weil ein Einzelergebnis keinen
+            // Mittelwert hat, gegen den es zurueckfaellt.
+            //
+            // BEFUND A-F2.7 (07.09.2026): genau das stand hier — und es
+            // widersprach der Ueberschrift darueber. Die Stufen sind ein
+            // Indexschnitt auf der nach Listenzahl absteigend sortierten
+            // Liste, und die Untertitel sagen das auch ("Die 3
+            // meistgespielten", "Raenge 4-10 nach Listenzahl", "Raenge
+            // 11-20 nach Listenzahl"). Die AUSWAHL war also richtig; die
+            // Sortierung INNERHALB der Stufe war es nicht: sie ordnete
+            // nach Ø-Platzierung, und der Leser sah unter "Die 3
+            // meistgespielten" die Kacheln mit 3, dann 5, dann 6 Listen.
+            //
+            // Die Untertitel stehen in js/i18n.js und sind sachlich
+            // richtig. Also wandert die Sortierung zur Beschriftung, nicht
+            // umgekehrt: eine einzige Rangfolge nach Listenzahl ueber alle
+            // vier Stufen, absteigend — dieselbe, aus der der Schnitt
+            // oben entstanden ist.
+            //
+            // Die Ø-Platzierung ist damit nicht verloren, sie ist der
+            // Stichentscheid bei gleicher Listenzahl. Als HAUPTordnung
+            // trug sie ohnehin nicht: gemessen am letzten vollstaendigen
+            // Datenstand (city_league_archetypes_comparison_M3.csv, 304
+            // Archetypen) betraegt die gesamte Spreizung ueber die 20
+            // gelisteten Decks 1,72 Plaetze, waehrend allein das
+            // 95-%-Intervall des groessten Decks bei ±0,37 liegt.
             Object.keys(tierGroups).forEach((tierKey) => {
-                if (tierKey === 'tier-trending') {
-                    tierGroups[tierKey].sort((a, b) => parseDeckCount(b) - parseDeckCount(a));
-                } else {
-                    tierGroups[tierKey].sort((a, b) => parseDeckRank(a) - parseDeckRank(b));
-                }
+                tierGroups[tierKey].sort((a, b) => {
+                    const nachListen = parseDeckCount(b) - parseDeckCount(a);
+                    if (nachListen !== 0) return nachListen;
+                    return parseDeckRank(a) - parseDeckRank(b);
+                });
             });
 
             let heroHtml = '';
@@ -1459,10 +1618,20 @@
             normalizedDecks.sort((a, b) => b._tierScore.score - a._tierScore.score);
 
             // Tier-Einteilung mit festen Limits und Mindestspielanzahl.
-            // Alle Tier 1-3 Decks müssen ≥ 10 % der Spielanzahl des Rang-1-Decks haben
-            // (Rang-1 hier = nach Composite-Score, nicht nach Share).
+            // Alle Tier 1-3 Decks muessen einen Mindestanteil an der GROESSTEN
+            // Listenzahl des Felds erreichen.
+            //
+            // BEFUND B6 (07.09.2026): der alte Kommentar sagte "der
+            // Spielanzahl des Rang-1-Decks", und derselbe Wortlaut stand im
+            // Erklaersatz auf der Seite. _maxCount ist aber das Maximum ueber
+            // ALLE new_count, nicht die Listenzahl des nach Score
+            // erstplatzierten Decks. Heute faellt beides auf dasselbe Deck
+            // (Dragapult), bei anderen Daten nicht. Der Nachbartext in
+            // js/app-city-league.js:1093 hatte es von Anfang an richtig:
+            // "10 % des groessten Archetyps".
+            const MINDEST_ANTEIL_GROESSTER = 0.10;
             const _maxCount = normalizedDecks.reduce((m, d) => Math.max(m, d.new_count || 0), 0);
-            const minCountThreshold = _maxCount * 0.10;
+            const minCountThreshold = _maxCount * MINDEST_ANTEIL_GROESSTER;
 
             const T1_MAX = 6;
             const T2_MAX = 9;
@@ -2310,7 +2479,32 @@
                 }, 'gl');
             }
 
-            let html = heroHtml + overallTop8Html + '<div style="margin-bottom: 30px;">';
+            /* BEFUND C6 / F15.19-F15.24: die Grundlage der Reihenfolge steht
+               jetzt ueber der Liste.
+
+               BEFUND B2 (07.09.2026): "die Werte kommen aus den Konstanten"
+               stimmte fuer 6 von 17 Zahlen. Die anderen 11 waren hier als
+               Literale wiederholt — 50, 15, 0.6, 10, 0.8, 15, 12, 1.5, 0.4,
+               8, 10 — und wanderten damit genau so ab, wie der Satz es
+               ausschliessen sollte. Jetzt steht rechts vom Doppelpunkt
+               ausschliesslich ein Name, keine Zahl. Wer TIER_SCORE oder
+               MINDEST_ANTEIL_GROESSTER aendert, aendert den Satz mit. */
+            const cmGrundlage = cmTierGrundlageZeile({
+                t1Max: T1_MAX, t2Max: T2_MAX, t3Max: T3_MAX,
+                minShare: T1_MIN_SHARE, minWR: T1_MIN_WR,
+                mindestAnteilGroesster: MINDEST_ANTEIL_GROESSTER * 100,
+                mindestListen: minCountThreshold,
+                groessteListenzahl: _maxCount,
+                labsAktiv: !!(labsByName && Object.keys(labsByName).length > 0),
+                labsMinPartien: TIER_SCORE.LABS_MIN_PARTIEN,
+                vorPartien: TIER_SCORE.PRIOR_GAMES,
+                anteilDeckel: TIER_SCORE.ANTEIL_DECKEL, anteilGewicht: TIER_SCORE.ANTEIL_GEWICHT,
+                wrDeckel: TIER_SCORE.WR_DECKEL, wrGewicht: TIER_SCORE.WR_GEWICHT,
+                labsWrDeckel: TIER_SCORE.LABS_WR_DECKEL, labsWrGewicht: TIER_SCORE.LABS_WR_GEWICHT,
+                tag2Deckel: TIER_SCORE.TAG2_DECKEL, tag2Gewicht: TIER_SCORE.TAG2_GEWICHT
+            });
+
+            let html = heroHtml + overallTop8Html + cmGrundlage + '<div style="margin-bottom: 30px;">';
 
             // Render each tier
             ['tier-1', 'tier-2', 'tier-3', 'tier-trending'].forEach(tierKey => {
