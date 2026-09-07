@@ -157,12 +157,46 @@ CONTENT_DRIVEN = {
 # Regel wie bei REFRESH_DRIVEN oben, aus demselben Grund: ein woechentlicher Job
 # mit einer Tagesschwelle feuert strukturell garantiert falsch.
 HEARTBEAT_DATEI = "_job_heartbeats.json"
+
+# Woher die 5 Tage kommen — abgeleitet, nicht gesetzt: der einzige planmaessige
+# Datenlauf ist .github/workflows/weekly-full-update.yml mit cron '0 6 * * 2,5',
+# also Dienstag und Freitag 06:00 UTC. Die beiden Abstaende sind Di->Fr 3 Tage
+# und Fr->Di 4 Tage; der groesste planmaessige Abstand ist damit 4 Tage. Die
+# Schwelle liegt einen Tag darueber, damit ein Lauf, der sich um Stunden
+# verspaetet, nicht strukturell garantiert falsch feuert.
+WOCHENLAUF_MAX_LUECKE = 4                       # Di->Fr 3, Fr->Di 4
+WOCHENLAUF_SCHWELLE = WOCHENLAUF_MAX_LUECKE + 1  # = 5
+WOCHENLAUF_KADENZ = "weekly-full-update Di+Fr (cron '0 6 * * 2,5') -> max. Luecke 4 Tage"
+
 HERZSCHLAG = {
     # Job-Schluessel in der Datei: (max_alter_in_tagen, Kadenz)
     "scrapers/champions_replica_scraper.py": (3,  "taeglich 04:00 -> 2 Tage Luft"),
     "scrapers/labs_tournament_scraper.py":   (5,  "weekly-full-update Di+Fr -> max. Luecke 4 Tage"),
     "scrapers/per_decklist_scraper.py":      (5,  "weekly-full-update Di+Fr + per-decklist-scrape Di"),
     "scrapers/player_continuity_scraper.py": (5,  "weekly-full-update Di+Fr"),
+
+    # NACHTRAG 07.09.2026 — die gesamte ONLINE-Seite der Datengrundlage stand
+    # bis heute in keiner Bewachung. Vier Jobs, deren Ausgaben zusammen den
+    # Meta Call, den Reiter "Current meta" und die Kartenanalyse tragen:
+    #
+    #   limitless_online_scraper.py       -> limitless_online_decks*.csv
+    #   online_tournament_scraper.py      -> online_tournament_dated_cards.csv
+    #   current_meta_analysis_scraper.py  -> current_meta_card_data.csv
+    #   build_online_fenster.py           -> limitless_online_fenster.csv
+    #
+    # Die letzte traegt die aktuellste Zahl der ganzen Seite (den Anteil im
+    # laufenden 14-Tage-Fenster) und speist laut der Schwellentabelle in
+    # scripts/sanity_check_data.py 12-30 % des prognostizierten Anteils im
+    # Meta Call. Sie hatte weder Herzschlag noch Stand noch Chip, und ihr
+    # Schritt im Wochenlauf lief mit `continue-on-error` — ein Ausfall war
+    # damit auf keinem Weg sichtbar.
+    #
+    # Alle vier laufen ausschliesslich im Wochenlauf, also dieselbe Schwelle
+    # wie die drei Jobs darueber, aus derselben Rechnung.
+    "scrapers/limitless_online_scraper.py":      (WOCHENLAUF_SCHWELLE, WOCHENLAUF_KADENZ),
+    "scrapers/online_tournament_scraper.py":     (WOCHENLAUF_SCHWELLE, WOCHENLAUF_KADENZ),
+    "scrapers/current_meta_analysis_scraper.py": (WOCHENLAUF_SCHWELLE, WOCHENLAUF_KADENZ),
+    "scripts/build_online_fenster.py":           (WOCHENLAUF_SCHWELLE, WOCHENLAUF_KADENZ),
 }
 
 
@@ -330,6 +364,305 @@ def check_freshness(findings):
                              f"incremental by design, so this does NOT prove the job "
                              f"failed — the source may simply have nothing new. Check "
                              f"the workflow run before treating it as a defect."))
+
+
+# ── Stillstand: die Datei ist da, sie ist gross, sie ist byte-identisch ──────
+#
+# BEFUND 07.09.2026. Drei Tore stehen vor den Daten, und keines davon sieht
+# Stillstand:
+#
+#   * scripts/sanity_check_data.py prueft Zeilenzahlen gegen einen Boden und
+#     gegen HEAD. Eine Datei, die sich NICHT geaendert hat, hat exakt so viele
+#     Zeilen wie vorher und passiert jede Schwelle. Das Tor kann Stillstand
+#     grundsaetzlich nicht sehen: es vergleicht den Arbeitsbaum EINES Laufes
+#     mit HEAD, nicht mehrere Laeufe miteinander. Und seine Antwort waere die
+#     falsche — es setzt Dateien zurueck, waehrend bei Stillstand der Inhalt
+#     in Ordnung und der Job kaputt ist.
+#   * check_shrink sieht nur die sechs CONSUMERS und nur prozentualen Verlust.
+#   * check_emptiness sieht nur den Sprung auf "nur Kopfzeile".
+#
+# Deshalb steht die Pruefung hier, im Waechter: er laeuft taeglich
+# (.github/workflows/data-guardian.yml, cron '30 9 * * *') mit fetch-depth 0,
+# also mit vollem Verlauf, und er meldet nur, er repariert nie.
+#
+# Warum das Commit-Datum die richtige Messung fuer Byte-Gleichheit ist: der
+# Wochenlauf committet mit `git add -A` und bricht ab, wenn `git diff --cached
+# --quiet` nichts findet. Eine Datei bekommt also GENAU DANN einen neuen
+# Commit, wenn sich ihre Bytes geaendert haben. `git log -1 -- datei` misst
+# damit unmittelbar "seit wann byte-identisch" — nicht "seit wann angefasst".
+# (Deshalb auch nicht mtime: der Checkout stempelt alle Dateien auf die
+# Klonzeit, die Pruefung waere strukturell tot.)
+#
+# WELCHE DATEIEN HIER HINEINGEHOEREN — gemessen am Verlauf, nicht geschaetzt.
+# Aufgenommen wird nur, was sich bei JEDEM planmaessigen Lauf aendern MUSS:
+#
+#   current_meta_card_data.csv       Commit-Tage seit 30.06.2026 luecklos im
+#   online_tournament_dated_cards.csv  Abstand 1-4 Tage (groesste Luecke
+#                                    07.08.->11.08. = 4 Tage, gemessen mit
+#                                    `git log --format=%cI -- data/<datei>`)
+#   limitless_online_fenster.csv     ist die Differenz zweier GEMESSENER
+#                                    Tagesstaende ueber ein gleitendes
+#                                    14-Tage-Fenster; das Fenster wandert an
+#                                    jedem Tag, die Datei kann gar nicht
+#                                    gleich bleiben, wenn der Job laeuft.
+#
+# NICHT aufgenommen: labs_tournament_matchups.csv. Gemessen am selben Verlauf
+# hat sie eine echte Luecke von 31.07. bis 01.09.2026 — zwischen zwei grossen
+# Turnieren aendert sich an einer Matchup-Matrix nichts, obwohl der Scraper
+# sauber laeuft. Ihr Waechter ist der Herzschlag von
+# scrapers/labs_tournament_scraper.py, nicht das Alter ihrer Datei. Genau
+# diese Unterscheidung trifft der Modulkommentar oben ueber CONTENT_DRIVEN.
+STILLSTAND = {
+    # Datei: (max_alter_in_tagen, Job-Schluessel im Herzschlag)
+    "limitless_online_fenster.csv":     (WOCHENLAUF_SCHWELLE,
+                                         "scripts/build_online_fenster.py"),
+    "current_meta_card_data.csv":       (WOCHENLAUF_SCHWELLE,
+                                         "scrapers/current_meta_analysis_scraper.py"),
+    "online_tournament_dated_cards.csv": (WOCHENLAUF_SCHWELLE,
+                                          "scrapers/online_tournament_scraper.py"),
+}
+
+
+def _herzschlag_lesen():
+    """Die Herzschlagdatei als dict, oder {} wenn sie fehlt/kaputt ist."""
+    try:
+        with open(os.path.join(DATA, HEARTBEAT_DATEI), encoding="utf-8") as f:
+            stand = json.load(f)
+        return stand if isinstance(stand, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def check_stillstand(findings):
+    """Eine Datei, die ueber mehrere planmaessige Laeufe hinweg byte-identisch
+    bleibt, obwohl ihr Scraper laufen sollte.
+
+    Die Meldung nennt immer beides — das Alter der Datei UND den Herzschlag des
+    zustaendigen Jobs —, weil erst die Kombination sagt, wo man hinsehen muss:
+
+        Datei still + Herzschlag still  -> der Job laeuft nicht mehr
+        Datei still + Herzschlag frisch -> der Job laeuft und liefert nichts
+                                           (Quelle geaendert, Filter leer,
+                                           Anmeldung abgelaufen)
+
+    AUSNAHME nach dem Vorbild der City-League-Dateien (siehe _leer_erlaubt):
+    was das Sanity-Tor mit Schwelle 0 ausdruecklich als "darf leer sein"
+    fuehrt, steht sachlich still — waehrend der japanischen Saisonpause ist
+    Stillstand der richtige Zustand. Das bleibt sichtbar, aber als WARN mit
+    Begruendung, nicht als Notfall. Ein Waechter, der viermal falschen Alarm
+    schlaegt, wird beim fuenften Mal nicht gelesen.
+    """
+    heute = dt.date.today()
+    schlaege = _herzschlag_lesen()
+    erlaubt_still = _leer_erlaubt()
+
+    for datei, (max_alter, job) in sorted(STILLSTAND.items()):
+        pfad = os.path.join(DATA, datei)
+        if not os.path.exists(pfad):
+            findings.append(("CRITICAL",
+                             f"data/{datei} fehlt — sie wird von {job} "
+                             f"geschrieben und von der Seite gelesen"))
+            continue
+        committed = _last_commit_date(pfad)
+        if committed is None:
+            findings.append(("WARN",
+                             f"Stillstand von data/{datei} nicht pruefbar: kein "
+                             f"Git-Verlauf lesbar (flacher Klon?). Die Pruefung "
+                             f"ist hier blind, nicht die Datei in Ordnung"))
+            continue
+        alter = (heute - committed).days
+        if alter <= max_alter:
+            continue
+
+        # Wie steht der zugehoerige Job da?
+        eintrag = schlaege.get(job)
+        if not isinstance(eintrag, dict):
+            herz = (f"Fuer {job} steht kein Herzschlag in "
+                    f"data/{HEARTBEAT_DATEI} — ob der Job lief, ist damit "
+                    f"nicht feststellbar.")
+        else:
+            status = str(eintrag.get("status", "")).strip() or "ohne Status"
+            zuletzt = str(eintrag.get("zuletzt_erfolgreich", "")).strip() or "nie"
+            herz = (f"Herzschlag von {job}: zuletzt erfolgreich {zuletzt}, "
+                    f"Status {status}.")
+
+        if datei in erlaubt_still:
+            findings.append(("WARN",
+                             f"data/{datei} ist seit {alter} Tagen byte-identisch "
+                             f"(planmaessig hoechstens {max_alter}, {WOCHENLAUF_KADENZ}). "
+                             f"Die Datei ist im Sanity-Tor mit Schwelle 0 als 'darf "
+                             f"leer sein' gefuehrt (Saisonpause), Stillstand ist dort "
+                             f"der richtige Zustand. {herz}"))
+        else:
+            findings.append(("CRITICAL",
+                             f"data/{datei} ist seit {alter} Tagen byte-identisch, "
+                             f"obwohl sie bei jedem planmaessigen Lauf neu geschrieben "
+                             f"wird (erlaubt sind {max_alter}, {WOCHENLAUF_KADENZ}). "
+                             f"Kein Zeilenverlust, keine leere Datei — deshalb sieht "
+                             f"das Sanity-Tor nichts. {herz}"))
+
+
+# ── format_window.json: entscheidet, welches Format gefiltert wird ──────────
+#
+# BEFUND 07.09.2026: die Datei war am 09.08.2026 zuletzt geschrieben, also seit
+# 29 Tagen unveraendert, und sie stand in keiner Frischepruefung. Zwei ihrer
+# Felder pflegt laut ihrem eigenen Kommentar ein Mensch von Hand:
+#
+#   "previous_format_key + set_addition_only are MANUAL fields the maintainer
+#    sets at every rotation."
+#
+# Ein Alter ist hier KEIN Fehler: die Datei wird zweimal je Wochenlauf neu
+# abgeleitet, aber nur geschrieben, wenn sich etwas geaendert hat — zwischen
+# zwei Rotationen steht sie zu Recht still. Eine Tagesschwelle waere deshalb
+# eine geratene Zahl, und geratene Zahlen sind in diesem Repo verboten.
+#
+# Gemeldet wird darum zweierlei:
+#   1. das ALTER als Hinweis, immer, mit Datum — damit es sichtbar ist statt
+#      nur wahr;
+#   2. ein WARN, wenn das von Hand gepflegte previous_format_key den GEMESSENEN
+#      Daten widerspricht. Das ist der Fehler, den die Handpflege macht: bei
+#      der Rotation wird current_set automatisch nachgezogen und das Vorformat
+#      vergessen. Messbar ist er, weil die Labs-Auszuege je Format ihre
+#      Turnierdaten fuehren — das Vorformat ist der Auszug mit dem juengsten
+#      Turnier VOR dem laufenden Format.
+def _meta_zeitraeume():
+    """{Metakuerzel: (erstes, letztes Turnierdatum)} aus den Labs-Auszuegen."""
+    import csv as _csv  # noqa: PLC0415
+    raus = {}
+    for pfad in sorted(glob.glob(os.path.join(DATA, "labs_tournament_decks_*.csv"))):
+        kuerzel = os.path.basename(pfad)[len("labs_tournament_decks_"):-len(".csv")]
+        if kuerzel.startswith("_"):
+            continue           # __unsorted ist kein Format
+        tage = set()
+        try:
+            with open(pfad, encoding="utf-8-sig", newline="") as f:
+                for r in _csv.DictReader(f):
+                    v = (r.get("tournament_date") or "").strip()[:10]
+                    if len(v) == 10 and v[4] == "-" and v[7] == "-":
+                        tage.add(v)
+        except (OSError, ValueError, UnicodeDecodeError):
+            continue
+        if tage:
+            raus[kuerzel] = (min(tage), max(tage))
+    return raus
+
+
+def check_formatfenster_alter(findings):
+    """Das Alter von format_window.json sichtbar machen — und die Handfelder pruefen."""
+    pfad = os.path.join(DATA, "format_window.json")
+    if not os.path.exists(pfad):
+        findings.append(("CRITICAL",
+                         "data/format_window.json fehlt — ohne sie ist nicht "
+                         "bestimmt, welches Format die Seite ueberhaupt filtert"))
+        return
+    try:
+        with open(pfad, encoding="utf-8") as f:
+            fenster = json.load(f)
+    except (OSError, ValueError) as e:
+        findings.append(("CRITICAL",
+                         f"data/format_window.json nicht lesbar ({e}) — das "
+                         f"Formatfenster ist damit unbestimmt"))
+        return
+
+    committed = _last_commit_date(pfad)
+    if committed is None:
+        findings.append(("WARN",
+                         "Alter von data/format_window.json nicht feststellbar "
+                         "(kein Git-Verlauf lesbar). Zwei ihrer Felder pflegt ein "
+                         "Mensch von Hand; ohne Alter ist nicht zu sehen, wann"))
+    else:
+        alter = (dt.date.today() - committed).days
+        findings.append(("INFO",
+                         f"data/format_window.json ist {alter} Tage alt "
+                         f"(zuletzt geschrieben {committed.isoformat()}). Sie "
+                         f"entscheidet, welches Format gefiltert wird "
+                         f"(current_set={fenster.get('current_set')!r}, "
+                         f"oldest_legal_set={fenster.get('oldest_legal_set')!r}). "
+                         f"previous_format_key={fenster.get('previous_format_key')!r} "
+                         f"und set_addition_only={fenster.get('set_addition_only')!r} "
+                         f"pflegt laut _note_previous_format ein Mensch von Hand — "
+                         f"kein Lauf zieht sie nach. Ein Alter allein ist hier kein "
+                         f"Fehler: geschrieben wird die Datei nur bei einer Rotation"))
+
+    # Widerspricht das Handfeld den gemessenen Turnierdaten?
+    vorformat = str(fenster.get("previous_format_key") or "").strip()
+    laufend = _aktuelles_meta()
+    zeitraeume = _meta_zeitraeume()
+    if not (vorformat and laufend and zeitraeume.get(laufend)):
+        return                      # nicht messbar -> keine Aussage
+    beginn_laufend = zeitraeume[laufend][0]
+    frueher = {k: v for k, v in zeitraeume.items()
+               if k != laufend and v[1] < beginn_laufend}
+    if not frueher:
+        return
+    gemessen = max(frueher, key=lambda k: frueher[k][1])
+    if vorformat != gemessen:
+        findings.append(("WARN",
+                         f"format_window.json fuehrt previous_format_key="
+                         f"{vorformat!r}, die Turnierdaten nennen aber {gemessen!r} "
+                         f"als Vorformat von {laufend} (juengstes Turnier dort "
+                         f"{frueher[gemessen][1]}, {laufend} beginnt "
+                         f"{beginn_laufend}). Das Feld wird von Hand gesetzt und "
+                         f"gatet den Vorformat-Boden des Predictors"))
+
+
+# ── Hat jede gefuehrte Datei ueberhaupt einen Stand? ────────────────────────
+#
+# scripts/build_data_stand.py fuehrt die Positivliste DATEIEN — nur was dort
+# steht, bekommt in data/data_stand.json ein Datum, und nur was dort ein Datum
+# hat, kann ein Frische-Chip anzeigen. Fehlt eine Datei in der Liste, zeigt die
+# Seite fuer sie "unbekannt" statt eines falschen Datums (das ist richtig so),
+# aber niemand erfaehrt, DASS dort nichts steht.
+#
+# Zwei Listen, eine Wahrheit: statt die Liste hier zu wiederholen, wird sie
+# gelesen — dieselbe Loesung wie bei _leer_erlaubt() und dem Sanity-Tor.
+def _gefuehrte_dateien():
+    try:
+        import sys as _sys  # noqa: PLC0415
+        _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from build_data_stand import DATEIEN as _D   # type: ignore  # noqa: PLC0415
+        return list(_D)
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def check_datenstand(findings):
+    """Jede gefuehrte Datei, die es gibt, braucht auch einen Stand."""
+    gefuehrt = _gefuehrte_dateien()
+    if not gefuehrt:
+        findings.append(("WARN",
+                         "scripts/build_data_stand.py nicht lesbar — ob die "
+                         "Frische-Chips ueberhaupt eine Quelle haben, laesst sich "
+                         "hier nicht pruefen"))
+        return
+    pfad = os.path.join(DATA, "data_stand.json")
+    try:
+        with open(pfad, encoding="utf-8") as f:
+            stand = (json.load(f) or {}).get("dateien", {}) or {}
+    except (OSError, ValueError):
+        findings.append(("WARN",
+                         "data/data_stand.json fehlt oder ist unlesbar — jeder "
+                         "Frische-Chip der Seite steht damit auf 'unbekannt'"))
+        return
+
+    for datei in gefuehrt:
+        if not os.path.exists(os.path.join(DATA, datei)):
+            continue            # nicht vorhanden ist Sache anderer Pruefungen
+        if stand.get(datei):
+            continue
+        if datei in STILLSTAND:
+            findings.append(("WARN",
+                             f"data/{datei} hat keinen Eintrag in "
+                             f"data/data_stand.json, obwohl sie bei jedem "
+                             f"planmaessigen Lauf neu geschrieben wird. Ein Chip "
+                             f"auf diese Datei zeigte 'unbekannt'. Der Eintrag "
+                             f"entsteht beim naechsten Lauf, der sie aendert"))
+        else:
+            findings.append(("INFO",
+                             f"data/{datei} hat (noch) keinen Eintrag in "
+                             f"data/data_stand.json — sie wird nur bei Aenderung "
+                             f"fortgeschrieben und hat sich seit Aufnahme in die "
+                             f"Liste nicht geaendert"))
 
 
 # How long a CSV may sit header-only before we say the refill never happened.
@@ -2236,6 +2569,9 @@ def main():
     check_schema(findings)
     check_freshness(findings)
     check_heartbeat(findings)
+    check_stillstand(findings)
+    check_formatfenster_alter(findings)
+    check_datenstand(findings)
     check_matchup_bilanzen(findings)
     check_kontinuitaet_vollstaendig(findings)
     check_druck_herkunft(findings)
