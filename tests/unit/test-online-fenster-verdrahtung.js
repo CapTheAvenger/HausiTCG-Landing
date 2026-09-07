@@ -206,8 +206,25 @@ describe('Online-Fenster (14 Tage) im Meta Call', () => {
       const scraperIdx = wf.indexOf('scrapers/limitless_online_scraper.py');
       assert.ok(scraperIdx > -1 && fensterIdx > scraperIdx,
         'das Fenster wird gebaut, BEVOR der Tagesstand von heute geschrieben ist');
-      assert.ok(/build_online_fenster[\s\S]{0,400}?continue-on-error: true|continue-on-error: true[\s\S]{0,400}?build_online_fenster/.test(wf),
+      /* Nachgeschaerft am 07.09.2026. Geprueft wurde hier bis dahin
+         `continue-on-error: true` — also die Frage "haelt ein fehlender
+         Verlauf den Wochenlauf an". Die Antwort war richtig und die
+         Messung falsch: `continue-on-error` laesst den Schritt scheitern
+         UND den Lauf gruen bleiben, ohne dass irgendwo Buch gefuehrt
+         wird. Ausgerechnet dieser Schritt schreibt die aktuellste Zahl
+         der Seite; sein Ausfall war damit an keiner Stelle sichtbar.
+         Nicht blockierend ist er weiterhin, aber ueber ein bewusstes
+         `exit 0` mit rc-Protokoll — dasselbe Muster wie bei den drei
+         Scraperschritten daneben (tests/python/test_wochenlauf_bilanz.py).
+         Gefordert werden jetzt beide Haelften: nicht blockierend UND
+         nicht stumm. */
+      const block = wf.slice(fensterIdx, fensterIdx + 1200);
+      assert.ok(/continue-on-error: true/.test(block) || /exit 0/.test(block),
         'der Schritt ist blockierend — ein fehlender Verlauf haelt den Wochenlauf an');
+      assert.ok(block.includes('rc_extra.txt')
+                && block.includes('FAIL scripts/build_online_fenster.py')
+                && block.includes('OK   scripts/build_online_fenster.py'),
+        'der Schritt kann still scheitern — sein Rueckgabewert landet in keiner Bilanz');
     });
 
   it('fuenf Waechter, nicht zwei', () => {

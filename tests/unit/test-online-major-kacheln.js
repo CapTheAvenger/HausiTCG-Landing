@@ -10,7 +10,9 @@
  * Ergebnissen."
  *
  * Und der Unterschied ist gross. Gemessen gegen Worlds San Francisco
- * (774 Spieler, 44 Archetypen):
+ * (797 Spieler, 44 Archetypen; am 01.09.2026 stand hier 774 — das war
+ * der damalige Wert in data/labs_tournaments.json, den der Wochenlauf
+ * vom 06.09.2026 auf 797 gezogen hat):
  *
  *     Deck                  Anteil online   Anteil Major
  *     Dragapult                    7,3 %        22,2 %
@@ -558,7 +560,7 @@ describe('Fehlende Major-Daten werden als fehlend gezeigt', () => {
     });
 
     it('der Anteil wird auch ohne Mindestzahl gezeigt', () => {
-        // Er ruht auf Antritten, nicht auf Partien: "1 von 774" ist eine
+        // Er ruht auf Antritten, nicht auf Partien: "1 von 797" ist eine
         // belastbare Aussage, 24,4 % aus 45 Partien nicht.
         const i = ohneKomm.indexOf("tileGeteilt('rep'");
         assert.ok(i > 0, 'die Anteils-Kachel ist nicht mehr geteilt');

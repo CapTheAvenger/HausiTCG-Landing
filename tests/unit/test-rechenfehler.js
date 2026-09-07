@@ -535,7 +535,13 @@ describe('Ø-Platzierung: fehlende Platzierungen zaehlen nirgends mit', () => {
 // ───────────────────────────────────────────────────────────────────
 describe('Wahrscheinlichkeitsrechner: was dasteht, ist womit gerechnet wird', () => {
     const CALC = lies('js/app-calculator.js');
-    const block = schnitt(CALC, '    function leseUndKlemme(id, fallback, min, max) {',
+    /* Der Anker ist ein SCHNITTPUNKT, keine Zusicherung. Am 07.09.2026 kam
+     * ein fuenfter Parameter dazu (`schreibeObergrenze`, siehe die Notiz an
+     * leseUndKlemme in js/app-calculator.js): eine Obergrenze, die nur an
+     * einem ANDEREN Feld haengt, darf die eigene Eingabe nicht mehr
+     * ueberschreiben. Die Zusicherungen darunter gelten unveraendert weiter
+     * — insbesondere die, dass ein leeres Feld leer bleibt. */
+    const block = schnitt(CALC, '    function leseUndKlemme(id, fallback, min, max, schreibeObergrenze) {',
         '        return wert;\n    }', 'leseUndKlemme');
 
     function baue(feldwert) {

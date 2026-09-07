@@ -8,9 +8,21 @@
  * hinaus:
  *
  *     Turnier         Feld   Listen  Plaetze   davon auf Gewicht 0,1
- *     Worlds 2026      774      143    1-143    111  (78 %)
+ *     Worlds 2026      797      143    1-143    111  (78 %)
  *     NAIC 2026      3.743      675    1-675    643  (95 %)
  *     Turin          2.032      383    1-383    351  (92 %)
+ *
+ * NACHTRAG 07.09.2026: in der Zeile Worlds stand 774. Das war der Wert,
+ * den labs_tournaments.json am 05.09.2026 wirklich fuehrte; der
+ * Wochenlauf vom 06.09.2026 (afec9825) hat ihn auf 797 gezogen. Die
+ * gesetzten Eingaben in den Zusicherungen unten bleiben bei 774 —
+ * sie sind gesetzte Werte fuer eine Rechenprobe, keine Behauptung
+ * ueber den Bestand. Dass Code und Datei zusammenpassen, prueft
+ * tests/unit/test-tag2-grundgesamtheit.js gegen BELEGTE_FELDER.
+ *
+ * Die Grundgesamtheit ist dabei IMMER der Tag-2-Cut: die 143 Listen
+ * sind genau die 143 Spieler mit day2=1. Das Perzentil misst den Platz
+ * am ganzen Feld (797), gewichtet wird aber nur innerhalb des Cuts.
  *
  * Rund neun von zehn veroeffentlichten Listen trugen dasselbe Gewicht.
  * Fuer Mega Excadrill lagen ALLE acht Listen (Plaetze 37-122) im selben
@@ -129,8 +141,23 @@ describe('Feldrelatives Platzgewicht', () => {
     });
 
     it('der Befund und der Preis stehen als Begründung im Quelltext', () => {
-        assert.match(QUELLE, /Worlds 2026\s+774\s+143/,
-            'die gemessene Tabelle fehlt oder traegt andere Zahlen');
+        /* 07.09.2026: hier stand /Worlds 2026\s+774\s+143/ — eine feste
+           Zahl im Quelltext-Griff. Sie hat den veralteten Kommentarwert
+           nicht nur durchgelassen, sondern ihn ZEMENTIERT: als der
+           Wochenlauf am 06.09. das Feld auf 797 zog, war die einzige
+           Stelle, die 774 verlangte, dieser Test. Jetzt wird die
+           Kommentartabelle gegen die Konstante BELEGTE_FELDER in
+           derselben Datei geprueft — die wiederum
+           tests/unit/test-tag2-grundgesamtheit.js gegen
+           data/labs_tournament_decks.csv nachrechnet. Keine feste Zahl
+           mehr, und die Kette endet an der Datei. */
+        const tabelle = QUELLE.match(/Worlds 2026\s+(\d[\d.]*)\s+143/);
+        assert.ok(tabelle, 'die gemessene Tabelle fehlt oder traegt andere Zahlen');
+        const konstante = QUELLE.match(/'0071':\s*\{[^}]*feld:\s*(\d+)/);
+        assert.ok(konstante, 'BELEGTE_FELDER fuehrt 0071 nicht mehr');
+        assert.strictEqual(tabelle[1].replace(/\./g, ''), konstante[1],
+            `Kommentartabelle sagt Feld ${tabelle[1]}, BELEGTE_FELDER sagt `
+            + `${konstante[1]} — genau so ist die 774 stehen geblieben`);
         assert.match(QUELLE, /labs_tournament_decks\.csv `total_players`/,
             'es steht nicht dabei, WELCHE Feldgroesse gemeint ist — die '
             + 'Spalte `players` in der Overview zaehlt anders');
