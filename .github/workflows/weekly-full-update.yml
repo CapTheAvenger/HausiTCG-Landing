@@ -752,6 +752,29 @@ jobs:
         run: |
           python3 scripts/repariere_ace_spec.py --melden
 
+      - name: Datenluecken neu bestimmen (Admin-Bereich)
+        # BEFUND 07.09.2026: `grep -rn datenluecken .github/` fand nichts.
+        # scripts/datenluecken.py schrieb data/datenluecken.json, der
+        # Admin-Bereich (#admin) liest genau diese Datei und meldete
+        # daraus "0 Luecken" — aus einem Stand vom 31.08., waehrend die
+        # Dateien, ueber die er urteilt, taeglich neu geschrieben werden.
+        #
+        # Die Null war zufaellig noch richtig (am 07.09. nachgerechnet:
+        # ebenfalls 0). Genau das ist der Punkt: eine Zahl, die niemand
+        # nachrechnet, ist keine Messung mehr, sondern eine Erinnerung.
+        #
+        # Hier und nicht spaeter, weil der Lauf ueber Dateien urteilt,
+        # die dieser Wochenlauf gerade erneuert hat — nach dem Commit
+        # gemessen, kaeme das Ergebnis erst eine Woche spaeter auf die
+        # Seite.
+        #
+        # Reiner Dateilauf: kein Netz, keine Zugangsdaten, Sekunden.
+        # Weich wie die beiden Schritte darueber — er meldet, er gatet
+        # nicht. Ein Waechter darf den Lauf nicht abbrechen, den er
+        # beobachtet.
+        run: |
+          python3 scripts/datenluecken.py || true
+
       - name: Upload scraper logs on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
