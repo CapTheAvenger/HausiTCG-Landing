@@ -631,9 +631,23 @@ def abgleich_vielfachheiten(pokemon, trainer, code):
     in der Reihenfolge der Seite), aber als Mehrmenge: "sechsmal einzeln,
     dreimal doppelt".
 
+    WIE SCHARF SIE WIRKLICH IST — ZWEI ZAHLEN, UND NUR EINE ZAEHLT
+    ---------------------------------------------------------------
     GEMESSEN am 07.09.2026 ueber alle 33 Decks:
       * das EIGENE Deck besteht sie bei **32 von 33**,
-      * ein FREMDER Code besteht sie bei **21 von 1056 (2,0 %)**.
+      * ein FREMDER Code besteht sie bei **117 von 1056 (11,1 %)**.
+
+    Die 11,1 % sind der Wert des WEGES, DEN DER LAUF GEHT: `sammle`
+    trennt die Karten mit `teile_karten` nach DEMSELBEN Code, der
+    anschliessend hier geprueft wird. Wer stattdessen die richtige
+    Trennung des Decks behaelt und nur den Code austauscht, misst
+    21 von 1056 (2,0 %) — aber diese Information hat der Lauf nicht.
+
+    Die erste Fassung dieses Docstrings nannte die 2,0 % und war damit
+    um den Faktor 5,6 zu guenstig. Die unabhaengige Abnahme am
+    07.09.2026 hat es nachgerechnet und die Zahl richtiggestellt. Eine
+    Selbstkritik, die zu guenstig rechnet, ist schlechter als keine —
+    man glaubt ihr.
 
     Deshalb ist sie eine Angabe und keine Sperre. Der eine Ausreisser ist
     erklaerbar und kein Fehler:
@@ -1416,9 +1430,13 @@ def main():
                               "bestanden; ihr Code gilt weiterhin, ihre Liste "
                               "wird nicht gezeigt. `karten_abgleich` ist die "
                               "schärfere Angabe (Vielfachheiten der Kennungen "
-                              "gegen die Anzahlen der Seite, 2 % Durchlass bei "
-                              "fremden Codes) — sie sperrt nicht, weil Game8 zwei "
-                              "Drucke derselben Karte in einer Zeile zusammenfasst.",
+                              "gegen die Anzahlen der Seite): auf dem Weg, den "
+                              "der Lauf geht, gehen 117 von 1056 fremden Codes "
+                              "durch (11,1 %) — schärfer als die 74 % der "
+                              "Trennung, aber kein Beweis. Sie sperrt nicht, weil "
+                              "Game8 zwei Drucke derselben Karte in einer Zeile "
+                              "zusammenfasst und ein Deck von 33 deshalb zu Recht "
+                              "herausfällt.",
             "uebersicht": {
                 "tier_tabelle": len(tier),
                 "set_tabelle": len(set_decks),
