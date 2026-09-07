@@ -212,13 +212,33 @@ describe('qr-svg: Funktionsmuster', () => {
 });
 
 describe('qr-svg: Formatinformation', () => {
-    // Die 15-Bit-Woerter aus ISO/IEC 18004, Tabelle C.1 — hier von Hand
-    // eingetragen, damit sie NICHT aus derselben Rechnung stammen wie
-    // der Code, den sie pruefen sollen.
+    // Alle 32 Formatwoerter, AUS ECHTEN segno-SYMBOLEN AUSGELESEN
+    // (error=..., mask=..., boost_error=False, 07.09.2026) — nicht aus
+    // derselben Rechnung wie der Code, den sie pruefen sollen. Fuenf
+    // davon stimmen ausserdem mit ISO/IEC 18004 Tabelle C.1 ueberein,
+    // soweit sie hier von Hand nachgeschlagen wurden.
+    //
+    // Vollstaendig, weil die Zusicherung darunter sonst LEER BESTEHEN
+    // kann: sie stieg mit `if (!soll) return;` aus, wenn die gewaehlte
+    // Maske nicht in der Tabelle stand. Ueber alle 33 Codes kommen alle
+    // acht Masken vor (Abnahme 07.09.2026).
     const TABELLE = {
-        'L0': '111011111000100', 'L7': '110100101110110',
-        'M0': '101010000010010', 'M2': '101111001111100',
-        'Q0': '011010101011111', 'H7': '000100000111011'
+        'L0': '111011111000100', 'L1': '111001011110011',
+        'L2': '111110110101010', 'L3': '111100010011101',
+        'L4': '110011000101111', 'L5': '110001100011000',
+        'L6': '110110001000001', 'L7': '110100101110110',
+        'M0': '101010000010010', 'M1': '101000100100101',
+        'M2': '101111001111100', 'M3': '101101101001011',
+        'M4': '100010111111001', 'M5': '100000011001110',
+        'M6': '100111110010111', 'M7': '100101010100000',
+        'Q0': '011010101011111', 'Q1': '011000001101000',
+        'Q2': '011111100110001', 'Q3': '011101000000110',
+        'Q4': '010010010110100', 'Q5': '010000110000011',
+        'Q6': '010111011011010', 'Q7': '010101111101101',
+        'H0': '001011010001001', 'H1': '001001110111110',
+        'H2': '001110011100111', 'H3': '001100111010000',
+        'H4': '000011101100010', 'H5': '000001001010101',
+        'H6': '000110100001100', 'H7': '000100000111011'
     };
     // H/Maske 7 stand hier zuerst als '001100011011010' — aus dem
     // Gedaechtnis, und falsch. Gegengeprueft am 07.09.2026 an einem
@@ -243,10 +263,21 @@ describe('qr-svg: Formatinformation', () => {
         // Der Fehler vom 07.09.2026. Er ist NUR hier zu sehen: rechnen
         // laesst sich damit alles, nur lesen nicht.
         const m = qr.matrix(CODES[0], 'M');
-        const soll = TABELLE['M' + m.maske];
-        if (!soll) return;                       // andere Maske gewaehlt, dann still
-        assert.equal(String(m.module[8][0]), soll[0],
-            'auf (8,0) steht nicht das hoechstwertige Bit der Formatinformation');
+        // Ueber ALLE Codes und alle vier Stufen — kein Ausstieg mehr.
+        let geprueft = 0;
+        ['L', 'M', 'Q', 'H'].forEach(stufe => {
+            CODES.forEach(c => {
+                const mm = qr.matrix(c, stufe);
+                const soll = TABELLE[stufe + mm.maske];
+                assert.ok(soll, `kein Sollwert fuer ${stufe}/Maske ${mm.maske}`);
+                assert.equal(String(mm.module[8][0]), soll[0],
+                    `${stufe}/Maske ${mm.maske}: auf (8,0) steht nicht das ` +
+                    `hoechstwertige Bit der Formatinformation`);
+                geprueft++;
+            });
+        });
+        assert.equal(geprueft, CODES.length * 4,
+            'die Schleife hat nicht jeden Fall angefasst');
     });
 
     it('beide Kopien der Formatinformation sagen dasselbe', () => {
