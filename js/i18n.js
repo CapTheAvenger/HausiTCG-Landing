@@ -6,9 +6,11 @@ const I18N_STORAGE_KEY = 'app_lang';
 const I18N_SUPPORTED = ['en', 'de'];
 
 /* Wohin ein Schluessel faellt, den die aktive Sprache nicht kennt.
-   Beide Woerterbuecher fuehren aktuell 1.913 Schluessel und decken
-   sich vollstaendig — der Rueckfall ist reine Vorsorge und bleibt auf
-   Englisch, weil neue Schluessel dort zuerst entstehen. */
+   Beide Woerterbuecher fuehren aktuell 2.338 Schluessel und decken
+   sich vollstaendig (nachgezaehlt am 07.09.2026; die Angabe stand bis
+   dahin auf 1.913 und war laengst ueberholt) — der Rueckfall ist reine
+   Vorsorge und bleibt auf Englisch, weil neue Schluessel dort zuerst
+   entstehen. */
 const I18N_FALLBACK_LANG = 'en';
 
 /* Was ein Besucher OHNE gespeicherte Wahl sieht.
@@ -247,6 +249,15 @@ const translations = {
     // darf die Warnung zu den Hauptgegnern nicht unterdrücken.
     'buildInfo.techIdeenOhne':   'Nothing found against: {liste}. The rule base holds {n} pairings dated {datum} — these matchups are not covered.',
     'buildInfo.techIdeenOhneEintrag': '{name} ({wr}, {n} games)',
+    'buildInfo.belegJa':         'proven',
+    'buildInfo.belegNein':       'unproven',
+    'buildInfo.belegHeuristik':  'derived from card text, not measured against games',
+    'buildInfo.belegNutzer':     'entered by you',
+    'buildInfo.belegNutzerSatz': 'not measured against games',
+    'buildInfo.belegStand':      'as of',
+    'buildInfo.belegPartien':    'matchup across {n} games',
+    'buildInfo.belegOhnePartien': 'number of games behind this matchup unknown',
+    'buildInfo.belegKeine':      'no data',
     'buildInfo.nearMissIntro':   'These cards were in the candidate pool but the tech slots were full. This is where a generated list diverges from real decklists — swap by hand if you disagree.',
     'buildInfo.altSuggestionsIntro': 'For these cards the field plurality plays a different copy count than the naive round — AND that plurality group places clearly better. The builder did NOT auto-adjust; review each suggestion and decide whether to override manually.',
     'btn.import':             'Import',
@@ -1993,6 +2004,24 @@ const translations = {
     'antiTech.cardsLoading':          'Loading suggested counters…',
     'antiTech.cardsCap':              'Tech slots are capped at {n}. Uncheck one before adding another.',
     'antiTech.toastInjected':         'Loaded {n} tech card(s) into your slots — generating build now.',
+
+    /* ── BELEGT / UNBELEGT / KEINE DATEN ─────────────────────────
+       ENTSCHEIDUNG DES BETREIBERS (07.09.2026), woertlich:
+       "Empfehlungen auf das begrenzen, was belegt ist, Rest offen als
+       'keine Daten' anschreiben." Dieselben Worte in allen vier
+       Ausgabepfaden (Build-vs, Tech Lab, Warum-Dialog, erkannte
+       Tech-Interaktionen) — derselbe Sachverhalt soll ueberall gleich
+       heissen, sonst liest er sich wie vier verschiedene. */
+    'antiTech.belegJa':               'proven',
+    'antiTech.belegNein':             'unproven',
+    'antiTech.belegHeuristik':        'derived from card text, not measured against games',
+    'antiTech.belegStand':            'as of',
+    'antiTech.belegDatumUnbekannt':   'date unknown',
+    'antiTech.belegPartien':          'matchup across {n} games',
+    'antiTech.belegOhnePartien':      'number of games behind this matchup unknown',
+    'antiTech.belegKopf':             'Rule base: {datei}{version} · as of {datum} · {n} pairings. Everything beyond that is derived from card text and flagged as unproven.',
+    'antiTech.belegKeineDaten':       'no data',
+    'antiTech.belegKeineDatenSatz':   'neither the rule base nor the threat file has anything on {liste}. Nothing stands here — not because there is nothing, but because nothing has been measured.',
     'techLab.heading':                'Tech Lab — find techs for any meta card',
     'techLab.subtitle':               'Pick any card from the current meta. The capability engine surfaces every meta card that has a winning card-text interaction against it. Mark wrong suggestions to hide them or add ones the engine missed — your edits persist locally and are visible the next time you open this view.',
     'techLab.targetLabel':            'Target card',
@@ -2029,6 +2058,20 @@ const translations = {
     'techLab.addModalIntro':          'Search the current meta for the card you want to register as a tech against the selected target. It will show up in the list immediately and persist across sessions.',
     'techLab.addPlaceholder':         'Card name…',
     'techLab.dataNote':               'Suggestions come from the card-text capability engine (data/card_capability_*.json) restricted to cards that appear in the current-meta data. Local edits live in localStorage under <code>techLab.overrides.v1</code> and never leave your browser — community-wide overrides will come in a follow-up release.',
+
+    /* Tech Lab nennt KEINE Partienzahl, und das ist Absicht: hier
+       steht eine Karte gegen eine Karte, nicht ein Deck gegen ein
+       Deck. Zu einer Kartenpaarung gibt es keine Partie — eine Zahl
+       aus irgendeiner Deckpaarung danebenzuschreiben waere erfunden. */
+    'techLab.belegJa':                'proven',
+    'techLab.belegNein':              'unproven',
+    'techLab.belegHeuristik':         'derived from card text, not measured against games',
+    'techLab.belegNutzer':            'entered by you',
+    'techLab.belegNutzerSatz':        'not measured against games',
+    'techLab.belegStand':             'as of',
+    'techLab.belegDatumUnbekannt':    'date unknown',
+    'techLab.belegOhnePartien':       'no games behind this — card texts are compared here, not deck matchups',
+    'techLab.belegKopf':              'Rule base: {datei}{version} · as of {datum} · {n} pairings. Everything beyond that is derived from card text and flagged as unproven.',
     'antiTech.modalTitleLegacy':      'Build vs Specific Deck',
     'antiTech.modalIntro':            'Pick the deck you want to beat. The generator will load tech counters against that single opponent instead of the weighted meta field.',
     'antiTech.quickPicksLabel':       'Quick picks (Meta-Call field)',
@@ -2751,6 +2794,15 @@ const translations = {
     'buildInfo.techIdeenLeer':   'Auch laut Kartentext keine Idee gegen deine schlechtesten Matchups. Die Regelbasis kennt {n} Paarungen vom {datum} — das ist ein Anfang, keine Formatabdeckung.',
     'buildInfo.techIdeenOhne':   'Nichts gefunden gegen: {liste}. Die Regelbasis kennt {n} Paarungen vom {datum} — diese Matchups sind nicht abgedeckt.',
     'buildInfo.techIdeenOhneEintrag': '{name} ({wr}, {n} Partien)',
+    'buildInfo.belegJa':         'belegt',
+    'buildInfo.belegNein':       'unbelegt',
+    'buildInfo.belegHeuristik':  'aus dem Kartentext abgeleitet, nicht an Partien gemessen',
+    'buildInfo.belegNutzer':     'vom Nutzer eingetragen',
+    'buildInfo.belegNutzerSatz': 'nicht an Partien gemessen',
+    'buildInfo.belegStand':      'Stand',
+    'buildInfo.belegPartien':    'Matchup aus {n} Partien',
+    'buildInfo.belegOhnePartien': 'Partienzahl des Matchups nicht bekannt',
+    'buildInfo.belegKeine':      'keine Daten',
     'buildInfo.nearMissIntro':   'Diese Karten standen im Kandidatenfeld, die Tech-Slots waren aber voll. Genau hier weicht eine gebaute Liste von echten Decklisten ab — tausche von Hand, wenn du anderer Meinung bist.',
     'buildInfo.altSuggestionsIntro': 'Bei diesen Karten spielt die Mehrheit des Metas eine andere Anzahl als die naive Math.round-Rundung — UND diese Mehrheit platziert sich deutlich besser. Der Builder hat NICHT automatisch angepasst, schau dir jeden Vorschlag an und entscheide selbst ob du manuell übernimmst.',
     'buildInfo.title':        'Warum dieses Deck?',
@@ -4573,6 +4625,24 @@ const translations = {
     'antiTech.cardsLoading':          'Lade Counter-Vorschläge…',
     'antiTech.cardsCap':              'Tech-Slots sind auf {n} begrenzt. Eine andere abwählen bevor du weitere hinzufügst.',
     'antiTech.toastInjected':         '{n} Tech-Karte(n) in deine Slots geladen — Build wird generiert.',
+
+    /* ── BELEGT / UNBELEGT / KEINE DATEN ─────────────────────────
+       ENTSCHEIDUNG DES BETREIBERS (07.09.2026), woertlich:
+       "Empfehlungen auf das begrenzen, was belegt ist, Rest offen als
+       'keine Daten' anschreiben." Dieselben Worte in allen vier
+       Ausgabepfaden (Build-vs, Tech Lab, Warum-Dialog, erkannte
+       Tech-Interaktionen) — derselbe Sachverhalt soll ueberall gleich
+       heissen, sonst liest er sich wie vier verschiedene. */
+    'antiTech.belegJa':               'belegt',
+    'antiTech.belegNein':             'unbelegt',
+    'antiTech.belegHeuristik':        'aus dem Kartentext abgeleitet, nicht an Partien gemessen',
+    'antiTech.belegStand':            'Stand',
+    'antiTech.belegDatumUnbekannt':   'Datum unbekannt',
+    'antiTech.belegPartien':          'Matchup aus {n} Partien',
+    'antiTech.belegOhnePartien':      'Partienzahl des Matchups nicht bekannt',
+    'antiTech.belegKopf':             'Regelbasis: {datei}{version} · Stand {datum} · {n} Paarungen. Alles darüber hinaus ist aus Kartentexten abgeleitet und als unbelegt gekennzeichnet.',
+    'antiTech.belegKeineDaten':       'keine Daten',
+    'antiTech.belegKeineDatenSatz':   'zu {liste} gibt weder die Regelbasis noch die Bedrohungsdatei etwas her. Hier steht deshalb nichts — nicht, weil es nichts gibt, sondern weil nichts gemessen ist.',
     'techLab.heading':                'Tech Lab — finde Techs für jede Meta-Karte',
     'techLab.subtitle':               'Wähle eine beliebige Karte aus dem aktuellen Meta. Die Capability-Engine zeigt jede Meta-Karte die eine Kartentext-Interaktion gegen sie gewinnt. Falsche Vorschläge markieren um sie auszublenden, oder fehlende Techs hinzufügen — deine Änderungen werden lokal gespeichert und bleiben beim nächsten Aufruf erhalten.',
     'techLab.targetLabel':            'Ziel-Karte',
@@ -4609,6 +4679,20 @@ const translations = {
     'techLab.addModalIntro':          'Suche im aktuellen Meta nach der Karte die du als Tech gegen das gewählte Ziel registrieren willst. Sie erscheint sofort in der Liste und bleibt über Sessions hinweg.',
     'techLab.addPlaceholder':         'Karten-Name…',
     'techLab.dataNote':               'Vorschläge kommen aus der Kartentext-Capability-Engine (data/card_capability_*.json) eingeschränkt auf Karten die im aktuellen Meta vorkommen. Lokale Edits leben im localStorage unter <code>techLab.overrides.v1</code> und verlassen deinen Browser nicht — Community-weite Overrides kommen in einer Folge-PR.',
+
+    /* Tech Lab nennt KEINE Partienzahl, und das ist Absicht: hier
+       steht eine Karte gegen eine Karte, nicht ein Deck gegen ein
+       Deck. Zu einer Kartenpaarung gibt es keine Partie — eine Zahl
+       aus irgendeiner Deckpaarung danebenzuschreiben waere erfunden. */
+    'techLab.belegJa':                'belegt',
+    'techLab.belegNein':              'unbelegt',
+    'techLab.belegHeuristik':         'aus dem Kartentext abgeleitet, nicht an Partien gemessen',
+    'techLab.belegNutzer':            'vom Nutzer eingetragen',
+    'techLab.belegNutzerSatz':        'nicht an Partien gemessen',
+    'techLab.belegStand':             'Stand',
+    'techLab.belegDatumUnbekannt':    'Datum unbekannt',
+    'techLab.belegOhnePartien':       'keine Partien dahinter — hier stehen Kartentexte gegeneinander, keine Deckpaarungen',
+    'techLab.belegKopf':              'Regelbasis: {datei}{version} · Stand {datum} · {n} Paarungen. Alles darüber hinaus ist aus Kartentexten abgeleitet und als unbelegt gekennzeichnet.',
     'antiTech.modalTitleLegacy':      'Bauen gegen spezifisches Deck',
     'antiTech.modalIntro':            'Wähle das Deck, das du schlagen willst. Der Generator lädt Tech-Counter gegen diesen einen Gegner statt gegen das gewichtete Meta.',
     'antiTech.quickPicksLabel':       'Schnellauswahl (aus dem Meta Call)',

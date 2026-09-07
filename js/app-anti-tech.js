@@ -34,6 +34,19 @@
         return (typeof t === 'function' ? t(key) : null) || fallback;
     }
 
+    /* BEFUND 07.09.2026 beim Live-Lauf des Beleg-Blocks: `_t` gab
+       WOERTLICH "antiTech.belegKopf" in die Oberflaeche, statt auf den
+       deutschen Rueckfall zu fallen. Grund: `t()` gibt einen
+       unbekannten Schluessel unveraendert zurueck, und ein Schluessel
+       ist ein wahrer String — das `||` greift nie. Fuer Schluessel, die
+       js/i18n.js (noch) nicht kennt, braucht es deshalb den Vergleich
+       gegen den Schluessel selbst. Dasselbe Muster steht in
+       app-deck-builder.js an buildInfo.nearMissTitle. */
+    function _tf(key, fallback) {
+        const v = (typeof t === 'function') ? t(key) : null;
+        return (v && v !== key) ? v : fallback;
+    }
+
     function _devLog(...args) {
         console.log('[AntiTechModal]', ...args);
     }
@@ -44,6 +57,142 @@
     function _normKey(s) {
         if (typeof normalizeCardName === 'function') return normalizeCardName(s || '');
         return String(s || '').toLowerCase().trim();
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+     * BELEGT / UNBELEGT / KEINE DATEN — 07.09.2026
+     *
+     * ENTSCHEIDUNG DES BETREIBERS, woertlich: "Empfehlungen auf das
+     * begrenzen, was belegt ist, Rest offen als 'keine Daten'
+     * anschreiben."
+     *
+     * GEMESSENE LAGE, die dahinter steht: dieser Assistent rechnet
+     * KEINE eigene Cut-Rechnung. Die Vorschlaege in Schritt 2 kommen
+     * aus genau zwei Quellen, und die eine ist deutlich duenner als
+     * die andere:
+     *
+     *   (a) data/card_capability_interactions.json — kuratierte
+     *       Paarungen "Angreifer-Faehigkeit schlaegt
+     *       Verteidiger-Faehigkeit". Version 0.1 vom 15.05.2026,
+     *       FUENF Paarungen. Wer hier auftaucht, hat eine benannte
+     *       Regel hinter sich: Quelle, Version, Datum.
+     *
+     *   (b) data/active_threats.json — Bedrohungskategorien und ihre
+     *       Gegenkarten, abgeleitet aus Kartentexten. Keine Partie,
+     *       keine Siegquote, keine Platzierung steht dahinter.
+     *
+     * Bis heute sah in der Liste beides gleich aus. Ein Vorschlag aus
+     * (b) las sich wie ein Befund, obwohl er eine Vermutung ist.
+     *
+     * Es wird nichts geloescht und nichts erfunden — jeder Vorschlag
+     * bleibt stehen und bekommt seine Einordnung daneben:
+     *
+     *   belegt      -> (a), mit Quelle, Version, Datum und der Zahl
+     *                  der Partien, auf denen das Matchup beruht.
+     *   unbelegt    -> (b), woertlich "aus dem Kartentext abgeleitet,
+     *                  nicht an Partien gemessen".
+     *   keine Daten -> ein gewaehltes Zieldeck, zu dem beide Quellen
+     *                  nichts hergeben. Steht als Zeile da, nicht als
+     *                  stille Leerstelle.
+     * ═══════════════════════════════════════════════════════════════ */
+    const BELEG_QUELLE = 'data/card_capability_interactions.json';
+    let _regelstand = null;   // {version, datum, paarungen}
+
+    function _ensureRegelstand() {
+        if (_regelstand) return Promise.resolve(_regelstand);
+        return fetch(BELEG_QUELLE, { cache: 'no-cache' })
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+            .then(d => {
+                _regelstand = {
+                    version:   (d && d.version) || null,
+                    datum:     (d && d.generated_at) || null,
+                    paarungen: (d && Array.isArray(d.interactions)) ? d.interactions.length : 0
+                };
+                return _regelstand;
+            });
+    }
+
+    // ISO -> deutsches Datum. Unbekanntes bleibt unbekannt statt zu
+    // einem erfundenen Datum zu werden.
+    function _belegDatum(iso) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || '').trim());
+        if (!m) return _tf('antiTech.belegDatumUnbekannt', 'Datum unbekannt');
+        const de = (typeof getLang === 'function' ? getLang() : 'de') === 'de';
+        return de ? `${m[3]}.${m[2]}.${m[1]}` : `${m[1]}-${m[2]}-${m[3]}`;
+    }
+
+    /* Partien je Gegner aus derselben Datei, aus der die Siegquoten
+       daneben kommen. Nur gelesen, nicht gerechnet: die Zahl ist die
+       Stichprobe des Matchups und sagt, wie schwer die Quote wiegt.
+
+       BEFUND 07.09.2026 bei der Abnahme: hier stand `window.
+       currentMetaArchetype` direkt. Dieses Modul ist aber aus DREI
+       Quellen erreichbar (currentMeta, cityLeague, pastMeta), und jede
+       haelt ihren Archetyp in einem eigenen Globalen — genau dafuer
+       gibt es `_getCurrentArchetype()`, das ein Stueck weiter unten
+       schon fuer den Kartenpool-Filter benutzt wird. Gemessen mit
+       currentMetaArchetype='Dragapult' und
+       currentCityLeagueArchetype='Mega Excadrill': wer Build-vs aus
+       der City League oeffnete, bekam die Stichprobe des FREMDEN
+       Decks (280 statt 358) an seine Empfehlungen geschrieben. Eine
+       Zahl aus einem anderen Deck ist schlimmer als keine. */
+    function _partienByOpponentForUser() {
+        const map = new Map();
+        const rows = (typeof window !== 'undefined') ? window.currentMetaMatchupData : null;
+        const userArch = _getCurrentArchetype();
+        if (!Array.isArray(rows) || !userArch) return map;
+        const userLower    = userArch.trim().toLowerCase();
+        const userStripped = _stripEx(userArch).toLowerCase();
+        for (const r of rows) {
+            const d = String(r.deck_name || '').trim().toLowerCase();
+            if (d !== userLower && d !== userStripped) continue;
+            const opp = String(r.opponent || '').trim();
+            if (!opp) continue;
+            const n = parseInt(String(r.total_games || '').replace(/[^0-9]/g, ''), 10);
+            if (Number.isFinite(n) && !map.has(opp.toLowerCase())) map.set(opp.toLowerCase(), n);
+        }
+        return map;
+    }
+
+    /* Der sichtbare Satz je Vorschlag. Deutsch, kurz, und er steht in
+       der Zeile — nicht im Titel-Attribut: was im Tooltip steht, hat
+       auf dem Telefon niemand gelesen. */
+    function _belegSatz(entry) {
+        const st = _regelstand || { version: null, datum: null, paarungen: 0 };
+        if (entry && entry.beleg === 'paarung') {
+            const teile = [_tf('antiTech.belegJa', 'belegt')];
+            teile.push(BELEG_QUELLE.replace(/^data\//, '')
+                + (st.version ? ' v' + st.version : ''));
+            teile.push(_tf('antiTech.belegStand', 'Stand') + ' ' + _belegDatum(st.datum));
+            const partien = _belegPartien(entry);
+            if (partien > 0) {
+                teile.push(_tf('antiTech.belegPartien', 'Matchup aus {n} Partien')
+                    .replace('{n}', String(partien)));
+            } else {
+                teile.push(_tf('antiTech.belegOhnePartien', 'Partienzahl des Matchups nicht bekannt'));
+            }
+            return teile.join(' · ');
+        }
+        return _tf('antiTech.belegNein', 'unbelegt')
+            + ' · '
+            + _tf('antiTech.belegHeuristik',
+                 'aus dem Kartentext abgeleitet, nicht an Partien gemessen');
+    }
+
+    /* Die groesste Stichprobe unter den Zielen, gegen die diese Karte
+       laut Regel hilft. Groesste und nicht Summe: die Partien
+       verschiedener Gegner sind verschiedene Stichproben, addieren
+       waere eine erfundene Zahl. */
+    function _belegPartien(entry) {
+        if (!entry || !entry.targets) return 0;
+        const partien = _partienByOpponentForUser();
+        let max = 0;
+        entry.targets.forEach(name => {
+            const n = partien.get(String(name || '').trim().toLowerCase());
+            if (Number.isFinite(n) && n > max) max = n;
+        });
+        return max;
     }
 
     function _getMetaCallField() {
@@ -389,6 +538,11 @@
                         targets: new Set(),
                         counterScore: 0,
                         source: 'capability',
+                        // BELEGT: hinter dieser Zeile steht eine
+                        // benannte Paarung aus
+                        // card_capability_interactions.json.
+                        beleg: 'paarung',
+                        paarungen: new Set(),
                     };
                     byCard.set(key, entry);
                 }
@@ -399,12 +553,16 @@
                 const label = defTag ? `card-text: ${defTag.replace(/^ability\./, '').replace(/_/g, ' ')}` : 'card-text tech';
                 entry.threatCategories.add(label);
                 entry.targets.add(targetName);
+                if (m.interactionTag) entry.paarungen.add(String(m.interactionTag));
             }
         }
         return Array.from(byCard.values());
     }
 
     async function _computeSuggestedCards() {
+        // Version und Datum der Regelbasis stehen spaeter in der Liste
+        // — sie werden hier geholt, damit der Renderer sie sicher hat.
+        await _ensureRegelstand();
         const intel = await _ensureActiveThreats();
         if (!intel || !intel.threats || !intel.counters) return [];
         const aggression = _readAggression();
@@ -457,6 +615,11 @@
                             threatCategories: new Set(),
                             targets: new Set(),
                             counterScore: 0,
+                            // UNBELEGT: active_threats.json leitet aus
+                            // Kartentexten ab. Keine Partie, keine
+                            // Siegquote, keine Platzierung dahinter.
+                            beleg: 'heuristik',
+                            paarungen: new Set(),
                         };
                         byCard.set(nameLower, entry);
                     }
@@ -487,6 +650,12 @@
                 cap.threatCategories.forEach(c => existing.threatCategories.add(c));
                 cap.targets.forEach(t => existing.targets.add(t));
                 if (!existing.cardId && cap.cardId) existing.cardId = cap.cardId;
+                /* Steht eine Karte in BEIDEN Quellen, gilt die
+                   belegte: die Paarung ist da, unabhaengig davon,
+                   dass die Heuristik sie auch gefunden hat. */
+                existing.beleg = 'paarung';
+                if (!existing.paarungen) existing.paarungen = new Set();
+                (cap.paarungen || new Set()).forEach(t => existing.paarungen.add(t));
             } else {
                 byCard.set(key, cap);
             }
@@ -597,6 +766,12 @@
     // Build Limitless CDN URL from a SET|number card_id.
     // - Numeric numbers get zero-padded to 3 digits (PFL|84 → PFL_084)
     // - Non-numeric prints (TG12, SV23, etc.) stay as-is
+    function _esc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     function _cardImageUrl(cardId) {
         if (!cardId) return null;
         const parts = String(cardId).split('|');
@@ -619,14 +794,50 @@
                 .join(', ');
         }
 
+        /* ── DAS ALTER DER DATENBASIS STEHT UEBER DER LISTE ──
+         *
+         * BEFUND 07.09.2026: die Liste nannte weder ihre Quelle noch
+         * deren Stand. Fuenf Paarungen vom 15.05.2026 sind eine
+         * Aussage ueber die Abdeckung — wer sie nicht kennt, haelt
+         * eine kurze Liste fuer "es gibt nicht mehr". */
+        const st = _regelstand || { version: null, datum: null, paarungen: 0 };
+        const kopf = _tf('antiTech.belegKopf',
+            'Regelbasis: {datei}{version} · Stand {datum} · {n} Paarungen. '
+          + 'Alles darüber hinaus ist aus Kartentexten abgeleitet und als unbelegt gekennzeichnet.')
+            .replace('{datei}', BELEG_QUELLE.replace(/^data\//, ''))
+            .replace('{version}', st.version ? ' v' + st.version : '')
+            .replace('{datum}', _belegDatum(st.datum))
+            .replace('{n}', String(st.paarungen));
+        const kopfHtml = `<div class="anti-tech-beleg-kopf" style="display:block;margin:0 0 8px;font-size:0.85em;line-height:1.35;opacity:0.85">${_esc(kopf)}</div>`;
+
+        /* KEINE DATEN — die gewaehlten Zieldecks, zu denen KEINE der
+           beiden Quellen etwas hergibt. Sie standen bisher als stille
+           Leerstelle da: der Nutzer waehlte drei Ziele und sah eine
+           Liste, die nur zu einem davon etwas sagte, ohne dass die
+           anderen beiden erwaehnt wurden. */
+        const gedeckt = new Set();
+        _suggestedCards.forEach(c => (c.targets || new Set())
+            .forEach(t => gedeckt.add(String(t || '').toLowerCase())));
+        const ohneDaten = Array.from(_targets)
+            .map(k => _targetDisplay.get(k) || k)
+            .filter(n => !gedeckt.has(String(n || '').toLowerCase()));
+        const ohneHtml = ohneDaten.length
+            ? `<div class="anti-tech-beleg-keine" style="display:block;margin-top:8px;font-size:0.85em;line-height:1.35;opacity:0.85">${_esc(
+                _tf('antiTech.belegKeineDaten', 'keine Daten') + ': '
+                + _tf('antiTech.belegKeineDatenSatz',
+                     'zu {liste} gibt weder die Regelbasis noch die Bedrohungsdatei etwas her. '
+                   + 'Hier steht deshalb nichts — nicht, weil es nichts gibt, sondern weil nichts gemessen ist.')
+                    .replace('{liste}', ohneDaten.join(', ')))}</div>`
+            : '';
+
         if (_suggestedCards.length === 0) {
-            list.innerHTML = `<div class="anti-tech-card-empty">${
+            list.innerHTML = kopfHtml + `<div class="anti-tech-card-empty">${
                 _t('antiTech.cardsEmpty', 'No counter cards for these targets — data/active_threats.json does not list them. That is a gap in our data, not a bad pick.')
-            }</div>`;
+            }</div>` + ohneHtml;
             return;
         }
 
-        list.innerHTML = _suggestedCards.map(c => {
+        list.innerHTML = kopfHtml + _suggestedCards.map(c => {
             const safe = c.name.replace(/"/g, '&quot;');
             const targetsTxt = Array.from(c.targets).join(', ');
             const catsTxt = Array.from(c.threatCategories).join(' · ');
@@ -647,9 +858,10 @@
                         <span class="anti-tech-card-targets">vs ${targetsTxt}</span>
                         <span class="anti-tech-card-cats">${catsTxt}</span>
                     </span>
+                    <span class="anti-tech-card-beleg anti-tech-beleg-${c.beleg === 'paarung' ? 'ja' : 'nein'}" style="display:block;margin-top:2px;font-size:0.8em;line-height:1.3;opacity:0.85">${_esc(_belegSatz(c))}</span>
                 </span>
             </label>`;
-        }).join('');
+        }).join('') + ohneHtml;
         list.querySelectorAll('.anti-tech-card-check').forEach(box => {
             box.addEventListener('change', () => _toggleSuggestedCard(box.dataset.card, box.checked));
         });

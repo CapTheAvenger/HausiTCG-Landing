@@ -3052,7 +3052,11 @@
             // blocks user's bench-snipe) and `neutral` interactions
             // are filtered out so the section reads as "your techs
             // against the field", not "the field's techs against you".
-            _renderCapabilityTechSection(capabilityData);
+            /* Der Stand der Regelbasis wird gelesen, bevor die Liste
+               ihn hinschreibt — sonst stuende dort "Datum unbekannt"
+               ueber Zeilen, deren Datum in der Datei steht. */
+            await _ensureUvRegelstand();
+            _renderCapabilityTechSection(capabilityData, archetype);
 
             _renderCardDiffSection(archetype);
 
@@ -3233,10 +3237,109 @@
             return out;
         }
 
+        /* ══════════════════════════════════════════════════════════
+         * BELEGT / UNBELEGT — 07.09.2026
+         *
+         * ENTSCHEIDUNG DES BETREIBERS, woertlich: "Empfehlungen auf
+         * das begrenzen, was belegt ist, Rest offen als 'keine Daten'
+         * anschreiben."
+         *
+         * BEFUND DER ABNAHME: diese Liste zeigte je Zeile NUR die
+         * `confidence`. Das ist eine Aussage ueber die SICHERHEIT DER
+         * ABLEITUNG aus dem Kartentext und wird als Aussage ueber die
+         * Karte gelesen. Weder die Quelle noch ihre Version noch ihr
+         * Stand standen irgendwo, und die Zahl der Partien hinter dem
+         * Matchup auch nicht — obwohl sie hier, anders als im Tech
+         * Lab, wirklich vorliegt: der Nutzer hat ein Deck, der Gegner
+         * ist ein Deck, und die Stichprobe der Paarung steht in
+         * derselben Datei, aus der die Siegquote daneben kommt.
+         *
+         * Die Worte sind dieselben wie im Build-vs-Assistenten
+         * (js/app-anti-tech.js) — derselbe Sachverhalt soll an jeder
+         * Stelle gleich heissen.
+         * ═══════════════════════════════════════════════════════════ */
+        const UV_BELEG_QUELLE = 'data/card_capability_interactions.json';
+        let _uvRegelstand = null;
+
+        function _uvText(key, de) {
+            const v = (typeof t === 'function') ? t(key) : null;
+            return (v && v !== key) ? v : de;
+        }
+
+        function _ensureUvRegelstand() {
+            if (_uvRegelstand) return Promise.resolve(_uvRegelstand);
+            return fetch('./' + UV_BELEG_QUELLE, { cache: 'no-cache' })
+                .then(r => r.ok ? r.json() : null)
+                .catch(() => null)
+                .then(d => {
+                    _uvRegelstand = {
+                        version:   (d && d.version) || null,
+                        datum:     (d && d.generated_at) || null,
+                        paarungen: (d && Array.isArray(d.interactions)) ? d.interactions.length : 0
+                    };
+                    return _uvRegelstand;
+                });
+        }
+
+        // ISO -> deutsches Datum. Unbekanntes bleibt unbekannt statt zu
+        // einem erfundenen Datum zu werden.
+        function _uvBelegDatum(iso) {
+            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || '').trim());
+            if (!m) return _uvText('antiTech.belegDatumUnbekannt', 'Datum unbekannt');
+            const de = (typeof getLang === 'function' ? getLang() : 'de') === 'de';
+            return de ? `${m[3]}.${m[2]}.${m[1]}` : `${m[1]}-${m[2]}-${m[3]}`;
+        }
+
+        /* Partien je Gegner, gelesen aus derselben Datei, aus der die
+           Siegquoten in der Tabelle darunter kommen. Nur gelesen, nicht
+           gerechnet. */
+        function _uvPartienByOpponent(archetype) {
+            const map = new Map();
+            const rows = (typeof window !== 'undefined') ? window.currentMetaMatchupData : null;
+            const arch = String(archetype || '').trim();
+            if (!Array.isArray(rows) || !arch) return map;
+            const ziel     = arch.toLowerCase();
+            const gestutzt = stripExSuffix(arch).trim().toLowerCase();
+            for (const r of rows) {
+                const d = String(r.deck_name || '').trim().toLowerCase();
+                if (d !== ziel && d !== gestutzt) continue;
+                const opp = String(r.opponent || '').trim();
+                if (!opp) continue;
+                const n = parseInt(String(r.total_games || '').replace(/[^0-9]/g, ''), 10);
+                if (Number.isFinite(n) && !map.has(opp.toLowerCase())) map.set(opp.toLowerCase(), n);
+            }
+            return map;
+        }
+
+        /* Der sichtbare Satz je Zeile. `interactionTag` ist der Beleg:
+           er benennt die Paarung aus der Regelbasis und ist
+           nachschlagbar. Eine Zeile ohne ihn ist abgeleitet — sie wird
+           nicht zum Befund erklaert. */
+        function _uvBelegSatz(m, partien) {
+            if (!m || !m.interactionTag) {
+                return _uvText('antiTech.belegNein', 'unbelegt')
+                    + ' · ' + _uvText('antiTech.belegHeuristik',
+                        'aus dem Kartentext abgeleitet, nicht an Partien gemessen');
+            }
+            const st = _uvRegelstand || { version: null, datum: null, paarungen: 0 };
+            const teile = [_uvText('antiTech.belegJa', 'belegt')];
+            teile.push(UV_BELEG_QUELLE.replace(/^data\//, '') + (st.version ? ' v' + st.version : ''));
+            teile.push(_uvText('antiTech.belegStand', 'Stand') + ' ' + _uvBelegDatum(st.datum));
+            const n = Number(partien) || 0;
+            teile.push(n > 0
+                ? _uvText('antiTech.belegPartien', 'Matchup aus {n} Partien').replace('{n}', String(n))
+                : _uvText('antiTech.belegOhnePartien', 'Partienzahl des Matchups nicht bekannt'));
+            return teile.join(' · ');
+        }
+
+        function _uvBelegKlasse(m) {
+            return (m && m.interactionTag) ? 'uv-tech-beleg-ja' : 'uv-tech-beleg-nein';
+        }
+
         // Renders the "Detected tech matchups" narrative list using
         // pre-computed capability data from _computeCapabilityBonuses.
         // Pure DOM — no engine calls, no data computation.
-        function _renderCapabilityTechSection(capabilityData) {
+        function _renderCapabilityTechSection(capabilityData, archetype) {
             const container = document.getElementById('currentMetaUserVsVanillaDetectedTech');
             if (!container) return;
             const header = t('matchup.detectedTechHeader') || 'Detected tech interactions';
@@ -3272,6 +3375,7 @@
                der Liste UND aus der Zaehlung. */
             const items = [];
             let gezaehlt = 0;
+            const partienJeGegner = _uvPartienByOpponent(archetype);
             for (const [oppName, data] of capabilityData.entries()) {
                 const siege  = data.matchups || [];
                 const gegen  = data.gegenrichtung || [];
@@ -3282,10 +3386,16 @@
                     ? ` <span class="uv-tech-bonus${b < 0 ? ' uv-tech-bonus-neg' : ''}">${
                         b > 0 ? '+' : ''}${String(b).replace('.', ',')}pts</span>`
                     : '';
+                const partien = partienJeGegner.get(String(oppName || '').trim().toLowerCase());
+                /* Die Einordnung steht IN der Zeile, in eigener Schrift
+                   — nicht in einem title-Attribut: was im Tooltip
+                   steht, liest auf dem Telefon niemand. */
                 const zeile = (m, richtung) =>
                     `<li class="uv-tech-line uv-tech-${m.confidence} uv-tech-${richtung}">`
                     + `${escapeHtml(m.narrative)} <span class="uv-tech-meta">(${
-                        escapeHtml(confidenceLabel(m.confidence))})</span></li>`;
+                        escapeHtml(confidenceLabel(m.confidence))})</span>`
+                    + `<span class="uv-tech-beleg ${_uvBelegKlasse(m)}" style="display:block;font-size:0.8em;line-height:1.3;opacity:0.85">${
+                        escapeHtml(_uvBelegSatz(m, partien))}</span></li>`;
                 items.push(`<li class="uv-tech-opp"><strong>vs ${escapeHtml(oppName)}</strong>${bonusBadge}<ul class="uv-tech-list">${
                     siege.map(m => zeile(m, 'pro')).join('')
                     + gegen.map(m => zeile(m, 'contra')).join('')
@@ -3295,9 +3405,22 @@
                 container.innerHTML = '';
                 return;
             }
+            /* Das Alter der Datenbasis steht UEBER der Liste. Fuenf
+               Paarungen vom Mai sind eine Aussage ueber die Abdeckung —
+               wer sie nicht kennt, haelt eine kurze Liste fuer "mehr
+               gibt es nicht". */
+            const _st = _uvRegelstand || { version: null, datum: null, paarungen: 0 };
+            const _kopf = _uvText('antiTech.belegKopf',
+                'Regelbasis: {datei}{version} · Stand {datum} · {n} Paarungen. '
+              + 'Alles darüber hinaus ist aus Kartentexten abgeleitet und als unbelegt gekennzeichnet.')
+                .replace('{datei}', UV_BELEG_QUELLE.replace(/^data\//, ''))
+                .replace('{version}', _st.version ? ' v' + _st.version : '')
+                .replace('{datum}', _uvBelegDatum(_st.datum))
+                .replace('{n}', String(_st.paarungen));
             container.innerHTML = `
                 <div class="uv-tech-section">
                     <h4 class="uv-tech-title">${escapeHtml(header)} <span class="uv-tech-count">(${gezaehlt})</span></h4>
+                    <div class="uv-tech-beleg-kopf" style="margin:0 0 8px;font-size:0.85em;line-height:1.35;opacity:0.85">${escapeHtml(_kopf)}</div>
                     <ul class="uv-tech-opp-list">${items.join('')}</ul>
                 </div>`;
             console.log('[CapabilityDetector] rendered section:', gezaehlt, 'of',

@@ -61,6 +61,123 @@
         return (typeof t === 'function' ? t(key) : null) || fallback;
     }
 
+    /* `t()` gibt einen unbekannten Schluessel UNVERAENDERT zurueck, und
+       ein Schluessel ist ein wahrer String — `_t` faellt deshalb nie
+       auf seinen Rueckfall. Fuer neue Schluessel braucht es den
+       Vergleich gegen den Schluessel selbst. Dasselbe Muster steht in
+       js/app-anti-tech.js. */
+    function _tf(key, fallback) {
+        const v = (typeof t === 'function') ? t(key) : null;
+        return (v && v !== key) ? v : fallback;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+     * BELEGT / UNBELEGT / VOM NUTZER — 07.09.2026
+     *
+     * ENTSCHEIDUNG DES BETREIBERS, woertlich: "Empfehlungen auf das
+     * begrenzen, was belegt ist, Rest offen als 'keine Daten'
+     * anschreiben."
+     *
+     * BEFUND DER ABNAHME: dieser ganze Ausgabepfad trug gar keine
+     * Kennzeichnung. `grep -n "beleg" js/app-tech-lab.js` fand null
+     * Treffer. Die Kacheln zeigten nur `confidence` — ein Wort ueber
+     * die SICHERHEIT DER ABLEITUNG, das wie eine Aussage ueber die
+     * Karte gelesen wird — und die Begruendung stand im
+     * title-Attribut, also im Tooltip: auf dem Telefon liest die
+     * niemand. Selbst eingetragene Karten sahen aus wie ein Befund
+     * der Maschine.
+     *
+     * Tech Lab liest dieselbe Regelbasis wie der Build-vs-Assistent
+     * (data/card_capability_interactions.json), also gilt dieselbe
+     * Einordnung, mit denselben Worten:
+     *
+     *   belegt          — eine benannte Paarung aus der Regelbasis
+     *                     steht dahinter, mit Quelle, Version, Stand.
+     *   unbelegt        — aus dem Kartentext abgeleitet, nicht an
+     *                     Partien gemessen.
+     *   vom Nutzer      — selbst eingetragen, nicht an Partien
+     *                     gemessen.
+     *
+     * WAS HIER BEWUSST FEHLT, IST EINE PARTIENZAHL. Der
+     * Build-vs-Assistent kann eine nennen, weil er ein DECK des
+     * Nutzers gegen ein GEGNERDECK stellt und die Stichprobe dieses
+     * Matchups in data/limitless_online_decks_matchups.csv steht.
+     * Tech Lab stellt eine KARTE gegen eine KARTE — dazu gibt es
+     * keine Partie, weder hier noch anderswo. Eine Zahl aus einer
+     * beliebigen Deckpaarung danebenzuschreiben waere eine erfundene
+     * Angabe. Also steht da, dass keine da ist.
+     * ═══════════════════════════════════════════════════════════════ */
+    const BELEG_QUELLE = 'data/card_capability_interactions.json';
+    let _regelstand = null;   // {version, datum, paarungen}
+
+    function _ensureRegelstand() {
+        if (_regelstand) return Promise.resolve(_regelstand);
+        return fetch('./' + BELEG_QUELLE, { cache: 'no-cache' })
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+            .then(d => {
+                _regelstand = {
+                    version:   (d && d.version) || null,
+                    datum:     (d && d.generated_at) || null,
+                    paarungen: (d && Array.isArray(d.interactions)) ? d.interactions.length : 0
+                };
+                return _regelstand;
+            });
+    }
+
+    // ISO -> deutsches Datum. Unbekanntes bleibt unbekannt statt zu
+    // einem erfundenen Datum zu werden.
+    function _belegDatum(iso) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || '').trim());
+        if (!m) return _tf('techLab.belegDatumUnbekannt', 'Datum unbekannt');
+        const de = (typeof getLang === 'function' ? getLang() : 'de') === 'de';
+        return de ? `${m[3]}.${m[2]}.${m[1]}` : `${m[1]}-${m[2]}-${m[3]}`;
+    }
+
+    // Der sichtbare Satz je Kachel. Steht in der Kachel, nicht im
+    // title-Attribut.
+    function _belegSatz(tech) {
+        const grad = String((tech && tech.beleg) || '').trim();
+        if (grad === 'nutzer' || (tech && tech.isUserAdded)) {
+            return _tf('techLab.belegNutzer', 'vom Nutzer eingetragen')
+                + ' · ' + _tf('techLab.belegNutzerSatz', 'nicht an Partien gemessen');
+        }
+        if (grad !== 'paarung') {
+            return _tf('techLab.belegNein', 'unbelegt')
+                + ' · ' + _tf('techLab.belegHeuristik',
+                    'aus dem Kartentext abgeleitet, nicht an Partien gemessen');
+        }
+        const st = _regelstand || { version: null, datum: null, paarungen: 0 };
+        const teile = [_tf('techLab.belegJa', 'belegt')];
+        teile.push(BELEG_QUELLE.replace(/^data\//, '') + (st.version ? ' v' + st.version : ''));
+        teile.push(_tf('techLab.belegStand', 'Stand') + ' ' + _belegDatum(st.datum));
+        teile.push(_tf('techLab.belegOhnePartien',
+            'keine Partien dahinter — hier stehen Kartentexte gegeneinander, keine Deckpaarungen'));
+        return teile.join(' · ');
+    }
+
+    function _belegKlasse(tech) {
+        const grad = String((tech && tech.beleg) || '').trim();
+        if (tech && tech.isUserAdded) return 'nutzer';
+        if (grad === 'paarung') return 'ja';
+        return 'nein';
+    }
+
+    // Das Alter der Datenbasis steht UEBER der Liste. Fuenf Paarungen
+    // vom Mai sind eine Aussage ueber die Abdeckung — wer sie nicht
+    // kennt, haelt eine kurze Liste fuer "es gibt nicht mehr".
+    function _belegKopfHtml() {
+        const st = _regelstand || { version: null, datum: null, paarungen: 0 };
+        const kopf = _tf('techLab.belegKopf',
+            'Regelbasis: {datei}{version} · Stand {datum} · {n} Paarungen. '
+          + 'Alles darüber hinaus ist aus Kartentexten abgeleitet und als unbelegt gekennzeichnet.')
+            .replace('{datei}', BELEG_QUELLE.replace(/^data\//, ''))
+            .replace('{version}', st.version ? ' v' + st.version : '')
+            .replace('{datum}', _belegDatum(st.datum))
+            .replace('{n}', String(st.paarungen));
+        return `<li class="tech-lab-beleg-kopf" style="grid-column:1/-1;margin:0 0 4px;font-size:0.8em;line-height:1.35;opacity:0.85">${_escapeHtml(kopf)}</li>`;
+    }
+
     function _devLog(...args) {
         console.log('[TechLab]', ...args);
     }
@@ -299,6 +416,9 @@
                         narrative:  m.narrative,
                         confidence: m.confidence,
                         attackSource: m.attackerSource && m.attackerSource.name,
+                        // BELEGT: hinter dieser Zeile steht eine benannte
+                        // Paarung aus card_capability_interactions.json.
+                        beleg:      'paarung',
                         hidden:     false,
                     });
                 }
@@ -356,6 +476,9 @@
                                 narrative,
                                 confidence: t.confidence,
                                 attackSource: t.source && t.source.name,
+                                // BELEGT: `ix` IST die Paarung aus der
+                                // Regelbasis, direkt aus der Datei gelesen.
+                                beleg:      'paarung',
                                 hidden:     false,
                             });
                             break;
@@ -484,6 +607,8 @@
                     narrative,
                     confidence: ix.confidence || 'medium',
                     attackSource: opponentSource && opponentSource.name,
+                    // BELEGT: dieselbe Regelbasis, andere Richtung.
+                    beleg: 'paarung',
                     role,
                 });
             }
@@ -502,10 +627,15 @@
     function _renderTechGrid(listEl, techs, direction, emptyText) {
         if (!listEl) return;
         if (techs.length === 0) {
-            listEl.innerHTML = `<li class="tech-lab-empty">${_escapeHtml(emptyText)}</li>`;
+            /* Auch ueber einer leeren Liste steht, WORAUS nichts
+               gefunden wurde — sonst liest sich "nichts gefunden" wie
+               "es gibt nichts", statt wie "diese fuenf Paarungen
+               kennen nichts". */
+            listEl.innerHTML = _belegKopfHtml()
+                + `<li class="tech-lab-empty">${_escapeHtml(emptyText)}</li>`;
             return;
         }
-        listEl.innerHTML = techs.map(tech => {
+        listEl.innerHTML = _belegKopfHtml() + techs.map(tech => {
             const safeName = _escapeHtml(tech.name);
             const imgUrl  = tech.cardId ? _cardImageUrl(tech.cardId) : null;
             const safeImg = imgUrl ? _escapeHtml(imgUrl) : '';
@@ -531,6 +661,7 @@
                 <div class="tech-lab-grid-name">${safeName}</div>
                 ${tech.attackSource ? `<div class="tech-lab-grid-source">${_escapeHtml(tech.attackSource)}</div>` : ''}
                 <span class="tech-lab-grid-conf tech-lab-conf-${confCls}">${_escapeHtml(confLabel)}</span>
+                <div class="tech-lab-grid-beleg tech-lab-beleg-${_belegKlasse(tech)}" style="font-size:0.72em;line-height:1.3;opacity:0.85">${_escapeHtml(_belegSatz(tech))}</div>
                 ${action}
             </li>`;
         }).join('');
@@ -551,6 +682,10 @@
             narrative: a.note || _t('techLab.userAdded', 'Added by you'),
             confidence: 'user',
             attackSource: null,
+            /* VOLLSTAENDIG UNBELEGT, und zwar auf die ehrlichste Art:
+               ein Mensch hat es hingeschrieben. Bis zum 07.09.2026 sah
+               diese Kachel aus wie jede andere. */
+            beleg: 'nutzer',
             isUserAdded: true,
         }));
         return [...filtered, ...added];
@@ -822,8 +957,9 @@
         const startHint = document.getElementById('techLabStartHint');
         if (startHint) startHint.classList.add('d-none');
 
-        // Three parallel reads: engine direction A, engine direction
-        // B, and the target's own tags (for summaries + non-EX bucket).
+        // Four parallel reads: engine direction A, engine direction
+        // B, the target's own tags (for summaries + non-EX bucket) und
+        // der Stand der Regelbasis, den die Kacheln hinschreiben.
         let engineBeatenBy = [];
         let engineBeats    = [];
         let targetTags     = { attacker: [], defender: [] };
@@ -832,6 +968,7 @@
                 _findTechsForCard(target.key, target.name),
                 _findThingsThisCardBeats(target.key, target.name),
                 _getTargetTags(target.key),
+                _ensureRegelstand(),
             ]);
         } catch (e) {
             _devLog('lookup failed:', e && e.message);

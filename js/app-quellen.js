@@ -430,5 +430,22 @@
         if (host && host.children.length) render();
     });
 
-    window.Quellen = { render: render, open: oeffne };
+    /* 07.09.2026 — die Abschnittskennungen als einzige Quelle.
+     *
+     * BEFUND: `#quellen-umfang` bewirkte nichts. Der Abschnitt "Umfang"
+     * bekam am 02.09.2026 die Kennung `umfang` und damit im Markup
+     * `id="qu-umfang"`; die Weissliste der erlaubten Anker in
+     * js/inline-init.js war aber eine von Hand gefuehrte Zweitschrift
+     * dieser Liste und wurde nicht mitgezogen. Nachgemessen: die sechs
+     * aelteren Anker klappten ihren Abschnitt auf, der siebte wechselte
+     * nicht einmal den Reiter.
+     *
+     * Zwei Listen, die dasselbe behaupten, laufen auseinander. Deshalb
+     * gibt es nur noch eine: diese hier, aus dem Inhalt gelesen. */
+    function ids() {
+        var c = INHALT[de() ? 'de' : 'en'];
+        return (c && c.abschnitte ? c.abschnitte : []).map(function (a) { return a.id; });
+    }
+
+    window.Quellen = { render: render, open: oeffne, ids: ids };
 })();

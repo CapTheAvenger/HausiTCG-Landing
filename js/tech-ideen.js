@@ -66,6 +66,14 @@
 
 var STAND = { version: null, datum: null, interaktionen: 0 };
 
+/* Die Datei, aus der die Paarungen kommen. Steht als Konstante hier,
+   weil die Oberflaeche sie beim Namen nennen soll: eine Empfehlung mit
+   Quelle laesst sich pruefen, eine ohne nicht.
+   (Entscheidung des Betreibers, 07.09.2026: "Empfehlungen auf das
+   begrenzen, was belegt ist, Rest offen als 'keine Daten'
+   anschreiben.") */
+var QUELLE = 'data/card_capability_interactions.json';
+
 /* Wieviele Vorschläge je Gegner. Mehr als drei liest niemand, und ab
    dem vierten steht ohnehin die schwächste Ableitung da. */
 var PRO_GEGNER = 3;
@@ -231,6 +239,22 @@ function _laden() {
             if (ix && ix.result === 'attacker_wins' && ix.defender) verteidiger.add(ix.defender);
         });
 
+        /* DER STAND WIRD HIER MITGENOMMEN, NICHT NUR IN datenstand().
+         *
+         * BEFUND 07.09.2026: `ideen()` gab `stand: STAND` heraus, und
+         * STAND war leer, solange niemand vorher `datenstand()`
+         * gerufen hatte. Wer `ideen()` allein benutzt, bekam
+         * Empfehlungen ohne Datum ihrer Datenbasis — genau die
+         * Angabe, ohne die fuenf Paarungen aus dem Mai wie eine
+         * Formatabdeckung aussehen. Die Datei ist ohnehin geladen. */
+        if (a[4]) {
+            STAND = {
+                version: a[4].version || null,
+                datum: a[4].generated_at || null,
+                interaktionen: Array.isArray(a[4].interactions) ? a[4].interactions.length : 0
+            };
+        }
+
         return {
             proArchetyp: proArchetyp, pool: pool, matchups: mu,
             effekte: a[3], verteidiger: verteidiger
@@ -342,7 +366,12 @@ function ideen(opts) {
          * für die Gegner, bei denen ohnehin nichts herauskommen kann. */
         var alleSchlechten = _schlechteGegner(daten, archetyp);
         var _knapp = function (m) {
-            return { name: m.gegner, quote: m.quote, partien: m.partien };
+            /* `beleg: 'keine'` ist die dritte Lage neben belegt und
+               unbelegt: zu diesem Matchup gibt die Regelbasis GAR
+               NICHTS her. Die Oberflaeche schreibt dafuer "keine
+               Daten" hin — eine stille Leerstelle sieht aus wie
+               "nichts noetig". */
+            return { name: m.gegner, quote: m.quote, partien: m.partien, beleg: 'keine' };
         };
         var gegner = alleSchlechten
             .filter(function (g) { return _hatAnsatzpunkt(daten, g.gegnerKey); })
@@ -415,7 +444,20 @@ function ideen(opts) {
                         gegenKarte: d.defenderCard,
                         gegenQuelle: d.defenderSource,
                         sicherheit: d.confidence,
-                        satz: d.narrative
+                        satz: d.narrative,
+                        /* WORAUF DIESE ZEILE BERUHT — mitgeliefert,
+                           damit die Oberflaeche es hinschreiben kann
+                           statt es der Leserin zu ueberlassen.
+                           `beleg: 'paarung'` heisst: hinter der
+                           Wirkung steht eine benannte Regel aus
+                           QUELLE; `partien` ist die Stichprobe des
+                           Matchups, nicht der Karte. Dass die Karte
+                           selbst in diesem Archetyp nie gespielt
+                           wurde, sagt der Kopf des Blocks. */
+                        beleg: 'paarung',
+                        paarung: d.interactionTag || '',
+                        quelleDatei: QUELLE,
+                        partien: g.partien
                     });
                 });
                 return {
@@ -472,6 +514,7 @@ function datenstand() {
 window.TechIdeen = {
     ideen: ideen,
     datenstand: datenstand,
+    QUELLE: QUELLE,
     /* Für die Tests — die Schwellen sind Entscheidungen, keine Magie. */
     SCHLECHT_AB: SCHLECHT_AB,
     MIN_PARTIEN: MIN_PARTIEN,

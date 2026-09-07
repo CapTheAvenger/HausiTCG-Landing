@@ -1772,9 +1772,16 @@ const BASE_PATH = './data/';
         function navigateToAnalysisWithDeck(archetypeName) {
             devLog('Navigating to analysis with deck:', archetypeName);
             window.pendingCityLeagueDeckSelection = archetypeName;
-            
-            // Switch to City League Analysis tab
-            switchTab('city-league-analysis');
+
+            /* BEFUND (Nachabnahme 07.09.2026): unmittelbares Geschwister der
+               beiden am 07.09. reparierten Held-Kachel-Wege, aber nicht
+               mitgezogen. switchTab() (js/app-core.js) schaltet nur um — es
+               enthaelt 0x __dsSchreibeTabHash, location.hash, pushState,
+               replaceState. Die geoeffnete City-League-Analyse war deshalb
+               nicht verlinkbar, und der Zurueck-Knopf kannte den Wechsel
+               nicht. wechsleZuAnalyse() nimmt switchTabAndUpdateMenu() mit
+               Rueckfall auf switchTab(). */
+            wechsleZuAnalyse('city-league-analysis');
             
             // Wait for dropdown to be populated with data
             let attempts = 0;
@@ -1827,13 +1834,26 @@ const BASE_PATH = './data/';
             setTimeout(checkAndSelect, 100);
         }
         
+        /* Ein Reiterwechsel, der die Adresse mitschreibt — derselbe Weg,
+           den jeder Menuepunkt und jumpToCardAnalysis() nehmen.
+           Rueckfallebene switchTab(), damit ein Ladefehler in
+           js/inline-init.js die Kacheln nicht stillegt. */
+        function wechsleZuAnalyse(tabId) {
+            if (typeof switchTabAndUpdateMenu === 'function') {
+                switchTabAndUpdateMenu(tabId);
+            } else {
+                switchTab(tabId);
+            }
+        }
+
         // Navigate to Current Meta Analysis tab and select a deck
         function navigateToCurrentMetaWithDeck(archetypeName) {
             devLog('Navigating to Current Meta with deck:', archetypeName);
             window.pendingCurrentMetaDeckSelection = archetypeName;
-            
-            // Switch to Current Meta Analysis tab
-            switchTab('current-analysis');
+
+            // Siehe Kommentar bei navigateToCMAnalysisWithCombinedDeck:
+            // switchTab() allein schreibt die Adresse nicht fort.
+            wechsleZuAnalyse('current-analysis');
             
             // Wait for dropdown to be populated with data
             let attempts = 0;
@@ -1884,7 +1904,9 @@ const BASE_PATH = './data/';
          */
         window.navigateToPastMetaWithDeck = function(archetypeName, formatKey) {
             devLog('Navigating to Past Meta with deck:', archetypeName, 'format:', formatKey);
-            switchTab('past-meta');
+            // Siehe navigateToAnalysisWithDeck(): switchTab() allein laesst die
+            // Adresse auf der vorigen Ansicht stehen. Derselbe gemeinsame Weg.
+            wechsleZuAnalyse('past-meta');
 
             const setFormatAndDeck = () => {
                 const fmtSel = document.getElementById('pastMetaFormatFilter');
@@ -1963,8 +1985,21 @@ const BASE_PATH = './data/';
 
             devLog('Navigating to CM Analysis with combined deck:', mainName, variants);
 
-            // Switch to Current Meta Analysis tab
-            switchTab('current-analysis');
+            /* BEFUND (07.09.2026, live gemessen, QA-C FEHLER-8): die
+               Held-Kachel in `current-meta` wechselte nach
+               `current-analysis`, `location.hash` blieb aber auf
+               `#current-meta`. Gemessen: Klick auf die Kachel
+               "Dragapult" -> Reiter current-analysis, Hash
+               #current-meta. Die geoeffnete Deck-Analyse liess sich
+               also nicht verlinken, nicht als Lesezeichen speichern,
+               und der Zurueck-Knopf fuehrte woandershin.
+               Ursache: switchTab() schaltet nur um; die Adresse
+               schreibt switchTabAndUpdateMenu() ueber
+               kanonischerHash(). jumpToCardAnalysis() nimmt diesen Weg
+               seit dem 30.08.2026 (triggerTabSwitch) — die beiden
+               Kachel-Wege hier waren die letzten, die ihn nicht
+               nahmen. */
+            wechsleZuAnalyse('current-analysis');
 
             // Wait for dropdown and pick best matching variant
             let attempts = 0;

@@ -316,13 +316,64 @@ function switchTabAndUpdateMenu(tabId) {
 // loaded later, so we wait one rAF for the profile DOM to be visible
 // before activating the sub-tab — otherwise the .profile-tab-content show
 // runs against an unrendered tree.
+/* BEFUND (07.09.2026, im Browser gemessen): "Meine Decks", "Wunschliste"
+   und der Menuepunkt "Deck Builder" oeffneten zwar den Reiter `profile`,
+   der aktive Untertab blieb aber "Meine Sammlung". Nachgestellt mit
+   Playwright auf 127.0.0.1: bei einem Erstbesuch, bei dem der Service
+   Worker die Seite einmal neu laedt, endete der Klick auf "Wunschliste"
+   bei `#profile` + `profile-collection` (4 von 7 Laeufen); nach dem
+   Neuladen war es reproduzierbar richtig. `switchProfileTab('wishlist')`
+   direkt aufgerufen hat immer funktioniert.
+
+   ZWEI URSACHEN, BEIDE HIER:
+
+   1. Die ADRESSE trug den Untertab nicht. switchTabAndUpdateMenu()
+      schreibt ueber kanonischerHash() nur `#profile` — und `#profile`
+      sagt nichts darueber, welche Unteransicht gemeint war. Jedes
+      Neuladen (der Service Worker macht genau eines beim Erstbesuch),
+      jeder Zurueck-Schritt und jeder geteilte Link fielen deshalb auf
+      den Standarduntertab zurueck. Das ist der gemessene Fall.
+   2. Der Umschaltbefehl hing an EINEM requestAnimationFrame mit einer
+      typeof-Wache. War switchProfileTab in genau diesem einen Bild noch
+      nicht geladen, fiel der Befehl wortlos aus — kein Fehler, keine
+      Spur, der Nutzer sieht seine Sammlung.
+
+   Behoben wird beides: die Adresse nennt den Untertab (die
+   Tieflink-Tabelle weiter unten kennt ihn ohnehin, #wishlist & Co.
+   funktionieren seit Juni), und umgeschaltet wird so lange versucht,
+   bis die Funktion da ist — hoechstens eine Sekunde. */
 function openProfileSection(subTab) {
-    switchTabAndUpdateMenu('profile');
-    requestAnimationFrame(() => {
-        if (typeof switchProfileTab === 'function') {
-            switchProfileTab(subTab);
+    /* BEFUND (Nachabnahme 07.09.2026): ein Klick hier kostete ZWEI
+       Verlaufseintraege — erst '#profile' aus switchTabAndUpdateMenu(),
+       dann die Kurzform. Gemessen bei bereits offenem #wishlist:
+       history.length 3 -> 4, Hash unveraendert, und der erste
+       Zurueck-Druck aenderte nichts Sichtbares.
+       Die Marke sagt schreibeHash(), dass gleich eine genauere Adresse
+       folgt; geschrieben wird dann genau einmal, naemlich unten. Nur
+       setzen, wenn es die Untertab-Schreibfunktion wirklich gibt —
+       sonst bliebe die Adresse bei einer aelteren Fassung von
+       js/inline-init.js ganz ohne Eintrag stehen. */
+    const schreibtUnter = typeof window.__dsSchreibeProfilHash === 'function';
+    if (schreibtUnter) window.__dsProfilHashFolgt = true;
+    try {
+        switchTabAndUpdateMenu('profile');
+    } finally {
+        window.__dsProfilHashFolgt = false;
+    }
+    // Schreibt die Kurzform, die den Untertab mitnennt — sonst ist der
+    // Zustand nicht verlinkbar und ueberlebt kein Neuladen.
+    if (schreibtUnter) {
+        window.__dsSchreibeProfilHash(subTab);
+    }
+    let versuche = 0;
+    (function schalten() {
+        if (typeof window.switchProfileTab === 'function') {
+            window.switchProfileTab(subTab);
+            return;
         }
-    });
+        if (++versuche > 60) return;   // ~1 s bei 60 Hz, dann aufgeben
+        requestAnimationFrame(schalten);
+    })();
 }
 
 // Point the menu highlight + header badge at a menu entry by id. Used by
@@ -410,6 +461,80 @@ document.addEventListener('DOMContentLoaded', function () {
     if (badge && hubActive) badge.style.display = 'none';
 });
 
+/* ── Tote Verweise im Anleitungstext ─────────────────────────
+ *
+ * BEFUND (07.09.2026, live gemessen; QA-B F8.5b): im Reiter `tutorial`
+ * stehen neun Verweise mit `href="#"` und ohne `onclick` — achtmal
+ * "🛒 Cardmarket", einmal "@TheDipidisBot". Nachgemessen: ein Klick auf
+ * den ersten setzt den Hash auf leer (""), der popstate-Zuhoerer unten
+ * schickt die Anwendung auf die Startseite, und der Leser verliert
+ * seine Stelle in einem 89.000 Zeichen langen Dokument.
+ *
+ * Der Text selbst (tutorial/tutorial.de.html) und index.html werden
+ * hier NICHT angefasst — abgefangen wird der Klick.
+ *
+ * WARUM ZWEIERLEI BEHANDLUNG — die Entscheidung, begruendet:
+ *
+ *   • "@TheDipidisBot" ist EINDEUTIG. Die Handle benennt einen realen
+ *     Bot, und dieselbe Datei verlinkt ihn 23 Zeilen weiter oben schon
+ *     korrekt auf https://t.me/TheDipidisBot; README.md und
+ *     js/i18n.js ('profile.priceAlerts.chatIdHelp') nennen dieselbe
+ *     Adresse. Es gibt also ein Ziel, das nicht geraten ist — es wird
+ *     eingetragen, und der Verweis funktioniert danach auch beim
+ *     Ueberfahren und beim Oeffnen in neuem Reiter.
+ *
+ *   • Die acht "🛒 Cardmarket" sind es NICHT. Sie stehen in
+ *     `.mockup-tg`, einem NACHBAU einer Telegram-Nachricht mit
+ *     erfundenen Beispielkarten und Beispielpreisen ("Beedrill ex
+ *     (CRI 98) · Markt 3,96 € · Ziel 4,50 €"). Den echten Link baut der
+ *     Bot pro Zeile aus Set und Kartennummer der WUNSCHLISTE DES
+ *     NUTZERS. Ein hier eingetragenes Ziel waere geraten — eine
+ *     Cardmarket-Suche nach einer Karte, die nur im Beispielbild
+ *     vorkommt. Die Regel dieses Projekts ("keine Zahl ohne Quelle,
+ *     keine Behauptung ohne Nachweis", js/app-quellen.js) gilt auch
+ *     fuer Verweise. Also: der Klick wird unschaedlich gemacht — kein
+ *     Hash-Wechsel, kein Sprung — und der Leser bekommt gesagt, WARUM
+ *     nichts passiert, statt es stillschweigend hinzunehmen. Zusaetzlich
+ *     bekommt der Verweis beim ersten Anfassen einen Titel und einen
+ *     Pfeil-Zeiger, damit die zweite Begegnung schon vorher spricht.
+ */
+function tutorialToterVerweis(e) {
+    const ziel = e && e.target;
+    if (!ziel || typeof ziel.closest !== 'function') return;
+    const a = ziel.closest('#tutorial a[href="#"]');
+    if (!a) return;
+
+    // In JEDEM Fall zuerst: der leere Hash ist der eigentliche Schaden.
+    e.preventDefault();
+
+    const deutsch = !(typeof getLang === 'function' && getLang() === 'en');
+    const text = (a.textContent || '');
+
+    if (/TheDipidisBot/i.test(text)) {
+        const url = 'https://t.me/TheDipidisBot';
+        a.setAttribute('href', url);
+        a.setAttribute('target', '_blank');
+        a.setAttribute('rel', 'noopener');
+        try { window.open(url, '_blank', 'noopener'); } catch (_e) { /* Popup-Blocker */ }
+        return;
+    }
+
+    a.setAttribute('title', deutsch
+        ? 'Beispielbild — der echte Cardmarket-Link steht in der Telegram-Nachricht'
+        : 'Example screenshot — the real Cardmarket link is in the Telegram message');
+    a.style.cursor = 'default';
+    if (typeof showNotification === 'function') {
+        showNotification(deutsch
+            ? 'Das ist ein Beispielbild einer Telegram-Nachricht. Den echten Cardmarket-Link baut der Bot aus Set und Nummer deiner eigenen Wunschlisten-Karte — er steht in der Nachricht, die du bekommst.'
+            : 'This is an example screenshot of a Telegram message. The real Cardmarket link is built by the bot from the set and number of your own wishlist card — it is in the message you receive.',
+            'info');
+    }
+}
+// Fangphase: der Verweis darf nicht erst dann unschaedlich werden, wenn
+// ein anderer Zuhoerer ihn schon weitergereicht hat.
+document.addEventListener('click', tutorialToterVerweis, true);
+window.tutorialToterVerweis = tutorialToterVerweis;
+
 // ── Deep-linking via URL hash ────────────────────────────────
 // Bis Firebase antwortet, gilt: nicht angemeldet. Ohne diese Zeile
 // blitzen die Sammlungsknoepfe beim Laden kurz im aktiven Zustand auf.
@@ -439,6 +564,19 @@ try { document.documentElement.classList.add('is-signed-out'); } catch (e) {}
         'quellen-trennung':      'quellen',
         'quellen-stand':         'quellen',
         'quellen-rechtliches':   'quellen',
+        /* BEFUND (07.09.2026, live gemessen): der Abschnitt "Umfang" hat
+           in js/app-quellen.js seit dem 02.09. die Kennung `umfang` und
+           damit im Markup `id="qu-umfang"`, aber weder hier einen Alias
+           noch weiter unten einen Weisslisteneintrag. `#quellen-umfang`
+           stieg deshalb in applyHash() an `if (!tabId) return` aus: der
+           Reiter wechselte nicht, der Abschnitt klappte nicht auf, die
+           falsche Adresse blieb in der Zeile stehen — nachgemessen von
+           #hub aus, Ergebnis: Reiter meta-analysis-hub, Hash
+           #quellen-umfang. Die sechs Geschwister funktionierten.
+           tests/unit/test-quellen-tieflinks.js vergleicht die
+           Abschnittskennungen aus app-quellen.js jetzt bei jedem Lauf
+           gegen diese Tabelle und gegen die Weissliste. */
+        'quellen-umfang':        'quellen',
         'how-to-use':            'tutorial',
         'howto':                 'tutorial',
         'help':                  'tutorial',
@@ -489,6 +627,19 @@ try { document.documentElement.classList.add('is-signed-out'); } catch (e) {}
         'meta-analysis-hub':     'meta-analysis-hub',
         'hub':                   'meta-analysis-hub',
         'uebersicht':            'meta-analysis-hub',
+        /* BEFUND (07.09.2026, live gemessen): #hub und #uebersicht
+           oeffneten die Kachelseite, das englische #overview tat gar
+           nichts — der vorher offene Reiter blieb stehen (gemessen von
+           #tutorial aus: Reiter tutorial, Hash #overview). Die drei
+           standen naemlich nur in PROFILE_SUBTAB_FOR_HASH, und diese
+           Tabelle wird in applyHash() erst NACH `const tabId =
+           HASH_ALIASES[rawTab]; if (!tabId) return;` gelesen — ein
+           Eintrag dort allein erreicht nie eine Zeile Code.
+           Widerspruchsfrei heisst hier: alle drei Kurzformen stehen in
+           HASH_ALIASES (der Tabelle, die entscheidet), und keine steht
+           in PROFILE_SUBTAB_FOR_HASH (die Tabelle fuer Profil-Untertabs
+           — 'meta-analysis-hub' ist keiner). */
+        'overview':              'meta-analysis-hub',
         // Admin — Datenluecken. Der EINZIGE Weg dorthin: die Seite steht
         // in keinem Menue. Kein Zugangsschutz, und die Seite sagt das
         // auch — sie zeigt nur, was uns fehlt.
@@ -506,9 +657,30 @@ try { document.documentElement.classList.add('is-signed-out'); } catch (e) {}
         'testinggroups':         'profile',
         'testing-groups':        'profile',
         'wishlist':              'profile',
+        // 07.09.2026: die beiden fehlten, und genau sie stehen hinter
+        // zwei der drei Kopfzeilen-Verknuepfungen ("Meine Decks",
+        // "Deck Builder"). Ohne Kurzform kann openProfileSection() die
+        // Unteransicht nicht in die Adresse schreiben.
+        'decks':                 'profile',
+        'deckbuilder':           'profile',
         'tradelist':             'profile',
         'trade-list':            'profile',
         'collection':            'profile',
+        /* BEFUND (Nachabnahme 07.09.2026): "Deck-Vergleich" und
+           "Einstellungen" sind echte .profile-tab-content mit eigenem
+           Knopf in der Profil-Leiste (index.html), hatten aber als
+           einzige zwei von elf Untertabs keinen Tieflink. Gemessen: Hash
+           von Hand auf #deckcompare bzw. #settings gesetzt -> Reiter
+           blieb stehen, der aktive Untertab blieb profile-collection.
+           Neun von elf loesten auf, diese zwei nicht. Ein Untertab ohne
+           Adresse ueberlebt kein Neuladen und laesst sich nicht teilen —
+           genau der Befund, an dem "Meine Decks" schon gescheitert ist.
+           tests/unit/test-profil-untertabs-tieflink.js prueft die REGEL:
+           jede id "profile-X" im Markup braucht beide Eintraege. */
+        'deckcompare':           'profile',
+        'deck-compare':          'profile',
+        'settings':              'profile',
+        'einstellungen':         'profile',
     };
 
     // For hash aliases that target Profile, we also want to auto-switch
@@ -530,15 +702,29 @@ try { document.documentElement.classList.add('is-signed-out'); } catch (e) {}
         'tradelist':      'tradelist',
         'trade-list':     'tradelist',
         'collection':     'collection',
+        'decks':          'decks',
+        'deckbuilder':    'deckbuilder',
+        // 07.09.2026 nachgezogen, siehe Kommentar in HASH_ALIASES.
+        'deckcompare':    'deckcompare',
+        'deck-compare':   'deckcompare',
+        'settings':       'settings',
+        'einstellungen':  'settings',
+        // HIER STANDEN 'hub', 'uebersicht' UND 'overview'.
+        //
         // Die Kachelseite hatte bis zum 26.08.2026 den Menuepunkt
-        // "Uebersicht". Der heisst jetzt "Startseite" und fuehrt dorthin,
-        // wo die Anwendung auch startet — auf Wunsch des Nutzers, weil zwei
-        // verschiedene Antworten auf "wo ist Zuhause" verwirren.
-        // Damit die Kachelseite nicht unerreichbar wird (Zusage vom
-        // 18.08.: "geloescht wird nichts"), behaelt sie einen Deep-Link.
-        'hub':            'meta-analysis-hub',
-        'uebersicht':     'meta-analysis-hub',
-        'overview':       'meta-analysis-hub',
+        // "Uebersicht"; der heisst jetzt "Startseite", und damit die
+        // Kachelseite nicht unerreichbar wird (Zusage vom 18.08.:
+        // "geloescht wird nichts"), behaelt sie einen Deep-Link. Der
+        // Deep-Link gehoert aber in HASH_ALIASES — DIESE Tabelle
+        // beantwortet nur die Anschlussfrage "welcher PROFIL-Untertab",
+        // und sie wird erst gelesen, wenn HASH_ALIASES den Reiter
+        // 'profile' ergeben hat. 'meta-analysis-hub' ist kein
+        // Profil-Untertab; die drei Zeilen konnten hier nie wirken.
+        //
+        // Gemessen am 07.09.2026: #hub und #uebersicht funktionierten,
+        // weil sie ZUSAETZLICH in HASH_ALIASES stehen. #overview stand
+        // nur hier — und tat gar nichts. Beide Richtungen stehen jetzt
+        // widerspruchsfrei in HASH_ALIASES, keine mehr hier.
     };
 
     // Waehrend applyHash() laeuft, ruft es switchTabAndUpdateMenu — und
@@ -560,7 +746,18 @@ try { document.documentElement.classList.add('is-signed-out'); } catch (e) {}
         // strings (the lookup itself is case-insensitive though).
         const qIdx = rawFull.indexOf('?');
         const rawTab = (qIdx >= 0 ? rawFull.slice(0, qIdx) : rawFull).toLowerCase();
-        const tabId = HASH_ALIASES[rawTab];
+        let tabId = HASH_ALIASES[rawTab];
+        /* BEFUND (Nachabnahme 07.09.2026): ein Anker auf einen Abschnitt, den
+           es nicht gibt — #quellen-tippfehler — wechselte nicht einmal den
+           Reiter. Gemessen von #hub aus: Reiter blieb meta-analysis-hub, die
+           falsche Adresse blieb stehen. Der Kommentar weiter unten sagt aber
+           seit der Einfuehrung, ein unbekannter Anker solle "die Seite oeffnen
+           und in Ruhe lassen". Verhalten und Zusage gingen auseinander, weil
+           applyHash() schon hier an `if (!tabId) return` aussteigt.
+           Der Praefix "quellen-" benennt den Reiter eindeutig; der Abschnitt
+           dahinter wird weiter unten geprueft und, wenn unbekannt, benannt
+           statt verschwiegen. */
+        if (!tabId && rawTab.indexOf('quellen-') === 0) tabId = 'quellen';
         if (!tabId) return;
         // A hash that resolves to a tab id with no element in the DOM must
         // not be routed: switchTab deactivates every tab and then finds
@@ -643,10 +840,52 @@ try { document.documentElement.classList.add('is-signed-out'); } catch (e) {}
          * nicht ins Leere scrollen.
          */
         if (tabId === 'quellen' && window.Quellen && typeof window.Quellen.open === 'function') {
-            const ABSCHNITTE = { quellen: 1, begriffe: 1, zuverlaessig: 1,
-                                 trennung: 1, stand: 1, rechtliches: 1 };
+            // 07.09.2026: `umfang` fehlte hier — die Weissliste war eine
+            // von Hand gefuehrte Zweitschrift der Abschnittsliste in
+            // js/app-quellen.js und lief ihr hinterher. Erste Wahl ist
+            // deshalb jetzt die Liste aus der Quelle selbst; die
+            // Aufzaehlung bleibt als Rueckfallebene, falls Quellen.ids()
+            // fehlt (aeltere zwischengespeicherte Fassung der Datei).
+            const ABSCHNITTE = { quellen: 1, umfang: 1, begriffe: 1,
+                                 zuverlaessig: 1, trennung: 1, stand: 1,
+                                 rechtliches: 1 };
+            let erlaubt = ABSCHNITTE;
+            try {
+                if (typeof window.Quellen.ids === 'function') {
+                    const liste = window.Quellen.ids();
+                    if (Array.isArray(liste) && liste.length) {
+                        erlaubt = {};
+                        liste.forEach(function (x) { erlaubt[x] = 1; });
+                    }
+                }
+            } catch (_e) { erlaubt = ABSCHNITTE; }
             const teil = rawTab.indexOf('quellen-') === 0 ? rawTab.slice(8) : '';
-            try { window.Quellen.open(ABSCHNITTE[teil] ? teil : ''); } catch (_e) { /* tolerate */ }
+            const bekannt = !teil || !!erlaubt[teil];
+            /* ZUSATZBEFUND (Nachabnahme 07.09.2026): fehlte eine Kennung in
+               Quellen.ids(), blieb der Abschnitt einfach zu — 0 Meldungen,
+               0 console.warn. Wer den Verweis geteilt hat, erfaehrt nie, dass
+               er nicht ankam, und wer ihn oeffnet, haelt die zugeklappte Seite
+               fuer das Ziel. Stille Ausfaelle sind in diesem Projekt verboten:
+               der Reiter oeffnet trotzdem (siehe oben), aber der Fehlschlag
+               wird benannt — in der Konsole immer, sichtbar wenn die
+               Meldungsleiste schon geladen ist. */
+            if (!bekannt) {
+                console.warn('[deep-link] Quellen & Methodik: Abschnitt "' + teil
+                    + '" gibt es nicht — bekannt sind: '
+                    + Object.keys(erlaubt).join(', '));
+                if (typeof showNotification === 'function') {
+                    const deutsch = typeof getLang === 'function' && getLang() === 'de';
+                    setTimeout(function () {
+                        showNotification(deutsch
+                            ? 'Den Abschnitt „' + teil + '" gibt es in Quellen & Methodik nicht — '
+                              + 'die Seite ist offen, der Abschnitt bleibt zu.'
+                            : 'Section "' + teil + '" does not exist in Sources & Method — '
+                              + 'the page is open, the section stays closed.',
+                            'error');
+                    }, 600);
+                }
+            }
+            try { window.Quellen.open(bekannt ? teil : ''); } catch (_e) { /* tolerate */ }
         }
 
         // focusCard=<set>|<number> deep-link (driven by the Telegram
@@ -714,6 +953,18 @@ try { document.documentElement.classList.add('is-signed-out'); } catch (e) {}
 
     function schreibeHash(tabId, ersetzen) {
         if (routetGerade) return;          // applyHash ruft switchTab — nicht zurueckschreiben
+        /* BEFUND (Nachabnahme 07.09.2026): ein Klick auf eine
+           Kopfzeilen-Verknuepfung erzeugte ZWEI Verlaufseintraege.
+           Gemessen bei bereits offenem #wishlist: history.length 3 -> 4 bei
+           unveraendertem #wishlist — der erste Zurueck-Druck aenderte nichts
+           Sichtbares. Ursache: openProfileSection() ruft erst
+           switchTabAndUpdateMenu('profile'), das hier '#profile' per pushState
+           schiebt, und danach schreibeProfilHash(), das es nur ersetzt.
+           '#profile' ist in diesem Ablauf kein Zustand, den jemand besucht
+           hat — es steht keine Millisekunde in der Zeile. Ein Verlaufseintrag
+           dafuer ist eine Sackgasse. Deshalb setzt openProfileSection() diese
+           Marke: der Untertab schreibt gleich selbst, genau einmal. */
+        if (window.__dsProfilHashFolgt && tabId === 'profile') return;
         const h = kanonischerHash(tabId);
         if (!h) return;
         const ziel = window.location.pathname + window.location.search + '#' + h;
@@ -724,6 +975,51 @@ try { document.documentElement.classList.add('is-signed-out'); } catch (e) {}
         } catch (_e) { /* file:// und aehnliche Faelle: lieber nichts als ein Absturz */ }
     }
     window.__dsSchreibeTabHash = schreibeHash;
+
+    /* 07.09.2026 — Adresse fuer einen PROFIL-UNTERTAB.
+     *
+     * kanonischerHash() kennt nur Reiter, und der Reiter heisst hier
+     * immer 'profile'. Fuer die Kopfzeilen-Verknuepfungen ist das zu
+     * grob: '#profile' laesst offen, welche Unteransicht gemeint war,
+     * und faellt beim naechsten Laden auf die Sammlung zurueck (genau
+     * der gemessene Befund, siehe openProfileSection()).
+     *
+     * Geschrieben wird nur die Kurzform, die BEIDE Tabellen schon
+     * kennen und die auf sich selbst zeigt — also dieselbe Adresse,
+     * die applyHash() anschliessend wieder aufloesen kann.
+     *
+     * KORREKTUR 07.09.2026 (Nachabnahme, Befund "doppelter
+     * Verlaufseintrag"): hier stand frueher replaceState mit der
+     * Begruendung, das '#profile' von switchTabAndUpdateMenu() solle
+     * keinen eigenen Verlaufseintrag bekommen. Gemessen traf das nicht
+     * zu — der Eintrag war da, bevor er ersetzt werden konnte
+     * (history.length 3 -> 4 bei unveraendertem #wishlist). Ersetzen
+     * kommt eine Stufe zu spaet. Unterdrueckt wird jetzt der
+     * '#profile'-Eintrag selbst (Marke __dsProfilHashFolgt in
+     * schreibeHash), und DIESE Funktion schiebt den einen Eintrag, den
+     * der Klick verdient. Ist die Adresse schon die richtige, wird gar
+     * nichts geschoben — ein Klick auf den bereits offenen Untertab
+     * kostet keinen Verlaufseintrag. */
+    function schreibeProfilHash(subTab) {
+        if (routetGerade) return;
+        const k = String(subTab || '');
+        /* Untertab ohne eigene Kurzform (oder eine Kurzform, die nicht auf
+           sich selbst zeigt — sonst haette dieselbe Ansicht zwei Adressen,
+           dieselbe Regel wie in kanonischerHash()): dann wenigstens
+           '#profile' schreiben. Ohne diesen Rueckfall bliebe die Adresse der
+           VORIGEN Ansicht ueber dem Profil stehen, seit der '#profile'-Eintrag
+           oben unterdrueckt wird. */
+        if (HASH_ALIASES[k] !== 'profile' || PROFILE_SUBTAB_FOR_HASH[k] !== k) {
+            schreibeHash('profile');
+            return;
+        }
+        if (window.location.hash === '#' + k) return;
+        const ziel = window.location.pathname + window.location.search + '#' + k;
+        try {
+            window.history.pushState({ tab: 'profile', unter: k }, '', ziel);
+        } catch (_e) { /* file:// und aehnliche Faelle */ }
+    }
+    window.__dsSchreibeProfilHash = schreibeProfilHash;
 
     function routeMitSperre() {
         routetGerade = true;
