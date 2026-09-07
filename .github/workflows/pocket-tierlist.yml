@@ -56,6 +56,10 @@ on:
         description: 'Nichts schreiben, nur berichten'
         type: boolean
         default: false
+      schrumpfen_erlauben:
+        description: 'Deutlich weniger Decks als bisher trotzdem schreiben (nur beim echten Set-Wechsel bei Game8)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -95,11 +99,13 @@ jobs:
           # als Shell-Text mit (dritte Abnahme, 04.09.2026).
           NUR: ${{ inputs.nur }}
           TROCKEN: ${{ inputs.trocken }}
+          SCHRUMPFEN: ${{ inputs.schrumpfen_erlauben }}
         run: |
           set +e
           args=""
           if [ -n "$NUR" ]; then args="$args --nur $NUR"; fi
           if [ "$TROCKEN" = "true" ]; then args="$args --trocken"; fi
+          if [ "$SCHRUMPFEN" = "true" ]; then args="$args --schrumpfen-erlauben"; fi
           # NICHT in ::group:: — eine zugeklappte Gruppe ist der falsche
           # Ort für einen Abbruch. Vorher verschwand der Rückfall
           # ("keine Set-Tabelle gefunden") in einer zugeklappten Gruppe
