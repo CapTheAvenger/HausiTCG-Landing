@@ -83,10 +83,11 @@ const GEMESSEN = (() => {
     const labsWr = gewichtUndDeckel((d) => nurLabs(50 + d, 0), 1);
     const tag2 = gewichtUndDeckel((c) => nurLabs(50, c), 0.01);
 
-    // Vorwert: adjWR = (g*r/100 + P*0,5) / (g + P) * 100, nach P aufgeloest.
+    // Vorwert: adjWR = (n*r/100 + P*0,5) / (n + P) * 100, nach P aufgeloest.
+    // n ist die LISTENzahl (BEFUND B1), nicht eine Partienzahl.
     const g = 400, r = 100;
     const a = wert({ share: 0, winrate: r, new_count: g }).adjWR;
-    const vorPartien = g * (r - a) / (a - 50);
+    const vorListen = g * (r - a) / (a - 50);
 
     // Win-%-Bestandteil: zwei Punkte unter dem Deckel, einer weit darueber.
     const p1 = wert({ share: 0, winrate: 52, new_count: 4000 });
@@ -103,7 +104,7 @@ const GEMESSEN = (() => {
 
     return {
         anteilDeckel: anteil.deckel, anteilGewicht: anteil.gewicht,
-        wrDeckel, wrGewicht, vorPartien,
+        wrDeckel, wrGewicht, vorListen,
         labsWrDeckel: labsWr.deckel, labsWrGewicht: labsWr.gewicht,
         tag2Deckel: tag2.deckel, tag2Gewicht: tag2.gewicht,
         labsMinPartien
@@ -193,7 +194,7 @@ describe('Grundlage der Tier-Einteilung im laufenden Meta (C6 / F15.19-F15.24, B
             T1_MIN_SHARE: 114, T1_MIN_WR: 115,
             MINDEST_ANTEIL_GROESSTER: 1.16,     // * 100 = 116
             TIER_SCORE: {
-                PRIOR_GAMES: 121, ANTEIL_DECKEL: 122, ANTEIL_GEWICHT: 123,
+                PRIOR_LISTEN: 121, ANTEIL_DECKEL: 122, ANTEIL_GEWICHT: 123,
                 WR_DECKEL: 124, WR_GEWICHT: 125, LABS_MIN_PARTIEN: 126,
                 LABS_WR_DECKEL: 127, LABS_WR_GEWICHT: 128,
                 TAG2_DECKEL: 129, TAG2_GEWICHT: 131
@@ -209,7 +210,7 @@ describe('Grundlage der Tier-Einteilung im laufenden Meta (C6 / F15.19-F15.24, B
             ['114,0 % Anteil', 'T1_MIN_SHARE'],
             ['115,0 % Win %', 'T1_MIN_WR'],
             ['mindestens 116 % der Listenzahl', 'MINDEST_ANTEIL_GROESSTER'],
-            ['Vorwert von 121 Partien', 'TIER_SCORE.PRIOR_GAMES'],
+            ['Vorwert von 121 Listen', 'TIER_SCORE.PRIOR_LISTEN'],
             ['Anteil (bis 122 %', 'TIER_SCORE.ANTEIL_DECKEL'],
             ['Gewicht 123,0)', 'TIER_SCORE.ANTEIL_GEWICHT'],
             ['über 50 (bis +124 pp', 'TIER_SCORE.WR_DECKEL'],
@@ -254,8 +255,11 @@ describe('Grundlage der Tier-Einteilung im laufenden Meta (C6 / F15.19-F15.24, B
         const s = satz('de');
         assert.ok(s.includes('bis +' + de(GEMESSEN.wrDeckel, 0) + ' pp, Gewicht '
             + de(GEMESSEN.wrGewicht, 1)), 'gemessen: ' + JSON.stringify(GEMESSEN) + '\n' + s);
-        assert.ok(s.includes('Vorwert von ' + Math.round(GEMESSEN.vorPartien) + ' Partien bei 50 %'),
-            'gemessener Vorwert: ' + GEMESSEN.vorPartien + '\n' + s);
+        /* BEFUND B1 (07.09.2026): hier stand "Partien". Geglaettet wird
+           gegen die LISTENzahl (deck.new_count), nicht gegen Partien —
+           die Einheit im Satz muss die der Rechnung sein. */
+        assert.ok(s.includes('Vorwert von ' + Math.round(GEMESSEN.vorListen) + ' Listen bei 50 %'),
+            'gemessener Vorwert: ' + GEMESSEN.vorListen + '\n' + s);
     });
 
     it('B2: Labs-Schwelle, -Deckel und -Gewicht im Satz sind die gemessenen', () => {

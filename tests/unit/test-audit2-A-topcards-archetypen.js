@@ -29,6 +29,11 @@ function build(lang) {
         fmtPct: (v) => String(v) + '%',
         escapeHtml: (s) => String(s == null ? '' : s),
         escapeJsStr: (s) => String(s == null ? '' : s),
+        // escapeHtmlAttr: seit dem 07.09.2026 steckt jede escapeJsStr in
+        // einem HTML-Attribut zusaetzlich darin (HTML-Zerteiler vor
+        // JS-Zerteiler). Ohne die Attrappe wirft der Sandkasten
+        // ReferenceError.
+        escapeHtmlAttr: (s) => String(s == null ? '' : s),
         // Seit dem Druck-Umschalter liest das Widget zwei weitere freie
         // Namen: die Zahl der gezeigten Karten und den gemerkten Modus.
         ladeStaplesAnzahl: () => 15,

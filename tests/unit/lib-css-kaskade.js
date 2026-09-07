@@ -58,8 +58,25 @@ function ladeReihenfolge() {
 
 /** Kommentare raus, dann Regeln auf oberster Ebene einsammeln. */
 function regeln(datei, rang) {
-    const roh = fs.readFileSync(path.join(WURZEL, datei), 'utf8')
-        .replace(/\/\*[\s\S]*?\*\//g, '');
+    return regelnAusText(fs.readFileSync(path.join(WURZEL, datei), 'utf8'), datei, rang);
+}
+
+/**
+ * Dieselbe Zerlegung fuer CSS, das NICHT in einer Datei unter css/ steht.
+ *
+ * BEFUND B3 (07.09.2026): der Saisonpause-Hinweis wird nicht mehr per
+ * Inline-Stil sichtbar gemacht, sondern per Klasse — und die Regel dazu
+ * spielt js/app-city-league.js zur Laufzeit als <style> ein. Ohne diesen
+ * Einstieg kann der Kaskaden-Rechner den GEWINNER dieser Eigenschaft
+ * nicht ausrechnen, weil ihm die eine Regel fehlt, auf die es ankommt.
+ *
+ * @param {string} text  CSS-Quelltext
+ * @param {string} quelle  Name fuer Fehlermeldungen (z. B. '<style> aus js/…')
+ * @param {number} rang  Ladeplatz; groesser = spaeter = gewinnt bei Gleichstand
+ */
+function regelnAusText(text, quelle, rang) {
+    const roh = String(text).replace(/\/\*[\s\S]*?\*\//g, '');
+    const datei = quelle;
     const raus = [];
     let i = 0, nr = 0;
     while (i < roh.length) {
@@ -270,6 +287,6 @@ function flaeche(alle, el, eigenschaften) {
 }
 
 module.exports = {
-    stilblatt, gewinner, passt, spezifitaet, ladeReihenfolge, WURZEL,
+    stilblatt, gewinner, passt, spezifitaet, ladeReihenfolge, WURZEL, regelnAusText,
     laengsformen, marken, flaeche, normwert, FLAECHE
 };
