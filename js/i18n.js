@@ -71,6 +71,7 @@ const translations = {
     'menu.howToUse':          'How to Use',
     'menu.quellen':           'Sources & Method',
     'menu.sideQuest':         'Side Quest: Pokémon Champions Replica',
+    'menu.pocket':            'Side Quest: Pokémon TCG Pocket',
 
     // ── Tab labels ───────────────────────────────────────────
     'tab.metaAnalysis':       'Meta & Deck Analysis',
@@ -2227,6 +2228,7 @@ const translations = {
     'aria.shareDeckImage':         'Share deck image',
     'aria.shareVia':               'Share via WhatsApp, etc.',
     'aria.sideQuestViews':         'Side Quest views',
+    'aria.pocketMuster':           '2D pattern for scanning in Pokémon TCG Pocket',
     'aria.startingHand':           'Starting hand simulator',
     'aria.telegramAlerts':         'Enable Telegram price alerts',
     'aria.telegramChatId':         'Telegram chat ID',
@@ -2657,6 +2659,7 @@ const translations = {
     'menu.howToUse':          'Anleitung',
     'menu.quellen':           'Quellen & Methodik',
     'menu.sideQuest':         'Side Quest: Pokémon Champions Replica',
+    'menu.pocket':            'Side Quest: Pokémon TCG Pocket',
 
     // ── Tab labels ───────────────────────────────────────────
     'tab.metaAnalysis':       'Meta & Deck-Analyse',
@@ -4807,6 +4810,7 @@ const translations = {
     'aria.shareDeckImage':         'Deckbild teilen',
     'aria.shareVia':               'Über WhatsApp und andere teilen',
     'aria.sideQuestViews':         'Side-Quest-Ansichten',
+    'aria.pocketMuster':           '2D-Muster zum Scannen in Pokémon TCG Pocket',
     'aria.startingHand':           'Starthand-Simulator',
     'aria.telegramAlerts':         'Telegram-Preisalarme einschalten',
     'aria.telegramChatId':         'Telegram-Chat-ID',
