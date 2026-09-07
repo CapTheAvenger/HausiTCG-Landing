@@ -205,6 +205,55 @@
             });
             s += '</section>';
         });
+
+        // EINE UNBEKANNTE STUFE DARF NICHT STILL VERSCHWINDEN.
+        //
+        // js/ds-post-quellen.js:1024 traegt dieselbe Reihenfolge und
+        // davor genau diesen Riegel, mit dem Kommentar vom 04.09.2026:
+        // fuehrt Game8 eines Tages "SS" ein, sortierte sie vorher ans
+        // Ende und wurde nie genommen — die Ausgabe zeigte "Stufe S",
+        // waehrend die hoechste Stufe fehlte.
+        //
+        // Hier war das Array kopiert und der Riegel nicht (Abnahme
+        // 07.09.2026, nachgestellt): ein Deck mit tier 'S+' oder null
+        // fiel aus der Liste, waehrend die Fusszeile weiter 33 von 52
+        // behauptete. Und `tier: null` ist ueber den Kollisionsweg des
+        // Scrapers schon heute erreichbar
+        // (tests/python/test_pocket_tierlist.py haelt es fest); in den
+        // aktuellen Daten stehen sechs Kollisionen.
+        //
+        // Gezeigt wird es trotzdem — nur angeschrieben. Ein Deck
+        // wegzulassen waere die stille Reparatur, die dieses Projekt
+        // ueberall verbietet.
+        var fremd = decks.filter(function (d) {
+            return TIER_ORDNUNG.indexOf(d.tier) < 0;
+        });
+        if (fremd.length) {
+            var stufen = fremd.map(function (d) {
+                return d.tier === null || d.tier === undefined || d.tier === ''
+                    ? t('ohne Angabe', 'not given') : String(d.tier);
+            }).filter(function (v, i, a) { return a.indexOf(v) === i; });
+            s += '<section class="pk-stufe">';
+            s += '<h3>' + esc(t('Ohne bekannte Stufe', 'Tier not recognised')) +
+                 ' <span class="pk-stufe-zahl">' + fremd.length + '</span></h3>';
+            s += '<p class="pk-alt">' + esc(t(
+                'Game8 führt hier eine Einstufung, die wir nicht kennen (' +
+                stufen.join(', ') + '). Die Decks stehen trotzdem da — ' +
+                'weglassen wäre die stillere, aber schlechtere Lösung.',
+                'Game8 uses a tier we do not know (' + stufen.join(', ') +
+                '). The decks are shown anyway — dropping them would be the ' +
+                'quieter but worse option.')) + '</p>';
+            fremd.sort(function (a, b) { return a.name.localeCompare(b.name, 'de'); });
+            fremd.forEach(function (d) {
+                var i = (daten.decks || []).indexOf(d);
+                s += '<button type="button" class="pk-zeile" data-pk-deck="' + i + '">';
+                s += '<span class="pk-marke">?</span>';
+                s += '<span class="pk-name">' + esc(d.name) + '</span>';
+                s += '<span class="pk-pfeil" aria-hidden="true">›</span>';
+                s += '</button>';
+            });
+            s += '</section>';
+        }
         return s;
     }
 
@@ -258,7 +307,12 @@
     }
 
     function kartenliste(d) {
-        if (!d.pokemon && !d.trainer) {
+        // `[]` ist wahr — mit `!d.pokemon` allein bliebe bei einer leeren
+        // Liste ein leerer Kasten stehen statt des Grundes (Abnahme
+        // 07.09.2026).
+        var hatKarten = (d.pokemon && d.pokemon.length) ||
+                        (d.trainer && d.trainer.length);
+        if (!hatKarten) {
             return d.karten_hinweis
                 ? '<p class="pk-hell">' + esc(t('Keine Kartenliste: ', 'No card list: ')) +
                   esc(d.karten_hinweis) + '</p>'
