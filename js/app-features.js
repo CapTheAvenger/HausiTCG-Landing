@@ -375,9 +375,9 @@
                                            group.type === 'new' ? `0 → ${card.newCount}` :
                                            group.type === 'changed' ? `${card.oldCount} → ${card.newCount}` :
                                            `${card.newCount}x`;
-                        const cardNameEscaped = escapeJsStr(card.name || '');
-                        const cardSetEscaped = escapeJsStr(card.set || '');
-                        const cardNumberEscaped = escapeJsStr(card.number || '');
+                        const cardNameEscaped = escapeHtmlAttr(escapeJsStr(card.name || ''));
+                        const cardSetEscaped = escapeHtmlAttr(escapeJsStr(card.set || ''));
+                        const cardNumberEscaped = escapeHtmlAttr(escapeJsStr(card.number || ''));
                         
                         const cardData = cardsBySetNumberMap[`${card.set}-${card.number}`];
                         const imageUrl = cardData ? cardData.image_url : '';

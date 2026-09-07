@@ -288,7 +288,6 @@ async function addToCollection(cardId) {
     // no toast appeared, and because currentCount was re-read from the
     // un-updated map, three taps queued "count = 1" three times instead of
     // reaching 3. Same reasoning as the deck-save path further down this file.
-    const hadBefore = window.userCollection.has(cardId);
     window.userCollection.add(cardId);
     if (!window.userCollectionCounts) window.userCollectionCounts = new Map();
     window.userCollectionCounts.set(cardId, newCount);
@@ -301,17 +300,36 @@ async function addToCollection(cardId) {
       'collection', firebase.firestore.FieldValue.arrayUnion(cardId),
       countFieldRef('collectionCounts', cardId), newCount
     ).catch(err => {
-      // A genuine write rejection (not offline — those queue and drain later).
-      // Roll the optimistic change back so the UI never claims a card is owned
-      // when the server refused it.
+      // Eine echte Ablehnung durch den Server (NICHT offline — offline
+      // schreibt Firestore in die Warteschlange und liefert spaeter nach).
+      // Die optimistische Aenderung wird zurueckgenommen, damit die
+      // Oberflaeche nie Besitz behauptet, den der Server verweigert hat.
       console.error('[collection] persist failed, reverting:', err);
-      // Undo THIS tap's increment rather than replaying the count captured
-      // when it started. Two rapid taps on an unowned card produce two
-      // in-flight writes; if both reject, replaying the snapshots left the
-      // Set saying "absent" while the counts Map said 1, and the next tap
-      // then wrote 2 to a server holding 0. Decrementing and deriving Set
-      // membership from the result keeps the two structures agreeing no
-      // matter how many rollbacks interleave.
+      // RUECKNAHME: diesen einen Tipper abziehen — nicht den Zaehlerstand
+      // zurueckspielen, den er beim Start gesehen hat. Zwei schnelle Tipper
+      // auf dem Telefon schicken zwei Schreibvorgaenge gleichzeitig los;
+      // spielt jede Ruecknahme ihre eigene Momentaufnahme zurueck, sagt die
+      // Zaehlkarte am Ende 1, waehrend der Server 0 haelt.
+      //
+      // Die Zugehoerigkeit zur Menge wird aus dem zurueckgerechneten
+      // Zaehlerstand ABGELEITET: >0 heisst besessen, 0 heisst nicht besessen.
+      // Genau das war bis zum 07.09.2026 kaputt — dort hing die Loeschung an
+      // einem je Tipper gemerkten `hadBefore`. Der zweite von zwei
+      // gleichzeitigen Tippern sah die Karte durch die optimistische
+      // Aenderung des ersten schon in der Menge, merkte sich
+      // `hadBefore = true`, und seine Ruecknahme loeschte nichts: die Karte
+      // galt als besessen, trug aber keine Anzahl. Nachgemessen mit zwei
+      // addToCollection('Iono|PAL|185') ohne Warten dazwischen, beide
+      // abgelehnt -> Zaehlkarte leer, Menge enthielt die Karte.
+      //
+      // WAS DAS ZUSICHERT und was nicht: Menge und Zaehlkarte sagen nach
+      // jeder Ruecknahme dasselbe, egal wie viele Ruecknahmen sich
+      // verschachteln (Zugehoerigkeit == Zaehlerstand > 0). Es sichert NICHT
+      // zu, dass der Stand nach einem verschachtelten Hinzufuegen UND
+      // Entfernen dem Server entspricht: das Entfernen nimmt selbst keine
+      // Ruecknahme vor, sein Abzug und der hiesige koennen sich addieren.
+      // Der naechste Ladevorgang raeumt das auf; ein widerspruechlicher
+      // Zustand in der Oberflaeche tut es nicht.
       const counts = window.userCollectionCounts;
       const reverted = (counts.get(cardId) || 0) - 1;
       if (reverted > 0) {
@@ -319,7 +337,7 @@ async function addToCollection(cardId) {
         window.userCollection.add(cardId);
       } else {
         counts.delete(cardId);
-        if (!hadBefore) window.userCollection.delete(cardId);
+        window.userCollection.delete(cardId);
       }
       updateCardUI(cardId);
       showNotification(getLang() === 'de'

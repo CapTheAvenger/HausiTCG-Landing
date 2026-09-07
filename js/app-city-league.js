@@ -532,6 +532,60 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
             return /^-?\d+\.\d+$/.test(roh) ? roh.replace('.', ',') : roh;
         }
 
+        /* Die Klasse, die den Saisonpause-Hinweis sichtbar macht — und die
+           Regel dazu.
+
+           BEFUND B3 (07.09.2026): die Sichtbarkeit haengte an einem
+           INLINE-Stil (`el.style.display = 'block'`), der gegen
+           `display: none` aus css/city-league.css:3098 antrat. Jede Stelle,
+           die das style-Attribut zuruecksetzt — ein Neuaufbau des Blocks,
+           ein Aufraeumdurchlauf, ein Sprachwechsel, der Markup ersetzt —
+           macht den Hinweis damit wieder unsichtbar, ohne dass irgendwo ein
+           Fehler auftaucht. Genau in der Lage, fuer die er gebaut wurde,
+           schwiege die Seite dann zum zweiten Mal.
+
+           Die Regel wird hier eingespielt und nicht in css/ gelegt, weil
+           dieser Durchgang css/ und index.html nicht anfasst: so gehoert
+           die Regel derselben Datei wie der Schalter, und beide koennen
+           nicht auseinanderlaufen. `!important` ist Absicht — es setzt die
+           Regel ueber jeden spaeteren Inline-Stil, damit "sichtbar" nicht
+           wieder von einem style-Attribut abhaengt.
+
+           NACHTRAG B3 (07.09.2026, zweite Runde): der erste Anlauf schrieb
+           `.cl-season-notice.cl-season-notice--sichtbar{display:block
+           !important}`. Damit war der NOTAUS kaputt: css/ui-components.css:5372
+           fuehrt `.d-none{display:none !important}` mit der Spezifitaet
+           (0,1,0), die eingespielte Regel hat (0,2,0) — beide !important,
+           also gewinnt die spezifischere, und `classList.add('d-none')`
+           blendete den Hinweis nicht mehr aus. Ein Notaus, der nicht
+           ausschaltet, ist schlimmer als keiner.
+
+           Die Reparatur ist `:not(.d-none)`: traegt das Element die
+           Versteckklasse, PASST die Sichtbarkeitsregel gar nicht mehr, und
+           `.d-none` bleibt als einzige Regel uebrig. Das ist die einzige
+           Ordnung, die ohne Zugriff auf css/ auskommt und trotzdem beide
+           Wuensche erfuellt: gegen Inline-Stile gewinnen, gegen `.d-none`
+           verlieren. */
+        const CL_SAISON_KLASSE = 'cl-season-notice--sichtbar';
+        const CL_SAISON_REGEL_ID = 'cl-season-notice-regel';
+        /* Die Versteckklasse des Projekts (css/ui-components.css:5372).
+           Sie steht hier als Konstante, damit die Ausnahme im Selektor und
+           der Notaus im uebrigen Quelltext denselben Namen benutzen. */
+        const CL_VERSTECK_KLASSE = 'd-none';
+
+        function clSaisonRegelEinspielen() {
+            if (typeof document === 'undefined') return null;
+            const da = document.getElementById(CL_SAISON_REGEL_ID);
+            if (da) return da;
+            const stil = document.createElement('style');
+            stil.id = CL_SAISON_REGEL_ID;
+            stil.textContent = '.cl-season-notice.' + CL_SAISON_KLASSE
+                + ':not(.' + CL_VERSTECK_KLASSE + ')'
+                + '{display:block !important;}';
+            (document.head || document.documentElement).appendChild(stil);
+            return stil;
+        }
+
         function setCitySeasonNotice(show) {
             // BEFUND (Schlussabnahme 30.08.2026): hier stand
             // `el.style.display = show ? '' : 'none'`. Der Leerstring
@@ -549,8 +603,18 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
             // Der Text war geschrieben, richtig formuliert, wurde
             // ausgeloest — und hat den Nutzer nie erreicht. Genau in der
             // Lage, fuer die er gebaut wurde, schwieg die Seite.
+            //
+            // BEFUND B3 (07.09.2026): danach stand hier
+            // `el.style.display = show ? 'block' : 'none'` — richtig, aber
+            // an der falschen Stelle. Traeger der Sichtbarkeit ist jetzt
+            // eine KLASSE mit eigener Regel (siehe oben); der Inline-Stil
+            // wird geraeumt, damit keine zweite Wahrheit daneben steht.
+            clSaisonRegelEinspielen();
             document.querySelectorAll('.cl-season-notice').forEach(el => {
-                el.style.display = show ? 'block' : 'none';
+                el.classList.toggle(CL_SAISON_KLASSE, !!show);
+                // '' entfernt die Inline-Angabe (statt sie auf einen Wert
+                // zu setzen) — ab hier entscheidet allein die Klasse.
+                el.style.display = '';
             });
         }
 
@@ -574,6 +638,9 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                 const analysisUrl   = `${BASE_PATH}${isPast ? 'city_league_analysis_past.csv'              : 'city_league_analysis.csv'}`;
                 const archetypesUrl = `${BASE_PATH}${isPast ? 'city_league_archetypes_past.csv'            : 'city_league_archetypes.csv'}`;
                 const comparisonUrl = `${BASE_PATH}${isPast ? 'city_league_archetypes_past_comparison.csv' : 'city_league_archetypes_comparison.csv'}`;
+                // BEFUND B4: derselbe Name, den der Leerzustand nennt — hier
+                // abgelegt, damit er nicht ein zweites Mal geschrieben wird.
+                window._cityLeagueVergleichsQuelle = comparisonUrl;
                 // No separate _past variant — the current images JSON
                 // accumulates archetype→image mappings across rotations.
                 const imagesUrl = `${BASE_PATH}city_league_images.json`;
@@ -871,7 +938,10 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                 
                 window._cityLeagueTournamentCount = tournamentCount;
                 window._cityLeagueDateRange = dateRange;
-                renderCityLeagueTable(tournamentCount, dateRange);
+                // BEFUND B4: woraus die Ansicht besteht, einmal lesen und
+                // merken — der Sprachwechsel baut die Tabelle neu auf.
+                window._cityLeagueTurnierHerkunft = cityLeagueTurnierHerkunft(archetypesData);
+                renderCityLeagueTable(tournamentCount, dateRange, window._cityLeagueTurnierHerkunft);
 
                 // Keep the analysis dropdown in sync with the freshly loaded format data
                 // analysisData wird im Hintergrund geladen (window._cityLeagueAnalysisPromise)
@@ -975,6 +1045,20 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
             const disappeared = data.filter(d => d.status === 'VERSCHWUNDEN');
             const increased = data.filter(d => d.status !== 'NEU' && parseInt(d.count_change || 0) > 0)
                 .sort((a, b) => parseInt(b.count_change) - parseInt(a.count_change));
+
+            /* BEFUND B2 (07.09.2026, zweite Runde): der Leerzustand hat den
+               GRUND fuer die leere Rubrik "Häufiger gespielt" frei erfunden
+               ("count_change > 0 kommt ohne Vorzeitraum nicht vor"). An den
+               Daten war das Gegenteil richtig. Damit der Text nicht wieder
+               raten muss, wird hier AUSGEZAEHLT, was der Filter oben sieht —
+               dieselben Zeilen, dieselbe Bedingung. */
+            const zaehlwerk = {
+                zeilen: data.length,
+                mitZuwachs: data.filter(d => parseInt(d.count_change || 0) > 0).length,
+                zuwachsUndNeu: data.filter(d => parseInt(d.count_change || 0) > 0
+                                             && d.status === 'NEU').length,
+                statusVerschwunden: disappeared.length
+            };
             const decreased = data.filter(d => parseInt(d.count_change || 0) < 0)
                 .sort((a, b) => parseInt(a.count_change) - parseInt(b.count_change));
             
@@ -1024,6 +1108,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                    genau den Wert, mit dem improvers/decliners oben
                    gefiltert wurden, wandert hier heraus. */
                 countThreshold,
+                zaehlwerk,
             };
             return _cityLeagueSortCache;
         }
@@ -1046,41 +1131,226 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
          *
          * @param {{keinVorzeitraum:boolean, archetypen:number, neu:number,
          *          zeitraum:string, turniere:number, mindestListen:number,
-         *          mindestAnteil:number,
+         *          mindestAnteil:number, quelle:string,
+         *          zaehlwerk:{zeilen:number, mitZuwachs:number,
+         *                     zuwachsUndNeu:number, statusVerschwunden:number},
          *          leer:{seltener:boolean, haeufiger:boolean, verbessert:boolean,
          *                verschlechtert:boolean, aufsteiger:boolean,
          *                neuTabelle:boolean, verschwunden:boolean},
-         *          vorhanden:{haeufiger:number, neuTabelle:number,
-         *                     verschwunden:number}}} o
+         *          ohneTabelle:Object<string,number>,
+         *          ohneTabelleGrund:string}} o
          * @returns {string} '' wenn nichts fehlt, sonst ein erklaerender Block
          */
+        /**
+         * WORAUF DIESE ANSICHT BERUHT — je Turnier eine Zeile, gelesen
+         * aus den Archetyp-Zeilen selbst.
+         *
+         * BEFUND B4 (07.09.2026): der Reiter heisst "City League", und im
+         * Vergangenheits-Fenster stand als einzige Herkunftsangabe die Zahl
+         * "1 Turnier". Welches Turnier das ist, wie gross sein Feld war und
+         * ob es ueberhaupt eine City League war, stand nirgends. Fuer den
+         * geprueften Stand traegt config/scraper_settings.json unter
+         * `city_league_analysis_past` genau ein `additional_tournament_ids`
+         * — ein einzelnes Sonderturnier. Eine Ansicht, die "City League"
+         * heisst und auf einem einzelnen Turnier steht, muss das sagen.
+         *
+         * Nichts hier wird abgeschrieben: Kennung, Ortsangabe, Bezeichnung
+         * und die Zahl der erfassten Platzierungen kommen aus den Zeilen,
+         * die die Seite ohnehin geladen hat. Was dort NICHT steht — der
+         * Turniername und die Teilnehmerzahl —, wird auch nicht erfunden;
+         * es wird als fehlend gemeldet.
+         *
+         * @param {Array<Object>} archetypesData Zeilen aus
+         *        city_league_archetypes*.csv
+         * @returns {Array<{id:string, bezeichnung:string, ort:string,
+         *          listen:number, bester:number|null, schlechtester:number|null,
+         *          nameFehlt:boolean}>}
+         */
+        function cityLeagueTurnierHerkunft(archetypesData) {
+            const nachId = new Map();
+            (Array.isArray(archetypesData) ? archetypesData : []).forEach(r => {
+                const id = String((r && r.tournament_id) || '').trim();
+                if (!id) return;
+                if (!nachId.has(id)) {
+                    nachId.set(id, { id, bezeichnung: '', ort: '', listen: 0,
+                                     bester: null, schlechtester: null });
+                }
+                const e = nachId.get(id);
+                const bez = String(r.shop || '').trim();
+                const ort = String(r.prefecture || '').trim();
+                if (!e.bezeichnung && bez) e.bezeichnung = bez;
+                if (!e.ort && ort) e.ort = ort;
+                e.listen += 1;
+                const platz = parseInt(r.placement || '', 10);
+                if (Number.isFinite(platz) && platz > 0) {
+                    e.bester = (e.bester === null) ? platz : Math.min(e.bester, platz);
+                    e.schlechtester = (e.schlechtester === null) ? platz : Math.max(e.schlechtester, platz);
+                }
+            });
+            /* Der Scraper schreibt "Tournament <id>" in die Shop-Spalte,
+               wenn die Quelle keinen Namen liefert. Das ist ein Platzhalter,
+               kein Turniername — und darf auch nicht als einer auftreten. */
+            nachId.forEach(e => {
+                e.nameFehlt = !e.bezeichnung
+                    || new RegExp('^tournament\\s*' + e.id + '$', 'i').test(e.bezeichnung);
+            });
+            return Array.from(nachId.values());
+        }
+
+        /**
+         * Aus dieser Herkunft ein Satz — oder ein leerer, wenn die Ansicht
+         * auf so vielen Turnieren steht, dass die Zahl allein genuegt.
+         *
+         * @param {Array<Object>} herkunft aus cityLeagueTurnierHerkunft()
+         * @param {boolean} de
+         * @returns {string} Klartext, noch nicht maskiert
+         */
+        /**
+         * Ortsangaben, die der Scraper SETZT, statt sie aus der Quelle zu
+         * lesen.
+         *
+         * BEFUND B5 (07.09.2026): "Special Event" steht fest verdrahtet in
+         * backend/scrapers/city_league_past_archetype_scraper.py (jetzt als
+         * ORT_PLATZHALTER_OHNE_QUELLE benannt) und wird fuer jedes Turnier
+         * gesetzt, das ueber `additional_tournament_ids` nachgezogen wird.
+         * Die Turnierseite eines einzelnen Turniers fuehrt keine Praefektur;
+         * der Listenweg des Scrapers liest sie aus der Tabellenspalte, dieser
+         * Weg hat nichts zu lesen. Auf der Seite stand der Wert bis heute wie
+         * ein Quellwert da.
+         *
+         * Die Dateien unter data/ bleiben unberuehrt — geaendert wird, was
+         * die Oberflaeche daraus macht: der Platzhalter wird als Platzhalter
+         * ausgewiesen, genau wie es bei der Bezeichnung "Tournament <id>"
+         * schon geschieht.
+         *
+         * Derselbe Wortlaut wie im Scraper. Laufen die beiden auseinander,
+         * wird tests/unit/test-r4-ort-platzhalter.js rot.
+         *
+         * Die Liste steht bewusst IM Funktionskoerper und nicht daneben:
+         * tests/unit/lib-cityleague-sandkasten.js schneidet ganze Funktionen
+         * aus dieser Datei heraus, und ein Bezeichner ausserhalb waere dort
+         * nicht definiert.
+         */
+        function cityLeagueHerkunftSatz(herkunft, de) {
+            const CL_ORT_PLATZHALTER = ['Special Event'];
+            const t = Array.isArray(herkunft) ? herkunft : [];
+            // Ab vier Turnieren traegt die Ansicht ihren Namen selbst; eine
+            // Aufzaehlung waere dann nur noch Laerm.
+            if (t.length === 0 || t.length > 3) return '';
+
+            const eins = (e) => {
+                const teile = [];
+                teile.push((de ? 'Kennung ' : 'ID ') + e.id);
+                if (e.ort) {
+                    const gesetzt = CL_ORT_PLATZHALTER.indexOf(e.ort) >= 0;
+                    teile.push((de ? 'Ortsangabe „' : 'location “') + e.ort + (de ? '“' : '”')
+                        + (gesetzt
+                            ? (de ? ' (vom Scraper gesetzt, nicht aus der Quelle)'
+                                  : ' (set by the scraper, not taken from the source)')
+                            : ''));
+                }
+                if (!e.nameFehlt) teile.push((de ? 'Bezeichnung „' : 'name “') + e.bezeichnung + (de ? '“' : '”'));
+                const spanne = (e.bester !== null && e.schlechtester !== null
+                                && e.bester !== e.schlechtester)
+                    ? (de ? ' (Plätze ' + e.bester + ' bis ' + e.schlechtester + ')'
+                          : ' (placements ' + e.bester + ' to ' + e.schlechtester + ')')
+                    : '';
+                const eine = e.listen === 1;
+                teile.push(e.listen + (de
+                    ? (eine ? ' erfasste Platzierung' : ' erfasste Platzierungen')
+                    : (eine ? ' recorded placement' : ' recorded placements')) + spanne);
+                return teile.join(', ');
+            };
+
+            const kopf = t.length === 1
+                ? (de ? 'Diese Ansicht beruht auf einem einzigen Turnier: '
+                      : 'This view rests on a single tournament: ')
+                : (de ? 'Diese Ansicht beruht auf diesen Turnieren: '
+                      : 'This view rests on these tournaments: ');
+            let satz = kopf + t.map(eins).join('; ') + '.';
+
+            /* Was nicht dasteht, wird gesagt statt geraten. Der Datensatz
+               fuehrt weder einen Turniernamen noch eine Teilnehmerzahl;
+               die erfassten Platzierungen sind das, was gescrapt wurde,
+               und nicht die Feldgroesse. */
+            const ohneNamen = t.filter(e => e.nameFehlt);
+            if (ohneNamen.length) {
+                satz += de
+                    ? ' Einen Turniernamen führt der Datensatz nicht — „'
+                      + ohneNamen[0].bezeichnung + '“ ist die Platzhalterbezeichnung des Scrapers.'
+                    : ' The data set carries no tournament name — “'
+                      + ohneNamen[0].bezeichnung + '” is the scraper\u2019s placeholder label.';
+            }
+            satz += de
+                ? ' Eine Teilnehmerzahl steht ebenfalls nicht darin: die erfassten Platzierungen '
+                  + 'sind das, was gescrapt wurde, nicht die Feldgröße.'
+                : ' Nor does it carry a field size: the recorded placements are what was scraped, '
+                  + 'not how many players entered.';
+            return satz;
+        }
+
+        /**
+         * Die Namen der Rubriken an EINER Stelle.
+         *
+         * BEFUND B5 (07.09.2026): der Leerzustands-Hinweis nannte drei
+         * Rubriken, die es als Tabelle gar nicht gab. Jetzt gibt es sie —
+         * und Ueberschrift und Hinweistext muessen denselben Namen
+         * benutzen, sonst spricht die Seite an zwei Stellen von zwei
+         * verschiedenen Dingen. `roh` ist der Name ohne Anfuehrungszeichen
+         * (fuer Ueberschriften), `zitiert` der Name im Fliesstext.
+         *
+         * @param {boolean} de
+         */
+        function cityLeagueRubrikNamen(de) {
+            const roh = de
+                ? { seltener: 'Seltener gespielt', haeufiger: 'Häufiger gespielt',
+                    verbessert: 'Performance verbessert',
+                    verschlechtert: 'Performance verschlechtert',
+                    aufsteiger: 'Auf- und Absteiger der Top 10',
+                    neuTabelle: 'Neue Archetypen', verschwunden: 'Verschwundene Archetypen' }
+                : { seltener: 'Popularity Decreases', haeufiger: 'Popularity Increases',
+                    verbessert: 'Performance Improvers',
+                    verschlechtert: 'Performance Decliners',
+                    aufsteiger: 'top-10 entries and exits',
+                    neuTabelle: 'New Archetypes', verschwunden: 'Disappeared Archetypes' };
+            const auf = de ? '„' : '\u201c';
+            const zu = de ? '“' : '\u201d';
+            const zitiert = {};
+            Object.keys(roh).forEach(k => {
+                // Die zwei Rubriken ohne Tabellentitel bleiben ohne
+                // Anfuehrungszeichen — sie zitieren keine Ueberschrift.
+                zitiert[k] = (k === 'aufsteiger')
+                    ? roh[k]
+                    : auf + roh[k] + zu;
+            });
+            return { roh, zitiert };
+        }
+
         function cityLeagueVergleichLeerHinweis(o) {
             const de = (typeof getLang === 'function' ? getLang() : 'de') === 'de';
             const l = (o && o.leer) || {};
-            const namen = de
-                ? { seltener: '„Seltener gespielt“', haeufiger: '„Häufiger gespielt“',
-                    verbessert: '„Performance verbessert“',
-                    verschlechtert: '„Performance verschlechtert“',
-                    aufsteiger: 'Auf- und Absteiger der Top 10',
-                    neuTabelle: 'neue Archetypen', verschwunden: 'verschwundene Archetypen' }
-                : { seltener: '“Popularity Decreases”', haeufiger: '“Popularity Increases”',
-                    verbessert: '“Performance Improvers”',
-                    verschlechtert: '“Performance Decliners”',
-                    aufsteiger: 'top-10 entries and exits',
-                    neuTabelle: 'new archetypes', verschwunden: 'disappeared archetypes' };
+            const namen = cityLeagueRubrikNamen(de).zitiert;
 
             const fehlend = Object.keys(namen).filter(k => l[k]).map(k => namen[k]);
 
-            /* DREI RUBRIKEN HAT DIESE SEITE UEBERHAUPT NICHT ALS TABELLE.
-               getCityLeagueSortedSections() rechnet `increased`,
-               `newArchetypes` und `disappeared` aus, und renderCityLeagueTable
-               zeigt keine davon. Solange sie leer sind, faellt das mit dem
-               Rest unter denselben Grund. Sind sie es NICHT, waere Schweigen
-               der eigentliche stille Ausfall: dann liegen Daten vor, die
-               nirgends stehen. Also werden sie genannt, mit ihrer Zahl. */
-            const v = (o && o.vorhanden) || {};
-            const ungezeigt = ['haeufiger', 'neuTabelle', 'verschwunden']
-                .filter(k => !l[k] && Number(v[k] || 0) > 0)
+            /* BEFUND B5 (07.09.2026): "Häufiger gespielt", "Neue Archetypen"
+               und "Verschwundene Archetypen" wurden von
+               getCityLeagueSortedSections() gerechnet und von
+               renderCityLeagueTable NICHT gezeigt — nur ihre Zahl stand
+               hier. Alle drei sind mit den vorhandenen Spalten der
+               Vergleichsdatei darstellbar (old_count, new_count,
+               count_change, *_meta_share, *_avg_placement, old_best/new_best),
+               also stehen sie jetzt als Tabelle da.
+
+               Was bleibt: eine Rubrik, fuer die Daten vorliegen, die aber
+               BEWUSST keine Tabelle bekommt — "Neue Archetypen" ohne
+               Vorzeitraum, wo "neu" nur heisst, dass es keine zweite
+               Messung gibt. Die traegt der Aufrufer hier ein, samt Grund.
+               Er weiss, was er gerendert hat; diese Funktion raet es nicht
+               nach. */
+            const v = (o && o.ohneTabelle) || {};
+            const ungezeigt = Object.keys(namen)
+                .filter(k => Number(v[k] || 0) > 0)
                 .map(k => namen[k] + ' (' + Number(v[k]) + ')');
 
             if (fehlend.length === 0 && ungezeigt.length === 0) return '';
@@ -1127,27 +1397,92 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                        + zahl(Math.ceil(o.mindestListen || 0)) + ' lists ('
                        + prozent(o.mindestAnteil) + ' % of the largest archetype).'));
 
-            const bestand = de
+            /* BEFUND B1 (07.09.2026, zweite Runde): der Herkunftssatz
+               ("Diese Ansicht beruht auf einem einzigen Turnier: Kennung 568,
+               …") stand ZWEIMAL auf der Seite — einmal in der Karte
+               "Datenquelle" und noch einmal hier, angehaengt an "Was dieser
+               Reiter hat".
+
+               Er bleibt in der KARTE und faellt hier weg. Grund: die Karte
+               "Datenquelle" wird IMMER gerendert, dieser Block nur, solange
+               Rubriken fehlen. Steht die Herkunft im Block, verschwindet sie
+               in dem Moment, in dem die Datenlage besser wird — und dann
+               fehlt die Angabe, worauf die Ansicht beruht, gerade dann, wenn
+               sie auf mehr beruht. Ausserdem ist "woraus die Daten kommen"
+               genau das, was die Karte "Datenquelle" ueberschreibt. */
+            const bestand = (de
                 ? ('Was dieser Reiter hat: Zeitraum ' + zeitraum + ', ' + zahl(o.turniere)
                    + (Number(o.turniere) === 1 ? ' Turnier, ' : ' Turniere, ') + zahl(o.archetypen)
                    + ' Archetypen.')
                 : ('What this tab does have: period ' + zeitraum + ', ' + zahl(o.turniere)
                    + (Number(o.turniere) === 1 ? ' tournament, ' : ' tournaments, ') + zahl(o.archetypen)
-                   + ' archetypes.');
+                   + ' archetypes.'));
+
+            /* BEFUND B4 (07.09.2026, zweite Runde): eine Tabelle, die nie
+               erscheint, ist keine erledigte Aufgabe — und ein Leerzustand,
+               der seine Quelle nicht nennt, ist nicht nachpruefbar. Deshalb
+               steht hier der DATEINAME, aus dem die Seite gelesen hat, samt
+               Zeitfenster. Der Name wird nicht abgeschrieben: er kommt aus
+               derselben Zeichenkette, mit der geladen wurde. */
+            const quelle = String((o && o.quelle) || '').trim();
+            const quelleSatz = quelle
+                ? (de ? ('Für diese Rubriken liefert der Zeitraum keine Daten — Quelle: '
+                         + quelle + ', Zeitfenster ' + zeitraum + '.')
+                      : ('These sections have no data in this window — source: '
+                         + quelle + ', window ' + zeitraum + '.'))
+                : '';
+
+            /* BEFUND B2 (07.09.2026, zweite Runde): hier stand als Grund,
+               "Häufiger gespielt" sei leer, weil count_change > 0 ohne
+               Vorzeitraum nicht vorkomme. Das ist an den Daten falsch: in
+               data/city_league_archetypes_past_comparison.csv haben ALLE 11
+               Zeilen count_change > 0 (6+5+3+3+2+2+1+1+1+1+1 = 26 = Summe
+               new_count). Leer ist die Rubrik aus einem anderen Grund — der
+               Filter verlangt zusaetzlich status !== 'NEU', und alle 11
+               Zeilen tragen status=NEU.
+
+               Statt eines Satzes, der eine Zahl behauptet, steht jetzt die
+               ausgezaehlte Bilanz da. Sie wird aus denselben Zeilen
+               gerechnet, aus denen auch gefiltert wurde. */
+            const z = (o && o.zaehlwerk) || {};
+            const nachgerechnet = [];
+            if (l.haeufiger && Number(z.zeilen || 0) > 0) {
+                nachgerechnet.push(de
+                    ? (namen.haeufiger + ' zählt Zeilen mit count_change > 0, die NICHT den Status '
+                       + 'NEU tragen: ' + zahl(z.mitZuwachs) + ' von ' + zahl(z.zeilen)
+                       + ' Zeilen haben count_change > 0, davon tragen ' + zahl(z.zuwachsUndNeu)
+                       + ' den Status NEU — es bleiben '
+                       + zahl(Number(z.mitZuwachs || 0) - Number(z.zuwachsUndNeu || 0)) + '.')
+                    : (namen.haeufiger + ' counts rows with count_change > 0 that are NOT flagged '
+                       + 'NEW: ' + zahl(z.mitZuwachs) + ' of ' + zahl(z.zeilen)
+                       + ' rows have count_change > 0, ' + zahl(z.zuwachsUndNeu)
+                       + ' of those are flagged NEW — leaving '
+                       + zahl(Number(z.mitZuwachs || 0) - Number(z.zuwachsUndNeu || 0)) + '.'));
+            }
+            if (l.verschwunden && Number(z.zeilen || 0) > 0) {
+                nachgerechnet.push(de
+                    ? (namen.verschwunden + ' zählt Zeilen mit dem Status VERSCHWUNDEN: '
+                       + zahl(z.statusVerschwunden) + ' von ' + zahl(z.zeilen) + '.')
+                    : (namen.verschwunden + ' counts rows flagged DISAPPEARED: '
+                       + zahl(z.statusVerschwunden) + ' of ' + zahl(z.zeilen) + '.'));
+            }
 
             const saetze = [];
             if (fehlend.length) {
                 saetze.push(de ? ('Hier fehlen ' + liste + '.') : ('Missing here: ' + liste + '.'));
+                if (quelleSatz) saetze.push(quelleSatz);
                 saetze.push(grund);
+                nachgerechnet.forEach(x => saetze.push(x));
             }
             if (ungezeigt.length) {
-                saetze.push(de
-                    ? ('Ohne Tabelle auf dieser Seite, obwohl Daten vorliegen: '
+                saetze.push((de
+                    ? ('Ohne eigene Tabelle, obwohl Daten vorliegen: '
                        + aufzaehlen(ungezeigt) + '. Die Zahl in Klammern ist die Zahl der Archetypen; '
                        + 'die vollständige Vergleichstabelle weiter unten führt sie.')
-                    : ('Present in the data but shown in no table here: '
+                    : ('Present in the data but shown in no table of their own: '
                        + aufzaehlen(ungezeigt) + '. The number in brackets is the archetype count; '
-                       + 'the full comparison table below lists them.'));
+                       + 'the full comparison table below lists them.'))
+                    + (o && o.ohneTabelleGrund ? ' ' + String(o.ohneTabelleGrund) : ''));
             }
             saetze.push(bestand);
 
@@ -1162,12 +1497,33 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
         }
 
         // Render City League table with full structure matching original HTML
-        function renderCityLeagueTable(tournamentCount = 0, dateRange = '') {
+        function renderCityLeagueTable(tournamentCount = 0, dateRange = '', herkunft = null) {
+            /* BEFUND B4: die Herkunft wird zur Laufzeit aus den
+               Archetyp-Zeilen gelesen, nicht abgeschrieben. Faellt der
+               Aufruf ohne sie herein (Sprachwechsel-Neuaufbau), holt
+               sie sich diese Stelle aus demselben Zwischenspeicher,
+               den die Ladestelle gefuellt hat. */
+            const _herkunft = Array.isArray(herkunft)
+                ? herkunft
+                : cityLeagueTurnierHerkunft(window.cityLeagueArchetypesData || []);
+            const _herkunftDe = (typeof getLang === 'function' ? getLang() : 'de') === 'de';
+            const _herkunftSatz = cityLeagueHerkunftSatz(_herkunft, _herkunftDe);
+            /* BEFUND B4 (07.09.2026, zweite Runde): der Leerzustand muss die
+               DATEI nennen, aus der nichts kam. Abgeschrieben wird der Name
+               nicht: die Ladestelle legt die Zeichenkette ab, mit der sie
+               wirklich geholt hat (window._cityLeagueVergleichsQuelle). Fehlt
+               sie — Sprachwechsel-Neuaufbau vor dem ersten Laden —, wird der
+               Name aus demselben Formatschalter gebildet, den auch die
+               Ladestelle benutzt. */
+            const _quelle = String((window && window._cityLeagueVergleichsQuelle) || '')
+                || ('data/city_league_archetypes'
+                    + (((window && window.currentCityLeagueFormat) || 'current') === 'past' ? '_past' : '')
+                    + '_comparison.csv');
             const content = document.getElementById('cityLeagueContent');
             if (!content || !cityLeagueData || cityLeagueData.length === 0) return;
             
             // Use cached sort results
-            const { newArchetypes, disappeared, increased, decreased, improvers, decliners, sorted, topByCount, topByPlacement, top10New, top10Old, keinVorzeitraum, countThreshold } = getCityLeagueSortedSections(cityLeagueData);
+            const { newArchetypes, disappeared, increased, decreased, improvers, decliners, sorted, topByCount, topByPlacement, top10New, top10Old, keinVorzeitraum, zaehlwerk, countThreshold } = getCityLeagueSortedSections(cityLeagueData);
             const totalArchetypes = cityLeagueData.length;
             
             // Generate timestamp
@@ -1214,7 +1570,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                         <h3 class="city-league-info-card-title">${t('cl.dataSource')}</h3>
                         <div class="city-league-info-card-details">
                             <strong>${t('cl.period')}</strong><br>${dateRange || 'N/A'}<br><br>
-                            <strong>${t('cl.tournaments')}</strong><br>${tournamentCount || 0}
+                            <strong>${t('cl.tournaments')}</strong><br>${tournamentCount || 0}${_herkunftSatz ? `<br><span class="city-league-info-card-herkunft">${escapeHtml(_herkunftSatz)}</span>` : ''}
                         </div>
                     </div>
                 </div>`;
@@ -1232,6 +1588,41 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                getCityLeagueSortedSections() improvers/decliners WIRKLICH
                gefiltert hat, aus deren Zwischenspeicher — und der
                Prozentsatz aus derselben Konstante. */
+            /* BEFUND B5: "Neue Archetypen" bekommt OHNE Vorzeitraum keine
+               Tabelle. Ohne zweite Messung tragen alle Zeilen status=NEU —
+               "neu" hiesse dann nur "wir haben nichts, wogegen". Genau die
+               Sorte erfundener Rubrik, die am 30.08.2026 bei den
+               Performance-Tabellen abgestellt wurde.
+
+               BEFUND B2 (07.09.2026, zweite Runde): hier stand als Zusatz,
+               "Häufiger gespielt" und "Verschwundene Archetypen" seien in
+               diesem Zustand ohnehin leer, "weil count_change > 0 bzw.
+               status=VERSCHWUNDEN ohne Vorzeitraum nicht vorkommt". Die
+               zweite Haelfte stimmt, die erste ist an den Daten falsch.
+               Nachgezaehlt in data/city_league_archetypes_past_comparison.csv
+               (Spalten count_change und status, 11 Zeilen):
+
+                 count_change > 0    : 11 von 11  (6,5,3,3,2,2,1,1,1,1,1 = 26,
+                                                   und 26 ist die Summe der
+                                                   Spalte new_count)
+                 count_change < 0    :  0 von 11
+                 status = NEU        : 11 von 11
+                 status = VERSCHWUNDEN: 0 von 11
+
+               "Häufiger gespielt" ist also NICHT leer, weil es keinen
+               Zuwachs gaebe — jede Zeile hat einen. Leer ist die Rubrik,
+               weil ihr Filter zusaetzlich status !== 'NEU' verlangt und
+               diese Bedingung 0 von 11 Zeilen passieren: 11 mit Zuwachs
+               minus 11 davon mit Status NEU = 0. "Verschwundene
+               Archetypen" ist leer, weil keine Zeile den Status
+               VERSCHWUNDEN traegt.
+
+               Diese Bilanz steht nicht mehr nur hier: sie wird als
+               `zaehlwerk` mitgerechnet und im Leerzustand ausgeschrieben,
+               damit Text und Filter nicht wieder auseinanderlaufen. */
+            const zeigeNeue = !keinVorzeitraum && newArchetypes.length > 0;
+            const _rubrik = cityLeagueRubrikNamen(_herkunftDe).roh;
+
             html += cityLeagueVergleichLeerHinweis({
                 keinVorzeitraum: keinVorzeitraum,
                 archetypen: totalArchetypes,
@@ -1240,6 +1631,8 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                 turniere: tournamentCount || 0,
                 mindestListen: countThreshold,
                 mindestAnteil: CL_MINDEST_ANTEIL_GROESSTER,
+                quelle: _quelle,
+                zaehlwerk: zaehlwerk,
                 leer: {
                     seltener:       decreased.length === 0,
                     haeufiger:      increased.length === 0,
@@ -1249,12 +1642,56 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                     neuTabelle:     newArchetypes.length === 0,
                     verschwunden:   disappeared.length === 0
                 },
-                vorhanden: {
-                    haeufiger:    increased.length,
-                    neuTabelle:   newArchetypes.length,
-                    verschwunden: disappeared.length
-                }
+                // Nur, was Daten hat UND bewusst keine Tabelle bekommt.
+                ohneTabelle: zeigeNeue ? {} : { neuTabelle: newArchetypes.length },
+                ohneTabelleGrund: zeigeNeue ? '' : (_herkunftDe
+                    ? 'Eine Tabelle „Neue Archetypen“ steht hier bewusst nicht: ohne Vorzeitraum '
+                      + 'trägt jede Zeile den Status NEU, und „neu“ hieße dann nur, dass es keine '
+                      + 'zweite Messung gibt.'
+                    : 'A “New Archetypes” table is deliberately absent: with no prior window every '
+                      + 'row is flagged NEW, so “new” would only mean that there is no second '
+                      + 'measurement.')
             });
+
+            /* BEFUND B5 (07.09.2026): DREI RUBRIKEN, DIE GERECHNET, ABER
+               NIE GEZEIGT WURDEN.
+
+               getCityLeagueSortedSections() bildet `increased`,
+               `newArchetypes` und `disappeared` seit jeher; auf der Seite
+               stand seit dem 07.09. nur ihre ZAHL im Leerzustandsblock.
+               Geprueft, ob sie mit den vorhandenen Daten darstellbar sind:
+               ja — die Vergleichsdatei fuehrt fuer jede Zeile old_count,
+               new_count, count_change, old_meta_share/new_meta_share,
+               old_avg_placement/new_avg_placement und old_best/new_best.
+               Mehr braucht keine der drei Tabellen.
+
+               Die Ueberschriften kommen aus cityLeagueRubrikNamen(), also
+               aus derselben Quelle wie die Namen im Leerzustandstext —
+               sonst nennt die Seite dieselbe Rubrik an zwei Stellen
+               verschieden. */
+            const _zelle = 'city-league-info-table-cell city-league-info-table-cell-center';
+            const _archZelle = (arch) => `<td class="city-league-info-table-cell city-league-info-table-cell-archetype" title="${t('cl.goToAnalysis')} ${escapeHtml(arch)}"><a href="javascript:void(0)" onclick="jumpToCardAnalysis('${escapeHtmlAttr(escapeJsStr(arch))}', 'cityLeague')" class="archetype-jump-link">${(typeof window.ArchetypeIcons!=='undefined'?window.ArchetypeIcons.getIconHtml(arch,{size:'sm',layout:'inline'}):'')}${escapeHtml(arch)}</a></td>`;
+            const _kopf = (titel, spalten) => `
+                    <div class="city-league-info-table-block">
+                        <h2 class="city-league-info-table-title">${escapeHtml(titel)}</h2>
+                        <table class="city-league-info-table">
+                            <thead>
+                                <tr class="city-league-info-table-header-row">
+                                    <th class="city-league-info-table-header city-league-info-table-header-archetype">${t('cl.thArchetype')}</th>
+                                    ${spalten.map(x => `<th class="city-league-info-table-header">${escapeHtml(x)}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>`;
+            const _anteilSpalte = _herkunftDe ? 'Meta-Anteil' : 'Meta share';
+            const _bestSpalte = _herkunftDe ? 'Bester Platz' : 'Best placement';
+            /* Anteile kommen als "23,08" aus der Datei — einmal richtig
+               lesen, dann in der Sprache des Nutzers schreiben. Die
+               Platzangabe ist eine ganze Zahl und bekommt kein Komma. */
+            const _anteil = (v) => _komma(parseLocaleNumber(v, 0), 2) + ' %';
+            const _platz = (v) => {
+                const n = parseInt(v, 10);
+                return Number.isFinite(n) ? String(n) : '—';
+            };
 
             // Add conditional tables
             if (decreased.length > 0) {
@@ -1276,7 +1713,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                     const change = parseInt(d.count_change || 0);
                     const placement_change = parseLocaleNumber(d.avg_placement_change || '0', 0);
                     const placement_color = placement_change < 0 ? 'var(--tint-ok-ink)' : 'var(--tint-bad-ink)';
-                    const archetypeEscaped = escapeJsStr(d.archetype);
+                    const archetypeEscaped = escapeHtmlAttr(escapeJsStr(d.archetype));
                     html += `
                         <tr class="city-league-info-table-row">
                             <td class="city-league-info-table-cell city-league-info-table-cell-archetype" title="${t('cl.goToAnalysis')} ${escapeHtml(d.archetype)}"><a href="javascript:void(0)" onclick="jumpToCardAnalysis('${archetypeEscaped}', 'cityLeague')" class="archetype-jump-link">${(typeof window.ArchetypeIcons!=='undefined'?window.ArchetypeIcons.getIconHtml(d.archetype,{size:'sm',layout:'inline'}):'')}${escapeHtml(d.archetype)}</a></td>
@@ -1289,6 +1726,23 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                 html += `</tbody></table></div>`;
             }
             
+            if (increased.length > 0) {
+                html += _kopf(_rubrik.haeufiger,
+                    [t('cl.thOldCount'), t('cl.thNewCount'), t('cl.thChange'), t('cl.thAvgPlacement')]);
+                increased.slice(0, 10).forEach(d => {
+                    const change = parseInt(d.count_change || 0);
+                    html += `
+                        <tr class="city-league-info-table-row">
+                            ${_archZelle(d.archetype)}
+                            <td class="${_zelle}">${escapeHtml(String(d.old_count))}</td>
+                            <td class="${_zelle}">${escapeHtml(String(d.new_count))}</td>
+                            <td class="${_zelle} city-league-info-table-cell-entry">+${change}</td>
+                            <td class="${_zelle}">${_rang(d.new_avg_placement)}</td>
+                        </tr>`;
+                });
+                html += `</tbody></table></div>`;
+            }
+
             if (improvers.length > 0 || decliners.length > 0) {
                 // Container for side-by-side layout (Desktop) / stacked (Mobile)
                 html += `<div class="city-league-info-flex">`;
@@ -1312,7 +1766,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                     const improvement = Math.abs(parseLocaleNumber(d.avg_placement_change || '0', 0));
                     const countChange = parseInt(d.new_count) - parseInt(d.old_count);
                     const countChangeText = countChange > 0 ? `+${countChange}` : `${countChange}`;
-                    const archetypeEscaped = escapeJsStr(d.archetype);
+                    const archetypeEscaped = escapeHtmlAttr(escapeJsStr(d.archetype));
                     html += `
                         <tr class="city-league-info-table-row">
                             <td class="city-league-info-table-cell city-league-info-table-cell-archetype" title="${t('cl.goToAnalysis')} ${escapeHtml(d.archetype)}"><a href="javascript:void(0)" onclick="jumpToCardAnalysis('${archetypeEscaped}', 'cityLeague')" class="archetype-jump-link">${(typeof window.ArchetypeIcons!=='undefined'?window.ArchetypeIcons.getIconHtml(d.archetype,{size:'sm',layout:'inline'}):'')}${escapeHtml(d.archetype)}</a></td>
@@ -1341,7 +1795,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                     const decline = parseLocaleNumber(d.avg_placement_change || '0', 0);
                     const countChange = parseInt(d.new_count) - parseInt(d.old_count);
                     const countChangeText = countChange > 0 ? `+${countChange}` : `${countChange}`;
-                    const archetypeEscaped = escapeJsStr(d.archetype);
+                    const archetypeEscaped = escapeHtmlAttr(escapeJsStr(d.archetype));
                     html += `
                         <tr class="city-league-info-table-row">
                             <td class="city-league-info-table-cell city-league-info-table-cell-archetype" title="${t('cl.goToAnalysis')} ${escapeHtml(d.archetype)}"><a href="javascript:void(0)" onclick="jumpToCardAnalysis('${archetypeEscaped}', 'cityLeague')" class="archetype-jump-link">${(typeof window.ArchetypeIcons!=='undefined'?window.ArchetypeIcons.getIconHtml(d.archetype,{size:'sm',layout:'inline'}):'')}${escapeHtml(d.archetype)}</a></td>
@@ -1355,6 +1809,42 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
             // Close flex container if it was opened
             if (improvers.length > 0 || decliners.length > 0) {
                 html += `</div>`; // Close flex container
+            }
+
+            if (zeigeNeue) {
+                html += _kopf(_rubrik.neuTabelle,
+                    [t('cl.thCount'), _anteilSpalte, t('cl.thAvgPlacement'), _bestSpalte]);
+                [...newArchetypes]
+                    .sort((a, b) => parseInt(b.new_count || 0) - parseInt(a.new_count || 0))
+                    .slice(0, 10).forEach(d => {
+                        html += `
+                        <tr class="city-league-info-table-row">
+                            ${_archZelle(d.archetype)}
+                            <td class="${_zelle}">${escapeHtml(String(d.new_count))}</td>
+                            <td class="${_zelle}">${_anteil(d.new_meta_share)}</td>
+                            <td class="${_zelle}">${_rang(d.new_avg_placement)}</td>
+                            <td class="${_zelle}">${_platz(d.new_best)}</td>
+                        </tr>`;
+                    });
+                html += `</tbody></table></div>`;
+            }
+
+            if (disappeared.length > 0) {
+                html += _kopf(_rubrik.verschwunden,
+                    [t('cl.thOldCount'), _anteilSpalte, t('cl.thAvgPlacement'), _bestSpalte]);
+                [...disappeared]
+                    .sort((a, b) => parseInt(b.old_count || 0) - parseInt(a.old_count || 0))
+                    .slice(0, 10).forEach(d => {
+                        html += `
+                        <tr class="city-league-info-table-row">
+                            ${_archZelle(d.archetype)}
+                            <td class="${_zelle}">${escapeHtml(String(d.old_count))}</td>
+                            <td class="${_zelle}">${_anteil(d.old_meta_share)}</td>
+                            <td class="${_zelle}">${_rang(d.old_avg_placement)}</td>
+                            <td class="${_zelle}">${_platz(d.old_best)}</td>
+                        </tr>`;
+                    });
+                html += `</tbody></table></div>`;
             }
             
             // Full comparison tables - side by side on Desktop
@@ -1529,12 +2019,12 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                        zweite Schritt. Der Wert steht in einem
                        einfach-gequoteten JS-String, also muss er auch fuer
                        JS entschaerft werden, nicht nur fuer die URL. */
-                    const variantsJson = escapeJsStr(
-                        encodeURIComponent(JSON.stringify(d.variants || [])));
+                    const variantsJson = escapeHtmlAttr(escapeJsStr(
+                        encodeURIComponent(JSON.stringify(d.variants || []))));
 
                     tableHTML += `
                         <tr class="city-league-info-table-row city-league-info-table-row-mobile" title="${d.variants.join(', ')}">
-                            <td class="city-league-info-table-cell city-league-info-table-cell-archetype city-league-info-table-cell-main-mobile" onclick="analyzeCombinedArchetype('${escapeJsStr(d.main || '')}', '${variantsJson}')" title="${t('cl.analyzeVariants')}"><span style="display:inline-flex;align-items:center;gap:6px;">${(typeof window.ArchetypeIcons!=='undefined'?window.ArchetypeIcons.slugIconHtml(d.main,{size:'sm'}):'')}${displayName}</span></td>
+                            <td class="city-league-info-table-cell city-league-info-table-cell-archetype city-league-info-table-cell-main-mobile" onclick="analyzeCombinedArchetype('${escapeHtmlAttr(escapeJsStr(d.main || ''))}', '${variantsJson}')" title="${t('cl.analyzeVariants')}"><span style="display:inline-flex;align-items:center;gap:6px;">${(typeof window.ArchetypeIcons!=='undefined'?window.ArchetypeIcons.slugIconHtml(d.main,{size:'sm'}):'')}${displayName}</span></td>
                             <td class="city-league-info-table-cell city-league-info-table-cell-center city-league-info-table-cell-variants-mobile">${d.variant_count}</td>
                             <td class="city-league-info-table-cell city-league-info-table-cell-center city-league-info-table-cell-count-mobile">${d.new_count} ${_ohneBasis ? '' : `<span class="city-league-info-table-count-change-mobile" style="color: ${changeColor};">(${changeValue > 0 ? '+' : ''}${changeValue})</span>`}</td>
                             <td class="city-league-info-table-cell city-league-info-table-cell-center city-league-info-table-cell-placement-mobile">${_rang(d.new_avg_placement)} ${_ohneBasis ? '' : `<span class="city-league-info-table-placement-mobile" style="color: ${placementColor};">(${placementChange > 0 ? '+' : ''}${_komma(placementChange, 2)})</span>`}</td>
@@ -1587,12 +2077,12 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                        zweite Schritt. Der Wert steht in einem
                        einfach-gequoteten JS-String, also muss er auch fuer
                        JS entschaerft werden, nicht nur fuer die URL. */
-                    const variantsJson = escapeJsStr(
-                        encodeURIComponent(JSON.stringify(d.variants || [])));
+                    const variantsJson = escapeHtmlAttr(escapeJsStr(
+                        encodeURIComponent(JSON.stringify(d.variants || []))));
                     
                     tableHTML += `
                         <tr class="city-league-info-table-row city-league-info-table-row-desktop" title="${d.variants.join(', ')}">
-                            <td class="city-league-info-table-cell city-league-info-table-cell-archetype city-league-info-table-cell-main-desktop" onclick="analyzeCombinedArchetype('${escapeJsStr(d.main || '')}', '${variantsJson}')" title="${t('cl.analyzeVariants')}"><span style="display:inline-flex;align-items:center;gap:6px;">${(typeof window.ArchetypeIcons!=='undefined'?window.ArchetypeIcons.slugIconHtml(d.main,{size:'sm'}):'')}${displayName}</span></td>
+                            <td class="city-league-info-table-cell city-league-info-table-cell-archetype city-league-info-table-cell-main-desktop" onclick="analyzeCombinedArchetype('${escapeHtmlAttr(escapeJsStr(d.main || ''))}', '${variantsJson}')" title="${t('cl.analyzeVariants')}"><span style="display:inline-flex;align-items:center;gap:6px;">${(typeof window.ArchetypeIcons!=='undefined'?window.ArchetypeIcons.slugIconHtml(d.main,{size:'sm'}):'')}${displayName}</span></td>
                             <td class="city-league-info-table-cell city-league-info-table-cell-center city-league-info-table-cell-variants-desktop">${d.variant_count}</td>
                             <td class="city-league-info-table-cell city-league-info-table-cell-center city-league-info-table-cell-count-desktop">${d.new_count} ${_ohneBasis ? '' : `<span class="city-league-info-table-count-change-desktop" style="--change-color: ${changeColor};">(${changeText})</span>`}</td>
                             <td class="city-league-info-table-cell city-league-info-table-cell-center city-league-info-table-cell-placement-desktop">${_rang(d.new_avg_placement)} ${_ohneBasis ? '' : `<span class="city-league-info-table-placement-desktop" style="--placement-color: ${placementColor};">(${placementText})</span>`}</td>
@@ -1639,7 +2129,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                     const changeColor = changeValue > 0 ? 'var(--tint-ok-ink)' : changeValue < 0 ? 'var(--tint-bad-ink)' : 'var(--ink-3)';
                     const placementChange = parseLocaleNumber(d.avg_placement_change || '0', 0);
                     const placementColor = placementChange < 0 ? 'var(--tint-ok-ink)' : placementChange > 0 ? 'var(--tint-bad-ink)' : 'var(--ink-3)';
-                    const archetypeEscaped = escapeJsStr(d.archetype);
+                    const archetypeEscaped = escapeHtmlAttr(escapeJsStr(d.archetype));
                     
                     tableHTML += `
                         <tr class="city-league-info-table-row city-league-info-table-row-mobile" title="${t('cl.goToAnalysis')} ${escapeHtml(d.archetype)}">
@@ -1674,7 +2164,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                     const placementChange = parseLocaleNumber(d.avg_placement_change || '0', 0);
                     const placementColor = placementChange < 0 ? 'var(--tint-ok-ink)' : placementChange > 0 ? 'var(--tint-bad-ink)' : 'var(--ink-3)';
                     const placementText = (placementChange > 0 ? '+' : '') + _komma(placementChange, 2);
-                    const archetypeEscaped = escapeJsStr(d.archetype);
+                    const archetypeEscaped = escapeHtmlAttr(escapeJsStr(d.archetype));
                     
                     tableHTML += `
                         <tr class="city-league-info-table-row city-league-info-table-row-desktop" title="${t('cl.goToAnalysis')} ${escapeHtml(d.archetype)}">
@@ -1795,6 +2285,8 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
             const analysisUrl   = `${BASE_PATH}${isPast ? 'city_league_analysis_past.csv'              : 'city_league_analysis.csv'}`;
             const archetypesUrl = `${BASE_PATH}${isPast ? 'city_league_archetypes_past.csv'            : 'city_league_archetypes.csv'}`;
             const comparisonUrl = `${BASE_PATH}${isPast ? 'city_league_archetypes_past_comparison.csv' : 'city_league_archetypes_comparison.csv'}`;
+            // BEFUND B4: siehe oben — eine Ablage, ein Name.
+            window._cityLeagueVergleichsQuelle = comparisonUrl;
             const hasComparisonFile = true;
             
             devLog(`Loading City League Analysis for format: ${format}`);
@@ -3720,7 +4212,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                 });
                 const rawPercentage = safeParseFloat(card.percentage_in_archetype || card.share_percent || 0);
                 const maxCount = parseInt(card.max_count) || card.max_count || '?';
-                const cardNameEscaped = escapeJsStr(cardName);
+                const cardNameEscaped = escapeHtmlAttr(escapeJsStr(cardName));
                 const setCode = displayCard.set_code || '';
                 const setNumber = displayCard.set_number || '';
                 
@@ -3944,7 +4436,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                 const originalSetNumber = card.set_number || '';
                 const rawCardName = card.card_name || '';
                 const cardName = getDisplayCardName(rawCardName, originalSetCode, originalSetNumber);
-                const cardNameEscaped = escapeJsStr(cardName);
+                const cardNameEscaped = escapeHtmlAttr(escapeJsStr(cardName));
                 
                 // Apply rarity mode to determine which versions to show
                 let versionsToRender = [];
@@ -4096,7 +4588,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                 }
                 const priceDisplay = eurPrice || '0,00€';
                 const priceBackground = eurPrice ? 'linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%)' : 'linear-gradient(135deg, #777 0%, #999 100%)';
-                const cardmarketUrlEscaped = escapeJsStr(cardmarketUrl || '');
+                const cardmarketUrlEscaped = escapeHtmlAttr(escapeJsStr(cardmarketUrl || ''));
                 
                 // Determine card type category for filtering
                 const cardType = card.type || card.card_type || '';
@@ -4814,7 +5306,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                     html += '<tr>';
                     // Image with green badge if card is in deck
                     html += `<td class="col-image" data-label="${thImage}"><div class="city-league-img-badge-wrap">`;
-                    html += `<img src="${imageUrl}" alt="${cardName}" loading="lazy" class="city-league-card-img" onerror="handleCardImageError(this, '${setCode}', '${setNumber}')" onclick="showSingleCard(this.src, '${escapeJsStr(cardName)} (${setCode} ${setNumber})')">`;
+                    html += `<img src="${imageUrl}" alt="${cardName}" loading="lazy" class="city-league-card-img" onerror="handleCardImageError(this, '${setCode}', '${setNumber}')" onclick="showSingleCard(this.src, '${escapeHtmlAttr(escapeJsStr(cardName))} (${setCode} ${setNumber})')">`;
                     if (currentDeckCount > 0) {
                         html += `<div class="city-league-img-badge">${currentDeckCount}</div>`;
                     }
@@ -4826,7 +5318,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                     html += `<td data-label="${thNumber}">${setNumber}</td>`;
                     html += `<td data-label="${thPctArchetype}"><strong class="city-league-pct">${percentage}%</strong></td>`;
                     html += `<td data-label="${thAvgCount}"><strong class="city-league-avg-count">${avgCount}x</strong></td>`;
-                    html += `<td class="city-league-action-btns"><button class="btn btn-primary" onclick="addCardToDeck('cityLeague', '${escapeJsStr(cardName)}')">${t('cl.addBtn')}</button><button class="btn btn-red" onclick="addCardToProxy('${escapeJsStr(cardName)}', '${setCode}', '${setNumber}', 1)">${t('cl.proxy')}</button></td>`;
+                    html += `<td class="city-league-action-btns"><button class="btn btn-primary" onclick="addCardToDeck('cityLeague', '${escapeHtmlAttr(escapeJsStr(cardName))}')">${t('cl.addBtn')}</button><button class="btn btn-red" onclick="addCardToProxy('${escapeHtmlAttr(escapeJsStr(cardName))}', '${setCode}', '${setNumber}', 1)">${t('cl.proxy')}</button></td>`;
                     html += '</tr>';
                 });
 
@@ -5074,7 +5566,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
             if (window.cityLeagueLoaded) {
                 // Re-render the comparison tables if data is available
                 if (window.cityLeagueSortedData) {
-                    renderCityLeagueTable(window._cityLeagueTournamentCount || 0, window._cityLeagueDateRange || '');
+                    renderCityLeagueTable(window._cityLeagueTournamentCount || 0, window._cityLeagueDateRange || '', window._cityLeagueTurnierHerkunft || null);
                 }
                 // Re-populate the deck dropdown
                 if (typeof populateCityLeagueDeckSelect === 'function') {

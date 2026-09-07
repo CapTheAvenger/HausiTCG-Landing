@@ -977,6 +977,26 @@ function showTableSkeleton(containerOrId, opts) {
                 return null;
             }
 
+            // PER-CARD PREFERENCE WINS (BEFUND 07.09.2026):
+            // Bis hierher entschied immer die globale Vorliebe, weil
+            // getGlobalRarityPreference() nie etwas anderes als 'min'/'max'
+            // liefert (js/app-core.js) und der globale Zweig weiter unten
+            // vorher zurueckkehrte. Eine ueber setRarityPreference()
+            // gesetzte kartenweise Auswahl war damit wirkungslos.
+            // Sie wird jetzt VOR der globalen Vorliebe ausgewertet; Karten
+            // OHNE eigene Einstellung (pref === null) bleiben unberuehrt.
+            // Ist der gewaehlte Druck nicht im Vorrat, faellt es bewusst auf
+            // die globale Vorliebe zurueck statt null zu liefern.
+            if (pref && pref.mode === 'specific' && pref.set && pref.number) {
+                const specificVersion = versions.find(v => v.set === pref.set && v.number === pref.number);
+                if (specificVersion) {
+                    debugVersionSelectionLog(`[getPreferredVersionForCard] Kartenweise Vorliebe fuer "${cardName}": ${specificVersion.set} ${specificVersion.number}`);
+                    preferredVersionCache.set(cacheKey, specificVersion);
+                    return specificVersion;
+                }
+                debugVersionSelectionLog(`[getPreferredVersionForCard] Kartenweise Vorliebe ${pref.set} ${pref.number} fuer "${cardName}" nicht im Vorrat — globale Vorliebe entscheidet`);
+            }
+
             // SPECIAL HANDLING: Basic Energies should always use SVE prints (17-24)
             if (isBasicEnergy(cardName) && globalPref === 'min') {
                 // Map each energy type to its correct SVE number

@@ -5,9 +5,43 @@
          * Normalize an archetype name for fuzzy matching.
          * Strips apostrophes, "ex" suffix, and known set-code suffixes.
          */
+        // EINE ZEICHENKLASSE FUER ALLE APOSTROPH-SCHREIBWEISEN.
+        //
+        // BEFUND (07.09.2026): hier standen zwei Abschriften derselben
+        // Idee, und sie waren verschieden. js/app-tier-meta.js trug
+        // [U+0027 U+0027 U+0060] — den geraden Apostroph doppelt, den
+        // typografischen gar nicht. js/app-meta-cards.js kannte U+2019
+        // und U+2018, dafuer fehlte ihm U+00B4.
+        //
+        //   Eingabe  "N\u2019s Zoroark ex"   (typografisch, U+2019)
+        //   gemessen  _normArchName            -> "n\u2019s zoroark ex"
+        //             normalizeArchetypeForMatch -> "n zoroark"
+        //
+        // Wirkung: sobald eine Quelle Deck-Namen typografisch liefert,
+        // findet die Bild- und Kartensuche im Reiter "Laufendes Meta"
+        // nichts mehr. In data/limitless_online_decks.csv steht heute
+        // kein U+2019 — das ist eine Eigenschaft der Daten, nicht des
+        // Codes.
+        //
+        // DIE KLASSE STEHT IN BEIDEN MODULEN ZEICHENGLEICH.
+        // tests/unit/test-f3-normalisierer.js liest beide Dateien und
+        // vergleicht die Klassen Byte fuer Byte; weicht eine Abschrift
+        // ab, wird die Suite rot.
+        //
+        // Ein gemeinsamer Bezeichner zur Laufzeit ist NICHT moeglich:
+        // der Nachbartest zur Archetyp-Zuordnung (tests/unit/, Datei mit
+        // "ArchetypeMatch" im Namen) schneidet beide Funktionen einzeln
+        // aus der Datei und fuehrt sie in einem leeren
+        // `new Function('window', ...)`-Sandkasten aus. Ein freier
+        // Bezeichner darin wirft ReferenceError — nachgemessen am
+        // 07.09.2026: 13 von 21 Zusicherungen fielen um.
+        //
+        // Beruecksichtigt: U+0027 '  U+2018 ‘  U+2019 ’  U+201B ‛
+        //                  U+0060 `  U+00B4 ´  U+02BC ʼ
         function normalizeArchetypeForMatch(name) {
             return (name || '').toLowerCase()
-                .replace(/['\u2019\u2018`]s\b/g, '').replace(/['\u2019\u2018`]/g, '')  // Rocket's → Rocket
+                .replace(/['\u2018\u2019\u201B\u0060\u00B4\u02BC]s\b/g, '')   // Genitiv streichen (Rocket's -> Rocket)
+                .replace(/['\u2018\u2019\u201B\u0060\u00B4\u02BC]/g, '')       // uebrige Apostrophe streichen
                 .replace(/^(rocket|hop|steven|cynthia|marnie|lillie|ethan|hau|n|iono|arven|nemona|kieran|kabu|raihan|jacq|geeta|ns)s\b/i, '$1')  // possessive without apostrophe (Rockets → Rocket)
                 .replace(/\bex\b/g, '')          // strip standalone "ex"
                 .replace(/\b(asc|blk|cri|dri|jtg|m3|m4|m5|m6|meg|mee|mep|mew|obf|paf|pal|par|pbl|pfl|por|pre|scr|sfa|ssp|svi|sve|svp|tef|twm|wht)\b/g, '') // strip set-code suffixes (full EN+JP rotation; sorted alphabetically)
@@ -883,7 +917,7 @@
                 
                 // Create JSON string for archetypes (escape properly for HTML attribute)
                 const archetypesJson = JSON.stringify(card.archetypes || []).replace(/"/g, '&quot;');
-                const cardNameEscaped = escapeJsStr(card.card_name);
+                const cardNameEscaped = escapeHtmlAttr(escapeJsStr(card.card_name));
                 
                 // Check if card is in deck
                 const currentDeck = source === 'cityLeague' ? window.cityLeagueDeck : 
@@ -914,7 +948,7 @@
                 }
                 const priceDisplay = eurPrice || '0,00€';
                 const priceBackground = eurPrice ? 'linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%)' : 'linear-gradient(135deg, #777 0%, #999 100%)';
-                const cardmarketUrlEscaped = escapeJsStr(cardmarketUrl || '');
+                const cardmarketUrlEscaped = escapeHtmlAttr(escapeJsStr(cardmarketUrl || ''));
                 
                 return `
                     <div class="card-item">
@@ -1096,7 +1130,7 @@
             let htmlString = '<div class="meta-card-list-grid">';
 
             cardsToRender.forEach(cardName => {
-                const cardNameEscaped = escapeJsStr(cardName);
+                const cardNameEscaped = escapeHtmlAttr(escapeJsStr(cardName));
                 const cardVersions = matchingCards.filter(c => c.name === cardName);
                 // Filter out Japanese versions if international versions exist
                 let displayVersions = cardVersions;
@@ -1197,7 +1231,7 @@
                     card_name: cardName,
                     image_url: imageUrl
                 });
-                const cardNameEscaped = escapeJsStr(cardName);
+                const cardNameEscaped = escapeHtmlAttr(escapeJsStr(cardName));
                 
                 html += `
                     <div class="meta-card-list-item" onmouseover="this.classList.add('meta-card-list-item-hover')" onmouseout="this.classList.remove('meta-card-list-item-hover')">
@@ -1717,7 +1751,7 @@
                         if (deckNameCell && !deckNameCell.querySelector('.archetype-jump-link')) {
                             const archetype = String(deckNameCell.textContent || '').trim();
                             if (archetype) {
-                                const archetypeEscaped = escapeJsStr(archetype);
+                                const archetypeEscaped = escapeHtmlAttr(escapeJsStr(archetype));
                                 deckNameCell.innerHTML = `<a href="javascript:void(0)" onclick="jumpToCardAnalysis('${archetypeEscaped}', 'currentMeta')" class="archetype-jump-link">${escapeHtml(archetype)}</a>`;
                             }
                         }

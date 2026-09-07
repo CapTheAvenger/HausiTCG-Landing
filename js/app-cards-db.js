@@ -1656,7 +1656,7 @@
             dropdown.innerHTML = matches.map(card => {
                 // Count how many versions exist
                 const versions = window.allCardsData.filter(c => c.name === card.name).length;
-                const cardNameEsc = escapeJsStr(card.name);
+                const cardNameEsc = escapeHtmlAttr(escapeJsStr(card.name));
                 
                 return `
                     <div class="cards-autocomplete-item" role="option" tabindex="0" onclick="selectCardFromAutocomplete('${cardNameEsc}')" onkeydown="handleCardAutocompleteKeydown(event, '${cardNameEsc}')" aria-label="Select ${escapeHtml(card.name)} from autocomplete">
@@ -3350,9 +3350,9 @@
             item.className = 'card-database-item card-database-prizepack';
 
             const displayName = escapeHtml(card.name || 'Unknown Card');
-            const escapedName = escapeJsStr(card.name || '');
+            const escapedName = escapeHtmlAttr(escapeJsStr(card.name || ''));
             const stamped = card.image_url || '';
-            const escapedImg = escapeJsStr(stamped);
+            const escapedImg = escapeHtmlAttr(escapeJsStr(stamped));
             const series = String(card.__prizePackSeries || '');
             const baseSet = String(card.__baseSet || '');
             // Fall back to the SET-QUALIFIED shape, never the bare "PPS9":
@@ -3367,7 +3367,6 @@
             const cardId = `${card.name}|${ppsSet}|${ppsNumber}`;
             item.setAttribute('data-card-id', cardId);
             const safeCardId = escapeHtml(cardId);
-            const safeName = escapeJsStr(card.name || '');
 
             const ownedCount = window.userCollectionCounts ? (window.userCollectionCounts.get(cardId) || 0) : 0;
             const userWantsCard = window.userWishlist && window.userWishlist.has(cardId);
@@ -3388,14 +3387,14 @@
             const ppsLabel = (typeof t === 'function' && t('rarity.prizePackPrint') !== 'rarity.prizePackPrint')
                 ? t('rarity.prizePackPrint') : 'Prize Pack Print';
             const limitlessBtn = (baseSet && baseNumber)
-                ? `<button type="button" onclick="openLimitlessCard('${escapeJsStr(baseSet)}', '${escapeJsStr(baseNumber)}')" class="btn-gradient-blue card-limitless-btn card-database-limitless-btn" title="View base print on Limitless">Limitless</button>`
+                ? `<button type="button" onclick="openLimitlessCard('${escapeHtmlAttr(escapeJsStr(baseSet))}', '${escapeHtmlAttr(escapeJsStr(baseNumber))}')" class="btn-gradient-blue card-limitless-btn card-database-limitless-btn" title="View base print on Limitless">Limitless</button>`
                 : '<div class="card-database-limitless-placeholder"></div>';
 
             item.innerHTML = `
                 <div class="pos-rel card-database-image-wrap">
                     <img src="${escapeHtmlAttr(stamped)}" alt="${displayName} – Prize Pack" loading="lazy" decoding="async"
-                         onclick="showImageView('${escapedImg}', '${escapedName}', '${escapeJsStr(marketUrl)}', '${escapeJsStr(ppsSet)}', '${escapeJsStr(ppsNumber)}')" role="button" tabindex="0"
-                         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showImageView('${escapedImg}', '${escapedName}', '${escapeJsStr(marketUrl)}', '${escapeJsStr(ppsSet)}', '${escapeJsStr(ppsNumber)}');}"
+                         onclick="showImageView('${escapedImg}', '${escapedName}', '${escapeHtmlAttr(escapeJsStr(marketUrl))}', '${escapeHtmlAttr(escapeJsStr(ppsSet))}', '${escapeHtmlAttr(escapeJsStr(ppsNumber))}')" role="button" tabindex="0"
+                         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showImageView('${escapedImg}', '${escapedName}', '${escapeHtmlAttr(escapeJsStr(marketUrl))}', '${escapeHtmlAttr(escapeJsStr(ppsSet))}', '${escapeHtmlAttr(escapeJsStr(ppsNumber))}');}"
                          aria-label="Open ${displayName} Prize Pack image in fullscreen">
                     ${ownedCount > 0 ? `<div class="card-database-owned-badge">${ownedCount}</div>` : ''}
                     <div class="pos-abs card-action-row-wide card-database-top-actions">
@@ -3417,7 +3416,7 @@
                         </div>
                     </div>
                     <div class="card-database-secondary-row">
-                        <button type="button" onclick="addCardToProxy('${escapedName}', '${escapeJsStr(ppsSet)}', '${escapeJsStr(ppsNumber)}', 1)" class="btn-gradient-red card-proxy-btn card-database-proxy-btn" title="Add stamped print to proxy queue" aria-label="Add ${displayName} Prize Pack to proxy queue">Proxy</button>
+                        <button type="button" onclick="addCardToProxy('${escapedName}', '${escapeHtmlAttr(escapeJsStr(ppsSet))}', '${escapeHtmlAttr(escapeJsStr(ppsNumber))}', 1)" class="btn-gradient-red card-proxy-btn card-database-proxy-btn" title="Add stamped print to proxy queue" aria-label="Add ${displayName} Prize Pack to proxy queue">Proxy</button>
                         ${limitlessBtn}
                     </div>
                 </div>
@@ -3444,8 +3443,13 @@
             const rarityClass = getRarityClass(card.rarity);
             
             // Escape strings for HTML attributes
-            const escapedName = escapeJsStr(card.name || '');
-            const escapedImageUrl = escapeJsStr(card.image_url || '');
+            const escapedName = escapeHtmlAttr(escapeJsStr(card.name || ''));
+            // src="…" ist ein gewoehnliches Attribut und wird NIE als JS
+            // gelesen — dort gehoert nur die HTML-Maske hin. Im onclick
+            // daneben steht derselbe Wert als JS-Zeichenkette: erst JS-,
+            // dann HTML-Maske, weil der HTML-Zerteiler zuerst laeuft.
+            const attrImageUrl = escapeHtmlAttr(String(card.image_url || ''));
+            const escapedImageUrl = escapeHtmlAttr(escapeJsStr(card.image_url || ''));
             const displayName = escapeHtml(card.name || 'Unknown Card');
             const displaySet = escapeHtml(card.set || '???');
             const displayNumber = escapeHtml(card.number || '?');
@@ -3459,10 +3463,6 @@
             // Create unique card ID: name|set|number (tracks SPECIFIC print, not just card name)
             const cardId = `${card.name}|${displaySet}|${displayNumber}`;
             item.setAttribute('data-card-id', cardId);
-            const safeCardId = escapeJsStr(cardId);
-            const safeCardName = escapeJsStr(card.name || '');
-            const safeDisplaySet = escapeJsStr(displaySet);
-            const safeDisplayNumber = escapeJsStr(displayNumber);
             
             // Check if user owns THIS SPECIFIC PRINT
             const userOwnsCard = window.userCollection && window.userCollection.has(cardId);
@@ -3590,12 +3590,12 @@
                 </div>`;
             }
             const limitlessButton = (card.set && card.number)
-                ? `<button type="button" onclick="openLimitlessCard('${escapeJsStr(card.set)}', '${escapeJsStr(card.number)}')" class="btn-gradient-blue card-limitless-btn card-database-limitless-btn" title="View on Limitless" aria-label="Open ${displayName} on Limitless">Limitless</button>`
+                ? `<button type="button" onclick="openLimitlessCard('${escapeHtmlAttr(escapeJsStr(card.set))}', '${escapeHtmlAttr(escapeJsStr(card.number))}')" class="btn-gradient-blue card-limitless-btn card-database-limitless-btn" title="View on Limitless" aria-label="Open ${displayName} on Limitless">Limitless</button>`
                 : '<div class="card-database-limitless-placeholder"></div>';
             
             item.innerHTML = `
                 <div class="pos-rel card-database-image-wrap">
-                    <img src="${escapedImageUrl}" alt="${displayName}" loading="lazy" decoding="async" onclick="showImageView('${escapedImageUrl}', '${escapedName}', '${escapeJsStr(rawCardMarketUrl)}', '${escapeJsStr(proxySetCode)}', '${escapeJsStr(proxySetNumber)}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showImageView('${escapedImageUrl}', '${escapedName}', '${escapeJsStr(rawCardMarketUrl)}', '${escapeJsStr(proxySetCode)}', '${escapeJsStr(proxySetNumber)}');}" aria-label="Open ${displayName} image in fullscreen">
+                    <img src="${attrImageUrl}" alt="${displayName}" loading="lazy" decoding="async" onclick="showImageView('${escapedImageUrl}', '${escapedName}', '${escapeHtmlAttr(escapeJsStr(rawCardMarketUrl))}', '${escapeHtmlAttr(escapeJsStr(proxySetCode))}', '${escapeHtmlAttr(escapeJsStr(proxySetNumber))}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showImageView('${escapedImageUrl}', '${escapedName}', '${escapeHtmlAttr(escapeJsStr(rawCardMarketUrl))}', '${escapeHtmlAttr(escapeJsStr(proxySetCode))}', '${escapeHtmlAttr(escapeJsStr(proxySetNumber))}');}" aria-label="Open ${displayName} image in fullscreen">
                     ${ownedCount > 0 ? `<div class="card-database-owned-badge">${ownedCount}</div>` : ''}
                     ${ownedCount === 0 && altPrintOwnedCount > 0 ? `<div class="card-database-alt-owned-badge" title="Owned other INT prints">${altPrintOwnedCount}</div>` : ''}
                     <div class="pos-abs card-action-row-wide card-database-top-actions">
@@ -3618,7 +3618,7 @@
                         </div>
                     </div>
                     <div class="card-database-secondary-row">
-                        <button type="button" onclick="addCardToProxy('${escapedName}', '${proxySetCode}', '${proxySetNumber}', 1)" class="btn-gradient-red card-proxy-btn card-database-proxy-btn" title="${escapeHtml(t('akt.addProxyQueue'))}" aria-label="Add ${displayName} to proxy queue">Proxy</button>
+                        <button type="button" onclick="addCardToProxy('${escapedName}', '${escapeHtmlAttr(escapeJsStr(proxySetCode))}', '${escapeHtmlAttr(escapeJsStr(proxySetNumber))}', 1)" class="btn-gradient-red card-proxy-btn card-database-proxy-btn" title="${escapeHtml(t('akt.addProxyQueue'))}" aria-label="Add ${displayName} to proxy queue">Proxy</button>
                         ${limitlessButton}
                     </div>
                     ${coverageDisplay}
@@ -4524,7 +4524,7 @@
                 const optionNumber = String(version.number || '').toUpperCase();
                 const optionDistributionKey = `${optionSet}-${optionNumber}`;
                 const assignedQty = activeDistribution.distribution.get(optionDistributionKey) || 0;
-                const safeOptionCardName = escapeJsStr(actualCardName);
+                const safeOptionCardName = escapeHtmlAttr(escapeJsStr(actualCardName));
                 
                 optionDiv.innerHTML = `
                     ${imageHtml}
@@ -4544,8 +4544,8 @@
                             max="60"
                             step="1"
                             value="${assignedQty}"
-                            data-set="${optionSet}"
-                            data-number="${optionNumber}"
+                            data-set="${escapeHtmlAttr(optionSet)}"
+                            data-number="${escapeHtmlAttr(optionNumber)}"
                             onclick="event.stopPropagation();"
                             oninput="this.value = Math.max(0, Math.min(60, parseInt(this.value || '0', 10) || 0));"
                         >
@@ -4555,18 +4555,18 @@
                     </div>
                     ${nurAnzeige ? `
                     <button class="btn btn-primary rarity-option-swap-all-btn"
-                            onclick="event.stopPropagation(); waehleAnzeigeDruck('${safeOptionCardName}', '${escapeJsStr(currentSet)}', '${escapeJsStr(currentNumber)}', '${optionSet}', '${optionNumber}')"
+                            onclick="event.stopPropagation(); waehleAnzeigeDruck('${safeOptionCardName}', '${escapeHtmlAttr(escapeJsStr(currentSet))}', '${escapeHtmlAttr(escapeJsStr(currentNumber))}', '${escapeHtmlAttr(escapeJsStr(optionSet))}', '${escapeHtmlAttr(escapeJsStr(optionNumber))}')"
                             title="${t('rarity.showThisPrint')}">
                         ${t('rarity.showThisPrint')}
                     </button>` : `
                     <button class="btn btn-primary rarity-option-swap-all-btn"
-                            onclick="event.stopPropagation(); selectRarityVersion('${optionSet}', '${optionNumber}', '${escapeJsStr(safeDeckKey)}', '${safeOptionCardName}', '${escapeJsStr((currentRaritySwitcherCard && currentRaritySwitcherCard.source) || '')}')"
+                            onclick="event.stopPropagation(); selectRarityVersion('${escapeHtmlAttr(escapeJsStr(optionSet))}', '${escapeHtmlAttr(escapeJsStr(optionNumber))}', '${escapeHtmlAttr(escapeJsStr(safeDeckKey))}', '${safeOptionCardName}', '${escapeHtmlAttr(escapeJsStr((currentRaritySwitcherCard && currentRaritySwitcherCard.source) || ''))}')"
                             title="${t('rarity.swapAll')}">
                         ${t('rarity.swapAll')}
                     </button>`}
                     ${cardmarketUrl ? `
                         <button class="${cardmarketBtnClass} card-database-price-btn" 
-                                onclick="event.stopPropagation(); openCardmarket('${cardmarketUrl}', '');" 
+                                onclick="event.stopPropagation(); openCardmarket('${escapeHtmlAttr(escapeJsStr(cardmarketUrl))}', '');" 
                                 title="${t('rarity.buyCardmarket')} ${priceDisplay}">
                             ${priceDisplay}
                         </button>
@@ -4596,8 +4596,8 @@
 
                         const tile = document.createElement('div');
                         tile.className = 'rarity-option-card rarity-option-prizepack';
-                        const safeName = escapeJsStr(actualCardName);
-                        const safeUrl = escapeJsStr(stampedUrl);
+                        const safeName = escapeHtmlAttr(escapeJsStr(actualCardName));
+                        const safeUrl = escapeHtmlAttr(escapeJsStr(stampedUrl));
                         tile.innerHTML = `
                             <div style="position:relative;display:block;cursor:zoom-in;"
                                  onclick="if(typeof showImageView==='function')showImageView('${safeUrl}','${safeName}','','','')">

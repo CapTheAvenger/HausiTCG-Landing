@@ -1802,6 +1802,69 @@
     };
   }
 
+  /* ── WIE DUENN DER BESTAND WIRKLICH IST — GERECHNET, NICHT NOTIERT ──
+   *
+   * BEFUND (07.09.2026, Nachpruefung): im Kommentar an der Ablehnung in
+   * js/app-deck-builder.js stand "elf mit EINER Liste, vier mit zweien".
+   * Nachgezaehlt an data/tournament_decklists_per_player.csv sind es
+   * ZEHN und FUENF. Die Zahl war nicht falsch gerechnet, sie war
+   * abgeschrieben und danach stehen geblieben — der Wochenlauf schiebt
+   * die Verteilung, der Satz nicht.
+   *
+   * Deshalb steht sie hier als Rechnung. Gezaehlt werden LISTEN
+   * (Schluessel tournament_id|player_name|place, siehe _loadAll), nach
+   * `deck_archetype` gruppiert; das Formatfenster ist dieselbe Grenze,
+   * die build() ueber opts.minDate anlegt, und dieselbe Regel: eine
+   * Liste ohne ISO-Datum bleibt drin, statt geraten zu werden.
+   *
+   * `bestandsLageAus` ist absichtlich rein — sie bekommt die Listen
+   * gereicht und liest nichts. `bestandsLage` ist der Anschluss an den
+   * geladenen Bestand; ohne geladene Daten gibt sie null zurueck,
+   * statt eine 0 zu erfinden.
+   */
+  function bestandsLageAus(listen, minDate) {
+    if (!Array.isArray(listen)) return null;
+    const grenze = /^\d{4}-\d{2}-\d{2}$/.test(String(minDate || ''))
+      ? String(minDate) : null;
+    const imFenster = listen.filter((l) => {
+      if (!grenze) return true;
+      const d = String((l && l.tournament_date) || '').trim().slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return true;
+      return d >= grenze;
+    });
+    const proArchetyp = new Map();
+    for (const l of imFenster) {
+      const a = String((l && l.deck_archetype) || '').trim();
+      if (!a) continue;
+      proArchetyp.set(a, (proArchetyp.get(a) || 0) + 1);
+    }
+    const verteilung = {};
+    let unterSchwelle = 0;
+    for (const n of proArchetyp.values()) {
+      if (n >= MIN_WEIGHTED_LISTS) continue;
+      unterSchwelle += 1;
+      verteilung[n] = (verteilung[n] || 0) + 1;
+    }
+    return {
+      quelle:            DATA_URL,
+      felder:            ['deck_archetype', 'tournament_date'],
+      min_date:          grenze,
+      schwelle:          MIN_WEIGHTED_LISTS,
+      listen_gesamt:     listen.length,
+      listen_im_fenster: imFenster.length,
+      archetypen:        proArchetyp.size,
+      unter_schwelle:    unterSchwelle,
+      erreichen:         proArchetyp.size - unterSchwelle,
+      verteilung,
+    };
+  }
+
+  /** Dasselbe fuer den geladenen Bestand. Ohne Daten: null. */
+  function bestandsLage(minDate) {
+    if (!_byList) return null;
+    return bestandsLageAus([..._byList.values()], minDate);
+  }
+
   global.MostConsistencyBuilder = {
     build,
     loadData:           _loadAll,
@@ -1810,7 +1873,15 @@
     datenbasisSatz,
     datenbasisHinweis,
     turnierFeld,
+    bestandsLage,
+    bestandsLageAus,
     BELEGTE_FELDER,
+    /* Die Stichprobenuntergrenze gehoert nach draussen (Befund B5,
+       07.09.2026). Faellt ein Archetyp darunter, baut der Aufrufer ueber
+       den Alt-Pfad weiter — und muss hinschreiben koennen, WORUNTER er
+       gefallen ist. Ohne diesen Export haette er die 3 abschreiben
+       muessen, und dann gaebe es die Zahl zweimal. */
+    MIN_WEIGHTED_LISTS,
     // Exposed for unit tests / future "explain why" UIs:
     _internals: {
       placementWeight:  _placementWeight,

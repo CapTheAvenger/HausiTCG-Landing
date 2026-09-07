@@ -589,8 +589,8 @@
                             // Zellen (27 %) ist W+L != total_games. Mit U aufgeführt
                             // summieren sich die genannten Zahlen sichtbar auf.
                             const tooltip = `${parsedWins}W - ${parsedLosses}L - ${parsedDraws}U (${totalGames} ${t('heatmap.games')}) · ${t('heatmap.raw')} ${winRateRoh.toFixed(1)} %`;
-                            const safeRow = escapeJsStr(rowDeck);
-                            const safeCol = escapeJsStr(colDeck);
+                            const safeRow = escapeHtmlAttr(escapeJsStr(rowDeck));
+                            const safeCol = escapeHtmlAttr(escapeJsStr(colDeck));
                             // Inline sample-size below the WR. Cells with n<10 get a
                             // muted "low" tag so users can see at a glance which numbers
                             // are statistically thin (TrainerHill's confidence cue).
@@ -676,7 +676,7 @@
                                         .replace('{n}', String(mj.anzahl))}`
                                     : ` \u00b7 ${t('heatmap.majorFehlt')}`);
                             const vollTip = tooltip + majorTip;
-                            tableHtml += `<td class="${tdClass} heatmap-td-dyn${lowSample ? ' heatmap-td-thin' : ''}" style="--heatmap-bg: ${bgColor}; --heatmap-color: ${textColor};" title="${escAttr(vollTip)}" onclick="showToast('${safeRow} vs ${safeCol}: ${escapeJsStr(vollTip)}', 'info', 5000)">${zellenHtml}</td>`;
+                            tableHtml += `<td class="${tdClass} heatmap-td-dyn${lowSample ? ' heatmap-td-thin' : ''}" style="--heatmap-bg: ${bgColor}; --heatmap-color: ${textColor};" title="${escAttr(vollTip)}" onclick="showToast('${safeRow} vs ${safeCol}: ${escapeHtmlAttr(escapeJsStr(vollTip))}', 'info', 5000)">${zellenHtml}</td>`;
                         }
                     });
                     tableHtml += '</tr>';

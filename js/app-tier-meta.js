@@ -63,6 +63,10 @@
          * the dict / below TIER_SCORE.LABS_MIN_PARTIEN games) and the score
          * collapses to share + adjusted-WR. Same caller path for both.
          *
+         * `new_count` ist die LISTENzahl des Archetyps (BEFUND B1), nicht
+         * seine Partienzahl; `labsByName[].games` dagegen sind echte
+         * Partien aus der Turnierdatei.
+         *
          * @param {{share:number, winrate:number, new_count:number, archetype:string}} deck
          * @param {Object<string,{games:number,winPct:number,day2Conv:number,players:number}>|null} labsByName
          * @returns {{score:number, adjWR:number, labsHit:boolean,
@@ -75,7 +79,7 @@
          * Literal in der Rechnung, einmal als Literal im Aufruf von
          * cmTierGrundlageZeile(). 11 der 17 Zahlen im Erklaersatz waren
          * abgeschrieben statt durchgereicht; vier Mutationen
-         * (PRIOR_GAMES 50 -> 80, Anteilsdeckel 15 -> 25, Labs-Schwelle
+         * (PRIOR_LISTEN 50 -> 80, Anteilsdeckel 15 -> 25, Labs-Schwelle
          * 15 -> 40, die Literale an der Aufrufstelle) liefen gruen durch,
          * und die Seite haette danach Schwellen genannt, mit denen nicht
          * gerechnet wird. Jetzt gibt es die Zahl nur einmal: hier.
@@ -85,8 +89,37 @@
          * test-cm-tier-grundlage.js ausfuehrt.
          */
         const TIER_SCORE = Object.freeze({
-            /** Bayes-Vorwert: so viele Partien bei 50 % Win %. */
-            PRIOR_GAMES: 50,
+            /* Bayes-Vorwert: so viele LISTEN bei 50 % Win %.
+             *
+             * BEFUND B1 (07.09.2026): die Konstante hiess PRIOR_GAMES, der
+             * Eingang der Rechnung hiess `games`, und der Satz ueber der
+             * Tier-Liste sagte "Vorwert von 50 Partien". Hineingereicht
+             * wird aber `new_count` aus
+             * data/limitless_online_decks_comparison.csv — und das ist die
+             * Zahl der LISTEN, nicht der Partien. Groessenordnung am
+             * gemessenen Datenstand: Dragapult 3.138 Listen gegen 14.861
+             * Partien (7943 + 6642 + 276 aus
+             * data/limitless_online_decks.csv). Der Vorwert wog also rund
+             * 4,7-mal schwerer, als sein Name behauptete.
+             *
+             * Bewusst NUR umbenannt, nicht umgestellt: die Zahl 50 und die
+             * Rechenschritte bleiben Zeichen fuer Zeichen dieselben, damit
+             * sich an keiner Tier-Einordnung etwas aendert. Die Alternative
+             * — den Vorwert auf die Partienzahl zu stellen — waere eine
+             * Verhaltensaenderung: gemessen an allen 136 Decks der
+             * Vergleichsdatei verschieben sich 40 Rangpositionen, und in
+             * den Top 8 tauscht Sinistcha Ogerpon gegen Dragapult Dusknoir.
+             * Sie braucht ausserdem eine zweite Datei
+             * (limitless_online_decks.csv) und einen Namensabgleich, den
+             * dieses Modul heute nicht hat. Das ist eine eigene
+             * Entscheidung, keine Namenskorrektur.
+             *
+             * Nebenbei: der Kommentar an CONV_PRIOR in js/app-utils.js
+             * nennt diese Konstante noch beim alten Namen PRIOR_GAMES.
+             * Die Datei gehoert nicht zu diesem Durchgang; der Wert 50
+             * wird von tests/unit/test-conversion-performance.js weiter
+             * gegen diesen hier gehalten. */
+            PRIOR_LISTEN: 50,
             /** Anteil: Deckel in Prozentpunkten, dann Gewicht. 0..9 */
             ANTEIL_DECKEL: 15, ANTEIL_GEWICHT: 0.6,
             /** Win % ueber 50: Deckel in pp, dann Gewicht. 0..8 */
@@ -102,11 +135,16 @@
         function computeTierScore(deck, labsByName) {
             const share = Math.max(0, Number(deck.share) || 0);
             const rawWR = Math.max(0, Number(deck.winrate) || 0);
-            const games = Math.max(0, Number(deck.new_count) || 0);
+            // BEFUND B1: hiess `games`. deck.new_count ist die Zahl der
+            // LISTEN des Archetyps im Fenster; Partien stehen in dieser
+            // Datei gar nicht. `pseudoSiege` ist entsprechend keine
+            // Siegzahl, sondern der mit der Win % gewichtete Listenanteil
+            // — die Groesse, gegen die geglaettet wird.
+            const listen = Math.max(0, Number(deck.new_count) || 0);
 
-            const wins = games * (rawWR / 100);
-            const adjWR = games > 0
-                ? (wins + TIER_SCORE.PRIOR_GAMES * 0.5) / (games + TIER_SCORE.PRIOR_GAMES) * 100
+            const pseudoSiege = listen * (rawWR / 100);
+            const adjWR = listen > 0
+                ? (pseudoSiege + TIER_SCORE.PRIOR_LISTEN * 0.5) / (listen + TIER_SCORE.PRIOR_LISTEN) * 100
                 : 50;
 
             const shareComp = Math.min(share, TIER_SCORE.ANTEIL_DECKEL) * TIER_SCORE.ANTEIL_GEWICHT;
@@ -154,7 +192,7 @@
          *
          * Die Zahlen kommen NICHT aus diesem Text, sondern aus den
          * Konstanten der Einteilung: sie werden hineingereicht. Aendert
-         * jemand T1_MIN_WR oder TIER_SCORE.PRIOR_GAMES, aendert sich der
+         * jemand T1_MIN_WR oder TIER_SCORE.PRIOR_LISTEN, aendert sich der
          * Satz mit. tests/unit/test-cm-tier-grundlage.js fuehrt beides aus
          * — die Rechnung UND diesen Satz — und vergleicht sie miteinander,
          * statt beide gegen dieselbe abgeschriebene Zahl zu halten.
@@ -164,7 +202,7 @@
          *          mindestAnteilGroesster:number,
          *          mindestListen:number, groessteListenzahl:number,
          *          labsAktiv:boolean, labsMinPartien:number,
-         *          vorPartien:number, anteilDeckel:number, anteilGewicht:number,
+         *          vorListen:number, anteilDeckel:number, anteilGewicht:number,
          *          wrDeckel:number, wrGewicht:number,
          *          labsWrDeckel:number, labsWrGewicht:number,
          *          tag2Deckel:number, tag2Gewicht:number}} g
@@ -217,8 +255,8 @@
                 ? ('Grundlage der Reihenfolge: nicht der Meta-Anteil allein, sondern ein '
                    + 'zusammengesetzter Wert aus Anteil (bis ' + z(g.anteilDeckel, 0) + ' %, Gewicht '
                    + z(g.anteilGewicht, 1) + '), Win % über 50 (bis +' + z(g.wrDeckel, 0) + ' pp, Gewicht '
-                   + z(g.wrGewicht, 1) + '; geglättet gegen einen Vorwert von ' + ganz(g.vorPartien)
-                   + ' Partien bei 50 %)' + (g.labsAktiv ? ' ' : '. ') + labsDe + '. '
+                   + z(g.wrGewicht, 1) + '; geglättet gegen einen Vorwert von ' + ganz(g.vorListen)
+                   + ' Listen bei 50 %)' + (g.labsAktiv ? ' ' : '. ') + labsDe + '. '
                    + 'Tier 1 fasst höchstens ' + ganz(g.t1Max) + ' Decks und verlangt zusätzlich mindestens '
                    + z(g.minShare, 1) + ' % Anteil und ' + z(g.minWR, 1) + ' % Win %; Tier 2 höchstens '
                    + ganz(g.t2Max) + ', Tier 3 höchstens ' + ganz(g.t3Max) + '.' + listenDe
@@ -226,7 +264,7 @@
                 : ('Basis of this order: not meta share alone, but a composite score of share (up to '
                    + z(g.anteilDeckel, 0) + ' %, weight ' + z(g.anteilGewicht, 1) + '), Win % above 50 (up to +'
                    + z(g.wrDeckel, 0) + ' pp, weight ' + z(g.wrGewicht, 1) + '; shrunk against a prior of '
-                   + ganz(g.vorPartien) + ' games at 50 %)' + (g.labsAktiv ? ' ' : '. ') + labsEn + '. '
+                   + ganz(g.vorListen) + ' lists at 50 %)' + (g.labsAktiv ? ' ' : '. ') + labsEn + '. '
                    + 'Tier 1 holds at most ' + ganz(g.t1Max) + ' decks and additionally requires at least '
                    + z(g.minShare, 1) + ' % share and ' + z(g.minWR, 1) + ' % Win %; Tier 2 at most '
                    + ganz(g.t2Max) + ', Tier 3 at most ' + ganz(g.t3Max) + '.' + listenEn
@@ -374,36 +412,30 @@
             return out;
         }
 
-        /**
-         * Determine tier for a deck
-         * @param {Object} deck - Deck object with share, winrate, etc.
-         * @returns {string} - 'tier-1', 'tier-2', 'tier-3', or 'tier-trending'
-         */
-        function getDeckTier(deck) {
-            const shareRaw = deck.share || deck.new_share || deck.new_meta_share || deck.percentage_in_archetype || 0;
-            const share = parseLocaleNumber(shareRaw, 0);
-            const winRate = parseLocaleNumber(deck.winrate || deck.new_winrate, NaN);
-            const countChange = parseInt(deck.count_change || 0);
+        /* HIER STAND getDeckTier() BIS ZUM 07.09.2026 — BEFUND B2.
+         *
+         * Eine zweite Tier-Regel im selben Modul: reine Anteilsschwellen
+         * (Tier 1 ab 8 %, Tier 2 ab 4 %, Tier 3 ab 1,5 %, darunter
+         * 'tier-trending' bzw. 'tier-rogue'). Repoweit gab es KEINE
+         * Aufrufstelle — nur die Definition (`grep -rn getDeckTier`
+         * ueber js/, index.html, prerender/, redesign/ und tools/ findet
+         * ausser dieser Notiz nur noch die Audit-Notizen in audit/).
+         *
+         * Entfernt statt "als tot markiert", weil sie der wirklich
+         * angewendeten Regel WIDERSPRICHT und nicht nur ueberfluessig
+         * ist. Angewendet wird weiter unten der Punktwert aus
+         * computeTierScore() mit Deckeln (T1_MAX/T2_MAX/T3_MAX), einer
+         * Mindestlistenzahl (MINDEST_ANTEIL_GROESSTER) und dem
+         * Win-%-Tor T1_MIN_WR. Beide Regeln auf dieselben Decks
+         * losgelassen fallen auseinander — genau das fuehrt
+         * tests/unit/test-b2-eine-tier-regel.js vor, statt es zu
+         * behaupten: ein Deck mit hohem Anteil und schwacher Win % ist
+         * nach den alten Schwellen Tier 1 und nach der gelebten Regel
+         * nicht.
+         *
+         * Wer die Anteilsschwellen zurueckhaben will, muss sie an EINER
+         * Stelle einbauen — nicht daneben. */
 
-            // Tier 1: Share >= 8%
-            if (share >= 8) return 'tier-1';
-            
-            // Tier 2: Share >= 4% and < 8%
-            if (share >= 4 && share < 8) return 'tier-2';
-
-            // Tier 3: Share >= 1.5% and < 4%
-            if (share >= 1.5 && share < 4) return 'tier-3';
-            
-            // Trending / Rogue: below Tier 3
-            if (share < 1.5) {
-                if (winRate && winRate > 52) return 'tier-trending';
-                if (countChange > 0) return 'tier-trending';
-                return 'tier-rogue';
-            }
-            
-            return null; // Don't show in tier list
-        }
-        
         /**
          * Get trend badge HTML based on share changes
          * @param {string} deckName - Name of the deck/archetype
@@ -565,10 +597,43 @@
          * Fuzzy lookup for cardDataByArchetype.
          * Handles apostrophe/possessive differences (Rocket's → Rocket), "ex" suffixes, partial matches.
          */
+        // EINE ZEICHENKLASSE FUER ALLE APOSTROPH-SCHREIBWEISEN.
+        //
+        // BEFUND (07.09.2026): hier standen zwei Abschriften derselben
+        // Idee, und sie waren verschieden. js/app-tier-meta.js trug
+        // [U+0027 U+0027 U+0060] — den geraden Apostroph doppelt, den
+        // typografischen gar nicht. js/app-meta-cards.js kannte U+2019
+        // und U+2018, dafuer fehlte ihm U+00B4.
+        //
+        //   Eingabe  "N\u2019s Zoroark ex"   (typografisch, U+2019)
+        //   gemessen  _normArchName            -> "n\u2019s zoroark ex"
+        //             normalizeArchetypeForMatch -> "n zoroark"
+        //
+        // Wirkung: sobald eine Quelle Deck-Namen typografisch liefert,
+        // findet die Bild- und Kartensuche im Reiter "Laufendes Meta"
+        // nichts mehr. In data/limitless_online_decks.csv steht heute
+        // kein U+2019 — das ist eine Eigenschaft der Daten, nicht des
+        // Codes.
+        //
+        // DIE KLASSE STEHT IN BEIDEN MODULEN ZEICHENGLEICH.
+        // tests/unit/test-f3-normalisierer.js liest beide Dateien und
+        // vergleicht die Klassen Byte fuer Byte; weicht eine Abschrift
+        // ab, wird die Suite rot.
+        //
+        // Ein gemeinsamer Bezeichner zur Laufzeit ist NICHT moeglich:
+        // der Nachbartest zur Archetyp-Zuordnung (tests/unit/, Datei mit
+        // "ArchetypeMatch" im Namen) schneidet beide Funktionen einzeln
+        // aus der Datei und fuehrt sie in einem leeren
+        // `new Function('window', ...)`-Sandkasten aus. Ein freier
+        // Bezeichner darin wirft ReferenceError — nachgemessen am
+        // 07.09.2026: 13 von 21 Zusicherungen fielen um.
+        //
+        // Beruecksichtigt: U+0027 '  U+2018 ‘  U+2019 ’  U+201B ‛
+        //                  U+0060 `  U+00B4 ´  U+02BC ʼ
         function _normArchName(name) {
             return String(name || '').toLowerCase()
-                .replace(/[''`]s\b/g, '')   // strip possessive 's (Rocket's → Rocket)
-                .replace(/[''`]/g, '')        // strip remaining apostrophes
+                .replace(/['\u2018\u2019\u201B\u0060\u00B4\u02BC]s\b/g, '')   // Genitiv streichen (Rocket's -> Rocket)
+                .replace(/['\u2018\u2019\u201B\u0060\u00B4\u02BC]/g, '')       // uebrige Apostrophe streichen
                 .replace(/-/g, ' ')           // hyphens → spaces (Raging-Bolt → Raging Bolt)
                 .replace(/\s+/g, ' ').trim();
         }
@@ -1047,8 +1112,8 @@
                     const imageUrl = imageMap
                         ? getImageUrlFuzzy(item.representativeVariant, imageMap, item.variants)
                         : getArchetypeImage(item.representativeVariant, representativeCards);
-                    const combinedMainEscaped = escapeJsStr(item.key || item.label || item.representativeVariant || '');
-                    const combinedVariantsJsonEscaped = escapeJsStr(encodeURIComponent(JSON.stringify(item.variants || [])));
+                    const combinedMainEscaped = escapeHtmlAttr(escapeJsStr(item.key || item.label || item.representativeVariant || ''));
+                    const combinedVariantsJsonEscaped = escapeHtmlAttr(escapeJsStr(encodeURIComponent(JSON.stringify(item.variants || []))));
                     /* BEFUND (Schlussabnahme 30.08.2026): die Heldenkachel
                        schrieb "Ø Rang 14,0", die Tabelle direkt darunter
                        "14,00" und "14,20" — dieselbe Groesse auf einem
@@ -1290,7 +1355,7 @@
                         </div>
                     `;
                     
-                    const archetypeEscaped = escapeJsStr(archetypeName);
+                    const archetypeEscaped = escapeHtmlAttr(escapeJsStr(archetypeName));
                     
                     html += `
                         <div class="deck-banner-card" role="button" tabindex="0"
@@ -1486,8 +1551,8 @@
                 topHeroArchetypes.forEach((item, index) => {
                     const representativeCards = fuzzyArchetypeLookup(item.representativeVariant, cardDataByArchetype);
                     const imageUrl = getArchetypeImage(item.representativeVariant, representativeCards);
-                    const combinedMainEscaped = escapeJsStr(item.key || item.label || item.representativeVariant || '');
-                    const combinedVariantsJsonEscaped = escapeJsStr(encodeURIComponent(JSON.stringify(item.variants || [])));
+                    const combinedMainEscaped = escapeHtmlAttr(escapeJsStr(item.key || item.label || item.representativeVariant || ''));
+                    const combinedVariantsJsonEscaped = escapeHtmlAttr(escapeJsStr(encodeURIComponent(JSON.stringify(item.variants || []))));
                     const winrateText = Number.isFinite(item.weightedWinrate) && item.weightedWinrate > 0
                         ? item.weightedWinrate.toFixed(1)
                         : '0.0';
@@ -2497,7 +2562,7 @@
                 groessteListenzahl: _maxCount,
                 labsAktiv: !!(labsByName && Object.keys(labsByName).length > 0),
                 labsMinPartien: TIER_SCORE.LABS_MIN_PARTIEN,
-                vorPartien: TIER_SCORE.PRIOR_GAMES,
+                vorListen: TIER_SCORE.PRIOR_LISTEN,
                 anteilDeckel: TIER_SCORE.ANTEIL_DECKEL, anteilGewicht: TIER_SCORE.ANTEIL_GEWICHT,
                 wrDeckel: TIER_SCORE.WR_DECKEL, wrGewicht: TIER_SCORE.WR_GEWICHT,
                 labsWrDeckel: TIER_SCORE.LABS_WR_DECKEL, labsWrGewicht: TIER_SCORE.LABS_WR_GEWICHT,
@@ -2563,7 +2628,7 @@
                     const powerScore = calculatePowerScore(share, winRate);
                     // Das Banner zeigte die ROHE Win Rate, waehrend dieselbe
                     // Datei fuer die Tier-Einordnung die geglaettete adjWR
-                    // benutzt (computeTierScore, k = 50). Sichtbar wurde das im
+                    // benutzt (computeTierScore, Listen-Vorwert k = 50). Sichtbar wurde das im
                     // Rogue-Block: "0.0 % · 100.0 % WR · 1 Decks" — eine Kachel
                     // in Tier-1-Groesse fuer ein Deck mit drei Partien. Die
                     // Seite glaubte ihrer eigenen Rohzahl fuer die Sortierung
@@ -2610,7 +2675,7 @@
                         }
                     }
                     
-                    const archetypeEscaped = escapeJsStr(archetypeName);
+                    const archetypeEscaped = escapeHtmlAttr(escapeJsStr(archetypeName));
                     
                     // Inline trend chip — ▲ +0.3% vs prev / ▼ -0.7% / → flat.
                     // Previous value explicit so users immediately see the
@@ -2667,7 +2732,7 @@
                     }
 
                     html += `
-                        <div class="deck-banner-card" data-deck-name="${escapeJsStr(archetypeName).toLowerCase()}" onclick="openArchetypeCard('${archetypeEscaped}')">
+                        <div class="deck-banner-card" data-deck-name="${escapeHtmlAttr(String(archetypeName || '').toLowerCase())}" onclick="openArchetypeCard('${archetypeEscaped}')">
                             ${imageUrl ? `<div class="deck-banner-bg" style="background-image: url('${imageUrl}')"></div>` : ''}
                             <div class="deck-banner-content">
                                 <div class="deck-banner-name">${archetypeName}</div>
@@ -3101,11 +3166,11 @@
                 const aktionen = hatDruck ? `
                         <div class="top-card-actions">
                             <button type="button" class="top-card-act"
-                                    onclick="addToWishlist('${escapeJsStr(kartenId)}')"
+                                    onclick="addToWishlist('${escapeHtmlAttr(escapeJsStr(kartenId))}')"
                                     title="${escapeHtml(t('akt.addWishlist'))}"
                                     aria-label="${escapeHtml((deLbl ? 'Auf die Wunschliste: ' : 'Add to wishlist: ') + card.name)}">♡</button>
                             <button type="button" class="top-card-act"
-                                    onclick="openRaritySwitcherFromDB('${escapeJsStr(card.name)}', '${escapeJsStr(card.set_code)}', '${escapeJsStr(String(card.set_number))}', 'staples')"
+                                    onclick="openRaritySwitcherFromDB('${escapeHtmlAttr(escapeJsStr(card.name))}', '${escapeHtmlAttr(escapeJsStr(card.set_code))}', '${escapeHtmlAttr(escapeJsStr(String(card.set_number)))}', 'staples')"
                                     title="${escapeHtml(deLbl ? 'Andere Artworks dieser Karte' : 'Other artworks of this card')}"
                                     aria-label="${escapeHtml((deLbl ? 'Artworks: ' : 'Artworks: ') + card.name)}">★</button>
                         </div>` : '';
