@@ -109,9 +109,21 @@ describe('City-League-Tiers: ein Indexschnitt heisst nicht "Beherrschen das Meta
 // 2. Der Rogue-Block sortiert nicht mehr nach einer Zahl aus einer Liste
 // ───────────────────────────────────────────────────────────────────
 describe('Rogue-Block: nach Listenzahl, nicht nach der Platzierung eines Einzelnen', () => {
+    // NACHGEZOGEN AM 07.09.2026 (Befund A-F2.7): der Block hatte bis dahin
+    // eine Ausnahme fuer 'tier-trending' und sortierte alle anderen Stufen
+    // nach Platzierung. Der Anker griff genau diese Ausnahme. Sie ist weg —
+    // nicht weil die Ueberlegung dahinter falsch war, sondern weil sie
+    // ueberall galt: unter "Die 3 meistgespielten" standen die Kacheln mit
+    // 3, dann 5, dann 6 Listen. Jetzt sortieren ALLE Stufen nach
+    // Listenzahl, und die Platzierung ist der Stichentscheid bei
+    // Gleichstand. Der Rogue-Block verhaelt sich damit unveraendert.
+    // Endanker MIT Zeilenumbruch: der innere Vergleicher endet auf
+    // '                });' (16 Leerzeichen) und enthaelt die kuerzere
+    // Fassung als Teilzeichenkette — ohne den Umbruch schnitte der Anker
+    // mitten in den Block.
     const block = schnitt(TIER,
-        "            Object.keys(tierGroups).forEach((tierKey) => {\n                if (tierKey === 'tier-trending')",
-        "            });", 'CL-Sortierung');
+        '            Object.keys(tierGroups).forEach((tierKey) => {',
+        '\n            });', 'CL-Sortierung');
 
     function sortiere(decks) {
         const rumpf = `
@@ -139,9 +151,20 @@ describe('Rogue-Block: nach Listenzahl, nicht nach der Platzierung eines Einzeln
             'ein Deck aus einer Liste mit Platzierung 1,0 darf den Block nicht anfuehren');
     });
 
-    it('Tier 1 bis 3 sortieren weiter nach Platzierung', () => {
+    it('Tier 1 bis 3 sortieren jetzt ebenfalls nach Listenzahl (A-F2.7)', () => {
         const g = sortiere(decks);
-        assert.deepEqual(g['tier-1'].map(d => d.rank), [1.0, 1.0, 6.5, 8.2]);
+        assert.deepEqual(g['tier-1'].map(d => d.name),
+            ['Getragen', 'Mittel', 'Einzelstueck A', 'Einzelstueck B'],
+            'die Untertitel der Stufen sagen "meistgespielt" bzw. "nach Listenzahl"');
+    });
+
+    it('bei gleicher Listenzahl entscheidet weiterhin die bessere Platzierung', () => {
+        const gleich = [
+            { name: 'Schlechter', count: 12, rank: 9.0 },
+            { name: 'Besser',     count: 12, rank: 4.0 }
+        ];
+        const g = sortiere(gleich);
+        assert.deepEqual(g['tier-1'].map(d => d.name), ['Besser', 'Schlechter']);
     });
 
     it('an den echten Daten fuehrten sonst drei Ein-Listen-Decks den Block an', () => {

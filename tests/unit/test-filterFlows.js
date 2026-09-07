@@ -36,6 +36,19 @@ function extractFunction(src, fnName) {
     return src.slice(start, end);
 }
 
+/**
+ * Eine `const NAME = ...;`-Zeile aus der Quelle holen — ausgefuehrt, nicht
+ * abgeschrieben. BEFUND B4 (07.09.2026): der Mindestanteil der
+ * Performance-Rubriken steht seither einmal als Konstante in
+ * js/app-city-league.js; ohne sie laeuft getCityLeagueSortedSections()
+ * hier in einen ReferenceError.
+ */
+function extractConst(src, name) {
+    const m = new RegExp(`const\\s+${name}\\s*=\\s*[^;]+;`).exec(src);
+    if (!m) throw new Error(`Const not found: ${name}`);
+    return m[0];
+}
+
 function createClassList(initial = []) {
     const set = new Set(initial);
     return {
@@ -71,6 +84,7 @@ function loadFilterFns(overrides = {}) {
         extractFunction(utilsSrc, 'mittlereDeckGroesse'),
         'let _cityLeagueSortCache = null;',
         'let _cityLeagueSortDataRef = null;',
+        extractConst(citySrc, 'CL_MINDEST_ANTEIL_GROESSTER'),
         extractFunction(citySrc, 'getCardShareValue'),
         extractFunction(citySrc, 'getAceSpecBonusCountForFilter'),
         extractFunction(citySrc, 'applyShareFilterWithAceSpecBoost'),
@@ -115,6 +129,26 @@ function loadFilterFns(overrides = {}) {
         renderFullComparisonTable: overrides.renderFullComparisonTable || (() => {}),
         renderCurrentMetaDeckTable: overrides.renderCurrentMetaDeckTable || (() => {}),
         renderCurrentMetaDeckGrid: overrides.renderCurrentMetaDeckGrid || (() => {}),
+    };
+
+    /* BEFUND B4 (07.09.2026): updateCurrentMetaCardCounts() schrieb den
+       Zaehler frueher selbst. Seither laeuft er ueber den EINEN
+       Schreiber aus js/deck-analysis-shared.js. Der wird hier
+       nachgebildet — mit seinem Vertrag, nicht mit seinem Quelltext:
+       er schreibt `anzahl + ' ' + kartenWort` und legt den letzten
+       Aufruf in window.__uebersichtZaehler ab. So prueft dieser Test
+       das VERHALTEN dieser Datei, ohne an der Formulierung der fremden
+       Datei zu haengen. */
+    sandbox.window.__zaehlerAufrufe = [];
+    sandbox.window.uebersichtZaehlerSchreiben = (id, o) => {
+        sandbox.window.__zaehlerAufrufe.push({ zaehlerId: id, ...o });
+        const el = elements.get(id);
+        const text = o.unvollstaendig
+            ? `${o.anzahl} / ${o.soll} ${o.kartenWort} \u2026`
+            : `${o.anzahl} ${o.kartenWort}`;
+        if (el) el.textContent = text;
+        sandbox.window.__uebersichtZaehler = { zaehlerId: id, text, ...o };
+        return text;
     };
 
     // Mirror globals to window for code that expects window-scoped symbols.
@@ -288,6 +322,13 @@ describe('applyCurrentMetaFilter', () => {
         // zurueck, deshalb stehen die Schluesselnamen in der Erwartung.
         assert.equal(countEl.textContent, '2 cl.cards');
         assert.equal(summaryEl.textContent, '/ 4 cl.total');
+        /* Und zwar UEBER den gemeinsamen Schreiber, nicht daran vorbei:
+           genau daran ist Befund B4 aufgefallen. */
+        const rufe = fns._sandbox.window.__zaehlerAufrufe;
+        assert.equal(rufe.length, 1, 'der Zaehler wurde nicht ueber uebersichtZaehlerSchreiben geschrieben');
+        assert.equal(rufe[0].zaehlerId, 'currentMetaCardCount');
+        assert.equal(rufe[0].anzahl, 2);
+        assert.equal(rufe[0].kartenWort, 'cl.cards');
     });
 
     it('renders grid view when table is hidden', () => {
