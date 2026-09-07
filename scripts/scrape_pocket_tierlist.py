@@ -69,7 +69,10 @@ AUFRUF
 """
 
 import argparse
+import base64
+import collections
 import datetime as dt
+import html as _html
 import io
 import json
 import os
@@ -435,8 +438,19 @@ def lies_seite(html):
 # deshalb heil.
 
 
-def deck_abschnitte(html):
-    """[(name, adresse)] — jedes 2D-Muster der Seite mit seinem Deck.
+def _muster_stellen(html):
+    """[(name, adresse, bereich)] — die eine Stelle, an der Muster gefunden werden.
+
+    `deck_abschnitte` und `karten_zum_muster` lesen dieselbe Seite auf
+    dieselbe Weise. Sie teilen sich deshalb diesen Kern, statt die
+    Suche zweimal zu tragen: zwei Kopien wuerden auseinanderdriften, und
+    dann bekaeme ein Deck die Kartenliste eines anderen — genau die
+    Fehlerklasse, die `waehle_abschnitt` mit drei Wegen abwehrt.
+
+    `bereich` ist das HTML zwischen der Ueberschrift des Decks und
+    seinem Muster. Die Kartentabelle steht dort (gemessen an der Seite
+    vom 04.09.2026: Ueberschrift, Tabelle, Muster — in dieser Reihenfolge
+    bei allen vier Abschnitten der Ausschnittsdatei).
 
     Gelesen wird am ROHEN HTML, nicht am Baum: die alt-Texte der Muster
     sind aus demselben Grund kaputt wie die der Vorschaubilder, und die
@@ -496,8 +510,227 @@ def deck_abschnitte(html):
         name = re.sub(r"\s+", " ", name).strip()
         name = re.sub(r"\s*Deck$", "", name).strip()
         if name:
-            raus.append((name, adr.group(1).split("?")[0]))
+            raus.append((name, adr.group(1).split("?")[0],
+                         html[ueb.end():m.start()]))
     return raus
+
+
+def deck_abschnitte(html):
+    """[(name, adresse)] — jedes 2D-Muster der Seite mit seinem Deck."""
+    return [(n, a) for n, a, _b in _muster_stellen(html)]
+
+
+# DIE KARTENLISTE STEHT AUF DERSELBEN SEITE, DIE WIR OHNEHIN HOLEN
+# ----------------------------------------------------------------
+# Bis zum 07.09.2026 hat der Lauf sie weggeworfen und nur den Scan-Code
+# behalten. Eine Bestenliste ohne Decklisten sagt, WAS stark ist, aber
+# nicht, WORAUS es besteht — und der Code ist eine Zeichenkette, der man
+# nichts ansieht.
+#
+# Der zweite Grund wiegt schwerer: die Kartenliste ist die einzige
+# nicht-zirkulaere Pruefung, ob ein Code zu SEINEM Deck gehoert.
+# `probe()` prueft unseren Erzeuger gegen unseren Leser; Game8s Bild
+# kommt darin nicht vor (steht so im Kopf von probe). Die Kartenzahlen
+# dagegen kommen aus dem Fliesstext der Seite und die Aufteilung aus dem
+# Muster — zwei getrennte Wege zur selben Zahl.
+_KARTE = re.compile(
+    r'''<a class=['"]a-link['"][^>]*>(.*?)</a>\s*×\s*(\d+)''', re.S)
+# DAS SETKUERZEL KANN EINEN BINDESTRICH TRAGEN
+# --------------------------------------------
+# BEFUND (07.09.2026, am echten Lauf): mit `[A-Za-z0-9]+` blieben 66
+# Karteneintraege ohne Setnummer — alle aus dem Promo-Set **P-A**
+# (Poke Ball, Professor's Research, X Speed, Electrike). Das Kuerzel
+# brach am Bindestrich ab, der Ausdruck fand danach keine Ziffern und
+# gab auf; die Karte kam mit `set: null` in die Datei, ohne Meldung.
+_KARTE_ALT = re.compile(
+    r'''alt=['"]Pokemon TCG Pocket-\s*([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)\s+(\d+)\s+Card['"]''')
+
+
+def karten_zum_muster(html, adresse):
+    """[{name, anzahl, set, nummer}] — die Kartenliste dieses Decks.
+
+    Leere Liste heisst: auf dieser Seite steht zu diesem Muster keine
+    lesbare Liste. Das ist ein Befund, kein Grund zum Raten.
+    """
+    for _n, adr, bereich in _muster_stellen(html):
+        if adr != adresse:
+            continue
+        raus = []
+        for zelle in re.split(r"(?=<td\b)", bereich):
+            t = _KARTE.search(zelle)
+            if not t:
+                continue
+            name = _html.unescape(re.sub(r"<[^>]+>", "", t.group(1)))
+            name = re.sub(r"\s+", " ", name).strip()
+            if not name:
+                continue
+            alt = _KARTE_ALT.search(zelle)
+            raus.append({
+                "name": name,
+                "anzahl": int(t.group(2)),
+                "set": alt.group(1) if alt else None,
+                "nummer": alt.group(2) if alt else None,
+            })
+        return raus
+    return []
+
+
+def teile_karten(karten, code):
+    """(pokemon, trainer, grund) — die Liste an der Stelle trennen, die der Code nennt.
+
+    Game8 listet die Karten in einer Reihe: erst die Pokémon, dann die
+    Trainer. Welche Karte die letzte Pokémon-Karte ist, sagt die Seite
+    NICHT — der Scan-Code sagt es: er traegt beide Anzahlen getrennt.
+
+    WIE STARK DIESE PRUEFUNG IST — GEMESSEN, NICHT GESCHAETZT
+    ----------------------------------------------------------
+    Sie ist SCHWACH, und das gehoert hierhergeschrieben, weil der
+    Entwurf vom 07.09.2026 sie zunaechst als "die nicht-zirkulaere
+    Pruefung" verkauft hat. Nachgemessen ueber alle 33 x 32 = 1056
+    Paarungen aus Kartenliste und FREMDEM Code: **783 davon werden
+    angenommen (74,1 %)**. Bei 13 bis 16 Karten mit Anzahlen von 1 bis 2
+    gibt es reichlich Kartengrenzen, auf die eine fremde Trennstelle
+    fallen kann.
+
+    Was sie zuverlaessig faengt, ist der Parser: greift er Zellen einer
+    Nachbartabelle mit oder verliert er welche, stimmt die Summe nicht
+    mehr mit n1+n2 ueberein. Dafuer ist sie hier, und dafuer genuegt sie.
+
+    Die schaerfere Pruefung steht in `abgleich_vielfachheiten` — sie
+    faellt auf 2,0 % durch (21 von 1056), taugt aber nicht als Sperre.
+
+    Ein Fehlschlag liefert `(None, None, grund)`. Die Liste wird dann
+    NICHT abgelegt: eine falsche Kartenliste neben einem richtigen Code
+    ist schlimmer als keine.
+    """
+    zahlen = _code_zahlen(code)
+    if zahlen is None:
+        return None, None, "der Scan-Code hat nicht den erwarteten Aufbau"
+    n_trainer, n_pokemon = zahlen
+    gesamt = sum(k["anzahl"] for k in karten)
+    if gesamt != n_trainer + n_pokemon:
+        return None, None, (f"die Seite listet {gesamt} Karten, der Scan-Code "
+                            f"traegt {n_trainer + n_pokemon}")
+    lauf = 0
+    for i, k in enumerate(karten):
+        lauf += k["anzahl"]
+        if lauf == n_pokemon:
+            return karten[:i + 1], karten[i + 1:], None
+        if lauf > n_pokemon:
+            break
+    return None, None, (f"die Trennstelle nach {n_pokemon} Pokémon faellt "
+                        f"nicht auf eine Kartengrenze")
+
+
+def abgleich_vielfachheiten(pokemon, trainer, code):
+    """None, wenn Liste und Code auch in den Vielfachheiten uebereinstimmen.
+
+    Der Code traegt je Kartenkopie eine 3-Byte-Kennung. Wie oft dieselbe
+    Kennung vorkommt, muss sich in den Anzahlen der Seite wiederfinden —
+    nicht Karte fuer Karte (die Kennungen sind aufsteigend sortiert, nicht
+    in der Reihenfolge der Seite), aber als Mehrmenge: "sechsmal einzeln,
+    dreimal doppelt".
+
+    WIE SCHARF SIE WIRKLICH IST — ZWEI ZAHLEN, UND NUR EINE ZAEHLT
+    ---------------------------------------------------------------
+    GEMESSEN am 07.09.2026 ueber alle 33 Decks:
+      * das EIGENE Deck besteht sie bei **32 von 33**,
+      * ein FREMDER Code besteht sie bei **117 von 1056 (11,1 %)**.
+
+    Die 11,1 % sind der Wert des WEGES, DEN DER LAUF GEHT: `sammle`
+    trennt die Karten mit `teile_karten` nach DEMSELBEN Code, der
+    anschliessend hier geprueft wird. Wer stattdessen die richtige
+    Trennung des Decks behaelt und nur den Code austauscht, misst
+    21 von 1056 (2,0 %) — aber diese Information hat der Lauf nicht.
+
+    Die erste Fassung dieses Docstrings nannte die 2,0 % und war damit
+    um den Faktor 5,6 zu guenstig. Die unabhaengige Abnahme am
+    07.09.2026 hat es nachgerechnet und die Zahl richtiggestellt. Eine
+    Selbstkritik, die zu guenstig rechnet, ist schlechter als keine —
+    man glaubt ihr.
+
+    Deshalb ist sie eine Angabe und keine Sperre. Der eine Ausreisser ist
+    erklaerbar und kein Fehler:
+
+        Team Rocket's Raticate ex and Alolan Ninetales ex [617527]
+        Code:  6 einzelne + 3 doppelte Trainer  (9 Kennungen)
+        Seite: 4 einzelne + 4 doppelte Trainer  (8 Zeilen)
+
+    Der Code unterscheidet zwei DRUCKE derselben Karte, die Game8 in
+    einer Zeile zusammenfasst. Wer daraus eine Sperre machte, warfe ein
+    richtiges Deck weg.
+    """
+    zerlegt = _code_kennungen(code)
+    if zerlegt is None:
+        return "der Scan-Code hat nicht den erwarteten Aufbau"
+    kennungen_trainer, kennungen_pokemon = zerlegt
+    for was, kennungen, karten in (("Pokémon", kennungen_pokemon, pokemon),
+                                   ("Trainer", kennungen_trainer, trainer)):
+        aus_code = sorted(collections.Counter(kennungen).values())
+        von_seite = sorted(k["anzahl"] for k in karten)
+        if aus_code != von_seite:
+            return (f"{was}: der Code trägt {len(aus_code)} verschiedene "
+                    f"Kennungen {aus_code}, die Seite listet "
+                    f"{len(von_seite)} Karten {von_seite}")
+    return None
+
+
+def _code_kennungen(code):
+    """(Trainer-Kennungen, Pokémon-Kennungen) je Kartenkopie, oder None."""
+    try:
+        b = base64.b64decode(code, validate=True)
+    except Exception:  # noqa: BLE001
+        return None
+    i = 0
+    try:
+        n1 = b[i]; i += 1
+        trainer = [bytes(b[i + 3 * k:i + 3 * k + 3]) for k in range(n1)]
+        i += 3 * n1
+        n2 = b[i]; i += 1
+        pokemon = [bytes(b[i + 3 * k:i + 3 * k + 3]) for k in range(n2)]
+        i += 3 * n2
+        k = b[i]; i += 1
+        i += k
+    except IndexError:
+        return None
+    if i != len(b) or len(trainer) != n1 or len(pokemon) != n2:
+        return None
+    return trainer, pokemon
+
+
+def _code_zahlen(code):
+    """(Trainer, Pokémon) aus dem Scan-Code, oder None.
+
+    AUFBAU, gemessen am 07.09.2026 an allen 33 Codes der Datei:
+
+        [n1][n1 x 3 Byte, jedes beginnt mit 0x98]     -> Trainer
+        [n2][n2 x 3 Byte, jedes beginnt mit 0x00]     -> Pokémon
+        [k][k x 1 Byte]                               -> Energiearten
+
+    n1 + n2 war bei 33 von 33 gleich 20 — der Deckgroesse in Pocket.
+    Welche Kennung welche Karte ist, sagt der Code NICHT; die drei Byte
+    sind ausserdem aufsteigend sortiert und nicht in der Reihenfolge der
+    Seite (gepruefte Gegenprobe: dieselbe Kennung stand einmal neben
+    zwei verschiedenen Namen). Hier wird deshalb nur GEZAEHLT, nichts
+    benannt.
+    """
+    try:
+        b = base64.b64decode(code, validate=True)
+    except Exception:  # noqa: BLE001
+        return None
+    i = 0
+    try:
+        n1 = b[i]; i += 1
+        i += 3 * n1
+        n2 = b[i]; i += 1
+        i += 3 * n2
+        k = b[i]; i += 1
+        i += k
+    except IndexError:
+        return None
+    if i != len(b):
+        return None
+    return n1, n2
 
 
 # `qr_adresse()` stand hier bis zum 04.09.2026 und wurde von niemandem
@@ -860,6 +1093,34 @@ def sammle(tier, set_decks, nur=None, still=False):
                                            "erzeugt ergibt einen anderen Inhalt"))
                 continue
             d["code"] = inhalt
+
+            # DIE KARTENLISTE KOMMT AUS DERSELBEN SEITE, DIE SCHON DA IST
+            # ----------------------------------------------------------
+            # Kein zusaetzlicher Abruf bei Game8: `seite` liegt seit dem
+            # Anfang dieser Schleife im Speicher. Der Aufwand ist ein
+            # Suchlauf ueber ein paar tausend Zeichen.
+            #
+            # Ein Deck OHNE Liste kommt trotzdem in die Datei — der
+            # Scan-Code ist das Hauptstueck, die Liste die Zugabe. Aber
+            # der Grund steht am Deck, damit die Oberflaeche sagen kann,
+            # WARUM dort nichts steht. Eine falsche Liste neben einem
+            # richtigen Code waere schlimmer als keine.
+            karten = karten_zum_muster(seite, adresse)
+            if not karten:
+                d["karten_hinweis"] = ("auf der Seite steht zu diesem Muster "
+                                       "keine lesbare Kartenliste")
+            else:
+                pokemon, trainer, grund = teile_karten(karten, inhalt)
+                if grund:
+                    d["karten_hinweis"] = grund
+                else:
+                    d["pokemon"] = pokemon
+                    d["trainer"] = trainer
+                    # Angabe, keine Sperre — siehe abgleich_vielfachheiten.
+                    streit = abgleich_vielfachheiten(pokemon, trainer, inhalt)
+                    if streit:
+                        d["karten_abgleich"] = streit
+
             fertig.append(d)
             if not still:
                 print(f"  [{i}/{len(reihe)}] {d['name'][:44]:46} {len(inhalt):4} Zeichen")
@@ -964,12 +1225,35 @@ def _zusammenfuehren(decks):
     return reihe, zusammengelegt
 
 
+def _bestand(pfad):
+    """Wie viele Decks stehen heute in der Zieldatei?
+
+    `None` heisst: keine brauchbare Vorlage — die Datei fehlt, ist kein
+    JSON, oder trägt keine Deckliste. Dann greift der Riegel unten
+    nicht; er soll den ersten Lauf nicht verhindern, sondern einen
+    Bestand schuetzen, den es gibt.
+    """
+    try:
+        with open(pfad, encoding="utf-8") as f:
+            alt = json.load(f)
+    except (OSError, ValueError):
+        return None
+    decks = alt.get("decks") if isinstance(alt, dict) else None
+    if not isinstance(decks, list) or not decks:
+        return None
+    return len(decks)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--nur", type=int,
                    help="nur die ersten N Decks (Probelauf; schreibt NICHT)")
     p.add_argument("--aus-datei", help="Übersichtsseite aus einer Datei statt aus dem Netz")
     p.add_argument("--trocken", action="store_true", help="nichts schreiben")
+    p.add_argument("--schrumpfen-erlauben", action="store_true",
+                   dest="schrumpfen_erlauben",
+                   help="deutlich weniger Decks als bisher trotzdem schreiben "
+                        "(fuer den echten Set-Wechsel bei Game8)")
     a = p.parse_args()
 
     html = (open(a.aus_datei, encoding="utf-8").read() if a.aus_datei
@@ -1067,6 +1351,43 @@ def main():
         print(f"Probelauf über {a.nur} Decks — es wird nichts geschrieben.")
         return 0
 
+    # DER RIEGEL GEGEN EINE GESCHRUMPFTE QUELLE (07.09.2026)
+    # ------------------------------------------------------
+    # Die beiden Schwellen oben rechnen ausschliesslich auf DIESEM Lauf:
+    # 66 % der angegangenen Eintraege, und 30 % verschiedene Codes ab
+    # zehn Versuchen. Keine von beiden sieht die vorhandene Datei an —
+    # das Skript liest sie nirgends.
+    #
+    # Nachgestellt und ausgefuehrt (Gegenpruefung 07.09.2026): listet
+    # die Quelle nur noch drei Decks und werden alle drei sauber
+    # gelesen, sind das 100 % der angegangenen Eintraege. Der Lauf gibt
+    # 0 zurueck, ersetzt 33 Decks durch 3, der Ablauf committet und
+    # stoesst den Deploy an. Bei einem einzigen Deck greift auch die
+    # zweite Bremse nicht, weil sie erst ab `versucht >= 10` misst.
+    #
+    # Ein Set-Wechsel bei Game8, eine umbenannte Tabellenueberschrift
+    # oder eine halb geladene Seite liefern genau dieses Bild: wenige
+    # Decks, alle sauber. Deshalb wird hier gegen den BESTAND gemessen,
+    # nicht gegen den Lauf.
+    #
+    # Die Schwelle ist bewusst grosszuegiger als die 66 % oben: dass
+    # Game8 die Liste umbaut und dabei ein Viertel der Decks streicht,
+    # ist ein normaler Vorgang. Wer ihn will, sagt es mit
+    # --schrumpfen-erlauben — dann steht die Entscheidung im Protokoll
+    # des Laufs, statt still zu passieren.
+    bestand = _bestand(AUSGABE)
+    if bestand is not None and len(fertig) < bestand * 0.7:
+        if a.schrumpfen_erlauben:
+            print(f"::warning::{len(fertig)} Decks gegen {bestand} im Bestand — "
+                  f"auf ausdrückliche Anweisung trotzdem geschrieben.")
+        else:
+            print(f"::error::die Quelle liefert nur noch {len(fertig)} Decks, "
+                  f"im Bestand stehen {bestand}. Das ist kein Lauf, das ist ein "
+                  f"Einbruch — die vorhandene Datei bleibt stehen. Ist der "
+                  f"Einbruch echt (Set-Wechsel bei Game8), noch einmal mit "
+                  f"--schrumpfen-erlauben starten.")
+            return 1
+
     aus = {
         "_meta": {
             "zweck": "Tier-Liste und Set-Decks für Pokémon TCG Pocket, mit "
@@ -1095,10 +1416,35 @@ def main():
             # Eintraege — auf der Seite standen 52 (dritte Abnahme,
             # 04.09.2026). Diese vier Zahlen gehen auf:
             #     angegangen = anzahl + ohne_code + zusammengelegt
+            "karten_hinweis": "Die Kartenlisten stehen im Fließtext derselben "
+                              "Deck-Seite, von der auch das 2D-Muster stammt — "
+                              "kein zusätzlicher Abruf. Die Aufteilung in Pokémon "
+                              "und Trainer nennt der Scan-Code, die Kartenzahlen "
+                              "nennt die Seite; beide müssen aufgehen. Das ist "
+                              "aber KEIN Beweis, dass ein Code zu seinem Deck "
+                              "gehört: nachgemessen am 07.09.2026 wurden 783 von "
+                              "1056 Paarungen mit einem FREMDEN Code trotzdem "
+                              "angenommen (74 %). Was die Prüfung zuverlässig "
+                              "fängt, ist ein verrutschter Parser. Decks mit "
+                              "`karten_hinweis` statt Listen haben sie nicht "
+                              "bestanden; ihr Code gilt weiterhin, ihre Liste "
+                              "wird nicht gezeigt. `karten_abgleich` ist die "
+                              "schärfere Angabe (Vielfachheiten der Kennungen "
+                              "gegen die Anzahlen der Seite): auf dem Weg, den "
+                              "der Lauf geht, gehen 117 von 1056 fremden Codes "
+                              "durch (11,1 %) — schärfer als die 74 % der "
+                              "Trennung, aber kein Beweis. Sie sperrt nicht, weil "
+                              "Game8 zwei Drucke derselben Karte in einer Zeile "
+                              "zusammenfasst und ein Deck von 33 deshalb zu Recht "
+                              "herausfällt.",
             "uebersicht": {
                 "tier_tabelle": len(tier),
                 "set_tabelle": len(set_decks),
                 "angegangen": versucht,
+                "mit_kartenliste": sum(1 for d in fertig if d.get("pokemon")),
+                "kartenliste_streng": sum(1 for d in fertig
+                                          if d.get("pokemon")
+                                          and not d.get("karten_abgleich")),
             },
             "ohne_code": [{"name": n, "grund": g} for n, g in ausfaelle],
             "zusammengelegt": zusammengelegt,

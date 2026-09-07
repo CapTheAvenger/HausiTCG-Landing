@@ -452,6 +452,11 @@ try { document.documentElement.classList.add('is-signed-out'); } catch (e) {}
         'past-meta':             'past-meta',
         'cards':                 'cards',
         'proxy':                 'proxy',
+        // Selbstverweis, sonst schreibt kanonischerHash() keinen Hash
+        // zurueck und der Reiter hat keine teilbare Adresse.
+        'pocket':                'pocket',
+        'tcg-pocket':            'pocket',
+        'pocket-decks':          'pocket',
         // The in-app playtester was retired in favour of the TCG Showdown
         // handoff, and #playtester / #sandbox kept pointing at a tab id that
         // no longer has an element. switchTab then hid every tab and showed

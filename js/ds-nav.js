@@ -56,6 +56,22 @@
           tabs: ['meta-call'] },            // Profil ist geteilt, siehe unten
         { id: 'karten',    go: 'cards',             gl: '◫',
           tabs: ['cards', 'proxy', 'calculator'] },
+        // 'pocket' steht hier ABSICHTLICH NICHT.
+        //
+        // Der erste Entwurf (07.09.2026) hat ihn der Champions-Gruppe
+        // zugeschlagen, damit beim Betreten von #pocket wenigstens
+        // etwas leuchtet. Im Bild war das Ergebnis: die Pocket-Liste
+        // steht da, und unten leuchtet "CHAMPIONS". Das ist genau die
+        // Vermischung, die diese Leiste vermeiden soll (siehe oben:
+        // "Pokémon Champions ist ein anderes Spiel").
+        //
+        // Nichts leuchten zu lassen ist hier kein Sonderfall: tutorial,
+        // quellen und profile machen es seit jeher so. Wo der Nutzer
+        // ist, sagt ihm das Abzeichen im Kopf ("Side Quest: Pokémon TCG
+        // Pocket"), nicht die Leiste. Ein sechster Knopf kommt nicht in
+        // Frage — css/ds-nav.css teilt mobil in fuenf Spalten, und
+        // tests/unit/test-startseite-meta.js nagelt die fuenf
+        // Gruppen-Kennungen fest.
         { id: 'champions', go: 'side-quest',        gl: '◆', alt: true,
           tabs: ['side-quest'] }
     ];

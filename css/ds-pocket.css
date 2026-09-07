@@ -1,0 +1,229 @@
+/* ds-pocket.css — Reiter "Side Quest · Pokémon TCG Pocket".
+ *
+ * Eigener Reiter, nicht im Champions-Reiter: Pokémon Champions ist ein
+ * anderes Spiel (js/ds-nav.js:19 schreibt genau das als Zweck der
+ * Trennung auf).
+ *
+ * DIE EINE STELLE, DIE KEINEM THEMA FOLGT
+ * ---------------------------------------
+ * `.pk-qr` ist hart weiß mit schwarzen Modulen — keine Tokens, keine
+ * Abfrage auf den Dunkelmodus. Ein invertierter QR ist nicht
+ * verlässlich scannbar, und der Scan ist der Zweck des Reiters.
+ * Alles andere folgt den Tokens wie üblich.
+ */
+
+/* ── Kopf ─────────────────────────────────────────────────────────── */
+.pk-quelle {
+    font-size: .82rem;
+    color: var(--text-muted, #6b7280);
+    margin: 6px 0 0;
+    line-height: 1.5;
+}
+.pk-quelle a { color: inherit; text-decoration: underline; }
+.pk-alt {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: var(--warning-bg, #fff7ed);
+    color: var(--warning-text, #9a3412);
+    border: 1px solid var(--warning-border, #fed7aa);
+    font-size: .82rem;
+    font-weight: 600;
+}
+
+/* ── Filter ───────────────────────────────────────────────────────── */
+.pk-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 4px;
+}
+.pk-filter button {
+    /* 44 px Tipphöhe. Die Unterreiter des Champions-Reiters liegen bei
+       rund 30 px; das wird hier bewusst nicht geerbt. */
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 22px;
+    border: 1px solid var(--border-color, #d1d5db);
+    background: var(--surface-1, #fff);
+    color: var(--text-primary, #111827);
+    font-size: .92rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.pk-filter button.is-active {
+    background: var(--text-primary, #111827);
+    color: var(--surface-1, #fff);
+    border-color: var(--text-primary, #111827);
+}
+
+/* ── Liste ────────────────────────────────────────────────────────── */
+.pk-stufe { margin-top: 22px; }
+.pk-stufe > h3 {
+    font-size: .95rem;
+    margin: 0 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pk-stufe-zahl { font-weight: 400; color: var(--text-muted, #6b7280); }
+
+.pk-zeile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 56px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 10px;
+    background: var(--surface-1, #fff);
+    color: var(--text-primary, #111827);
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+}
+.pk-zeile:hover { border-color: var(--text-muted, #9ca3af); }
+.pk-zeile:focus-visible { outline: 2px solid var(--accent, #2563eb); outline-offset: 2px; }
+
+.pk-marke {
+    flex: 0 0 auto;
+    min-width: 34px;
+    text-align: center;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: .82rem;
+    background: var(--text-primary, #111827);
+    color: var(--surface-1, #fff);
+}
+.pk-name {
+    /* Deck-Namen sind englisch (Game8s Bezeichnungen) und lang. Sie
+       brechen um statt zu kürzen: sieben beginnen mit "Team Rocket's …",
+       das Unterscheidende steht hinten. */
+    flex: 1 1 auto;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+.pk-fussnote {
+    display: block;
+    font-weight: 400;
+    font-size: .78rem;
+    color: var(--text-muted, #6b7280);
+    margin-top: 2px;
+}
+.pk-pfeil { flex: 0 0 auto; color: var(--text-muted, #9ca3af); }
+
+/* ── Fußzeile mit der Rechnung ────────────────────────────────────── */
+.pk-rechnung {
+    margin-top: 26px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    background: var(--surface-2, #f3f4f6);
+    color: var(--text-muted, #4b5563);
+    font-size: .84rem;
+    line-height: 1.6;
+}
+.pk-rechnung strong { color: var(--text-primary, #111827); }
+
+.pk-meldung {
+    margin: 14px 0;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: .9rem;
+    background: var(--surface-2, #f3f4f6);
+    color: var(--text-primary, #111827);
+}
+.pk-meldung.is-fehler {
+    background: var(--danger-bg, #fef2f2);
+    color: var(--danger-text, #991b1b);
+    border: 1px solid var(--danger-border, #fecaca);
+}
+
+/* ── Vollbild mit dem Muster ──────────────────────────────────────── */
+.pk-overlay {
+    position: fixed;
+    inset: 0;
+    /* über der unteren Leiste (.ds-tabbar liegt bei 900) */
+    z-index: 10001;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    background: var(--surface-1, #fff);
+    color: var(--text-primary, #111827);
+}
+.pk-overlay[hidden] { display: none !important; }
+.pk-schliessen {
+    align-self: flex-end;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 14px;
+    border-radius: 22px;
+    border: 1px solid var(--border-color, #d1d5db);
+    background: var(--surface-1, #fff);
+    color: var(--text-primary, #111827);
+    font-size: 1rem;
+    cursor: pointer;
+}
+.pk-overlay-kopf { text-align: center; }
+.pk-overlay-name {
+    margin: 0 0 4px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+.pk-overlay-kopf p { margin: 0; font-size: .82rem; color: var(--text-muted, #6b7280); }
+
+/* HART. Siehe Kopf dieser Datei. */
+.pk-qr {
+    background: #ffffff;
+    padding: 10px;
+    border-radius: 8px;
+    line-height: 0;
+}
+.pk-qr svg {
+    width: min(78vw, 78vh);
+    max-width: 420px;
+    height: auto;
+    display: block;
+}
+.pk-hell {
+    font-size: .82rem;
+    color: var(--text-muted, #6b7280);
+    text-align: center;
+    margin: 0;
+}
+
+.pk-karten {
+    width: 100%;
+    max-width: 460px;
+    margin: 4px 0 0;
+    font-size: .86rem;
+}
+.pk-karten h4 {
+    margin: 12px 0 6px;
+    font-size: .78rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-muted, #6b7280);
+}
+.pk-karten ul { list-style: none; margin: 0; padding: 0; }
+.pk-karten li {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border-color, #f3f4f6);
+}
+.pk-karten li span:last-child {
+    color: var(--text-muted, #6b7280);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}

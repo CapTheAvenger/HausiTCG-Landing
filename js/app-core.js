@@ -1592,6 +1592,15 @@ const BASE_PATH = './data/';
                             window.DsAdmin.open();
                         }
                         break;
+                    case 'pocket':
+                        // Ohne diesen Fall bleibt der Reiter beim
+                        // Tiefllink #pocket leer — derselbe Ausfall wie
+                        // am 26.08.2026 bei side-quest, siehe den
+                        // Kommentar oben.
+                        if (window.dsPocket && typeof window.dsPocket.render === 'function') {
+                            window.dsPocket.render();
+                        }
+                        break;
                     case 'side-quest':
                         if (window.sideQuest && typeof window.sideQuest.render === 'function') {
                             const teamsHost = document.getElementById('sideQuestTeamsHost');
