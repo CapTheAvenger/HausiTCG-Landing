@@ -586,6 +586,25 @@ def _list_labs_chunk_paths(prefix: str) -> List[str]:
     return paths
 
 
+def _schreibe_csv_atomar(pfad: str, kopf: List[str], zeilen: List[Dict]) -> None:
+    """Erst daneben schreiben, dann umbenennen.
+
+    `open(pfad, 'w')` kuerzt die vorhandene Datei, BEVOR die erste Zeile
+    drinsteht. Bricht der Lauf mitten im Schreiben ab — der Wochenlauf
+    hat ein Zeitlimit —, bleibt eine halbe CSV liegen, und der
+    Commit-Schritt committet sie. Vorbild: _schreibe_atomar in
+    limitless_online_decklist_scraper.py.
+    """
+    os.makedirs(os.path.dirname(pfad) or '.', exist_ok=True)
+    vorlaeufig = pfad + '.tmp'
+    with open(vorlaeufig, 'w', encoding='utf-8', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=kopf, extrasaction='ignore')
+        writer.writeheader()
+        for zeile in zeilen:
+            writer.writerow({k: zeile.get(k, '') for k in kopf})
+    os.replace(vorlaeufig, pfad)
+
+
 def _reassemble_labs_monolith(prefix: str, header: List[str]) -> List[Dict]:
     """Concatenate all per-meta chunk rows into a single list. Used at the
     start of a run to learn which tournament_ids are already scraped (so
@@ -617,10 +636,7 @@ def _split_labs_by_meta(rows: List[Dict], prefix: str, header: List[str]) -> Dic
     counts: Dict[str, int] = {}
     for meta, bucket in by_meta.items():
         out_path = os.path.join(data_dir, f'{prefix}_{meta}.csv')
-        with open(out_path, 'w', encoding='utf-8', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=header, extrasaction='ignore')
-            writer.writeheader()
-            writer.writerows(bucket)
+        _schreibe_csv_atomar(out_path, header, bucket)
         counts[meta] = len(bucket)
         logger.info("  → %s: %d rows", os.path.basename(out_path), len(bucket))
     _schreibe_labs_verzeichnis(data_dir, prefix)
@@ -1614,7 +1630,118 @@ MATCHUP_CSV_HEADER = [
     'vs_ties',               # T
     'day_filter',            # 'overall' | 'day1' | 'day2'
     'scraped_at',
+    # BELEGSPALTEN (07.09.2026). Zwei Dinge standen bisher nur im
+    # Kommentar und nicht in der Datei — wer die CSV liest, sah davon
+    # nichts.
+    #
+    # 1) `day_filter='day1'` ist eine Aussage ueber die Herkunft, und sie
+    #    stimmt nicht: das Flag `&d1` wurde geraten und ist widerlegt
+    #    (siehe scrape_archetype_matchups). Die Quelle liefert dort die
+    #    Overall-Ansicht. `tagesfilter_quelle` sagt fuer jede Zeile
+    #    einzeln, ob hinter dem Tagesfilter eine eigene Abfrage steht.
+    #
+    # 2) In Spiegelpaarungen ist vs_count != vs_wins+vs_losses+vs_ties.
+    #    Das ist KEIN Zaehlfehler, sondern die richtige Zaehlweise — der
+    #    Archetyp sitzt auf beiden Seiten des Tisches, jede Partie
+    #    liefert ihm einen Sieg UND eine Niederlage (oder zwei
+    #    Unentschieden). `ist_spiegel` macht das aus der Datei heraus
+    #    erkennbar, damit der naechste es nicht "korrigiert".
+    #
+    # Beide haengen HINTEN an: die Reihenfolge der bestehenden Spalten
+    # bleibt unveraendert, ein Leser nach Position faellt nicht um.
+    'ist_spiegel',           # 'ja' | 'nein'
+    'tagesfilter_quelle',    # 'abfrage' | 'kopie_overall' | 'ungeprueft'
 ]
+
+# Werte fuer `tagesfilter_quelle`.
+TAGESQUELLE_ABFRAGE = 'abfrage'          # eigene Abfrage an die Quelle
+TAGESQUELLE_KOPIE = 'kopie_overall'      # als Tagesansicht beschriftet, ist aber Overall
+TAGESQUELLE_UNGEPRUEFT = 'ungeprueft'    # kein Gegenstueck da, also nichts behauptet
+
+# Diese Felder entscheiden, ob eine day1-Zeile eine Kopie ist. Bewusst
+# OHNE 'scraped_at' (weicht immer ab) und ohne die Kopfspalten
+# my_deck_* — die traegt die Quelle in jeder Tagesansicht unveraendert
+# mit. Gemessen an data/labs_tournament_matchups_TEF-PBL.csv: die
+# Kopfzahlen 553-601-162 von dragapult-ex stehen wortgleich in den
+# overall-, day1- UND day2-Zeilen. Sie taugen deshalb nicht als
+# Unterscheidungsmerkmal.
+MATCHUP_VERGLEICHSFELDER = ('vs_count', 'vs_win_pct', 'vs_wins', 'vs_losses', 'vs_ties')
+
+
+def _matchup_schluessel(zeile: Dict) -> Tuple[str, str, str]:
+    """Eine Paarung ist ueber Meta und beide Decks eindeutig."""
+    return (
+        (zeile.get('meta') or '').strip(),
+        (zeile.get('my_deck_slug') or '').strip(),
+        (zeile.get('opponent_deck_slug') or '').strip(),
+    )
+
+
+def ist_spiegelpaarung(zeile: Dict) -> bool:
+    """Sitzt der Archetyp auf beiden Seiten des Tisches?"""
+    eigen = (zeile.get('my_deck_slug') or '').strip()
+    gegner = (zeile.get('opponent_deck_slug') or '').strip()
+    return bool(eigen) and eigen == gegner
+
+
+def markiere_matchup_zeilen(zeilen: List[Dict]) -> Dict[str, int]:
+    """Traegt `ist_spiegel` und `tagesfilter_quelle` ein. Aendert sonst nichts.
+
+    Arbeitet auf EINEM zusammenhaengenden Bestand (Monolith oder ein
+    Meta-Auszug) und veraendert die Zeilen an Ort und Stelle. Keine
+    bestehende Spalte wird angefasst, keine Zeile kommt hinzu oder faellt
+    weg.
+
+    `tagesfilter_quelle` beantwortet genau eine Frage: steht hinter
+    diesem day_filter eine eigene Abfrage an die Quelle?
+
+      * 'overall' -> ja. Das ist die Standardansicht der Seite, sie wird
+        OHNE Flag geholt. Genau deshalb ist sie die Gesamtansicht und
+        nicht heimlich Tag 1: eine Ansicht, die man nicht anfordert,
+        kann nicht gefiltert sein.
+      * 'day2'    -> ja. `&d2` ist am 25.05.2026 bestaetigt und wirkt
+        nachweislich — die Zahlen weichen von overall ab.
+      * 'day1'    -> wird GEMESSEN, nicht behauptet. Stimmt die Zeile in
+        allen MATCHUP_VERGLEICHSFELDERN mit der overall-Zeile derselben
+        Paarung ueberein, ist sie eine Kopie und wird so benannt.
+
+    Was hier ausdruecklich NICHT passiert: aus day1 und day2 eine Summe
+    bilden. Das waere eine Zahl, die die Quelle nie geliefert hat.
+    """
+    overall_index: Dict[Tuple[str, str, str], Dict] = {}
+    for z in zeilen:
+        if (z.get('day_filter') or MATCHUP_DAY_OVERALL) == MATCHUP_DAY_OVERALL:
+            overall_index[_matchup_schluessel(z)] = z
+
+    zaehler = {
+        TAGESQUELLE_ABFRAGE: 0,
+        TAGESQUELLE_KOPIE: 0,
+        TAGESQUELLE_UNGEPRUEFT: 0,
+        'spiegel': 0,
+    }
+    for z in zeilen:
+        spiegel = ist_spiegelpaarung(z)
+        z['ist_spiegel'] = 'ja' if spiegel else 'nein'
+        if spiegel:
+            zaehler['spiegel'] += 1
+
+        tag = z.get('day_filter') or MATCHUP_DAY_OVERALL
+        if tag != MATCHUP_DAY_DAY1:
+            quelle = TAGESQUELLE_ABFRAGE
+        else:
+            gegenstueck = overall_index.get(_matchup_schluessel(z))
+            if gegenstueck is None:
+                # Ohne Gegenstueck laesst sich die Kopie nicht nachweisen.
+                # Dann wird sie auch nicht behauptet.
+                quelle = TAGESQUELLE_UNGEPRUEFT
+            elif all(str(z.get(f, '')) == str(gegenstueck.get(f, ''))
+                     for f in MATCHUP_VERGLEICHSFELDER):
+                quelle = TAGESQUELLE_KOPIE
+            else:
+                quelle = TAGESQUELLE_ABFRAGE
+        z['tagesfilter_quelle'] = quelle
+        zaehler[quelle] += 1
+    return zaehler
 
 
 def _parse_player_summary(soup) -> Dict[str, float]:
@@ -1776,8 +1903,12 @@ def scrape_archetype_matchups(
     Day filter:
       • 'overall' → no extra query flag
       • 'day2'    → adds `&d2` (user-confirmed 2026-05-25)
-      • 'day1'    → adds `&d1` (inferred symmetric pattern — verify when
-        the first populated day1 scrape lands)
+      • 'day1'    → adds `&d1`. WIDERLEGT (05.09.2026): die Quelle
+        ignoriert das Flag und liefert die Overall-Ansicht zurueck. Die
+        so entstehenden Zeilen tragen deshalb
+        tagesfilter_quelle='kopie_overall' — sie werden nicht mehr
+        stillschweigend als Tag 1 ausgegeben. Der ausfuehrliche Beleg
+        steht am Aufbau der URL weiter unten.
 
     Returns a dict:
       {
@@ -1925,6 +2056,15 @@ def build_matchup_rows(
             'vs_ties'               : '' if m.get('vs_ties') is None else m['vs_ties'],
             'day_filter'            : day_filter,
             'scraped_at'            : scraped_at,
+            # Vorlaeufige Werte. `ist_spiegel` steht hier schon fest,
+            # `tagesfilter_quelle` fuer 'day1' erst, wenn die
+            # overall-Zeilen danebenliegen — das entscheidet
+            # markiere_matchup_zeilen() ueber den ganzen Bestand.
+            'ist_spiegel'           : 'ja' if deck_slug == m.get('opponent_slug', '') else 'nein',
+            'tagesfilter_quelle'    : (
+                TAGESQUELLE_UNGEPRUEFT if day_filter == MATCHUP_DAY_DAY1
+                else TAGESQUELLE_ABFRAGE
+            ),
         })
     return rows
 
@@ -1935,11 +2075,7 @@ def save_matchup_rows(matchup_rows: List[Dict], data_dir: Optional[str] = None) 
     out_dir = data_dir or _get_data_dir()
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, 'labs_tournament_matchups.csv')
-    with open(out_path, 'w', encoding='utf-8', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=MATCHUP_CSV_HEADER, extrasaction='ignore')
-        writer.writeheader()
-        for row in matchup_rows:
-            writer.writerow(row)
+    _schreibe_csv_atomar(out_path, MATCHUP_CSV_HEADER, matchup_rows)
     logger.info("Wrote %d matchup rows → %s", len(matchup_rows), out_path)
     return out_path
 
@@ -2043,6 +2179,89 @@ def overwrite_results(tournaments_meta: List[Dict], deck_rows: List[Dict]) -> No
                 csv_path, len(deck_rows), len(deduped))
 
 
+def _vereinige_matchup_kopf(kopf_alt: List[str]) -> List[str]:
+    """Neue Spalten hinten anhaengen, fremde Spalten mitnehmen.
+
+    Nur MATCHUP_CSV_HEADER zu nehmen wuerde eine Spalte, die jemand
+    anders eingefuehrt hat, stillschweigend loeschen — dieselbe Falle,
+    die am 06.09.2026 in per_decklist_scraper.py 21-Feld-Zeilen unter
+    eine 20-Feld-Kopfzeile geschrieben und alles dahinter verschoben
+    hat. Beim Schreiben faellt so etwas nicht auf, der Lauf meldet
+    Erfolg.
+    """
+    kopf = list(kopf_alt)
+    for feld in MATCHUP_CSV_HEADER:
+        if feld not in kopf:
+            kopf.append(feld)
+    return kopf
+
+
+def _tagesfilter_verteilung(zeilen: List[Dict]) -> Dict[str, int]:
+    """Zeilen je day_filter — die Messgroesse fuer vorher/nachher."""
+    verteilung: Dict[str, int] = {}
+    for z in zeilen:
+        schluessel = z.get('day_filter') or '(leer)'
+        verteilung[schluessel] = verteilung.get(schluessel, 0) + 1
+    return verteilung
+
+
+def _lauf_tagesfilter_belegen(data_dir: Optional[str] = None) -> int:
+    """`--nur-tagesfilter-belegen`: die Belegspalten ohne Netz nachtragen.
+
+    Traegt `ist_spiegel` und `tagesfilter_quelle` in alle vorhandenen
+    data/labs_tournament_matchups*.csv nach.
+
+    WAS DIESER LAUF NICHT TUT, UND WARUM NICHT. Er loescht keine Zeile,
+    ergaenzt keine Zeile und veraendert keinen bestehenden Wert. Die
+    naheliegende "Reparatur" waere gewesen, 'overall' als day1+day2
+    neu zu rechnen — das waere eine Zahl, die die Quelle nie geliefert
+    hat. Die Quelle liefert 'overall' als eigene Ansicht; falsch
+    beschriftet ist 'day1'. Also wird benannt, nicht gerechnet.
+    """
+    import glob as _glob
+    # Der Nachtrag ist kein Scrape, sondern Pflege am Bestand IM REPO.
+    # Er zielt deshalb auf data/ neben dem Projekt, nicht auf
+    # _get_data_dir() — das zeigt in dieser Umgebung nach
+    # backend/core/data und ist dort leer. Gleiches Vorbild wie
+    # REPO_AUSGABE in limitless_online_decklist_scraper.py.
+    verzeichnis = data_dir or os.path.join(_PROJECT_ROOT, 'data')
+    muster = os.path.join(verzeichnis, 'labs_tournament_matchups*.csv')
+    dateien = sorted(_glob.glob(muster))
+    if not dateien:
+        print(f"::warning::keine Datei passt auf {muster}")
+        return 1
+
+    for pfad in dateien:
+        with open(pfad, 'r', encoding='utf-8-sig', newline='') as f:
+            leser = csv.DictReader(f)
+            kopf_alt = list(leser.fieldnames or [])
+            zeilen = list(leser)
+        name = os.path.basename(pfad)
+        if not zeilen:
+            print(f"{name}: keine Zeile — uebersprungen")
+            continue
+
+        vorher = _tagesfilter_verteilung(zeilen)
+        beleg = markiere_matchup_zeilen(zeilen)
+        nachher = _tagesfilter_verteilung(zeilen)
+        # Ein Nachtrag, der die Zeilenverteilung veraendert, ist kein
+        # Nachtrag mehr. Lieber gar nicht schreiben als falsch.
+        if vorher != nachher:
+            print(f"::error::{name}: die Verteilung je day_filter hat sich "
+                  f"geaendert ({vorher} -> {nachher}) — nichts geschrieben.")
+            return 1
+
+        _schreibe_csv_atomar(pfad, _vereinige_matchup_kopf(kopf_alt), zeilen)
+
+        verteilung = ', '.join(f"{k}={v}" for k, v in sorted(vorher.items()))
+        print(f"{name}: {len(zeilen)} Zeilen ({verteilung})")
+        print(f"    Spiegelzeilen {beleg['spiegel']}, "
+              f"day1-Kopien {beleg[TAGESQUELLE_KOPIE]}, "
+              f"eigene Abfrage {beleg[TAGESQUELLE_ABFRAGE]}, "
+              f"unbelegt {beleg[TAGESQUELLE_UNGEPRUEFT]}")
+    return 0
+
+
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -2108,7 +2327,21 @@ def main() -> None:
              'closed metas already present in per-meta chunks. Default skips '
              'closed-meta tournaments to save HTTP cost on weekly runs.',
     )
+    parser.add_argument(
+        '--nur-tagesfilter-belegen', action='store_true',
+        dest='nur_tagesfilter_belegen',
+        help='ohne Netz: den vorhandenen data/labs_tournament_matchups*.csv '
+             'die Spalten `ist_spiegel` und `tagesfilter_quelle` nachtragen. '
+             'Loescht nichts, rechnet nichts um — benennt nur, was dasteht. '
+             'Schreibt atomar (tmp + os.replace).',
+    )
     args = parser.parse_args()
+
+    # Steht bewusst VOR dem Laden der Einstellungen: der Nachtrag braucht
+    # weder Netz noch scraper_settings.json und soll auch dann laufen,
+    # wenn die Konfiguration fehlt.
+    if args.nur_tagesfilter_belegen:
+        sys.exit(_lauf_tagesfilter_belegen())
 
     # ── Load settings (CLI args take priority over scraper_settings.json) ──
     cfg = load_settings("labs_tournament_scraper_settings.json", DEFAULT_SETTINGS)
@@ -2786,6 +3019,26 @@ def main() -> None:
             if (r.get('meta', ''), r.get('my_deck_slug', ''), r.get('day_filter', '')) not in replaced_keys
         ]
         merged_matchup_rows.extend(matchup_rows)
+        # Belegspalten setzen, BEVOR geschrieben wird. Ohne diesen
+        # Schritt liefe eine day1-Zeile, die in Wahrheit die
+        # Overall-Ansicht ist, wieder unbeschriftet in die Datei — und
+        # genau das ist vier Monate lang unbemerkt geblieben.
+        beleg = markiere_matchup_zeilen(merged_matchup_rows)
+        if beleg[TAGESQUELLE_KOPIE]:
+            logger.warning(
+                "%d von %d Matchup-Zeilen sind als 'day1' beschriftet, aber "
+                "Paar fuer Paar identisch mit 'overall'. Sie werden als "
+                "tagesfilter_quelle=%s ausgewiesen. Das Flag `&d1` wirkt "
+                "weiterhin nicht — siehe scrape_archetype_matchups.",
+                beleg[TAGESQUELLE_KOPIE], len(merged_matchup_rows),
+                TAGESQUELLE_KOPIE,
+            )
+        logger.info(
+            "Belegspalten: %d Spiegelzeilen, %d day1-Kopien, %d aus eigener "
+            "Abfrage, %d unbelegt.",
+            beleg['spiegel'], beleg[TAGESQUELLE_KOPIE],
+            beleg[TAGESQUELLE_ABFRAGE], beleg[TAGESQUELLE_UNGEPRUEFT],
+        )
         save_matchup_rows(merged_matchup_rows)
         logger.info(
             "Matchup pass done. %d new rows + %d carried-over from chunks = %d total.",
