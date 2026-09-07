@@ -30,7 +30,7 @@ Schema (header row):
   place, player_name, deck_archetype, deck_slug,
   wins, losses, ties,
   card_name, card_identifier, set_code, set_number,
-  count, type, is_ace_spec, scraped_at
+  count, type, is_ace_spec, quelle, druck_quelle, scraped_at
 
 Usage:
   python backend/scrapers/per_decklist_scraper.py
@@ -422,6 +422,16 @@ CSV_FIELDS = [
     'count',
     'type',
     'is_ace_spec',
+    # Woher die ZEILE stammt, nicht die Karte:
+    #   'papier'  limitlesstcg.com — dieser Scraper hier.
+    #   'online'  play.limitlesstcg.com — der Online-Scraper
+    #             (backend/scrapers/limitless_online_decklist_scraper.py),
+    #             der seit dem 07.09.2026 in DIESELBE Datei schreibt.
+    # Die Spalte steht hier und nicht nur drueben, weil `write_rows` die
+    # Datei bei abweichender Kopfzeile komplett neu schreibt: fehlte
+    # 'quelle' in dieser Liste, wuerde der naechste Papier-Lauf die
+    # Herkunft aller Online-Zeilen wieder wegwerfen.
+    'quelle',
     # Woher der Druck (set, number) stammt: 'seite' = von der
     # Decklistenseite abgegriffen, 'name' = ueber den Kartennamen
     # aufgeloest, weil die Seite nichts hergab. Leer = vor dem
@@ -642,6 +652,8 @@ def scrape_one_tournament(
                     'set_number':                set_number,
                     'count':                     c.get('count', 0),
                     'type':                      c.get('type', '') or c.get('card_type', ''),
+                    # Papier — siehe CSV_FIELDS.
+                    'quelle':                    'papier',
                     'druck_quelle':              c.get('druck_quelle', ''),
                     # Belegt statt geraten — siehe backend/core/ace_spec_regel.py.
                     'is_ace_spec':               ('Yes' if c.get('is_ace_spec')

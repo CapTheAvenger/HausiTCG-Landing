@@ -1,570 +1,758 @@
-# Testmatrix — Feature-Inventar thedipidis.app
+# Testmatrix — Live-Prüfung TheDipidis
 
-**Stand der Erhebung:** 2026-09-06 · Phase 1 (Kartierung, kein Browser)
-**Grundlage:** `index.html` (3.971 Zeilen), `js/app-*.js`, `js/i18n.js` (deutscher Block, Zeilen 2611–5182), Messungen an `data/` mit `python3`/`csv`.
+**Datum:** 07.09.2026 · **Stand:** `main` = `5ec1e742`
 
-## Wie diese Datei zu lesen ist
+**Zweck:** Dies ist das Arbeitsdokument, gegen das die Live-Prüfung läuft. Es führt
+`audit/inventar-oberflaeche.md` (662 Oberflächenelemente, Gruppen F0–F19, plus 14
+Hypothesen) und `audit/datenfluss.md` (Datenflusskarte je Kennzahl, verwaiste Daten,
+leere Rechnungen, doppelte Rechenwege) zu einer einzigen Prüfliste zusammen.
 
-* **Nr** — feste Kennung. Wird nie neu vergeben, auch wenn eine Zeile wegfällt.
-* **Ansicht/Route** — die Hash-Route. Die kanonischen Routen stehen in `js/inline-init.js:389–482` (`HASH_ALIASES`); geschrieben wird nur, was dort auf sich selbst zeigt (`js/inline-init.js:646–650`).
-* **Element** — der sichtbare deutsche Text. Quelle: `js/i18n.js`, deutscher Block. Wo kein `data-i18n` und kein `t()` dahintersteht, ist das vermerkt — **das ist selbst ein Befund**.
-* **Art** — Knopf / Reiter / Filter / Auswahlfeld / Sucheingabe / Tabellenspalte / Sortierung / Kachel / Berechnung / Klickpfad / Deep-Link.
-* **Team** — QA (Bedienung, Zustände, Fehlerfälle) · Spieler (fachliche Plausibilität) · Daten (Zahl gegen Datei prüfen).
-* **Status** — alle Zeilen stehen auf `offen`.
+**Regel:** Es wird nichts geprüft, was nicht in dieser Liste steht, und nichts in
+dieser Liste bleibt ungeprüft.
 
-## Vorbemerkung: was „Startseite" heißt
+**Aufbau:**
+* **Teil A** — Prüfzeilen je Oberflächenelement, gruppiert F0–F19 (aus dem Inventar).
+* **Teil B** — Datenprüfzeilen `D1…`, aus der Datenflusskarte: Kennzahlen gegen
+  Formel und Rohdatei, verwaiste Dateien, leere Rechnungen, doppelte Rechenwege.
+* **Teil C** — Hypothesen `H1…H14` aus „Was mir aufgefallen ist", je mit der
+  Handlung, die sie live bestätigt oder widerlegt.
+* **Teil D** — Zählung: Zeilen je Team und insgesamt.
 
-`index.html:1103` trägt `<div id="current-meta" class="tab-content active">`. **Ohne Hash startet die Anwendung auf `#current-meta`**, nicht auf `#meta-analysis-hub`. Die Kachelseite (`#meta-analysis-hub`) heißt im Menü „Meta & Deck-Analyse" und ist über den Deep-Link `#hub` / `#uebersicht` / `#overview` zusätzlich erreichbar (`js/inline-init.js:478–481`). Alle „← Startseite"-Knöpfe rufen `switchTabAndUpdateMenu('current-meta')`.
-Damit sind „Startseite" und `#current-meta` **dieselbe Ansicht**; die Zeilen F001–F022 gelten für beide Einstiege, F023–F026 prüfen ausdrücklich den Unterschied zwischen dem Aufruf ohne Hash und dem Aufruf mit `#current-meta`.
-
----
-
-## 1. Startseite (ohne Hash) und `#current-meta`
-
-Gerüst: `index.html:1103–1131`. Inhalt gezeichnet von `js/app-tier-meta.js` (Tierliste, Kacheln, Staples), `js/app-current-meta.js` (Heatmap), `js/app-archetype-card.js` (Archetyp-Karte), `js/ds-nav.js` (Format-Kürzel im Kopf).
-
-| Nr | Ansicht/Route | Element | Art | Was genau geprüft wird | Team | Status |
-|---|---|---|---|---|---|---|
-| F001 | Startseite | „Aktuelles Meta" (`cm.limitlessHeading`) | Kachel | Seite ohne Hash öffnen. Erwartet: Überschrift „Aktuelles Meta", danach das Formatkürzel aus `window._formatWindow` (`#cmFormatLabel`, gefüllt von `js/ds-nav.js`). Erwartet heute: `PBL` (`data/format_window.json` → `current_set`). | QA | offen |
-| F002 | Startseite | „Daten:" + Datumschip (`data.updated`) | Kachel | Chip mit `data-quelle="limitless_online_decks.csv"` lesen (`index.html:1107`). Gegen die Datei-mtime von `data/limitless_online_decks.csv` halten. Erwartet: gleiches Datum, kein „…" nach 5 s. | Daten | offen |
-| F003 | Startseite | Hilfe-Knopf (`btn.helpTitle` = „Hilfe") | Knopf | `openTabHelp('current-meta')` klicken. Erwartet: Hilfe-Overlay öffnet, `Esc` schließt es, Fokus kehrt auf den Knopf zurück. | QA | offen |
-| F004 | Startseite | „Beherrschen das Meta" (`tier.sub1`) | Kachel | Tier-1-Block zählen. Jede Zeile muss `new_count ≥` der Mindestschwelle tragen (`js/app-tier-meta.js:1475`) und `adjWR ≥ T1_MIN_WR` **oder** `labsWR ≥ T1_MIN_WR` (`js/app-tier-meta.js:1493`). Erwartet: kein Deck mit weniger Listen als der Schwelle in Tier 1. | Spieler | offen |
-| F005 | Startseite | „Starke Herausforderer" (`tier.sub2`) | Kachel | Wie F004 für Tier 2. Zusätzlich: Score jeder Tier-2-Zeile muss ≤ dem kleinsten Tier-1-Score sein. | Spieler | offen |
-| F006 | Startseite | „Spielbare Optionen" (`tier.sub3`) | Kachel | Wie F004 für Tier 3. | Spieler | offen |
-| F007 | Startseite | „Aufkommende Archetypen" (`tier.subRogue`) / „Unter den Tier-Schwellen — die dünnsten Stichproben der Seite" (`tier.cmSubRogue`) | Kachel | Jede Rogue-Zeile muss < `ROGUE_MIN_LISTEN` (= `CONV_MIN_N`, Rückfall 20, `js/app-tier-meta.js:2395`) Listen haben. Zeilenzahl notieren. | Daten | offen |
-| F008 | Startseite | Win-Rate-Wert auf der Deck-Kachel | Berechnung | Tooltip lesen: „geglättet (k = 50) — roh X % aus N Listen" (`js/app-tier-meta.js:2397–2399`). Angezeigt wird `adjWR`, nicht `winRate` (`js/app-tier-meta.js:2380`). Roh und geglättet gegen `data/limitless_online_decks_comparison.csv` (`new_winrate`, `new_count`) nachrechnen: `(w + 25) / (n + 50) · 100`. | Daten | offen |
-| F009 | Startseite | Konventionszusatz an der Win Rate | Tabellenspalte | Tooltip muss zusätzlich `S / (S + N + U) · Unentschieden zählen mit` tragen (`js/app-tier-meta.js:2395–2396` → `WinRateKonvention.kurzHinweis('mitUnentschieden')`). Erwartet: sichtbar; fehlt er, ist die Zahl ohne Konvention. | Daten | offen |
-| F010 | Startseite | Share-Wert auf der Deck-Kachel | Berechnung | Wert gegen `data/limitless_online_decks_comparison.csv` `new_share` prüfen. Kursive Werte kennzeichnen Decks ohne eigene Zeile (Tooltip `tier.share`). Erwartet: Summe aller Shares ≈ 96,4 % (gemessen), nicht 100 %. | Daten | offen |
-| F011 | Startseite | „dünn" (`tier.clThinSample`) / Tooltip `tier.rogueThinTip` | Kachel | Bei jeder Zeile mit < n Listen muss das Kennzeichen stehen. Erwartet: Kennzeichen und kursive Darstellung fallen zusammen. | QA | offen |
-| F012 | Startseite | Trend-Pfeil / „Trend über die letzten 7 Tage (vorheriger Stand: {vorher})" (`tier.rogueTrendTip`) | Kachel | Tooltip muss den Vorwert nennen. Gegen `old_share` in `limitless_online_decks_comparison.csv` halten. | Daten | offen |
-| F013 | Startseite | „🔎 Archetyp suchen…" (`tier.searchPlaceholder`) | Sucheingabe | „drag" eintippen. Erwartet: nur Zeilen mit „Drag…" bleiben; Zeilenzahl vorher/nachher notieren, nachher < vorher. Feld leeren → alte Zeilenzahl exakt wieder da. | QA | offen |
-| F014 | Startseite | „Filter zurücksetzen" (`tier.clearFilter`) | Knopf | Nach F013 klicken. Erwartet: Suchfeld leer, Zeilenzahl wieder auf dem Ausgangswert. | QA | offen |
-| F015 | Startseite | „Meistgespielte Karten (Format-Staples)" (`tier.mostUsedCards`) | Kachel | Liste gegen `data/current_meta_card_data.csv` prüfen: Karte mit dem höchsten `deck_inclusion_count` über alle 62 Archetypen muss oben stehen. | Daten | offen |
-| F016 | Startseite | „Matchup-Heatmap" (`heatmap.title`) | Kachel | Heatmap muss erscheinen. Erwartet: Diagonale als „Mirror" (`heatmap.mirror`), keine Zelle ohne Tooltip. | Spieler | offen |
-| F017 | Startseite | „Y-Achse (Dein Deck)" (`heatmap.yLabel`), Platzhalter „z.B. N's Zoroark" | Sucheingabe | „Dragapult" eintippen. Erwartet: Y-Achse auf die Treffer reduziert; bei keinem Treffer erscheint `heatmap.noDecksY` („Keine Decks auf der Y-Achse gefunden für"). | QA | offen |
-| F018 | Startseite | „X-Achse (Gegner, optional)" (`heatmap.xLabel`), Platzhalter „z.B. Dragapult" | Sucheingabe | Wie F017 für die X-Achse, Leerfall `heatmap.noDecksX`. | QA | offen |
-| F019 | Startseite | „Nur Top 10 zeigen" / „Alle Decks zeigen" (`heatmap.showTop10` / `heatmap.showAll`) | Knopf | Umschalten. Erwartet: Spalten-/Zeilenzahl springt von 10 auf die volle Deckzahl (gemessen: 100 Decks in `data/limitless_online_decks_matchups.csv`) und zurück. | QA | offen |
-| F020 | Startseite | Heatmap-Zelle, Zeile „online" (`heatmap.onlineLabel`) | Berechnung | Zelle mit Tooltip öffnen. Erwartet laut `heatmap.majorTip`: „Siege ÷ entschiedene Partien" = `S/(S+N)`. Wert gegen `data/limitless_online_decks_matchups.csv` `record` nachrechnen — dort stimmt `win_rate` in **allen 1.702 Zeilen** exakt mit `S/(S+N)` überein (gemessen). | Daten | offen |
-| F021 | Startseite | Heatmap-Zelle, Zeile „Major" (`heatmap.majorLabel`) | Berechnung | Erwartet für Paarungen ohne Präsenzdaten: `heatmap.majorFehlt` („keine Major-Matches für diese Paarung"). Gemessen: nur `meta = TEF-PBL` trägt in `data/labs_tournament_matchups.csv` überhaupt eine Bilanz (`vs_wins/losses/ties`); alle zwölf anderen Metas haben dort 0 Partien. Erwartet also: außerhalb TEF-PBL steht überall der Fehlt-Hinweis. | Daten | offen |
-| F022 | Startseite | „kursiv" / „unter 10 Matches" (`heatmap.legendeKursiv`, `heatmap.legendeKursivKurz`) | Tabellenspalte | Jede Zelle mit `total_games < 10` muss kursiv sein. Gemessen: 563 von 1.702 Paarungen liegen darunter (33 %). Erwartet: ungefähr ein Drittel der belegten Zellen kursiv. | Daten | offen |
-| F023 | Startseite | Adresszeile beim Erststart | Deep-Link | Seite ohne Hash laden. Erwartet: `stempleStartansicht()` (`js/inline-init.js:686–691`) schreibt `#current-meta` per `replaceState`. Nach dem Laden muss `#current-meta` in der Adresszeile stehen. | QA | offen |
-| F024 | Startseite | Browser-Zurück nach Tabwechsel | Klickpfad | Startseite → `#cards` → Zurück. Erwartet: wieder Startseite; `popstate`-Zuhörer (`js/inline-init.js:698–701`) greift, keine leere Seite. | QA | offen |
-| F025 | Startseite | Browser-Vorwärts | Klickpfad | Nach F024 einmal vorwärts. Erwartet: `#cards` wieder aktiv. | QA | offen |
-| F026 | Startseite | Kein doppelter Verlaufseintrag | Klickpfad | Zweimal denselben Menüpunkt anklicken. Erwartet: nur ein zusätzlicher Verlaufseintrag (`schreibeHash` steigt bei gleichem Hash aus, `js/inline-init.js:660`). | QA | offen |
+**Spalten:** `Nr` (unverändert aus dem Inventar/der Datenflusskarte übernommen) ·
+`Element` · `Was geprüft wird` (ausführbare Anweisung: Handlung → erwartetes
+Ergebnis) · `Team` (QA = Technik, SPIELER = Nutzersicht anhand Mega Excadrill,
+DATEN = Scraper/Datenbasis; Mehrfachnennung erlaubt) · `Status` (überall `offen`)
+· `Nachweis` (leer).
 
 ---
 
-## 2. `#meta-analysis-hub` (Menü: „Meta & Deck-Analyse")
+## Teil A — Prüfzeilen je Oberflächenelement
 
-Gerüst `index.html:636–676`, Inhalt `js/meta-analysis-hub.js`.
+### F0 · Rahmen: Kopfzeile, Pokéball-Menü, Navigationsleiste, Tieflinks
 
-| Nr | Ansicht/Route | Element | Art | Was genau geprüft wird | Team | Status |
-|---|---|---|---|---|---|---|
-| F027 | `#meta-analysis-hub` | „Meta & Deck-Analyse" (`metaHub.title`) | Kachel | Route direkt aufrufen. Erwartet: Überschrift plus Untertitel „Japan, Global, Vergangen — je Meta und Deck. Dazu die Prognose." (`metaHub.subtitle`). | QA | offen |
-| F028 | `#meta-analysis-hub` | Kachel „City League Meta" (`metaHub.tile.cityLeague.title`) | Kachel | Klicken. Erwartet: Wechsel nach `#city-league`, Adresszeile folgt. | QA | offen |
-| F029 | `#meta-analysis-hub` | Kachel „Deck-Analyse (Japan)" (`metaHub.tile.cityLeagueAnalysis.title`) | Kachel | Klicken → `#city-league-analysis`. | QA | offen |
-| F030 | `#meta-analysis-hub` | Kachel „Aktuelles Meta (Global)" (`metaHub.tile.currentMeta.title`) | Kachel | Klicken → `#current-meta`. | QA | offen |
-| F031 | `#meta-analysis-hub` | Kachel „Deck-Analyse (Global)" (`metaHub.tile.currentMetaAnalysis.title`) | Kachel | Klicken → `#current-analysis`. | QA | offen |
-| F032 | `#meta-analysis-hub` | Kachel „Vergangenes Meta" (`metaHub.tile.pastMeta.title`) | Kachel | Klicken → `#past-meta`. | QA | offen |
-| F033 | `#meta-analysis-hub` | Kachel „Meta Call" (`metaHub.tile.metaCall.title`) | Kachel | Klicken → `#meta-call`. Erwartet: **keine** Anmeldewand (der Tab ist seit „Block 7" eigenständig, `js/inline-init.js:401–412`). | QA | offen |
-| F034 | `#meta-analysis-hub` | Block „Was gerade läuft" (`#metaHubAnswer`, `js/meta-analysis-hub.js`) | Kachel | Erwartet: Block wird gezeichnet. Er stand bis 01.09.2026 auch auf der Startseite und wurde dort entfernt (`index.html:1108–1125`) — hier muss er noch da sein. | Spieler | offen |
-| F035 | `#meta-analysis-hub` | Hilfe-Knopf | Knopf | `openTabHelp` — wie F003. | QA | offen |
-| F036 | `#meta-analysis-hub` | Deep-Links `#hub`, `#uebersicht`, `#overview` | Deep-Link | Alle drei aufrufen. Erwartet: alle landen auf `#meta-analysis-hub`; die Adresszeile wird **nicht** umgeschrieben, weil nur kanonische Kennungen zurückgeschrieben werden (`js/inline-init.js:646–650`). | QA | offen |
-| F037 | `#meta-analysis-hub` | Deep-Links `#playtester`, `#sandbox` | Deep-Link | Aufrufen. Erwartet: Landung auf `#meta-analysis-hub` **plus** Hinweis nach ~600 ms: „Der Playtester läuft jetzt extern über TCG Showdown — im Menü unter ‚Werkzeuge'." (`js/inline-init.js:513–520`). | QA | offen |
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F0.1 | Pokéball-Knopf | Auf `mainMenuTrigger` klicken → Hauptmenü öffnet sich, `aria-expanded` wechselt auf `true`. Erneut klicken → Menü schließt, `aria-expanded` zurück auf `false`. | QA | offen | |
+| F0.2 | Reiter-Abzeichen | Zwischen zwei Reitern wechseln → `current-tab-title` zeigt jeweils den Namen des neu geöffneten Reiters. Reiter `current-meta` (intern `meta-analysis-hub`? prüfen) aufrufen → Abzeichen ist ausgeblendet. | QA | offen | |
+| F0.3 | Dunkelmodus | `themeToggleBtn` klicken → Farbschema wechselt hell↔dunkel, Icon wechselt Mond/Sonne, `aria-pressed` wechselt mit. Seite neu laden → gewählter Modus bleibt erhalten. | QA | offen | |
+| F0.4 | Sprache | `langToggleBtn` klicken → Oberfläche wechselt DE⇄EN; die Beschriftung des Knopfes selbst zeigt die **Zielsprache**, nicht die aktuelle. | QA | offen | |
+| F0.5 | Battle Journal | Angemeldet mit offenen Journal-Einträgen: `battleJournalFab` klicken → Journal-Schublade öffnet sich; Plakette `battleJournalFabBadge` zeigt die korrekte Anzahl offener Einträge. Erfordert Anmeldung. | QA, SPIELER | offen | |
+| F0.6 | My Decks | `openProfileSection('decks')` auslösen (Kopfzeilen-Link) → Profil öffnet sich direkt auf Untertab „My Decks". Ohne Anmeldung → Anmeldewand statt Inhalt. | QA | offen | |
+| F0.7 | Wishlist | Analog F0.6 mit Untertab „Wishlist". | QA | offen | |
+| F0.8 | Database | Klick → wechselt zu Reiter `cards` (Kartendatenbank). | QA | offen | |
+| F0.9 | Sign In / Profil | Ohne Anmeldung: `signin-btn` klicken → Anmeldemodal öffnet sich. Mit Testkonto anmelden → Kopfzeile zeigt `user-info` statt `signin-btn` (Klasse `is-signed-out` verschwindet vom `<html>`-Element); `user-info` klicken → wechselt zu Reiter `profile` und aktualisiert das Menü. Erfordert Testkonto. | QA | offen | |
+| F0.10 | Menüpunkt „Overview / Startseite" | `menu-btn-meta-analysis-hub` klicken → prüfen, welcher Reiter tatsächlich öffnet: laut Code `current-meta`, **nicht** `meta-analysis-hub` trotz der id. Vgl. H9. | QA | offen | |
+| F0.11 | Menügruppe „Meta & Tier Lists" | Gruppenkopf `menu-group-meta` klicken → Untermenü `menu-submenu-meta` klappt zu (startet beim Öffnen des Hauptmenüs offen). Erneut klicken → klappt wieder auf. | QA | offen | |
+| F0.12 | Menüpunkt „City League Meta" | Klick → öffnet Reiter `city-league`. | QA | offen | |
+| F0.13 | Menüpunkt „Deck Analysis (Japan)" | Klick → öffnet Reiter `city-league-analysis`. | QA | offen | |
+| F0.14 | Menüpunkt „Current Meta (Global)" | Klick → öffnet Reiter `current-meta`. | QA | offen | |
+| F0.15 | Menüpunkt „Deck Analysis (Global)" | Klick → öffnet Reiter `current-analysis`. | QA | offen | |
+| F0.16 | Menüpunkt „Past Meta" | Klick → öffnet Reiter `past-meta`. | QA | offen | |
+| F0.17 | Menüpunkt „Card Database" | Klick → öffnet Reiter `cards`. | QA | offen | |
+| F0.18 | Menüpunkt „Deck Builder" | Klick → `openProfileSection('deckbuilder')` öffnet Profil direkt auf Untertab Deck Builder. | QA | offen | |
+| F0.19 | Menügruppe „Tools" | Gruppenkopf `menu-group-tools` klicken → Untermenü `menu-submenu-tools` klappt auf (startet zu, anders als F0.11). | QA | offen | |
+| F0.20 | Menüpunkt „Proxy Printer" | Klick → öffnet Reiter `proxy`. | QA | offen | |
+| F0.21 | Menüpunkt „Playtester (TCG Showdown ↗)" | Klick → `openShowdownExternal()` öffnet TCG Showdown in einem **neuen** Browser-Tab; die App selbst wechselt **nicht** den Reiter. | QA | offen | |
+| F0.22 | Menüpunkt „Probability Calculator" | Klick → öffnet Reiter `calculator`. | QA | offen | |
+| F0.23 | Menüpunkt „Meta Call" | Klick → öffnet Reiter `meta-call`. | QA | offen | |
+| F0.24 | Menüpunkt „My Profile" | Klick → öffnet Reiter `profile`. | QA | offen | |
+| F0.25 | Menüpunkt „Side Quest: Champions" | Klick → öffnet Reiter `side-quest`. | QA | offen | |
+| F0.26 | Menüpunkt „Side Quest: TCG Pocket" | Klick → öffnet Reiter `pocket`. | QA | offen | |
+| F0.27 | Menüpunkt „How to Use" | Klick → öffnet Reiter `tutorial`. | QA | offen | |
+| F0.28 | Menüpunkt „Sources & Method" | Klick → öffnet Reiter `quellen`. Zusätzlich prüfen: `meta-analysis-hub` und `admin` sind **nirgends** im Menü verlinkt (nur per Tieflink erreichbar) — Menü einmal komplett durchklicken und bestätigen, dass beide fehlen. | QA | offen | |
+| F0.29 | Untere Nav-Leiste: Gruppe „Meta" | Auf Mobilbreite: Reiter `current-meta`, `city-league`, `past-meta` und `meta-analysis-hub` einzeln aufrufen → Nav-Gruppe „Meta" leuchtet jeweils; Gruppe antippen → wechselt zu `current-meta`. | QA | offen | |
+| F0.30 | Untere Nav-Leiste: Gruppe „Decks" | Reiter `current-analysis` und `city-league-analysis` aufrufen → Gruppe „Decks" leuchtet; antippen → wechselt zu `current-analysis`. | QA | offen | |
+| F0.31 | Untere Nav-Leiste: Gruppe „Turnier" | Reiter `meta-call` aufrufen → Gruppe „Turnier" leuchtet; antippen → wechselt zu `meta-call`. | QA | offen | |
+| F0.32 | Untere Nav-Leiste: Gruppe „Karten" | Reiter `cards`, `proxy`, `calculator` aufrufen → Gruppe „Karten" leuchtet in allen drei Fällen; antippen → wechselt zu `cards`. | QA | offen | |
+| F0.33 | Untere Nav-Leiste: Gruppe „Champions" | Reiter `side-quest` aufrufen → Gruppe „Champions" leuchtet; antippen → wechselt zu `side-quest`. Zusätzlich: Reiter `tutorial`, `quellen`, `profile`, `pocket`, `admin` einzeln aufrufen → **keine** der fünf Gruppen leuchtet (bewusst so vorgesehen). | QA | offen | |
+| F0.34 | Datenraum-Filterzeile | In `city-league`: Datenraum-Knopf zwischen 🇯🇵 Japan und 🌐 Global umschalten → Reiter wechselt entsprechend. Bei Japan die Zeitraum-Spalte ändern → spiegelt sich in `cityLeagueFormatSelect`/`pastMetaFormatFilter`. Bei Global: Format-Spalte zeigt festes Schild ohne Auswahlmöglichkeit (`.ds-filter-fixed`). Eine gesperrte Option anklicken → bleibt `disabled`, `title` zeigt den Sperrgrund. Bei mehr als 4 Optionen prüfen, dass aus der Knopfleiste ein `<select>` wird. | QA | offen | |
+| F0.35 | Tieflinks (Hash-Aliase) | Stichprobe direkt in der Adressleiste aufrufen: `#tutorial`, `#quellen`, `#city-league`, `#calculator`, `#wishlist`, `#meta-analysis-hub`, `#admin`, `#playtester` → jeweils der passende Reiter/Untertab öffnet; `#playtester`/`#sandbox` → öffnet `meta-analysis-hub`, nach 600 ms erscheint der Hinweis „Playtester läuft jetzt extern …". Parameter testen: `#current-analysis?deck=Mega Excadrill` → Deck ist vorausgewählt; `#past-meta?format=<Key>` setzt den Formatfilter; `?focusCard=<SET>|<Nr>` in Wishlist/Tradelist → scrollt zur Karte und lässt sie 3 s amber blinken. Einen erfundenen Hash auf eine nicht existierende Reiter-id aufrufen → Hash wird ignoriert, Konsole zeigt `[deep-link] no tab element for …`. Nach Navigation prüfen, ob die Adressleiste auf den kanonischen Hash-Schlüssel zurückgeschrieben wird. | QA | offen | |
+
+### F1 · `meta-analysis-hub` — Meta & Deck Analysis (Kachelseite)
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F1.1 | Überschrift + Untertitel | Reiter über `#hub` aufrufen → Überschrift „Meta & Deck Analysis" und Untertitel sind sichtbar. | QA | offen | |
+| F1.2 | Hilfeknopf | Klick auf den Hilfeknopf → `#helpModal` öffnet sich mit zum Reiter passendem Inhalt. | QA | offen | |
+| F1.3 | Antwortblock „Was gerade läuft" | Bei geladenen Daten: `#metaHubAnswer` zeigt einen Fließtext mit Deckname und Zahlen. Netzwerk der CSV `online_tournament_top8_decks.csv` blockieren → Block bleibt vollständig leer, **keine** Platzhalter-Meldung erscheint. | QA, DATEN | offen | |
+| F1.4 | Kachelgitter | `#metaHubTileGrid` zeigt genau 6 Kacheln, unabhängig davon, ob Daten geladen sind. | QA | offen | |
+| F1.5 | Kachel „City League Meta" | Klick → öffnet Reiter `city-league`. | QA | offen | |
+| F1.6 | Kachel „Deck Analysis (Japan)" | Klick → öffnet Reiter `city-league-analysis`. | QA | offen | |
+| F1.7 | Kachel „Current Meta (Global)" | Klick → öffnet Reiter `current-meta`. | QA | offen | |
+| F1.8 | Kachel „Deck Analysis (Global)" | Klick → öffnet Reiter `current-analysis`. | QA | offen | |
+| F1.9 | Kachel „Past Meta" | Klick → öffnet Reiter `past-meta`. | QA | offen | |
+| F1.10 | Kachel „Meta Call" | Klick → öffnet Reiter `meta-call` (oberster Reiter der Gruppe). | QA | offen | |
+| F1.11 | Rolle „Erfolgreichstes Deck" / „Meistgespielt · Rang n" | Prüfen, welcher Text erscheint und ob der genannte Rang mit der tatsächlichen Position des Decks in der anteilssortierten Liste übereinstimmt (Deck Mega Excadrill als Stichprobe: eigenen Rang in der Rangliste nachzählen). | SPIELER | offen | |
+| F1.12 | Große Zahl = Feldanteil | Angezeigten Prozentwert mit der Kontextzeile „Meta-Anteil"/„des Metas" gegen die Tabelle in `current-meta` nachrechnen — müssen übereinstimmen. | SPIELER, DATEN | offen | |
+| F1.13 | „aus N Antritten" | Zahl `N` gegen den gerundeten, mit `toLocaleString` formatierten Wert aus `computeConversionPerformance` nachrechnen (Rohwert aus `online_tournament_top8_decks.csv`). | DATEN | offen | |
+| F1.14 | „Top-8-Quote X %" | Zahl mit `top8/brought` aus derselben Berechnung nachrechnen. | DATEN | offen | |
+| F1.15 | „N,N-mal so oft wie der Schnitt" | Nachrechnen: `d.convPct / (model.conv.expected*100)` — Formel ist laut Kommentar **roh**, nicht geglättet; prüfen, dass hier tatsächlich der ungeglättete Wert steht und nicht versehentlich der geglättete. | DATEN | offen | |
+| F1.16 | Nenner-Satz + Verweis „Wie das gerechnet ist →" | Satz „Aus N gewichteten Antritten · Deck: X von Y in die Top 8." auf Plausibilität prüfen; Klick auf den Verweis → springt zu `#quellen` mit der passenden Definition. | SPIELER | offen | |
+| F1.17 | Datenstand-Chip | Chip mit `data-quelle="online_tournament_top8_decks.csv"` zeigt ein aktuelles Datum/Zeit passend zum letzten Scraper-Lauf. | DATEN | offen | |
+
+### F2 · `city-league` — City League Meta (Japan)
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F2.1 | Hilfeknopf | Klick → `#helpModal` öffnet sich mit Inhalt zu `city-league`. | QA | offen | |
+| F2.2 | Datenstand-Chip | Chip mit `data-quelle="city_league_archetypes.csv"` zeigt Datum; da diese Datei laut Datenflusskarte **0 Datenzeilen** hat (§10.1 in `datenfluss.md`), prüfen, welches Datum/welcher Zustand angezeigt wird. | DATEN | offen | |
+| F2.3 | Format-Auswahl | `cityLeagueFormatSelect` auf „Past Meta" umstellen → Inhalt wechselt auf den Vorzeitraum-Datensatz; zurück auf „Current Meta" → wechselt zurück. | QA | offen | |
+| F2.4 | Datenraum-Filterzeile | Siehe F0.34 — hier im Kontext von `city-league` ausführen. | QA | offen | |
+| F2.5 | Suchfeld Vergleichstabelle | In `cityLeagueSearchFilter` einen bekannten Archetyp-Namen eingeben → `#cityLeagueFullTable` filtert auf Treffer, `#cityLeagueSearchResults` zeigt die Trefferanzahl korrekt. | QA | offen | |
+| F2.6 | Tier-Held-Kacheln | Kacheln sind nach Anzahl absteigend sortiert; Rangplakette, Name, „n Varianten", Deckzahl-Plakette und „Ø-Rang"-Plakette sind für jede Kachel vorhanden und plausibel. | SPIELER | offen | |
+| F2.7 | Tier-Abschnitte 1/2/3/Trending | Prüfen: Tier 1 enthält Plätze 1–3, Tier 2 Plätze 4–10, Tier 3 Plätze 11–20, Rogue/Trending den Rest; der Rogue-Block ist als `<details>` einklapp-/aufklappbar. | SPIELER | offen | |
+| F2.8 | Karte „Archetype Overview" | Gesamtzahl, Top-3 nach Anzahl und Top-3 nach Ø-Platzierung gegen die Vergleichstabelle F2.14 nachrechnen. | DATEN | offen | |
+| F2.9 | Karte „Top-10 Changes" | Ein-/Aussteiger der Top 10 prüfen; ohne Vorzeitraum bzw. ohne Top-10-Änderungen erscheinen die Leerfall-Texte `cl.noBaseline`/`cl.noTop10Changes`. | SPIELER, DATEN | offen | |
+| F2.10 | Karte „Data Source" | Zeitraum und Anzahl Turniere gegen die Fußzeile F2.16 nachrechnen. | DATEN | offen | |
+| F2.11 | Tabelle „Popularity Decreases / Seltener gespielt" | Zeigt genau die Top 10 der Rückgänge, Spalten Archetype/Old Count/New Count/Change/Ø-Platzierung sind korrekt befüllt. | DATEN | offen | |
+| F2.12 | Tabelle „Performance Improvers" | Spalten Archetype/Count/Ø-Platzierung korrekt befüllt. | DATEN | offen | |
+| F2.13 | Tabelle „Performance Decliners" | Analog F2.12. | DATEN | offen | |
+| F2.14 | Tabelle „Full Comparison Table (Top 30)" | Zeigt genau die Top 30 nach Deck/Count/Ø-Platzierung. | DATEN | offen | |
+| F2.15 | Tabelle „Archetype Combined" | Spalten Main Pokémon/Varianten/Count/Ø-Platzierung korrekt befüllt. | DATEN | offen | |
+| F2.16 | Fußzeile | „Generated <Datum>" und „Total tracked <n>" stimmen mit dem tatsächlichen Datenstand überein. | DATEN | offen | |
+| F2.17 | Klickpfad Tier-Held-Kachel → Deck Analysis | Auf eine Held-Kachel klicken → wechselt zu `city-league-analysis`, Deck-Dropdown zeigt `GROUP:<v1>|<v2>…` vorbelegt mit den Varianten. Zurück über Pokéball, Nav-Leiste und Browser-Zurück je einzeln prüfen. | QA | offen | |
+| F2.18 | Klickpfad Archetyp-Zelle → Deck Analysis | In einer der Tabellen F2.11–F2.15 auf eine Archetyp-Zelle klicken → wechselt zu `city-league-analysis`, Dropdown vorbelegt, Seite scrollt nach oben; es gibt **keine** eigene Zurück-Taste — mit Browser-Zurück testen. | QA | offen | |
+| F2.19 | Kennzahl Count / New Count / Old Count | Werte gegen `city_league_archetypes.csv` nachrechnen (Datei hat laut Datenflusskarte 0 Zeilen — prüfen, was dann angezeigt wird). | DATEN | offen | |
+| F2.20 | Kennzahl Change (`count_change`) | Wert = New Count − Old Count nachrechnen. | DATEN | offen | |
+| F2.21 | Kennzahl Ø-Platzierung | Angezeigter Wert entspricht `new_avg_placement` aus der CSV, formatiert über `_rang()`. | DATEN | offen | |
+| F2.22 | Kennzahl Varianten-Anzahl je Held | Anzahl der auf einer Held-Kachel zusammengefassten Varianten stimmt mit der Anzahl der Deck-Dropdown-Einträge nach Klick auf F2.17 überein. | DATEN | offen | |
+
+### F3 · `city-league-analysis` — Deck Analysis (Japan)
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F3.1 | Hilfeknopf | Klick → `#helpModal` mit Inhalt zu `city-league-analysis`. | QA | offen | |
+| F3.2 | Datenstand-Chip | Chip `data-quelle="city_league_analysis.csv"` — Datei hat laut Datenflusskarte 0 Zeilen; prüfen, welcher Zustand angezeigt wird. | DATEN | offen | |
+| F3.3 | Format-Auswahl (spiegelt F2.3) | `cityLeagueFormatSelectAnalysis` auf „Past" stellen, dann in `city-league` (F2.3) prüfen, ob die dortige Auswahl mitgezogen ist, und umgekehrt. | QA | offen | |
+| F3.4 | Datum von | `cityLeagueDateFrom` setzen → Deck-Statistik und Kartenübersicht filtern auf Listen ab diesem Datum. | QA | offen | |
+| F3.5 | Datum bis | `cityLeagueDateTo` setzen → filtert auf Listen bis zu diesem Datum. | QA | offen | |
+| F3.6 | Deck-Archetyp-Auswahl | Ohne Auswahl zeigt das Feld „-- Please Select Deck --"; Mega Excadrill auswählen → Statistik/Karten/Builder erscheinen. | SPIELER | offen | |
+| F3.7 | Card Share Filter | Nacheinander `all`/`90`/`70`/`50` wählen → Kartenliste filtert entsprechend auf Inklusionsrate. | SPIELER | offen | |
+| F3.8 | „Cards in deck (unique / avg. list)" | Wert für Mega Excadrill von Hand aus den Kartenzeilen nachzählen. | SPIELER, DATEN | offen | |
+| F3.9 | „Decks Used" + Fußnote | Wert prüfen; Fußnote `cityLeagueStatDecksNote` beobachten — steht als `hidden` im Markup, prüfen unter welcher Bedingung sie sichtbar wird. | SPIELER | offen | |
+| F3.10 | „Avg Placement" | Wert von Hand aus den Platzierungen der geladenen Listen nachrechnen. | SPIELER, DATEN | offen | |
+| F3.11 | Zähler „n Karten / n Gesamt" | Zahl stimmt mit der tatsächlich angezeigten Kartenanzahl im Grid überein. | QA | offen | |
+| F3.12 | Kartensuche | In `cityLeagueOverviewSearch` einen Kartennamen eingeben → `filterOverviewCards()` reduziert das Grid auf Treffer. | QA | offen | |
+| F3.13–F3.21 | 9 Typfilter (All/Pokemon/Supporter/Item/Tool/Stadium/Energy/SpecialEnergy/AceSpec) | Jeden Typfilter einzeln anklicken → Kartengrid zeigt nur Karten dieses Typs; „All" ist voreingestellt und zeigt wieder alle. | SPIELER | offen | |
+| F3.22–F3.24 | Seltenheit min/max/all | `overviewRarityMin` ist voreingestellt (aktiver Zustand `btn-success`); auf `overviewRarityMax` bzw. `overviewRarityAll` umschalten → Filterlogik ändert sich sichtbar im Grid. | SPIELER | offen | |
+| F3.25 | Copy Decklist | Klick auf „Copy Decklist" → Zwischenablage enthält die Liste im PTCGL/Limitless-Format; Format nachprüfen. | QA | offen | |
+| F3.26 | Grid/Table-Umschalter | `toggleDeckGridView()` klicken → schaltet zwischen `#cityLeagueDeckTableView` und `#cityLeagueDeckVisual` um. | QA | offen | |
+| F3.27 | Karten-Legende fehlt | Bestätigen, dass in dieser Ansicht **keine** Legende „Was bedeuten die Symbole auf den Karten?" existiert (anders als in F4.50) — prüfen, ob das so gewollt ist. | QA | offen | |
+| F3.28 | Consistency Generate | Klick → `autoCompleteConsistency('cityLeague','min')` befüllt „Your Deck" automatisch für Mega Excadrill; Deckinhalt gegen die Kartenübersicht plausibilisieren. | SPIELER | offen | |
+| F3.29 | ↑ Max Rarity | Klick → `toggleDeckRarity('cityLeague', …)` wechselt die im generierten Deck verwendeten Prints auf die seltenste verfügbare Variante. | QA | offen | |
+| F3.30 | Kennzahl „# n /60" | Deck manuell verändern (Karte hinzufügen/entfernen) → Zähler `cityLeagueDeckCount` aktualisiert sich sofort korrekt. | QA | offen | |
+| F3.31 | Kennzahl „♦ (n Unique)" | Analog F3.30 für `cityLeagueDeckCountUnique`. | QA | offen | |
+| F3.32 | Kennzahl „€ Preis" | `cityLeagueDeckPrice` gegen die Summe der Einzelpreise aller Karten im Deck nachrechnen (`js/app-price.js`). | DATEN | offen | |
+| F3.33 | Test Draw | Klick → `#drawSimulatorModal` öffnet sich mit einer gezogenen Starthand aus dem aktuellen Deck. | QA | offen | |
+| F3.34 | TCG Showdown ↗ | Klick → `openInShowdownFromBuilder('cityLeague')` öffnet TCG Showdown mit dem aktuellen Deck in neuem Tab. | QA | offen | |
+| F3.35 | Clear | Klick → `clearDeck('cityLeague')` leert das Deck vollständig, Leerzustand „Your deck is empty" erscheint. | QA | offen | |
+| F3.36 | „How the consistency builder works" | `<details>` aufklappen → Gewichtungsregeln (Top-4 voll, Day-2 ≈30 %, Day-1 ≈10 %) sind lesbar und decken sich mit dem tatsächlichen Ergebnis von F3.28. | SPIELER | offen | |
+| F3.37 | Handstatistik | `#cityLeagueHandStats` zeigt eine plausible Verteilung nach dem Generieren eines Decks. | SPIELER | offen | |
+| F3.38 | Save | Klick → `saveCurrentDeckToProfile('cityLeague')` speichert das Deck im Profil unter „My Decks" (Anmeldung nötig). | QA | offen | |
+| F3.39 | Why? (Build Info) | Klick → `showConsistencyBuildInfo('cityLeague')` öffnet eine Erklärung, die zur tatsächlichen Kartenauswahl passt. | SPIELER | offen | |
+| F3.40 | Compare | Klick → `#deckCompareModal` öffnet sich; beide Optionen (manuelle Liste, eigenes gespeichertes Deck) einzeln durchspielen. | QA | offen | |
+| F3.41 | Copy | Klick → `copyDeck('cityLeague')` kopiert die aktuelle Liste in die Zwischenablage. | QA | offen | |
+| F3.42 | Deck → Proxy | Klick → `sendCurrentDeckToProxyPrinter('cityLeague')` überträgt das Deck in die Proxy-Warteschlange; zusätzlich prüfen, ob die Beschriftung tatsächlich „Deck ? Proxy" statt „Deck → Proxy" zeigt (vgl. H14). | QA | offen | |
+| F3.43 | Share | Klick → `shareDeck('cityLeague')` öffnet `#shareImageModal` mit einem Bild des Decks. | QA | offen | |
+| F3.44 | PTCGL Import | Eine PTCGL-formatierte Liste einfügen → `importFromPTCGL('cityLeague')` übernimmt sie korrekt ins Deck. | QA | offen | |
+| F3.45 | PTCGL Export | Klick → `exportToPTCGL('cityLeague')` liefert eine korrekt formatierte PTCGL-Liste des aktuellen Decks. | QA | offen | |
+| F3.46 | Grid | Klick → `generateDeckGrid('cityLeague')` öffnet `#deckGridPreviewModal` mit einer Bildvorschau des Decks. | QA | offen | |
+| F3.47 | Deck-Suche mit Autovervollständigung | In `cityLeagueDeckGridSearch` tippen → `#cityLeagueDeckAutocomplete` schlägt passende Karten vor; Auswahl fügt die Karte dem Deck hinzu. | QA | offen | |
+| F3.48 | Bank | `#cityLeagueBenchSection` zeigt die nicht im Deck verwendeten, aber im Set relevanten Karten korrekt an. | SPIELER | offen | |
+| F3.49 | Zähler (Meta Card Analysis) | `cityLeagueMetaCardCount` stimmt mit der Anzahl im Meta-Card-Gitter überein. | DATEN | offen | |
+| F3.50–F3.53 | Anteilsfilter All/>90 %/>70 %/>50 % | Jeden Filter einzeln anklicken → Meta-Card-Gitter zeigt nur Karten mit passender Inklusionsrate; „All" ist voreingestellt. | SPIELER | offen | |
+| F3.54–F3.57 | Typfilter All/Trainer/Pokémon/Energy | Jeden Filter einzeln anklicken → Gitter filtert entsprechend; „All" ist voreingestellt. | SPIELER | offen | |
+| F3.58–F3.60 | Sortierung by Type/by Share %/by Avg Count | Jede Sortierung anklicken → Reihenfolge der Karten ändert sich entsprechend; „by Type" ist aktiv voreingestellt. | QA | offen | |
+| F3.61 | Suche (Meta Card Analysis) | In `cityLeagueMetaSearch` tippen → `filterMetaCards('cityLeague')` reduziert das Gitter auf Treffer. | QA | offen | |
+| F3.62 | Load Meta Analysis | Klick auf `cityLeagueMetaReloadBtn` → lädt die Analyse; Beschriftung wechselt danach tatsächlich auf „Reload". | QA | offen | |
+| F3.63 | Leerzustand-Knopf | Im ungeladenen Zustand den zweiten „Load Meta Analysis"-Knopf im Gitter-Leerzustand klicken → löst dieselbe Ladefunktion aus wie F3.62. | QA | offen | |
+| F3.64 | Abschnitt „Tech vs Normal" | Mit generiertem Deck: Added/Cut/Count changes/Total consistency score/Δ vs Normal sind befüllt und rechnerisch nachvollziehbar. | SPIELER, DATEN | offen | |
+| F3.65 | Rote Plakette | Zeigt korrekt die Max-Anzahl der Karte in einer einzelnen (Top-)Liste. | SPIELER | offen | |
+| F3.66 | Grüne Plakette | Zeigt korrekt die Anzahl Kopien der Karte im eigenen Deck; ändert sich sofort beim Hinzufügen/Entfernen. | QA | offen | |
+| F3.67 | Wunschzettel-Herz | Klick → Karte wird der Wunschliste hinzugefügt/entfernt; in `profile → wishlist` nachprüfen. Erfordert Anmeldung. | QA | offen | |
+| F3.68 | Bernstein-Plakette | Zeigt korrekt an, wenn andere Prints derselben Karte in der eigenen Sammlung vorhanden sind. Erfordert Anmeldung mit Sammlung. | QA | offen | |
+| F3.69 | Set + Inklusionsrate | „SET 123 · 100 %" — Set/Nummer und Prozentsatz gegen die Kartenübersicht nachrechnen. | DATEN | offen | |
+| F3.70 | Ø-Anzahl | „Ø 3,2x (2,8x)" — beide Werte (nur spielende Decks / alle Decks) einzeln nachrechnen. | DATEN | offen | |
+| F3.71 | Deck-Verbreitung | „87/100 (87 %)" — Zähler, Nenner und Prozentsatz gegeneinander nachrechnen. | DATEN | offen | |
+| F3.72 | − / + / ★ | Minus/Plus ändern die Kopienanzahl im Deck sofort; ★ öffnet `#raritySwitcherModal` zum Wechsel von Print & Seltenheit. | QA | offen | |
+| F3.73 | L / P / Preis | „L" öffnet Limitless-Kartenseite, „P" fügt die Karte dem Proxy-Drucker hinzu, Preis-Link öffnet Cardmarket — alle drei einzeln anklicken. | QA | offen | |
+| F3.74 | 📌 / 🚫 | Nur im Cooking Mode sichtbar: 📌 pinnt eine Karte, 🚫 schließt sie aus; Wirkung auf die Kartenauswahl von F3.28 prüfen. | SPIELER | offen | |
+
+### F4 · `current-analysis` — Deck Analysis (Global)
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F4.1 | „Quick overview" | Ist beim Öffnen des Reiters voreingestellt (Session-flüchtig — nach Neuladen der Seite erneut prüfen). | QA | offen | |
+| F4.2 | „Deep Dive" | Klick → `data-cm-view` am Reiter wechselt, alle `.cm-deep-dive-only`-Elemente werden sichtbar; Seite neu laden → springt zurück auf „vanilla". | QA | offen | |
+| F4.3–F4.5 | Turnierformat All/Limitless Decks/Major Tournament Decks | Jeden einzeln anklicken → Statusanzeige F4.6 und die Kacheln F4.15–18 aktualisieren sich passend zum gewählten Format; „All" ist voreingestellt. | SPIELER | offen | |
+| F4.6 | Statusanzeige zum Filter | Zeigt einen Text, der zur aktuellen Filterauswahl passt. | QA | offen | |
+| F4.7 | Datenfenster ab | `currentMetaDateFrom` setzen → Statistik filtert entsprechend; danach in `meta-call` (F5.7) prüfen, dass **derselbe** Wert dort erscheint (gemeinsamer Zustand, vgl. H7). | QA | offen | |
+| F4.8 | Clear (Datum) | Klick → `clearCurrentMetaDateFrom()` setzt das Datumsfeld zurück und hebt den Filter auf. | QA | offen | |
+| F4.9 | Statusanzeige zum Datum | Zeigt einen zum gesetzten/gelöschten Datum passenden Text. | QA | offen | |
+| F4.10 | Deck-Archetyp-Auswahl | Mega Excadrill auswählen → Statistik/Karten/Builder erscheinen mit passenden Daten. | SPIELER | offen | |
+| F4.11 | „+ Fuse with archetype (Cooking)" | Nur im Deep Dive sichtbar; ein zweites Deck wählen → Cooking-Modus kombiniert beide Archetypen sichtbar (z. B. in F3.74-analogen Pin/Exclude-Symbolen). | SPIELER | offen | |
+| F4.12 | Card Share Filter | all/90/70/50 einzeln anklicken → Kartenliste filtert entsprechend. | SPIELER | offen | |
+| F4.13 | Leerzustand „Wähle ein Deck-Archetype…" | Ohne Deckauswahl sichtbar, `currentAnalysisEmptyState`; nach Auswahl verschwindet er. | QA | offen | |
+| F4.14 | Archetyp-Karte | Nach Auswahl von Mega Excadrill: `currentMetaArchetypeCard` zeigt eine vollständige Karte mit allen vier Kacheln F4.15–18. | SPIELER | offen | |
+| F4.15 | Kachel „Anteil" | Prozentwert (`d.share`) und Zahl (`d.count`/Major-Antritte) für Mega Excadrill von Hand nachrechnen; Nenner steht nur im `title`-Hinweis — daraufhin prüfen. | SPIELER, DATEN | offen | |
+| F4.16 | Kachel „Win Rate" | Wert für beide Seiten (online/Major) nachrechnen; `title` erklärt den Remisquote-Unterschied — Text mit den tatsächlichen Unentschieden-Zahlen abgleichen. | SPIELER, DATEN | offen | |
+| F4.17 | Kachel „Top-8-Quote (online)" | `top8/brought` roh nachrechnen; Feldschnitt „Schnitt aller Decks X %" daneben plausibilisieren. | DATEN | offen | |
+| F4.18 | Kachel „Day-2-Quote (Major)" | `m.day2Quote` und Feldschnitt nachrechnen; bei zu wenig Daten erscheint „–"/„kein Major"/„zu wenig Daten" statt einer Zahl. | DATEN | offen | |
+| F4.19 | „Cards in deck (unique / avg. list)" | Wert für Mega Excadrill von Hand aus den Kartenzeilen nachzählen. | SPIELER, DATEN | offen | |
+| F4.20 | „Total Win Rate Limitless Online Tournaments" | Wert gegen `win_rate_numeric` aus `limitless_online_decks.csv` für Mega Excadrill nachrechnen. | DATEN | offen | |
+| F4.21 | „Matchup vs Top 20" | Format „54,12 % (17 MU)" nachrechnen: gewichtetes Mittel nur über Gegner mit `rank ≤ 20`; prüfen, dass weder „(17 MU)" noch Nenner noch Rang-Schwelle irgendwo erklärt sind (vgl. H6). | DATEN | offen | |
+| F4.22 | „Used in Top 256" | Liste/Anzahl gegen die tatsächlichen Top-256-Platzierungen von Mega Excadrill nachrechnen. | DATEN | offen | |
+| F4.23 | Tabelle „Best Matchups" (nur Deep Dive) | Spalten Opponent/Win Rate/Record korrekt befüllt und nach Win Rate absteigend geordnet; Tabelle selbst ist **nicht** klickbar sortierbar. | SPIELER, DATEN | offen | |
+| F4.24 | Tabelle „Worst Matchups" | Analog F4.23, aufsteigend/schlechteste zuerst; bei fehlenden Daten „No data available" über `colspan=3`. | SPIELER, DATEN | offen | |
+| F4.25 | Gegnersuche | In `currentMetaOpponentSearch` tippen → Dropdown zeigt passende Gegner; Auswahl erscheint in `#currentMetaOpponentSelected`. | QA | offen | |
+| F4.26 | Matchup-Detail | Nach Auswahl eines Gegners in F4.25: `#currentMetaMatchupDetails` zeigt Detailwerte, die zur Tabelle passen. | SPIELER, DATEN | offen | |
+| F4.27 | Tabelle vs Meta Call | Spalten Opponent/Field %/Win Rate korrekt befüllt, nicht sortierbar (anklicken testen). | DATEN | offen | |
+| F4.28 | Zusammenfassung (vs Meta Call) | Text fasst die Tabelle F4.27 korrekt zusammen. | SPIELER | offen | |
+| F4.29 | Legende der Farbstufen | Farben der Zellen in F4.27 mit den Schwellen ≥60/53–60/47–53/40–47/<40 abgleichen. | QA | offen | |
+| F4.30 | Tabelle „Your Build vs Vanilla" | Spalten Opponent/Field %/Vanilla/Your Build/Delta korrekt, Delta = Your Build − Vanilla, nicht sortierbar. | SPIELER, DATEN | offen | |
+| F4.31 | Zusammenfassung/Detail | Text fasst F4.30 korrekt zusammen und öffnet Details bei Klick. | SPIELER | offen | |
+| F4.32 | Erkannte Techs | Liste zeigt tatsächlich vom eigenen Build abweichende Karten gegenüber der Vanilla-Liste. | SPIELER | offen | |
+| F4.33 | Kartendiff | Diff-Ansicht zeigt korrekt hinzugefügte/entfernte Karten gegenüber Vanilla. | SPIELER | offen | |
+| F4.34 | Zähler (Card Overview) | `currentMetaCardCount`/`currentMetaCardCountSummary` stimmen mit dem sichtbaren Grid überein. | QA | offen | |
+| F4.35 | Suche (Card Overview) | In `currentMetaOverviewSearch` tippen → filtert das Grid korrekt. | QA | offen | |
+| F4.36–F4.44 | 9 Typfilter | Jeden Typfilter einzeln anklicken → Grid filtert korrekt; „All" voreingestellt. | SPIELER | offen | |
+| F4.45–F4.47 | Seltenheit min/max/all | Analog F3.22–24. | SPIELER | offen | |
+| F4.48 | Copy | Klick → `copyCurrentMetaDeckOverview()` kopiert die Liste. | QA | offen | |
+| F4.49 | Grid | Klick → `toggleCurrentMetaDeckGridView()` schaltet die Ansicht um. | QA | offen | |
+| F4.50 | Karten-Legende `<details>` | Aufklappen → Erklärung A–K deckt sich mit den tatsächlich in F4-Kartenkacheln verwendeten Symbolen (identisch zu F3.65–74); prüfen, dass diese Legende **nur hier** existiert (vgl. H11). | QA | offen | |
+| F4.51 | Consistency Generate | Analog F3.28 für `currentMeta`/Mega Excadrill. | SPIELER | offen | |
+| F4.52 | „Build vs …" (Deep Dive) | Klick → `#antiTechModal` öffnet sich, Zieldeck wählen → Konter werden in Tech-Slots übernommen. | SPIELER | offen | |
+| F4.53 | ↑ Max Rarity | Analog F3.29. | QA | offen | |
+| F4.54–F4.56 | Kennzahlen #/60, ♦ Unique, € Preis | Analog F3.30–32 für `currentMeta`. | QA, DATEN | offen | |
+| F4.57 | Test Draw | Analog F3.33. | QA | offen | |
+| F4.58 | TCG Showdown ↗ | Analog F3.34. | QA | offen | |
+| F4.59 | Clear | Analog F3.35 (`currentMetaClearDeckBtn`). | QA | offen | |
+| F4.60 | Algorithmus-Hinweis `<details>` | Aufklappen → Inhalt lesbar und passend zum tatsächlichen Bauverhalten. | SPIELER | offen | |
+| F4.61 | Tech-Slots-Zeile (Deep Dive) | Zähler `currentMetaTechSlotsCount` zeigt „0/10" initial; nach Hinzufügen eines Techs über den Picker zählt er hoch. | QA | offen | |
+| F4.62 | Tech-Slots leeren | Klick → `clearTechSlots('currentMeta')` leert alle Tech-Slots, Zähler zurück auf „0/10". | QA | offen | |
+| F4.63 | Handstatistik | `#currentMetaHandStats` zeigt plausible Verteilung nach Deckgenerierung. | SPIELER | offen | |
+| F4.64–F4.73 | Your Deck: Save/Why/Compare/Copy/Deck→Proxy/Share/PTCGL Import/PTCGL Export/Grid/Suche+Autocomplete | Alle zehn Funktionen einzeln durchspielen wie F3.38–47, Quelle `currentMeta`. | QA | offen | |
+| F4.74 | Bank | `#currentMetaBenchSection` analog F3.48. | SPIELER | offen | |
+| F4.75–F4.78 | Anteilsfilter All/>90/>70/>50 | Analog F3.50–53. | SPIELER | offen | |
+| F4.79–F4.82 | Typfilter All/Trainer/Pokémon/Energy | Analog F3.54–57. | SPIELER | offen | |
+| F4.83–F4.85 | Sortierung by Type/by Share%/by Avg Count | Analog F3.58–60. | QA | offen | |
+| F4.86 | Suche (Meta Card Analysis) | `currentMetaMetaSearch` analog F3.61. | QA | offen | |
+| F4.87 | Knopf „Load Meta Analysis" (ohne id) | Klick lädt die Analyse; danach prüfen, ob sich die Beschriftung umbenennt (vgl. H2 — die id `currentMetaMetaReloadBtn`, die dafür gesucht wird, existiert laut Code nicht). | QA | offen | |
+| F4.88 | Leerzustand „Meta analysis loading" | Vor dem Laden sichtbar mit Knopf; Knopf löst F4.87 aus. | QA | offen | |
+| F4.89 | Tech vs Normal | Analog F3.64 für `currentMeta`. | SPIELER, DATEN | offen | |
+| F4.90 | Quick Reference Lists | Zwei Spalten „Latest Major · Best Placement" und „Latest Online · Typical Build" — Inhalte gegen die tatsächlich jüngsten Turniere/Listen von Mega Excadrill nachrechnen. | SPIELER, DATEN | offen | |
+| F4.91 | 3-way Compare | Klick → `#threeWayCompareModal` öffnet sich mit drei Spalten (Builder/Major/Online); Schließen über Knopf **und** Klick auf Hintergrund je einzeln testen. | QA | offen | |
+| F4.92 | Hilfeknopf (Tech Lab) | Klick → `#helpModal` mit Inhalt zu `tech-lab`. | QA | offen | |
+| F4.93 | Zielkarten-Suche | In `techLabTargetSearch` tippen → Dropdown zeigt passende Karten. | QA | offen | |
+| F4.94 | Vorschau + Name | Nach Auswahl einer Zielkarte: Thumbnail und Name werden korrekt angezeigt. | QA | offen | |
+| F4.95 | Reset overrides | Startet `disabled`; nach einer Änderung aktiv → Klick setzt Overrides zurück. | QA | offen | |
+| F4.96 | Starthinweis | Vor jeder Interaktion sichtbar, danach ausgeblendet/ersetzt. | QA | offen | |
+| F4.97 | Abschnitt „Beaten by" | Liste zeigt tatsächlich Decks, gegen die die Zielkarte laut Matchup-Daten schlecht steht; Zusammenfassung und Non-Ex-Teilliste stimmen damit überein. | SPIELER, DATEN | offen | |
+| F4.98 | „+ Add missing" (Beaten by) | Startet `disabled`; nach Erkennung fehlender Einträge aktiv → Klick öffnet F4.101. | QA | offen | |
+| F4.99 | Abschnitt „Good against" | Analog F4.97, umgekehrte Richtung. | SPIELER, DATEN | offen | |
+| F4.100 | „+ Add missing" (Beats) | Analog F4.98. | QA | offen | |
+| F4.101 | Modal „Add a tech the engine missed" | Klick auf F4.98/F4.100 → Modal öffnet sich mit Suchfeld `techLabAddSearch`; hinzugefügter Eintrag erscheint danach in der jeweiligen Liste. | QA | offen | |
+
+### F5 · `meta-call` — Meta Call
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F5.1 | Zurück-Knopf „← Startseite" | Klick → `switchTabAndUpdateMenu('current-meta')` wechselt zurück nach `current-meta`. | QA | offen | |
+| F5.2 | Hilfeknopf | Klick → `#helpModal` mit Inhalt zu `meta-call`. | QA | offen | |
+| F5.3 | Szenarien-Auswahl | Ein gespeichertes Szenario wählen → Konfiguration (Feld, Filter, Einstellungen) lädt entsprechend nach. | SPIELER | offen | |
+| F5.4 | Szenario auffrischen | Klick → `_refreshScenario()` lädt die zugrundeliegenden Daten neu, ohne die Konfiguration zu verlieren. | QA | offen | |
+| F5.5 | Szenario speichern | Klick → `_saveScenario()` speichert die aktuelle Konfiguration; danach über F5.3 wieder abrufbar. | QA | offen | |
+| F5.6 | Szenario löschen | Klick → `_deleteScenario()` entfernt das gewählte Szenario dauerhaft aus F5.3. | QA | offen | |
+| F5.7 | Datenfenster ab | `metacallDateFrom` setzen → prüfen, dass **derselbe** Zustand wie `#currentMetaDateFrom` (F4.7) gilt: in `current-analysis` wechseln → dortiges Feld zeigt denselben Wert. | QA | offen | |
+| F5.8 | Clear (Datum) | Klick → `clearCurrentMetaDateFrom()` setzt Datum zurück, wirkt sich auch auf F4.7 aus. | QA | offen | |
+| F5.9 | Hinweistext zum Fenster | Zeigt korrekt einen der Zustände „aktiv"/„automatisch"/„keiner" passend zur Datumseinstellung. | QA | offen | |
+| F5.10 | Meta-Quelle | `.mc-source-format-select` auf `past` stellen → `_setMetaSource('past', v)` wechselt die Datengrundlage sichtbar (z. B. andere Deckliste im Feld). | DATEN | offen | |
+| F5.11 | City-League-Quellen (Checkboxen) | Beide Checkboxen (current/past) einzeln an-/abwählen → Feldtabelle F5.19 berücksichtigt die gewählten Quellen. | DATEN | offen | |
+| F5.12 | Top-Cut-Größe | Wert ändern → Empfehlungstabelle/Berechnung berücksichtigt die neue Cut-Größe. | SPIELER | offen | |
+| F5.13 | Spielerzahl | Wert im Bereich 2–9999 setzen, Grenzwerte testen (1 und 10000 eingeben) → Feld klemmt auf 2–9999. | QA | offen | |
+| F5.14 | Runden | Wert setzen (1–15) → Berechnung reagiert; Grenzwerte testen. | QA | offen | |
+| F5.15 | Day-2-Punkte | Wert setzen (1–45) → Berechnung reagiert; Grenzwerte testen. | QA | offen | |
+| F5.16 | Turniername | Text eingeben (max 60 Zeichen) → erscheint im generierten Turnierbild F5.17; Grenze bei 60 Zeichen testen. | QA | offen | |
+| F5.17 | Turnierbild erzeugen | Klick → `generateTournamentImage()` erzeugt ein Bild mit Turniername, Feld und Einstellungen aus F5.10–16. | QA | offen | |
+| F5.18 | Modus-Reiter (`.mc-tt-tab`) | Prüfen, welche Reiter tatsächlich sichtbar sind und wie sie sich je nach Meta-Quelle (F5.10) und eingefrorenem/laufendem Meta unterscheiden. | QA | offen | |
+| F5.19 | Feldtabelle-Kopf | Spalten Deck/Online/Personal/Final/Players/Ø-Begegnungen sind vorhanden, jede mit erklärendem `title`-Hinweis beim Hover. | SPIELER | offen | |
+| F5.20 | Schätzfeld je Zeile | Für Mega Excadrill einen Wert zwischen 0 und 100 (Schrittweite 0,1) eintragen → „Final" und Empfehlungstabelle reagieren entsprechend. | SPIELER | offen | |
+| F5.21 | Zeile aufklappen | Klick auf `.mc-row-toggle` → zeigt Detailinformationen zur Zeile (z. B. Online/Personal-Herkunft). | QA | offen | |
+| F5.22 | „Alle Details" | Klick → `_toggleAllDetails()` klappt alle Zeilen gleichzeitig auf/zu. | QA | offen | |
+| F5.23 | „Feld gruppieren" | Klick → `_toggleGroupField()` gruppiert die Feldtabelle sichtbar um (z. B. nach Archetyp-Familie). | QA | offen | |
+| F5.24 | Feld als Bild teilen | Klick → `exportFieldShareImage()` erzeugt ein Bild der aktuellen Feldtabelle. | QA | offen | |
+| F5.25 | Eigenes Deck hinzufügen | Klick → `_addCustomDeck()` fügt eine neue leere Zeile zur Eingabe hinzu. | QA | offen | |
+| F5.26 | Name/Anteil/Entfernen (eigenes Deck) | Namen aus `mc-custom-datalist` wählen oder eintippen, Anteil (0–100) setzen, dann über `.mc-custom-remove-btn` wieder entfernen → Feldtabelle reagiert bei jedem Schritt. | SPIELER | offen | |
+| F5.27 | Mein Deck | Mega Excadrill in `mc-my-deck` eintragen → Empfehlungstabelle bezieht das eigene Deck in die Matchup-Rechnung ein. | SPIELER | offen | |
+| F5.28 | Overrides ein/aus | Klick → `_toggleOverrides()` blendet die Win-Rate-Override-Eingaben (F5.30) ein/aus. | QA | offen | |
+| F5.29 | Brick-Filter | `.mc-brick-filter-select` umstellen → `_onBrickFilter(v)` filtert die Empfehlung entsprechend. | SPIELER | offen | |
+| F5.30 | Win-Rate-Override je Gegner | Wert 0–100 gegen einen bestimmten Gegner setzen → Empfehlungstabelle übernimmt den manuellen Wert statt der berechneten Win Rate. | SPIELER | offen | |
+| F5.31 | Day-2-Bild teilen | Klick → `exportDay2ShareImage()` erzeugt ein Bild der Day-2-Prognose. | QA | offen | |
+| F5.32 | Empfehlungstabelle mit „Why?" | Spalte „Why?" (`.mc-rec-toggle-th`) aufklappen und über `.mc-rec-reason-jump` zur Begründung springen — Sprungziel prüfen. | SPIELER | offen | |
+| F5.33 | Feld+Empfehlungen als Bild | Klick → `exportFieldAndRecsShareImage()` erzeugt ein kombiniertes Bild. | QA | offen | |
+| F5.34 | Mobile Detailschalter | Auf Mobilbreite: `.mc-mobile-detail-toggle` klappt Detailinformationen ein/aus, die auf Desktop dauerhaft sichtbar sind. | QA | offen | |
+| F5.35 | Frozen-Banner | Bei eingefrorenem vergangenem Meta: Banner ersetzt die Konfigurationselemente F5.3–F5.17 vollständig. | QA | offen | |
+| F5.36 | Frozen-Anteilstabelle | Zeigt die eingefrorenen Anteile korrekt, ohne Bearbeitungsmöglichkeit. | DATEN | offen | |
+| F5.37 | Frozen-Empfehlungstabelle | Spalten „Score" und „Win %" mit `title`-Erklärung; Custom Decks/My Deck/Results sind vollständig ausgeblendet. | DATEN | offen | |
+
+### F6 · `cards` — Card Database
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F6.1 | Hilfeknopf | Klick → `#helpModal` mit Inhalt zu `cards`. | QA | offen | |
+| F6.2 | Datenstand-Chip | Chip im `<h2>` zeigt ein aktuelles Datum passend zum letzten Kartendaten-Build. | DATEN | offen | |
+| F6.3 | Kartensuche mit Autovervollständigung | „Excadrill" eintippen → `#cardSearchAutocomplete` schlägt passende Karten vor; Auswahl filtert das Gitter. | SPIELER | offen | |
+| F6.4 | Filterpanel ein/aus | Klick → `toggleCardsFilterPanel()` klappt das Panel auf/zu, `aria-expanded` wechselt mit. | QA | offen | |
+| F6.5 | Filter „Meta / Format" | Radios `total`/`all_playables`/`city_league` einzeln wählen → Kartenliste filtert entsprechend; „total" ist voreingestellt. | SPIELER | offen | |
+| F6.6 | Filter „Set" | Ein Set auswählen → Liste zeigt nur Karten dieses Sets. | SPIELER | offen | |
+| F6.7 | Filter „Rarity" | Eine Seltenheit auswählen → Liste filtert entsprechend. | SPIELER | offen | |
+| F6.8 | Filter „Category" | Eine Kategorie auswählen → Liste filtert entsprechend. | SPIELER | offen | |
+| F6.9 | Filter „Element Type" | Einen Energietyp auswählen → Liste filtert entsprechend. | SPIELER | offen | |
+| F6.10 | Filter „Main Pokemon" | In `mainPokemonSearch` „Excadrill" eintippen, dann in der Liste auswählen → Kartenliste filtert auf Karten dieses Hauptpokémon. | SPIELER | offen | |
+| F6.11 | Filter „Archetype" | Mega Excadrill über `archetypeSearch` suchen und wählen → Liste zeigt die für dieses Deck relevanten Karten. | SPIELER | offen | |
+| F6.12 | Filter „Deck Coverage" | Eine Option wählen → Liste filtert entsprechend. | SPIELER | offen | |
+| F6.13 | Reset Filters | Klick → `resetCardFilters()` setzt alle gesetzten Filter (F6.5–12) zurück auf den Ausgangszustand. | QA | offen | |
+| F6.14 | Sortierung | `set`/`deck`/`coverage`/`pokedex` einzeln wählen → Reihenfolge der Karten ändert sich entsprechend; „set" ist voreingestellt. | QA | offen | |
+| F6.15 | Standard Print | Ist beim Start aktiv; Klick auf einer bereits umgestellten Ansicht → schaltet zurück auf Standarddruck je Karte. | QA | offen | |
+| F6.16 | All Prints | Klick → zeigt alle verfügbaren Drucke jeder Karte statt nur eines. | QA | offen | |
+| F6.17 | Trefferanzeige | Startet mit „Loading cards…", zeigt danach die korrekte Trefferzahl passend zum Gitter. | QA | offen | |
+| F6.18 | Kartengitter | Zeigt Karten passend zu den aktuell aktiven Filtern (F6.5–14). | SPIELER | offen | |
+
+### F7 · `proxy` — Proxy Printer
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F7.1 | Zurück „← Startseite" | Klick → wechselt zu `current-meta`. | QA | offen | |
+| F7.2 | Hilfeknopf | Klick → `#helpModal` mit Inhalt zu `proxy`. | QA | offen | |
+| F7.3 | Decklisten-Eingabe | Eine PTCGL-Liste in `proxyDecklistInput` einfügen. | QA | offen | |
+| F7.4 | Add Decklist to Queue | Klick → `importDecklistToProxy()` übernimmt die eingefügte Liste (F7.3) vollständig in die Warteschlange F7.16. | QA | offen | |
+| F7.5 | Kartenname | „Excadrill" eintippen → `datalist`-Vorschläge erscheinen passend. | QA | offen | |
+| F7.6 | Set | Set-Kürzel für die gewählte Karte eintragen. | QA | offen | |
+| F7.7 | Nummer | Kartennummer eintragen. | QA | offen | |
+| F7.8 | Anzahl | Wert setzen (min 1, Vorgabe 1); Grenze testen. | QA | offen | |
+| F7.9 | Add Card | Klick → `addManualProxyCard()` fügt die manuell eingegebene Karte (F7.5–8) der Warteschlange hinzu. | QA | offen | |
+| F7.10 | Aus Binder laden | Klick → `cbLoadBinderIntoProxy()` überträgt einen zuvor angelegten Custom Binder in die Warteschlange. Erfordert Anmeldung mit angelegtem Binder. | QA | offen | |
+| F7.11 | Add City League Deck | Klick → `addCurrentDeckToProxy('cityLeague')` überträgt das aktuelle Deck aus `city-league-analysis`. | QA | offen | |
+| F7.12 | Add Current Meta Deck | Klick → `addCurrentDeckToProxy('currentMeta')` überträgt das aktuelle Deck aus `current-analysis`. | QA | offen | |
+| F7.13 | Add Past Meta Deck | Klick → `addCurrentDeckToProxy('pastMeta')` überträgt das aktuelle Deck aus `past-meta`. | QA | offen | |
+| F7.14 | Print Queue | Klick → `printProxyQueue()` öffnet den Druckdialog mit allen Karten der Warteschlange als Proxy-Layout. | QA | offen | |
+| F7.15 | Clear Queue | Klick → `clearProxyQueue()` leert die Warteschlange vollständig, Leerzustand erscheint. | QA | offen | |
+| F7.16 | Warteschlange | Zeigt nach F7.4/F7.9/F7.11–13 korrekt alle hinzugefügten Karten mit Anzahl. | QA | offen | |
+
+### F8 · `tutorial` — How to Use
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F8.1 | Zurück „← Startseite" | Klick → wechselt zu `current-meta`. | QA | offen | |
+| F8.2 | Hilfeknopf | Klick → `#helpModal` mit Inhalt zu `tutorial`. | QA | offen | |
+| F8.3 | Link „Anleitung (deutsch)" | Klick → öffnet `tutorial/tutorial.de.html`, Seite lädt fehlerfrei. | QA | offen | |
+| F8.4 | Link „Guide (english)" | Klick → öffnet `tutorial/tutorial.en.html`, Seite lädt fehlerfrei. | QA | offen | |
+| F8.5 | Restlicher Inhalt aus `js/ds-tutorial.js` | Prüfen, was dieses Modul zusätzlich in den Reiter zeichnet — Inhalt vollständig sichten und auf Plausibilität prüfen. | QA | offen | |
+
+### F9 · `quellen` — Quellen & Methodik
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F9.1 | Zurück „← Startseite" | Klick → wechselt zu `current-meta`. | QA | offen | |
+| F9.2 | Abschnitt „Quellen" | Startet **offen** beim Aufruf des Reiters. | QA | offen | |
+| F9.3 | Abschnitt „Datenumfang" | Startet zu; aufklappen zeigt die Kennzahlen aus F9.15. | QA | offen | |
+| F9.4 | Abschnitt „Begriffe" | Startet zu; aufklappen zeigt die Begriffsdefinitionen F9.9–14. | QA | offen | |
+| F9.5 | Abschnitt „Zuverlässigkeit" | Startet zu; Inhalt auf Aktualität prüfen. | DATEN | offen | |
+| F9.6 | Abschnitt „Trennung der Datenräume" | Startet zu; Inhalt beschreibt korrekt, wie Japan/Global getrennt gehalten werden. | DATEN | offen | |
+| F9.7 | Abschnitt „Stand / Aktualisierung" | Startet zu; genannte Zeitpläne mit den tatsächlichen Workflow-Läufen aus `datenfluss.md` §2 abgleichen. | DATEN | offen | |
+| F9.8 | Abschnitt „Rechtliches" | Startet zu; Inhalt vorhanden und lesbar. | QA | offen | |
+| F9.9–F9.14 | Begriffsdefinitionen (Anteil, Antritt, Top-8-Quote, ggü. Schnitt, Win Rate, Tier-Einordnung) | Jede der sechs Definitionen mit der tatsächlichen Berechnung an der jeweiligen Anzeigestelle (F1, F15 u. a.) abgleichen — insbesondere „geglättet vs. roh" bei „ggü. Schnitt" und „Remis im Nenner, nicht als halber Sieg" bei Win Rate. | DATEN | offen | |
+| F9.15 | Datenumfang zur Laufzeit | Von `js/ds-datenumfang.js` ergänzte Zeilenzahlen mit den tatsächlichen Zeilenzahlen der geladenen Dateien (vgl. `datenfluss.md` §1) abgleichen. | DATEN | offen | |
+
+### F10 · `admin` — Datenlücken
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F10.1 | Zurück „← Startseite" | Klick → wechselt zu `current-meta`. | QA | offen | |
+| F10.2 | Titel „Datenlücken" | Sichtbar beim Aufruf über `#admin`/`#datenluecken`. | QA | offen | |
+| F10.3 | Einleitung + Hinweis „nicht zugangsgeschützt" | Ohne jede Anmeldung `#admin` direkt aufrufen → Seite ist vollständig erreichbar, Hinweis ist sichtbar. | QA | offen | |
+| F10.4 | Filterchip „Alle n" | Zeigt korrekt die Gesamtzahl aller Lücken; Klick zeigt alle Klassen gemeinsam. | DATEN | offen | |
+| F10.5 | Filterchips je Klasse | Jede Klasse einzeln anklicken → nur Lücken dieser Klasse werden angezeigt. | DATEN | offen | |
+| F10.6 | Lückenkarte | Titel, „Steht in `<code>`" und Notiz sind für eine Beispiel-Lücke korrekt befüllt. | DATEN | offen | |
+| F10.7 | Einstufungs-Plakette | Zeigt „eindeutig belegt"/„Bestätigung nötig"/„ungeprüft" passend zur tatsächlichen Datenlage der jeweiligen Lücke. | DATEN | offen | |
+| F10.8 | Vorschlag: Wert + Begründung | Begründung und genannte Fähigkeiten der Grundform sind für eine Beispiel-Lücke fachlich korrekt. | DATEN | offen | |
+| F10.9 | Knopf „Quelle ansehen ↗" | Klick → öffnet `v.quelle` in neuem Tab, Link funktioniert. | QA | offen | |
+| F10.10 | Knopf „Bestätigen & senden ↗" | Klick → `issueUrl(l)` öffnet ein vorbefülltes GitHub-Issue mit korrekten Angaben zur Lücke. | QA | offen | |
+| F10.11 | Sammelknopf „Alle n Vorschläge auf einmal bestätigen ↗" | Ab 2 Vorschlägen sichtbar; Klick → Adresse enthält alle offenen Vorschläge, gedeckelt auf 6000 Zeichen (`MAX_ADRESSE`) — mit vielen offenen Lücken die Deckelung gezielt provozieren. | QA, DATEN | offen | |
+| F10.12 | Fußblock „Wie es weitergeht" + Inventarzeit | Genannte UTC-Zeit „Inventar erzeugt" mit der tatsächlichen Erzeugungszeit von `data/datenluecken.json` abgleichen. **Achtung:** laut `datenfluss.md` §9.2 erzeugt **kein Ablauf** diese Datei — prüfen, wie alt der Stand tatsächlich ist. | DATEN | offen | |
+
+### F11 · `side-quest` — Side Quest: Pokémon Champions
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F11.1 | Zurück „← Startseite" | Klick → wechselt zu `current-meta`. | QA | offen | |
+| F11.2 | Statuszeile | `sideQuestStatus` (`aria-live="polite"`) zeigt bei einer Aktion (z. B. Laden) eine Statusmeldung. | QA | offen | |
+| F11.3 | Unterreiter „Teams" | Ist beim Öffnen aktiv, `sideQuestTeamsHost` sichtbar, alle anderen Hosts `hidden`. | QA | offen | |
+| F11.4 | Unterreiter „Usage" | Klick → `sideQuestUsageHost` wird sichtbar, Teams-Host verschwindet. | QA | offen | |
+| F11.5 | Unterreiter „Matchups" | Klick → `sideQuestMatchupsHost` wird sichtbar. | QA | offen | |
+| F11.6 | Unterreiter „Pokémon" | Klick → `sideQuestPokedexHost` wird sichtbar. | QA | offen | |
+| F11.7 | Unterreiter „Team-Builder" | Klick → `sideQuestBuilderHost` wird sichtbar. | QA | offen | |
+| F11.8 | Unterreiter „Status" | Klick → `sideQuestZustaendeHost` wird sichtbar. | QA | offen | |
+| F11.9 | Unterreiter „Look up" | Klick → `sideQuestResourcesHost` wird sichtbar. | QA | offen | |
+| F11.10 | Replica-Code kopieren | Klick auf `.side-quest-copy-btn` bei einem Team → Code landet in der Zwischenablage. | QA | offen | |
+| F11.11 | Eigenen Code kopieren | Klick auf `.side-quest-copyown-btn` → eigener Team-Code landet in der Zwischenablage. | QA | offen | |
+| F11.12 | Export-Auswahl Copy/Limitless/Showdown | Jede der drei Optionen einzeln wählen. | QA | offen | |
+| F11.13 | Export öffnen | Klick auf `.side-quest-export-btn` → exportiert im zuvor gewählten Format (F11.12). | QA | offen | |
+| F11.14 | Team importieren | Öffnen, Namen eingeben, Import durchführen, abbrechen — alle vier Zustände (`open`/`name`/`do`/`cancel`) einzeln testen. | QA | offen | |
+| F11.15 | Aktives Team setzen | Klick auf `.side-quest-active-btn` → Team wird als aktives Team markiert und bleibt es nach Neuladen. | QA | offen | |
+| F11.16 | Markierung (mark) | Klick auf `.side-quest-mark-btn` → Team wird markiert/entmarkiert. | QA | offen | |
+| F11.17 | Filter setzen/entfernen/leeren | Alle drei Aktionen (`.side-quest-filter-trigger`, `-remove`, `-clear`) einzeln testen → Teamliste filtert entsprechend. | QA | offen | |
+| F11.18 | Info | Klick auf `.side-quest-info-btn` → zeigt Zusatzinformationen zum Team. | QA | offen | |
+| F11.19 | Claude-Knopf | Klick auf `.side-quest-claude-btn` → prüfen, was tatsächlich passiert (im Code nicht eindeutig, laut Inventar *zu prüfen*). | QA | offen | |
+| F11.20 | Modal schließen | Klick auf `.side-quest-modal-close` → offenes Modal schließt sich. | QA | offen | |
+| F11.21 | Formatwahl (Usage) | „Doubles" ist voreingestellt; auf „Singles" umstellen → Nutzungsdaten wechseln entsprechend. | SPIELER | offen | |
+| F11.22 | Typfilter (Usage) | Einen Typ wählen (Voreinstellung leer/alle) → Liste filtert entsprechend. | SPIELER | offen | |
+| F11.23 | Formatwahl (Matchups) | Format umstellen → Kreuztabelle F11.27 wechselt entsprechend. | SPIELER | offen | |
+| F11.24 | Sortierung (Matchups) | `_sort` ändern → Reihenfolge der Kreuztabelle ändert sich. | QA | offen | |
+| F11.25 | Suche (Matchups) | In `.sq-search` einen Pokémon-Namen eingeben → Kreuztabelle filtert entsprechend. | QA | offen | |
+| F11.26 | Team-Chips setzen/entfernen | `.sq-team-chip` setzen und über `.sq-team-chip-weg` wieder entfernen → Kreuztabelle reagiert. | QA | offen | |
+| F11.27 | Kreuztabelle | Kopfspalte = Gegner-Pokémon, Zeilenkopf = eigenes Pokémon; Werte plausibilisieren, Tabelle ist **nicht** sortierbar (anklicken testen). | SPIELER, DATEN | offen | |
+| F11.28 | „Mehr" / „Zurück" | `.sq-more` zeigt weitere Zeilen/Spalten, `.sq-back` kehrt zur reduzierten Ansicht zurück. | QA | offen | |
+| F11.29 | Formatumschalter Singles/Doubles (Pokédex) | „Doubles" voreingestellt; auf „Singles" umstellen → Werte in der Tabelle F11.33 wechseln. | SPIELER | offen | |
+| F11.30 | Suche (Pokédex) | In `sqpSearch` einen Namen eingeben → Tabelle filtert entsprechend. | QA | offen | |
+| F11.31 | Typfilter (Pokédex) | `sqpType` setzen → Tabelle filtert entsprechend. | SPIELER | offen | |
+| F11.32 | Presets | Einen Preset wählen → Tabelle filtert/sortiert entsprechend dem Preset. | SPIELER | offen | |
+| F11.33 | Sortierbare Tabelle (Mon/HP/Atk/Def/SpA/SpD/Spe/Total) | Jede Spalte anklicken → sortiert danach; Voreinstellung ist „total" absteigend — beim Öffnen prüfen. | SPIELER | offen | |
+| F11.34 | Detailansicht | Ein Pokémon anklicken → Tabelle Base True/Lv50/Used/Range öffnet sich mit korrekten Werten. | SPIELER | offen | |
+| F11.35 | Detail schließen | Klick auf `.sqp-d-close` → Detailansicht schließt sich. | QA | offen | |
+| F11.36–F11.44 | Team-Builder-Slots (Suche/Name/Fähigkeit/Item/Attacken/Wesen, Chips, Rechner, Setzen, Speichern, Als aktiv, Bearbeiten, Zurücksetzen, Leeren, Export, Zurück, Modal schließen) | Ein vollständiges Team für einen Pokémon-Slot zusammenstellen (Suche → Name → Fähigkeit → Item → 4 Attacken → Wesen), Rechner prüfen, speichern, als aktiv setzen, danach bearbeiten, zurücksetzen, leeren und exportieren — jede Funktion einzeln auslösen und Ergebnis prüfen. | SPIELER | offen | |
+| F11.45 | Statuszustände | Kopfzeile `.sz-kopf` (`data-sz-id`) klappt auf/zu; „Alle" (`.sz-alle`) klappt alle gleichzeitig. | QA | offen | |
+| F11.46 | Suche (Look up) | In `sqResSearch` einen Begriff eingeben → Liste filtert entsprechend. | QA | offen | |
+| F11.47 | Filterchips (Look up) | `data-sq-res-filter` einzeln anklicken → Liste filtert entsprechend. | QA | offen | |
+| F11.48 | „Nur Champions" | Klick auf `.sq-res-champ` → Liste zeigt nur Champions-relevante Einträge. | QA | offen | |
+
+### F12 · `pocket` — Side Quest: TCG Pocket
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F12.1 | Zurück „← Startseite" | Klick → wechselt zu `current-meta`. | QA | offen | |
+| F12.2 | Kopf: Titel + Untertitel | Sichtbar beim Öffnen des Reiters. | QA | offen | |
+| F12.3 | Quellenzeile | „Einstufung von Game8, keine von uns gemessene Zahl" sichtbar, Link zu game8.co funktioniert, „Stand …" zeigt ein plausibles Datum. | DATEN | offen | |
+| F12.4 | Alterswarnung | Prüfen, ob die Warnung erscheint, sobald der Datenstand älter als `PLAUSIBEL_TAGE` Tage ist — aktuellen Datenstand gegen die Schwelle abgleichen. | DATEN | offen | |
+| F12.5 | Filter „Alle" | Ist voreingestellt, zeigt alle Decks. | QA | offen | |
+| F12.6 | Filter „Tier-Liste" | Klick → zeigt nur Decks der Tier-Liste. | SPIELER | offen | |
+| F12.7 | Filter „Neues Set" | Klick → zeigt nur Decks aus dem neuen Set. | SPIELER | offen | |
+| F12.8 | Deckzeile | Klick auf eine Deckzeile → Overlay F12.12–17 öffnet sich mit den Daten dieses Decks. | SPIELER | offen | |
+| F12.9 | Tier-Gruppierung | Reihenfolge folgt `TIER_ORDNUNG`, innerhalb einer Stufe alphabetisch — Stichprobe nachprüfen. | DATEN | offen | |
+| F12.10 | Abweichende Stufen (Dubletten) | Eine zusammengelegte Dublette suchen → ist als solche markiert. | DATEN | offen | |
+| F12.11 | Rechnungsblock | Zahlen „n Einträge bei Game8 — n ohne lesbares Muster, n als Dublette zusammengelegt" gegen die tatsächliche Liste nachzählen; Liste der fehlenden Decks stimmt. | DATEN | offen | |
+| F12.12 | Overlay: Schließen | Klick auf `.pk-schliessen` → Overlay schließt sich. | QA | offen | |
+| F12.13 | Overlay: Name + Stufe | Zeigt korrekten Namen, Stufe, „Game8" und Stand-Datum. | DATEN | offen | |
+| F12.14 | Overlay: 2D-Muster | Muster wird gezeichnet und ist mit einem zweiten Gerät tatsächlich scanbar. | SPIELER | offen | |
+| F12.15 | Overlay: Hinweis „Bildschirm hell stellen" | Text sichtbar im Overlay. | QA | offen | |
+| F12.16 | Overlay: Kartenliste | Pokémon/Trainer mit Stückzahl und SET-Nr. stimmen mit der tatsächlichen Deckliste überein. | DATEN | offen | |
+| F12.17 | Bildschirm-Wachhalten | Während das Overlay offen ist, schaltet sich der Bildschirm nicht selbst ab (`navigator.wakeLock`) — auf einem echten Mobilgerät testen. | QA | offen | |
+
+### F13 · `calculator` — TCG Probability Calculator
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F13.1 | Zurück „← Startseite" | Klick → wechselt zu `current-meta`. | QA | offen | |
+| F13.2 | Hilfeknopf | Klick → `#helpModal` mit Inhalt zu `calculator`. | QA | offen | |
+| F13.3 | Cards in Deck | Wert außerhalb 1–99 eingeben → JS klemmt auf 1–99, Vorgabe ist 60. | QA | offen | |
+| F13.4 | Copies in Deck | Deck-Größe auf 99 setzen, dann 60+ Kopien eingeben → Markup blockt bei `max=60`, obwohl JS bis `deckSize` klemmen würde (vgl. H8) — Diskrepanz gezielt provozieren. | QA | offen | |
+| F13.5 | Cards Drawn | Wert außerhalb 1–60/`deckSize` eingeben → JS klemmt entsprechend, Vorgabe ist 7. | QA | offen | |
+| F13.6 | Already in Hand | Bei 5+ Kopien im Deck einen Wert über 4 eingeben → Markup blockt bei `max=4`, obwohl JS bis `copies` klemmen würde (vgl. H8) — Diskrepanz gezielt provozieren. | QA | offen | |
+| F13.7 | Ergebnis „Draw (at least 1)" | Bekannte Eingaben nachrechnen, Farbcodierung (≥70 % high, ≥40 % mid, sonst low) prüfen. | QA | offen | |
+| F13.8 | Fußzeile Draw | Text „n von m Karten, k gezogen" stimmt mit den Eingaben überein. | QA | offen | |
+| F13.9 | Ergebnis „In Prize Cards" | Nachrechnen, Hinweis „(at least 1, after opening hand)" korrekt. | QA | offen | |
+| F13.10 | Fußzeile Prize | Text „n übrig in m ungesehenen Karten, 6 davon Preiskarten" stimmt. | QA | offen | |
+| F13.11 | Ergebnis „Topdeck Chance" | Nachrechnen, Hinweis „(next card drawn)" korrekt. | QA | offen | |
+| F13.12 | Fußzeile Topdeck | Text „n von m ungesehenen Karten" stimmt. | QA | offen | |
+| F13.13 | Klemm-Rückmeldung | Einen Wert außerhalb des gültigen Bereichs eingeben → `.calc-input-geklemmt` erscheint 1600 ms mit `title` „Wert auf den gültigen Bereich a–b gesetzt — gerechnet wird mit c." | QA | offen | |
+
+### F14 · `profile` — My Profile
+
+**Hinweis:** Fast alle Elemente dieser Gruppe sind ohne Anmeldung nicht erreichbar
+oder nicht sinnvoll prüfbar — Anmeldung mit einem Testkonto ist Voraussetzung für
+F14.4 ff.
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F14.1 | Hilfeknopf | Klick → `#helpModal` mit Inhalt zu `profile`. | QA | offen | |
+| F14.2 | Anmeldewand | Ohne Anmeldung: `profile-auth-prompt` mit Knopf „Sign In / Sign Up" ist die einzige sichtbare Fläche. Klick → `showAuthModal('signin')`. | QA | offen | |
+| F14.3 | Inhalt nach Anmeldung | Nach Anmeldung mit Testkonto: `profile-content` wird sichtbar (verliert `d-none`). Erfordert Anmeldung. | QA | offen | |
+| F14.4 | Cloud-Sync-Status | Zeigt „Initialisiere…" beim Laden, danach einen plausiblen Sync-Status. Erfordert Anmeldung. | QA | offen | |
+| F14.5 | „Jetzt synchronisieren" | Klick → `forceCloudSync()` löst eine sichtbare Synchronisation aus, Status aktualisiert sich. Erfordert Anmeldung. | QA | offen | |
+| F14.6–F14.9 | Vier Kopfkennzahlen (Name/Cards Owned/Collection Value/Saved Decks) | Alle vier Werte gegen die tatsächliche Sammlung/Decks des Testkontos nachzählen. Erfordert Anmeldung. | SPIELER | offen | |
+| F14.10 | Battle-Journal-Kasten | „Log Match" öffnet die Journal-Schublade (F19.17), „Sync Now" löst eine Synchronisation aus. Erfordert Anmeldung. | QA | offen | |
+| F14.11 | Untertab „My Collection" | Ist beim Öffnen aktiv. Erfordert Anmeldung. | QA | offen | |
+| F14.12 | Untertab „Wishlist" | Klick → `switchProfileTab('wishlist')` wechselt den Inhalt. Erfordert Anmeldung. | QA | offen | |
+| F14.13 | Untertab „Trade List" | Klick → wechselt zu `tradelist`. Erfordert Anmeldung. | QA | offen | |
+| F14.14 | Untertab „Meta Binder" | Klick → wechselt zu `metabinder`. Erfordert Anmeldung. | QA | offen | |
+| F14.15 | Untertab „Custom Binder" | Klick → wechselt zu `custombinder`. Erfordert Anmeldung. | QA | offen | |
+| F14.16 | Untertab „My Decks" | Klick → wechselt zu `decks`. Erfordert Anmeldung. | QA | offen | |
+| F14.17 | Untertab „Compare Decklists" | Klick → wechselt zu `deckcompare`. Erfordert Anmeldung. | QA | offen | |
+| F14.18 | Untertab „Deck Builder" | Klick → wechselt zu `deckbuilder`. Erfordert Anmeldung. | QA | offen | |
+| F14.19 | Untertab „Battle Journal" | Klick → wechselt zu `journal`. Erfordert Anmeldung. | QA | offen | |
+| F14.20 | Untertab „Testing Groups" | Klick → wechselt zu `testinggroups`. Erfordert Anmeldung. | QA | offen | |
+| F14.21 | „Meta Call →" | Klick → verlässt das Profil, wechselt zu Reiter `meta-call` (nicht wie die anderen ein Untertab). Erfordert Anmeldung. | QA | offen | |
+| F14.22 | Untertab „Settings" | Klick → wechselt zu `settings`. Erfordert Anmeldung. | QA | offen | |
+| F14.23–F14.34 | Collection (Import, Sortierung, Filter, Clear, Suche, Gitter, Leerzustand) | CSV importieren, alle vier Sortierungen und alle Filteroptionen (All + 10 Energietypen + Supporter/Item/Tool/Special Energy/Basic Energy) einzeln durchspielen, suchen, `clearCollection()` auslösen und den Leerzustand „Your collection is empty" mit Knopf „Open Card Database" prüfen. Erfordert Anmeldung. | SPIELER | offen | |
+| F14.35–F14.44 | Wishlist (Bot-Import, Suche, Set-Filter, Gitterbild, Kopieren, Cardmarket-Wants, Leeren, Trefferzeile, Gitter, Leerzustand) | Jede der zehn Funktionen einzeln auslösen; insbesondere `copyWishlistForCardmarket()` gegen `#wishlistCardmarketModal` prüfen und Leerzustand „Your wishlist is empty" mit „Find Cards". Erfordert Anmeldung. | SPIELER | offen | |
+| F14.45–F14.52 | Trade List (Suche, Set-Filter, Gitterbild, Kopieren, Leeren, Trefferzeile, Gitter, Leerzustand) | Analog F14.35–44, Leerzustand „Your trade list is empty". Erfordert Anmeldung. | SPIELER | offen | |
+| F14.53–F14.60 | Meta Binder (Hilfe, Generate, Load Saved, Add Missing to Wishlist, Proxy All Missing, Proxy NEW Cards, Blöcke, Gitter, Dropped-Modal) | „Generate Binder" auslösen → Gitter füllt sich, danach werden die drei zunächst `disabled` Knöpfe aktiv; „Load Saved Binder" nach dem Speichern erneut laden; Modal „Dropped Cards" öffnen und Inhalt prüfen. Erfordert Anmeldung. | SPIELER | offen | |
+| F14.61–F14.75 | Custom Binder (Ordnerleiste, Modus, Archetyp-Suche, Dropdown, Top 10 Meta, Chips, Schwelle, Generate, Speichern-Varianten, Wishlist/Proxy-Aktionen, Druckliste, Blöcke, Gitter, Leerzustand) | Mega Excadrill über die Archetyp-Suche hinzufügen, Schwelle „Nur Kern (>70 %)" (Voreinstellung) gegen „Alle Karten"/„Kern + Tech" testen, Binder generieren, speichern („Ordner speichern"/„Als neuen Ordner"/„Auf aktuellen Stand bringen" einzeln), Druckmodus mit „Noch nicht Gedruckte → Druckliste" und „Gefilterte als gedruckt ✓" durchspielen. Erfordert Anmeldung. | SPIELER | offen | |
+| F14.76–F14.83 | My Decks (Compare Built Decks, New Folder, Suche, Filterchip, Ordner-Navigation, Ordner-Zusammenfassung, Gitter, Leerzustand) | Neuen Ordner anlegen, ein gebautes Deck hineinlegen, Filterchip „IRL Built Only" prüfen, Leerzustand „No saved decks yet" mit „Build a Deck" → führt zu `city-league`. Erfordert Anmeldung. | SPIELER | offen | |
+| F14.84–F14.87 | Compare Decklists (Deck A, Deck B, Compare, Ergebnis) | Zwei unterschiedliche Decklisten einfügen, „Compare" klicken → `profileCompareResult` zeigt einen korrekten Diff. Erfordert Anmeldung. | SPIELER | offen | |
+| F14.88–F14.96 | Deck Builder (Profil) (Suche, Filterzeile, Trefferzähler, Filter leeren, Ergebnisgitter, Deckname, Deckzähler, Deck leeren, Einfüge-Panel, Mulligan-Block, Toast, Zoom-Overlay) | Ein Deck über Suche/Filter zusammenstellen, per Paste-Feld eine Liste einfügen, Mulligan-Statistik prüfen, „Deck leeren" mit Bestätigungsdialog (`confirm()`) auslösen. Erfordert Anmeldung. | SPIELER | offen | |
+| F14.97–F14.104 | Battle Journal (Log Match, Sync Now, Copy All, Clear Journal, Statistik, vier Filter, Matchup Spreadsheet, Liste, Ausstehende Einträge) | Einen Match protokollieren, alle vier Filter (Meta/Type/Tournament/Result) einzeln durchspielen, „Matchup Spreadsheet" öffnen, „Copy All" und „Clear Journal" auslösen. Erfordert Anmeldung. | SPIELER | offen | |
+| F14.105–F14.112 | Testing Groups (Hilfe, Gruppe anlegen/öffnen/schließen/löschen/verlassen, Mitglied einladen/entfernen, Deck hinzufügen/umbenennen/entfernen, Zeilenfilter, Load into Meta Call, JSON-Export) | Eine Gruppe anlegen, ein Mitglied per E-Mail einladen, ein Deck hinzufügen und umbenennen, „Load into Meta Call" prüfen (Deck erscheint dort), JSON-Export prüfen. Erfordert Anmeldung, ggf. Zweitkonto für Einladung. | SPIELER | offen | |
+| F14.113–F14.119 | Settings (Anzeigename, Telegram-Preisalarme, Chat-ID, Schwelle, Speichern, Sign Out) | Anzeigename ändern und speichern (max 50 Zeichen), Preisalarme aktivieren mit Chat-ID und Schwelle (0–100, Vorgabe 10), speichern, „Sign Out" auslösen → Nutzer wird abgemeldet, Kopfzeile zeigt wieder F0.9-Zustand „Sign In". Erfordert Anmeldung. | QA | offen | |
+
+### F15 · `current-meta` — Current Meta (Global)
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F15.1 | Abschnitt „Die meistgespielten Decks" | Startet **offen** beim Aufruf des Reiters. | QA | offen | |
+| F15.2 | Abschnitt „Matchups" | Startet offen. | QA | offen | |
+| F15.3 | Abschnitt „Meistgespielte Karten" | Startet offen. | QA | offen | |
+| F15.4 | Abschnitt „Gegen welches Meta?" | Startet zu. | QA | offen | |
+| F15.5 | Abschnitt „Tier-Liste" | Startet zu. | QA | offen | |
+| F15.6 | Abschnitt „Meta-Performance" | Startet zu. | QA | offen | |
+| F15.7 | Abschnittszustände (localStorage) | Alle sechs Abschnitte in einen bestimmten Zustand bringen, Seite neu laden → Zustände bleiben erhalten (`ds_sections_v1`). Manuell eine unbekannte id in den localStorage-Eintrag schreiben → wird beim Lesen gefiltert, kein Fehler. | QA | offen | |
+| F15.8 | „Ansicht zurücksetzen" | Erscheint erst, wenn vom Standard abgewichen wurde; Klick → alle Abschnitte zurück auf Standardzustand F15.1–6. | QA | offen | |
+| F15.9–F15.14 | Spaltenköpfe, Sortierverhalten, Rangneuzählung, Sichtbarkeitsgrenze der Tabelle „Meta-Performance" | Jeden sortierbaren Spaltenkopf außer `#` anklicken → Reihenfolge kehrt sich um; Voreinstellung ist „Listen" absteigend beim Öffnen prüfen; nach Sortierung ist `#` neu durchgezählt und die Sichtbarkeitsgrenze wieder auf die ersten 25 gesetzt; Leerwerte „–" landen am Tabellenende. | SPIELER | offen | |
+| F15.15 | Knopf „Alle n Decks zeigen" / „Nur die Top 25 zeigen" | Klick → zeigt alle Decks statt nur Top 25; erneuter Klick → wieder nur Top 25. | QA | offen | |
+| F15.16 | Fußnote nicht zugeordnete Turniernamen | Vorhanden und listet tatsächlich Namen auf, die nicht in `archetype_aliases.json` zugeordnet sind. | DATEN | offen | |
+| F15.17 | Held-Kachel | Rangplakette, Name, „n Varianten", Anteils-Plakette (mit `title` zur Summierung über Varianten) und „WR x % · n"-Plakette sind für Mega Excadrill (falls in Top-Kacheln vertreten, sonst ein anderes Beispiel) korrekt befüllt. | SPIELER | offen | |
+| F15.18 | Klick/Enter/Leertaste auf Held-Kachel | Alle drei Auslösewege einzeln testen → `navigateToCMAnalysisWithCombinedDeck` wechselt zu `current-analysis`; Rückweg über Nav-Leiste, Pokéball und Browser-Zurück je einzeln testen. | QA | offen | |
+| F15.19–F15.22 | Tier-Abschnitte 1/2/3/Trending-Rogue | Prüfen: Tier 1 = Anteil ≥ 8 %, Tier 2 = 4–8 %, Tier 3 = 1,5–4 %, Trending/Rogue = WR > 52 % oder positive Veränderung — für mehrere Decks die tatsächlichen Werte gegen die Einordnung nachrechnen. | DATEN | offen | |
+| F15.23 | Plakette „n Listen" mit „dünne Stichprobe" | Ein Deck mit wenigen Listen suchen → Markierung `tier-listen-duenn` erscheint. | DATEN | offen | |
+| F15.24 | Grundlagen-Zeile unter den Kacheln | Text ist vorhanden und stimmt inhaltlich mit der Tier-Einordnung überein. | QA | offen | |
+| F15.25 | Deckauswahl (Gegen welches Meta?) | Mega Excadrill auswählen → Ergebnisblock aktualisiert sich. | SPIELER | offen | |
+| F15.26 | Feldauswahl | Ein bestimmtes Feld wählen → Berechnung berücksichtigt es. | SPIELER | offen | |
+| F15.27 | Rundenzahl | Wert 1–20 setzen, Grenzen testen → Berechnung reagiert. | QA | offen | |
+| F15.28 | Ergebnisblock | Zeigt ein plausibles Ergebnis passend zu Deck/Feld/Runden. | SPIELER, DATEN | offen | |
+| F15.29 | Feldnotiz + Fußnote | Beide Texte inhaltlich korrekt zum gewählten Feld. | QA | offen | |
+| F15.30 | Tabelle Gegner-Deck/…/Matches/trägt bei | Werte nachrechnen, Tabelle ist **nicht** sortierbar (anklicken testen). | DATEN | offen | |
+| F15.31 | Statistikkarte „Archetype Overview" | Gesamtzahl, Top-3 nach Count und Top-3 nach Win Rate (Schwelle ≥10 % der Deckzahl des Spitzendecks) nachrechnen. | DATEN | offen | |
+| F15.32 | Statistikkarte Meta-Statistiken | Werte aus `patchMetaStats()` gegen die Rohdaten nachrechnen. | DATEN | offen | |
+| F15.33 | Best/Worst-Matchup-Tabellen | Spalten Deck/Rank/Win Rate korrekt, auf Mobilbreite wird „Win Rate" zu „WR"; Tabelle nicht sortierbar. | SPIELER, DATEN | offen | |
+| F15.34 | Vollständige Vergleichstabelle | Spalte „Rank" enthält korrekt eingerechnete „(↑n)/(↓n)/(-)"-Änderung statt separater Old-Rank/Rank-Δ-Spalten; nicht sortierbar. | DATEN | offen | |
+| F15.35 | Deckname als Link | Klick auf einen Decknamen in F15.34 → `jumpToCardAnalysis` wechselt zu `current-analysis` mit diesem Deck vorausgewählt. | QA | offen | |
+| F15.36 | Top-100-Matchup-Block entfernt | Bestätigen, dass dieser Block aus der eingefügten HTML tatsächlich entfernt wurde und nirgends sichtbar ist. | QA | offen | |
+| F15.37 | Matchup-Heatmap | `#matchupHeatmapContainer` zeigt eine vollständige, farbcodierte Heatmap; Zellenwerte stichprobenartig nachrechnen. | SPIELER, DATEN | offen | |
+| F15.38 | Meistgespielte Karten | `div.top-cards-container` zeigt die tatsächlich meistgespielten Karten passend zur Kartenstatistik. | DATEN | offen | |
+
+### F16 · `past-meta` — Past Meta
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F16.1 | Hilfeknopf | Klick → `#helpModal` mit Inhalt zu `past-meta`. | QA | offen | |
+| F16.2 | Datenstand-Chip | Zeigt ein Datum passend zum eingefrorenen Format. | DATEN | offen | |
+| F16.3 | Formatfilter | „-- All Formats --" wählbar sowie jedes abgeschlossene Fenster einzeln → Inhalt wechselt entsprechend. | SPIELER | offen | |
+| F16.4 | Turnierfilter | „-- All Tournaments --" sowie einzelne Turniere wählen → Inhalt filtert entsprechend. | SPIELER | offen | |
+| F16.5 | Deck-Archetyp-Auswahl | Mega Excadrill (falls im Vorformat vertreten, sonst Alakazam Dudunsparce als Beispiel aus H10) auswählen → Statistik erscheint. | SPIELER | offen | |
+| F16.6 | Card Share Filter | all/90/70/50 einzeln anklicken. | SPIELER | offen | |
+| F16.7–F16.9 | Deck-Statistik (Cards in deck, Tournament, Format) | Alle drei Werte für das gewählte Deck nachrechnen; keine Definitionen daneben vorhanden — Verständlichkeit ohne Erklärung einschätzen. | SPIELER | offen | |
+| F16.10 | Abschnitt „Tournament Performance" | Hinweistext und Kartenraster zeigen plausible, zum Turnier passende Werte. | SPIELER, DATEN | offen | |
+| F16.11 | Abschnitt „Most Successful List" | Zeigt tatsächlich die erfolgreichste Liste des gewählten Decks. | SPIELER, DATEN | offen | |
+| F16.12 | Card Overview: Suche | Kartenname eingeben → Grid filtert entsprechend. | QA | offen | |
+| F16.13–F16.21 | 9 Typfilter | Jeden einzeln anklicken, „All" voreingestellt. | SPIELER | offen | |
+| F16.22–F16.24 | Seltenheit min/max/all | „min" voreingestellt, auf max/all umschalten. | SPIELER | offen | |
+| F16.25 | Copy | Klick → `copyPastMetaDeckOverview()` kopiert die Liste. | QA | offen | |
+| F16.26 | Grid | Klick → `togglePastMetaDeckGridView()` schaltet die Ansicht um. | QA | offen | |
+| F16.27–F16.32 | Deck Builder (Consistency Generate, Max Rarity, Test Draw, TCG Showdown, Clear, Algorithmus-`<details>`) | Alle sechs Funktionen durchspielen; insbesondere prüfen, dass der Formattor (`in_person_legal_date`) hier **nicht** greift (vgl. H10/D-Zeile zu Zwei Wege #10) — d. h. auch ältere Listen fließen ein. | SPIELER, DATEN | offen | |
+| F16.33 | „Build vs …" | Klick → `openAntiTechModal('pastMeta')` öffnet den Anti-Tech-Dialog. | SPIELER | offen | |
+| F16.34 | Tech-Slots leeren + Picker | Tech über `pastMetaTechSlotInput` hinzufügen, dann leeren. | QA | offen | |
+| F16.35 | Handstatistik | `pastMetaHandStats` zeigt plausible Verteilung. | SPIELER | offen | |
+| F16.36–F16.45 | Your Deck (Save/Why/Compare/Copy/Deck→Proxy/Share/PTCGL Import/PTCGL Export/Grid/Suche+Autocomplete) | Alle zehn Funktionen analog F3.38–47 durchspielen. | QA | offen | |
+| F16.46 | Bank | `pastMetaBenchSection` analog F3.48. | SPIELER | offen | |
+| F16.47 | Tech vs Normal | Analog F3.64/F4.89 für `pastMeta`. | SPIELER, DATEN | offen | |
+
+### F17 · `deckbuilder` (Menüziel, kein eigener Reiter)
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F17.1 | Menü-Hervorhebung | Über `menu-btn-deckbuilder` navigieren → prüfen, ob das Menü „Deck Builder" hervorhebt oder fälschlich „My Profile"; zusätzlich prüfen, ob das Kopf-Abzeichen (F0.2) denselben Namen zeigt. | QA | offen | |
+| F17.2 | Ohne Anmeldung | Ohne Anmeldung `menu-btn-deckbuilder` anklicken → landet auf der Anmeldewand F14.2 statt direkt im Deck Builder. | QA | offen | |
+
+### F18 · `showdown` (Menüziel, extern)
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F18.1 | Menüpunkt „Playtester" | Klick → `openShowdownExternal()` öffnet TCG Showdown in neuem Tab, **kein** Tabwechsel in der App selbst. | QA | offen | |
+| F18.2 | Übergabe aus jedem Deck Builder | „📋 TCG Showdown ↗" aus F3.34, F4.58 und F16.30 je einzeln auslösen → `openInShowdownFromBuilder(source)` übergibt jeweils das richtige, aktuelle Deck. | QA | offen | |
+| F18.3 | Alte Tieflinks `#playtester`/`#sandbox` | Beide Aliase aufrufen → landen auf `meta-analysis-hub`, nach 600 ms erscheint „Der Playtester läuft jetzt extern über TCG Showdown — im Menü unter ‚Werkzeuge'." | QA | offen | |
+
+### F19 · Modale und Overlays (reiterübergreifend)
+
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| F19.1 | Hilfe (`helpModal`) | Von jedem der Reiter mit Hilfeknopf öffnen (Stichprobe: 3 verschiedene Reiter) → Inhalt passt jeweils zum Reiter; schließen über Knopf **und** Hintergrundklick. | QA | offen | |
+| F19.2 | Anmeldung (`auth-modal`) | E-Mail/Passwort-Anmeldung, Google-Anmeldung und Passwort-Zurücksetzen je einzeln durchspielen; `signin`/`signup`-Varianten testen; schließen über Knopf und Hintergrund. | QA | offen | |
+| F19.3 | Starthand-Simulator | Öffnen aus einem Deck Builder (F3.33) → `simulatorHandGrid` zeigt eine gezogene Hand; „Combo Probability" mit `comboTargetBadges` gegen eine bekannte Zielkarte nachrechnen. | SPIELER, DATEN | offen | |
+| F19.4 | Deck Compare | Öffnen aus F3.40 → Option 1 (manuelle Liste) und Option 2 (eigenes gespeichertes Deck) je einzeln testen, Ergebnis nachrechnen. | SPIELER | offen | |
+| F19.5 | 3-way Compare | Öffnen aus F4.91 → Builder/Major/Online-Spalten zeigen konsistente Daten für Mega Excadrill; schließen über `closeThreeWayCompare()`. | SPIELER, DATEN | offen | |
+| F19.6 | Anti-Tech / Build vs | Öffnen aus F4.52 → beide Schritte (Deckauswahl → Tech-Vorschläge) einzeln durchlaufen, Vorschläge auf Plausibilität prüfen. | SPIELER | offen | |
+| F19.7 | Rarity Switcher | ★-Knopf (F3.72) auf einer Karte anklicken → Modal zeigt verfügbare Prints/Seltenheiten, Auswahl wechselt die Karte im Deck. | QA | offen | |
+| F19.8 | Matchup-Analyse | Öffnen über `openMatchupAnalysisModal()` → Heatmap, Beste/Schlechteste/Alle Matchups anzeigen, Chip-Filter `maFilterTypeChips` filtert korrekt. | SPIELER, DATEN | offen | |
+| F19.9 | Deck-Gitter-Vorschau | Öffnen aus F3.46 → Bildvorschau zeigt das tatsächliche Deck korrekt; schließen über `closeDeckGridPreview()`. | QA | offen | |
+| F19.10 | Bildansicht | Auf ein Kartenbild im Gitter klicken → `imageViewModal` öffnet die Karte in groß; schließen über `closeImageView()`. | QA | offen | |
+| F19.11 | Vollbildkarte | Karte antippen → `fullscreenCardModal` öffnet sich; schließen über `closeFullscreenCard()`. | QA | offen | |
+| F19.12 | Einzelkarte | `singleCardModal` öffnen und über `closeSingleCard()` schließen. | QA | offen | |
+| F19.13 | Deck-Bild teilen | Öffnen aus F3.43 → `shareImageModal` zeigt ein korrektes Bild des Decks; schließen über `closeShareImageModal()`. | QA | offen | |
+| F19.14 | Wishlist-Gitter | Öffnen aus F14.35–44 → zeigt alle Wunschlisten-Karten als Bild. Erfordert Anmeldung. | QA | offen | |
+| F19.15 | Cardmarket-Wants-Helfer | Öffnen aus F14.35–44 → `wishlistCardmarketModal` liefert eine für Cardmarket brauchbare Liste. Erfordert Anmeldung. | QA | offen | |
+| F19.16 | Tradelist-Gitter | Öffnen aus F14.45–52 → zeigt alle Tauschlisten-Karten als Bild. Erfordert Anmeldung. | QA | offen | |
+| F19.17 | Battle-Journal-Schublade | Öffnen über `openBattleJournalSheet()` → Turniertyp-Chips, Deck-Autocomplete (eigen + Gegner), Bo3-Details und Speicher-Animation einzeln durchspielen. Erfordert Anmeldung. | SPIELER | offen | |
+| F19.18 | Journal: Turnier bearbeiten | Ein protokolliertes Turnier bearbeiten → Änderungen werden übernommen; schließen über `closeEditTournamentModal()`. Erfordert Anmeldung. | QA | offen | |
+| F19.19 | Journal: Match bearbeiten | Einen protokollierten Match bearbeiten → Änderungen werden übernommen; schließen über `closeEditEntryModal()`. Erfordert Anmeldung. | QA | offen | |
+| F19.20 | Meta Binder: verworfene Karten | Nach „Generate Binder" öffnen → zeigt tatsächlich verworfene Karten korrekt; schließen über `closeMetaBinderDroppedModal()`. Erfordert Anmeldung. | SPIELER | offen | |
+| F19.21 | Tech Lab: fehlenden Tech ergänzen | Öffnen aus F4.98/F4.100 → Suche funktioniert, hinzugefügter Eintrag erscheint danach in der jeweiligen Liste (F4.97/F4.99). | QA | offen | |
+| F19.22 | Pocket-Muster | Öffnen aus F12.8, schließen über `.pk-schliessen` — bereits unter F12.12 geprüft; hier zusätzlich das Zusammenspiel mit dem Wachhalte-Modus (F12.17) im offenen Zustand prüfen. | QA | offen | |
+| F19.23 | Meldungen (Toast) | Eine Aktion auslösen, die `showNotification(...)` aufruft (z. B. Deck speichern) → Toast erscheint in `#toast-container`, `aria-live="polite"` greift, verschwindet automatisch nach kurzer Zeit. | QA | offen | |
 
 ---
 
-## 3. `#city-league`
+## Teil B — Datenprüfzeilen (aus `audit/datenfluss.md`)
 
-Gerüst `index.html:677–703`, Inhalt `js/app-city-league.js`.
-
-| Nr | Ansicht/Route | Element | Art | Was genau geprüft wird | Team | Status |
-|---|---|---|---|---|---|---|
-| F038 | `#city-league` | „City League Entwicklung" (`cl.cityLeagueDev`) | Kachel | Route aufrufen. Erwartet: Überschrift steht. | QA | offen |
-| F039 | `#city-league` | „📅 Saison-Pause:" (`cl.seasonClosedTitle`) + `cl.seasonClosed` + `cl.seasonClosedHint` | Kachel | Erwartet: der Saison-Pause-Kasten ist sichtbar. **Belegt:** `data/city_league_analysis.csv`, `data/city_league_archetypes.csv`, `…_deck_stats.csv` und `…_comparison.csv` enthalten heute **nur die Kopfzeile, null Datenzeilen** (gemessen). | Daten | offen |
-| F040 | `#city-league` | Formatwahl `#cityLeagueFormatSelect`: „Aktuelles Meta" (`format.m4current`) | Auswahlfeld | Auf „Aktuelles Meta" stellen. Erwartet: leere Tabelle bzw. Leerzustand, **keine** Ladeanzeige, die nie endet — die Quelldateien haben 0 Zeilen. | Daten | offen |
-| F041 | `#city-league` | Formatwahl: „Vergangenes Meta" (`format.m3archive`) | Auswahlfeld | Umstellen. Erwartet: Tabelle füllt sich aus `data/city_league_analysis_M3.csv` (gemessen: **133.437 Zeilen**) bzw. `…_comparison_M3.csv` (304 Zeilen). Zeilenzahl vorher/nachher notieren, nachher deutlich > 0. | Daten | offen |
-| F042 | `#city-league` | „Daten:"-Chip | Kachel | Chip gegen die mtime der geladenen CSV halten. | Daten | offen |
-| F043 | `#city-league` | „Laden…" (`misc.loading`) | Kachel | Route bei gedrosseltem Netz öffnen. Erwartet: Ladezustand verschwindet, wenn die Datei da ist; er darf nicht als Endzustand stehenbleiben. | QA | offen |
-| F044 | `#city-league` | Hilfe-Knopf | Knopf | Wie F003 mit `openTabHelp('city-league')`. | QA | offen |
-| F045 | `#city-league` | Tabellenspalte „Archetyp" (`cl.thArchetype`) | Tabellenspalte | Kopf gegen `js/app-city-league.js` prüfen; jede Zeile muss einen Wert tragen. | QA | offen |
-| F046 | `#city-league` | Spalte „Anzahl" (`cl.thCount`) / „Alt"/„Neu" (`cl.thOldCount`, `cl.thNewCount`) | Tabellenspalte | Summe der `new_count` gegen `data/city_league_archetypes_comparison_M3.csv` prüfen. | Daten | offen |
-| F047 | `#city-league` | Spalte „Veränderung" (`cl.thChange`) | Berechnung | Stichprobe: `count_change == new_count − old_count` je Zeile. | Daten | offen |
-| F048 | `#city-league` | Spalte „Ø Platzierung" (`cl.thAvgPlacement` / `cl.thAvgPlacementShort`) | Tabellenspalte | Gegen `new_avg_placement` prüfen. | Daten | offen |
-| F049 | `#city-league` | Spalte „Varianten" (`cl.thVariants`) / „Haupt-Pokémon" (`cl.thMainPokemon`) | Tabellenspalte | Werte müssen gefüllt sein; leere Zelle ist ein Befund. | QA | offen |
-| F050 | `#city-league` | Deep-Link `#city-league?deck=<Name>` | Deep-Link | `#city-league?deck=Charizard%20ex` aufrufen. Erwartet: `window.pendingCityLeagueDeckSelection` wird vorbelegt (`js/inline-init.js:545–550`) — auf dieser Route ohne Dropdown darf das folgenlos bleiben, nicht abstürzen. | QA | offen |
-
----
-
-## 4. `#city-league-analysis`
-
-Gerüst `index.html:704–1102` — 94 `data-i18n`, 44 Knöpfe, 3 Auswahlfelder, 5 Eingabefelder.
-
-| Nr | Ansicht/Route | Element | Art | Was genau geprüft wird | Team | Status |
-|---|---|---|---|---|---|---|
-| F051 | `#city-league-analysis` | „City League Deck-Analyse" (`tab.cityLeagueAnalysis`) | Kachel | Route aufrufen, Überschrift prüfen. | QA | offen |
-| F052 | `#city-league-analysis` | Formatwahl `#cityLeagueFormatSelectAnalysis` | Auswahlfeld | Zwischen „Aktuelles Meta" und „Vergangenes Meta" wechseln. Erwartet: Deck-Dropdown lädt neu; bei „Aktuelles Meta" bleibt es leer (0 Datenzeilen, siehe F039). | Daten | offen |
-| F053 | `#city-league-analysis` | Deckwahl `#cityLeagueDeckSelect`, „-- Deck auswählen --" (`cl.selectDeckOption`) | Auswahlfeld | Ein Deck wählen. Erwartet: alle Bereiche darunter füllen sich; Zeilenzahl der Kartenübersicht > 0. | QA | offen |
-| F054 | `#city-league-analysis` | „Bitte Deck auswählen" (`cl.pleaseSelectDeck`) | Kachel | Ohne Deckwahl. Erwartet: Hinweistext statt leerer Fläche. | QA | offen |
-| F055 | `#city-league-analysis` | Kartenfilter `#cityLeagueFilterSelect`: „Alle Karten" (`filter.allCards`) | Filter | Zeilenzahl notieren. | QA | offen |
-| F056 | `#city-league-analysis` | „Karten in >50% der Decks" (`filter.cards50`) | Filter | Umstellen. Erwartet: Zeilenzahl **kleiner** als bei „Alle Karten". Gegenprobe an `percentage_in_archetype` in `data/city_league_analysis_M3.csv`: nur Karten > 50. | Daten | offen |
-| F057 | `#city-league-analysis` | „Karten in >70% der Decks" (`filter.cards70`) | Filter | Umstellen. Erwartet: Zeilenzahl ≤ der von F056. | Daten | offen |
-| F058 | `#city-league-analysis` | „Karten in >90% der Decks (Kern)" (`filter.cards90core`) | Filter | Umstellen. Erwartet: Zeilenzahl ≤ der von F057, und jede verbliebene Karte hat `percentage_in_archetype > 90`. | Daten | offen |
-| F059 | `#city-league-analysis` | „Von:" / „Bis:" (`filter.from`, `filter.to`) — `#cityLeagueDateFrom`, `#cityLeagueDateTo` | Filter | Von = ältestes Datum, Bis = ältestes Datum setzen. Erwartet: Zeilenzahl sinkt gegenüber unbeschränkt. Datumsformat-Hinweis `filter.dateFormatHint` muss sichtbar sein. | Daten | offen |
-| F060 | `#city-league-analysis` | Suchfeld `#cityLeagueOverviewSearch` (`filter.searchCardPlaceholder`) | Sucheingabe | „Boss" eintippen. Erwartet: nur Treffer bleiben; Suche muss auch auf deutschen Namen und `Set+Nr.` greifen (Platzhaltertext verspricht beides). | QA | offen |
-| F061 | `#city-league-analysis` | Typfilter „Alle"/„Pokémon"/„Supporter"/„Item"/„Tool"/„Stadion"/„Energie"/„Spez. Energie"/„Ace Spec" (`filter.type*`, `setOverviewCardTypeFilter`) | Filter | Jeden Typ einzeln. Erwartet: Summe der neun Einzelzeilenzahlen = Zeilenzahl bei „Alle". | Daten | offen |
-| F062 | `#city-league-analysis` | Seltenheit: „Alle Drucke"/„Niedrige Seltenheit"/„Max. Seltenheit" (`filter.allPrints`, `filter.lowRarity`, `filter.maxRarity`, `setOverviewRarityMode`) | Filter | Umschalten. Erwartet: Kartenzahl bleibt gleich, nur die Drucke/Preise ändern sich. | Spieler | offen |
-| F063 | `#city-league-analysis` | „Kartenübersicht" (`section.cardOverview`) | Kachel | Bereich vorhanden, Zeilen tragen Bild, Name, Set+Nr. | QA | offen |
-| F064 | `#city-league-analysis` | Sortierung „Nach Share% sortieren" (`meta.sortByShare`, `sortMetaCards`) | Sortierung | Klicken. Erwartet: erste Zeile hat den höchsten `percentage_in_archetype`, monoton fallend. Zweiter Klick kehrt um. | Daten | offen |
-| F065 | `#city-league-analysis` | Sortierung „Nach Ø Anzahl sortieren" (`meta.sortByAvgCount`) | Sortierung | Wie F064 gegen `average_count`. | Daten | offen |
-| F066 | `#city-league-analysis` | Sortierung „Nach Typ sortieren" (`meta.sortByType`) | Sortierung | Erwartet: Gruppen in fester Reihenfolge, keine Vermischung. | QA | offen |
-| F067 | `#city-league-analysis` | „Meta-Karten-Analyse (Top 10 Archetypen)" (`section.metaCards`) + `#cityLeagueMetaSearch` | Sucheingabe | Archetyp suchen. Erwartet: Trefferliste schrumpft; Bereich zeigt maximal 10 Archetypen. | QA | offen |
-| F068 | `#city-league-analysis` | Meta-Filter „Alle"/„>50%"/„>70%"/„>90%" (`meta.filterAll/50/70/90`, `setMetaShareFilter`) | Filter | Wie F056–F058 im Meta-Karten-Block. | Daten | offen |
-| F069 | `#city-league-analysis` | „Deckbau" (`section.deckBuilder`) / „Dein Deck" (`section.yourDeck`) | Kachel | Karte anklicken → landet im Deck. Erwartet: Zähler „Karten im Deck" steigt. | QA | offen |
-| F070 | `#city-league-analysis` | „Generieren: Max Consistency" (`deck.generateLabel` + `cl.genConsistency`, `autoCompleteConsistency`) | Berechnung | Deck wählen, Knopf drücken. Erwartet: genau 60 Karten (`DECK_SIZE`, `js/deck-builder-consistency.js:186`), höchstens 1 ACE SPEC, kein Nicht-Basis-Karte über 4 Kopien. **Achtung:** die City-League-Quelle ist eine andere als die des Builders — siehe `audit/datenfluss.md`, Kennzahl 3. | Spieler | offen |
-| F071 | `#city-league-analysis` | „So baut der Consistency-Algorithmus" (`deck.algoHintTitle` / `deck.algoHintBody`) | Kachel | Hinweistext lesen. Er behauptet „Top-4 voll gewichtet, Day-2 ≈ 30 %, Day-1 ≈ 10 %" und „Karten ab 80–90 % Inklusion werden Core-Slots". Gegen `PLACEMENT_WEIGHT_BANDS` (`js/deck-builder-consistency.js:62–68`) und `CORE_THRESHOLDS` (`:151`) halten. **Befund erwartet:** der Text erwähnt die seit 05.09.2026 zusätzlich wirkende feldrelative Skala `PLACEMENT_PERCENTILE_BANDS` (`:135–142`) nicht. | Daten | offen |
-| F072 | `#city-league-analysis` | „Warum?" (`btn.buildInfo`, `showConsistencyBuildInfo`) | Knopf | Nach dem Generate klicken. Erwartet: Dialog mit Karten-Detail, Zahl der ausgewerteten Listen, Turnier-Herkunft (`_assessDataQuality`, `js/deck-builder-consistency.js:1260ff`). | Spieler | offen |
-| F073 | `#city-league-analysis` | „Leeren" (`cl.clear`, `clearDeck`) | Knopf | Erwartet: Deck auf 0, Bestätigung oder direkte Leerung — Verhalten festhalten. | QA | offen |
-| F074 | `#city-league-analysis` | „Testhand" (`cl.testDraw`, `openDrawSimulator`) | Knopf | Bei leerem Deck und bei 60 Karten. Erwartet: bei leerem Deck Hinweis `deck.emptyTestDraw`, sonst 7 Karten. | QA | offen |
-| F075 | `#city-league-analysis` | „Deck kopieren" (`cl.btnCopy`, `copyDeck`) | Knopf | Klicken, Zwischenablage prüfen. Erwartet: PTCGL-Format, Summe = 60. | QA | offen |
-| F076 | `#city-league-analysis` | „PTCGL Export" (`btn.exportPTCGL`, `exportToPTCGL`) | Knopf | Erwartet: Datei/Text im PTCGL-Format. | QA | offen |
-| F077 | `#city-league-analysis` | „PTCGL Import" (`btn.importPTCGL`, `importFromPTCGL`) | Klickpfad | Eine gültige Liste einfügen. Erwartet: 60 Karten im Deck. Danach eine kaputte Liste (Tippfehler im Set-Kürzel): Erwartet eine benannte Fehlermeldung, kein stiller Verlust. | QA | offen |
-| F078 | `#city-league-analysis` | „Teilen" (`cl.btnShare`, `shareDeck`) | Knopf | Erwartet: Link oder Bild; `js/ds-share.js` zeichnet. | QA | offen |
-| F079 | `#city-league-analysis` | „Speichern" (`cl.btnSave`, `saveCurrentDeckToProfile`) | Klickpfad | Abgemeldet und angemeldet testen. Erwartet abgemeldet: Aufforderung zur Anmeldung, kein stiller Verlust. | QA | offen |
-| F080 | `#city-league-analysis` | „Vergleichen" (`cl.btnCompare`, `openDeckCompare`) | Knopf | Erwartet: Vergleichsdialog öffnet. | QA | offen |
-| F081 | `#city-league-analysis` | „Raster" (`cl.btnGrid`, `toggleDeckGridView` / `generateDeckGrid`) | Knopf | Umschalten Liste ↔ Raster. Erwartet: gleiche Kartenzahl in beiden Ansichten. | QA | offen |
-| F082 | `#city-league-analysis` | „Proxy" (`cl.btnProxy`, `sendCurrentDeckToProxyPrinter`) | Klickpfad | Klicken → `#proxy`. Erwartet: 60 Karten in der Warteschlange. | QA | offen |
-| F083 | `#city-league-analysis` | „📋 TCG Showdown ↗" (`showdown.buttonLabel`, `openInShowdownFromBuilder`) | Knopf | Erwartet: neuer Tab, Deck übergeben. | QA | offen |
-| F084 | `#city-league-analysis` | „↑ Max Seltenheit" (`deck.upgradeRarity`, `toggleDeckRarity`) | Knopf | Erwartet: Bilder wechseln, Kartenzahl bleibt 60. | Spieler | offen |
-| F085 | `#city-league-analysis` | „Deck-Statistiken" (`section.deckStats`) — „Karten im Deck (verschiedene / Ø-Liste)" (`stats.cardsInDeck`) | Berechnung | Zwei Zahlen prüfen: verschiedene Kartennamen im Deck und Ø-Listengröße. Erwartet: zweite Zahl ≈ 60. | Daten | offen |
-| F086 | `#city-league-analysis` | „Ø Platzierung" (`stats.avgPlacement`) | Berechnung | Gegen `average_placement` in `data/city_league_archetypes_deck_stats.csv` — **die Datei hat 0 Datenzeilen**, also gegen `…_past_deck_stats.csv` prüfen. | Daten | offen |
-| F087 | `#city-league-analysis` | „Verwendete Decks" (`stats.decksUsed`) | Berechnung | Gegen `total_decks_in_archetype` in der geladenen Analyse-CSV. | Daten | offen |
-| F088 | `#city-league-analysis` | „Tech vs Normal" (`techVsNormal.title` / `.subtitle`) | Kachel | Einmal ohne Tech und einmal mit Tech generieren. Erwartet: Block vergleicht die beiden letzten Builds; ohne zweiten Build muss ein Leerzustand stehen. | Spieler | offen |
-| F089 | `#city-league-analysis` | „Meta-Analyse laden" (`btn.loadMetaAnalysis`, `loadMetaCardAnalysis`) | Knopf | Erwartet: Meta-Karten-Block füllt sich, `meta.loadHint` verschwindet. | QA | offen |
-| F090 | `#city-league-analysis` | Raster-Suche `#cityLeagueDeckGridSearch` | Sucheingabe | Kartennamen eintippen. Erwartet: Raster filtert, Zähler passt sich an. | QA | offen |
-| F091 | `#city-league-analysis` | Leerzustände `emptyState.deckEmpty`, `emptyState.metaNotLoaded` | Kachel | Route frisch öffnen. Erwartet: beide Leerzustände sichtbar, nicht leere Kästen. | QA | offen |
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| D1 | Kennzahl **Win %** — drei Konventionen an sieben Anzeigestellen | Für Mega Excadrill (bzw. ein Deck mit ausreichend Partien) an jeder der sieben Anzeigestellen aus `datenfluss.md` §3.4 die angezeigte Zahl gegen die dort genannte Formel und die Rohdatei nachrechnen: Deck-Kachel Tierliste (`mitUnentschieden`, Beta-Prior k=50), Heatmap-Zelle „online" (`ohneUnentschieden`, k=20, kursiv unter 10 Matches), Matchup-Tabelle Archetyp-Karte (`ohneUnentschieden`, k=20, `THIN_GAMES=20`), Major-Win-Rate Archetyp-Karte (`mitUnentschieden`, **neu gerechnet** aus wins/losses/ties, **nicht** `win_pct` gelesen, gedämpft unter 100 Partien), „Cumulative Win %" in `past-meta` (**Matchpunkte**), Labs-Beitrag zum Tier-Score (`win_pct`=Matchpunkte, nur ab `games ≥ 15`), Matchup-Mischung im Meta Call (Day-2 0,45/Day-1 0,35/Online 0,20). Bei jedem Wert prüfen, ob Unentschieden wie in der jeweiligen Konvention beschrieben behandelt werden. | SPIELER, DATEN | offen | |
+| D2 | Kennzahl **Meta-Anteil** — Online kumulativ (`share_numeric`) | Angezeigten Wert „Anteil"/„Share online" für Mega Excadrill gegen `share_numeric` aus `limitless_online_decks.csv` nachrechnen; Nenner ist die Zahl der Decklisten **inklusive** der weggeworfenen Zeile „Other" — bestätigen, dass die Summe aller `share_numeric` merklich unter 100 % bleibt (heute gemessen 96,19 %). | DATEN | offen | |
+| D3 | Kennzahl **Meta-Anteil** — Fenster (`share_fenster`) | Wert „Fenster"/Trend-Spalte im Meta Call für Mega Excadrill gegen `count_fenster/Σcount_fenster` aus `limitless_online_fenster.csv` nachrechnen; bestätigen, dass der Nenner ein **anderer** ist als bei D2 (Fensterzuwächse statt Gesamtliste). | DATEN | offen | |
+| D4 | Kennzahl **Meta-Anteil** — Präsenzturniere (`share_pct`) | Wert „Anteil Major"/„Field Share" gegen `player_count/total_players` aus `labs_tournament_decks.csv` nachrechnen; bestätigen, dass hier über **Spieler**, nicht über Listen genannt wird. | DATEN | offen | |
+| D5 | Kennzahl **Antritte** (`total_brought`) | Angezeigte Zahl „Antritte"/„gebracht" gegen die gezählte **und** die gewichtete Spalte nachrechnen; bestätigen, dass `gezaehlteZeilen()` konsequent auf eine der beiden Varianten schaltet (alles oder nichts je Zeile), nicht gemischt. | DATEN | offen | |
+| D6 | Kennzahl **Meta-Anteil** — Prognose/Final % im Meta Call | Für Mega Excadrill (oder ein anderes im Feld vertretenes Deck) den „Prognose"/„Final %"-Wert Schritt für Schritt nachrechnen: rezenzgewichteter Anker (λ=0,40) → Leistungsfaktor (γ-Fenster 2 Turniere, Faktor-Deckel 0,85–…) → Mittelwertrückkehr (Exponent 0,92); bei fehlender Deckkenntnis den Rückfall-Pfad mit den dort genannten Gewichten (0,40/0,20/0,15/0,15/0,10 bzw. mit City-League-Schaltern 0,32/0,35/…) prüfen. | DATEN | offen | |
+| D7 | Kennzahl **Max Consistency** | Für Mega Excadrill (8 Listen, alle aus Worlds 2026, Plätze 37–122) den generierten Deck-Inhalt (F3.28/F4.51) gegen die Formel aus §5.1 nachrechnen (`weightedShare`, `weightedAvgCount`, `topCutFreq`, Platzgewicht als Maximum aus absoluter/feldrelativer Skala, Größengewicht); bestätigen, dass wegen `MIN_WEIGHTED_LISTS = 3` **nicht** in den Alt-Pfad zurückgefallen wird (8 ≥ 3), und den „Why?"-Dialog (F3.39) auf die genannten Turnierzahl/Namen/Datum/Platzspanne prüfen. | SPIELER, DATEN | offen | |
+| D8 | Kennzahl **Tech-Cut** — Baustein A (Bedrohungslage) | Für eine Kategorie aus `active_threats.json` (z. B. `hand_disruption`, `weighted_meta_share = 0,2678`) den Wert gegen die Formel in §6.1 nachrechnen (Schwellen `INCLUSION_FLOOR=0,25`, `META_SHARE_FLOOR=0,005`, `CATEGORY_FLOOR=0,02`, Maximum je Archetyp statt Summe). | DATEN | offen | |
+| D9 | Kennzahl **Tech-Cut** — Baustein B (Tech-Audit im Bauer) | Für Mega Excadrill im Deck Builder die vorgeschlagene Konteranzahl je Kategorie gegen `weighted_meta_share`-Schwellen (0,30/0,60) und Aggressionszuschlag nachrechnen; Score-Wirkung (+18 gewählt / −20 redundant) am „Why?"-Dialog nachvollziehen. | SPIELER, DATEN | offen | |
+| D10 | Kennzahl **Tech-Cut** — Baustein C (Tech-Ideen) | Eine angezeigte Tech-Idee gegen die fünf Paarungen in `card_capability_interactions.json` (Version 0.1, 15.05.2026) abgleichen; bestätigen, dass „Keine Idee gefunden" erscheint, sobald keine der fünf Regeln zutrifft, und dass **keine** Anteils-/Platzierungs-/Siegquote daneben steht (bewusst getrennt vom Beleg-Block). | DATEN | offen | |
+| D11 | **Archetyp-Erkennung** — Mega Excadrill | Bestätigen, dass „Mega Excadrill" in allen sechs Quelldateien (`archetype_icons.json`, `limitless_online_decks.csv`, `labs_tournament_decks.csv`, `online_tournament_top8_decks.csv`, `tournament_decklists_per_player.csv`, `current_meta_card_data.csv`) identisch geschrieben ist und ohne Alias-Eintrag über den Namen zusammengeführt wird; die Anzeige in allen Reitern (city-league-analysis, current-analysis, past-meta, cards) zeigt durchgängig denselben Namen für dasselbe Deck. | DATEN | offen | |
+| D12 | Kennzahl **Top-8 vs. Erwartung** | Wert für Mega Excadrill (oder ein Deck mit ≥ `CONV_MIN_N=20` Antritten) gegen `smoothed`/`rawPct` aus §8.1 nachrechnen (`CONV_PRIOR=50`); ein Deck mit weniger als 20 Antritten suchen und bestätigen, dass es aus der **Liste** fliegt, nicht nur aus dem Feldmittel. | DATEN | offen | |
+| D13 | Kennzahl **Deckempfehlung** („Was bringe ich mit?") | Score für ein angezeigtes Deck gegen die Formel in §8.2 nachrechnen (`D1`, `D2`, `p0`, `k=30` bzw. `60`); bestätigen, dass nur Decks mit `MIN_ZIELSPIELER=8` und Anker mit `MIN_ANZEIGE=30` in die Top 10 kommen. | DATEN | offen | |
+| D14 | Kennzahl **Preise** | Für eine Beispielkarte den angezeigten „€"-Wert gegen `price_data.csv` nachrechnen; bestätigen, dass bei `no_trend`/`trend_below_low`/`eur_price==0`/`eur_low>eur_price` tatsächlich `eur_low` statt `eur_price` angezeigt wird (§8.3); eine Karte mit `mapping_status=collision` suchen und prüfen, was dann angezeigt wird. | DATEN | offen | |
+| D15 | Kennzahl **Kartentrends** (▲/▼) | Für eine City-League-Karte den Pfeil gegen `getTrendIndicator()` nachrechnen (Schwellen ±2, Staple-Schutz bei >95 % und diff>−10); bestätigen, dass in `current-analysis` **keine** Pfeile erscheinen (nur `source==='cityLeague'`) — und dass wegen §10.1 auch im City-League-Reiter „aktuell" aktuell keine Pfeile erscheinen können. | DATEN | offen | |
+| D16 | Kennzahl **Stichprobengrößen** im Block „Quellen & Methodik" | Angezeigte Zahlen (Gemeldete Listen/Turniere/Spieler) gegen `totalEntries = Σ new_count` und die rekonstruierte Feldgröße nachrechnen; Seite länger als 24 h offen lassen bzw. `sessionStorage`-Eintrag `ds_datenumfang_v1` manuell altern lassen → Block aktualisiert sich (`HOECHSTALTER_MS`). | DATEN | offen | |
+| D17 | Kennzahl **Datenstand** („Daten: …") | Angezeigtes Datum je Reiter gegen `data/data_stand.json` abgleichen; bestätigen, dass das Datum aus dem **Git-Verlauf** kommt, nicht aus `Last-Modified`; für eine Datei ohne bekannten Stand prüfen, dass „unbekannt" und **nicht** das heutige Datum erscheint. | DATEN | offen | |
+| D18 | Kennzahl **Pocket-Tierliste** | Eine Stufe in `pocket` gegen `data/pocket_tierlist.json` und die Game8-Quelle abgleichen; bestätigen, dass unbekannte Stufen ausgewiesen und nicht stillschweigend einsortiert werden; Datenstand gegen `pocket-tierlist.yml` prüfen — der Ablauf hat **keinen** Zeitplan, nur `workflow_dispatch`. | DATEN | offen | |
+| D19 | Verwaiste Datei `labs_tournament_scraper.log` (0 B) | Bestätigen, dass die Datei tatsächlich leer und von keinem Feature referenziert ist — versehentlich unter `data/` abgelegtes Protokoll. | DATEN | offen | |
+| D20 | Verwaiste Datei `online_tournament_scraper.log` (0 B) | Analog D19. | DATEN | offen | |
+| D21 | Verwaiste Datei `per_decklist_scraper.log` (0 B) | Analog D19. | DATEN | offen | |
+| D22 | Verwaiste Datei `tournament_scraper.log` (139 B) | Analog D19. | DATEN | offen | |
+| D23 | Verwaiste Datei `city_league_archetypes_comparison.html` (21 KB) | Bestätigen, dass kein Frontend-Code sie liest — einziger Treffer ist ein Dokumentationsverweis. | DATEN | offen | |
+| D24 | Verwaiste Datei `data/datenluecken.json` | Bestätigen: `js/app-admin.js` liest sie (Admin-Reiter F10), aber **kein** Workflow erzeugt sie; aktueller Stand ist `anzahl: 0` vom 2026-08-31 — prüfen, wie alt er inzwischen ist. | DATEN | offen | |
+| D25 | Verwaiste Datei `pokepricelab_worklist.csv` | Bestätigen, dass sie nur von `triage_pokepricelab_report.py` berührt wird, kein Frontend-Bezug. | DATEN | offen | |
+| D26 | Verwaiste Datei `pokepricelab_verification.csv` | Bestätigen, dass Ablauf nur `workflow_dispatch` ist, kein Zeitplan. | DATEN | offen | |
+| D27 | Verwaiste Datei `pokepricelab_catalog_index.csv` (4,7 MB) | Bestätigen, dass Dateistand seit 2026-08-17 unverändert ist. | DATEN | offen | |
+| D28 | Verwaiste Datei `calibration/indy_2026_actuals.json` | Bestätigen, dass `tools/calibrate_meta_call_indy.py` in keinem Workflow steht. | DATEN | offen | |
+| D29 | Verwaiste Datei `_archetype_mapping_gaps.json` | Bestätigen, dass `archetype_mapping_audit.py` in `weekly-full-update.yml:267–275` **nicht** aufgerufen wird. | DATEN | offen | |
+| D30 | Verwaiste Datei `all_cards_database.json` (16 MB) | Bestätigen, dass das Frontend tatsächlich `all_cards_merged`/`cards_chunk_*` liest und diese Datei nur ein Zwischenprodukt ist. | DATEN | offen | |
+| D31 | Verwaiste Datei `all_cards_merged.csv` (7 MB) | Bestätigen, dass das Frontend nur die `.json`-Fassung liest. | DATEN | offen | |
+| D32 | Verwaiste Dateien `city_league_archetypes_comparison_M3.csv` / `city_league_analysis_M3.csv` (31 MB) | Bestätigen, dass beide im Frontend-Code nur als **Kommentar** erscheinen, nicht tatsächlich gelesen werden. | DATEN | offen | |
+| D33 | Verwaiste Datei `meta_play_decks_cache.json` (534 KB) | Bestätigen, dass sie nur Scraper-Zwischenspeicher ist. | DATEN | offen | |
+| D34 | Verwaiste Dateien `price_guide_6.json` / `products_singles_6.json` / `products_nonsingles_6.json` | Bestätigen, dass die Seite nur `price_data.csv` (über `cards_chunk_*`) liest, diese drei Dateien nur Zwischenstufen sind. | DATEN | offen | |
+| D35 | Verwaiste Datei `testing_group_bootstrap.json` | Bestätigen, dass `index.html` sie referenziert, aber kein Ablauf sie pflegt (Stand 2026-08-17) — prüfen, ob Testing Groups (F14.105–112) davon betroffen sind. | DATEN | offen | |
+| D36 | Verwaiste Dateien `offline-images-manifest.json` / `offline-manifest.json` | Bestätigen, dass der Dateistand (2026-08-17) hinter dem täglich neu gebauten Kartenbestand zurückliegt — Offline-Modus mit veraltetem Manifest testen. | DATEN | offen | |
+| D37 | Praktisch tot: `labs_tournament_decks_TEF-PBL.csv` / `…_matchups_TEF-PBL.csv` | Bestätigen, dass beide geladen werden, aber nur **ein einziges** Turnier enthalten — Auswirkung auf die Aussagekraft der Major-Zahlen in F4/F16 einschätzen. | DATEN | offen | |
+| D38 | Praktisch tot: `city_league_images.json` (38 KB) | Bestätigen, dass sie seit 2026-08-17 unverändert ist und zum leeren City-League-Zweig gehört (vgl. D39). | DATEN | offen | |
+| D39 | Leere Rechnung: City League „aktuell" (4 Dateien nur Kopfzeile) | In den Reitern `city-league` und `city-league-analysis` im Modus „Current" bestätigen, dass tatsächlich keine Daten erscheinen (Stand laut `data_stand.json`: 2026-07-31); zusätzlich prüfen, dass die Kartentrend-Pfeile (D15) und `getCityLeagueDeckCountFallback` im Deck Builder entsprechend reagieren. | DATEN | offen | |
+| D40 | Leere Rechnung: drei Konversionsspalten immer 0 (`labs_tournament_decks.csv`) | Bestätigen, dass `top8_conv_rate`/`top16_conv_rate`/`top32_conv_rate` in allen 4.713 Zeilen `0` sind und der Meta Call konsequent auf den Day-2-Ersatz umschaltet (§10.2); insbesondere `labsT8Boost` beobachten — er sollte strukturell auf 0 rechnen, wo der Ersatz nicht greift. | DATEN | offen | |
+| D41 | Leere Rechnung: fünf Regeln als „Formatabdeckung" (`card_capability_interactions.json`) | Bereits unter D10 geprüft — hier zusätzlich bestätigen, dass Version und Datum (0.1, 15.05.2026) seither unverändert sind. | DATEN | offen | |
+| D42 | Leere Rechnung: `data/datenluecken.json` zeigt „keine Lücken" | Admin-Reiter (F10) zeigt „Keine offene Lücke" — bestätigen, dass das an der fehlenden Erzeugung liegt (D24), nicht daran, dass tatsächlich keine Lücken bestehen. | DATEN | offen | |
+| D43 | Leere Rechnung: `data/ace_specs.json` fehlt oder veraltet | Bestätigen, dass ohne diese Datei (39 Namen, Stand 2026-02-18) **jedes** generierte Deck ohne ACE SPEC gebaut würde — an einem generierten Deck (F3.28/F4.51) prüfen, ob ein ACE SPEC enthalten ist. | DATEN | offen | |
+| D44 | Leere Rechnung: Max Consistency fällt für 15 von 27 Archetypen auf Alt-Pfad zurück | Für ein Deck mit < 3 gewichteten Listen (nicht Mega Excadrill, das hat 8) bestätigen, dass der Bauer **still** auf den Alt-Pfad (Stufen 0/0c/1/2/LRM) umschaltet, ohne dass die Oberfläche das kenntlich macht. | SPIELER, DATEN | offen | |
+| D45 | Leere Rechnung: `prizepack_official_images.csv` veraltet trotz Sonntags-Ablauf | Dateistand der CSV (2026-08-17) gegen die JSON-Fassung (2026-09-07) und den tatsächlichen letzten Lauf von `prizepack-official-images.yml` abgleichen. | DATEN | offen | |
+| D46 | Zwei Wege #1: Win Rate desselben Decks am Major | Für ein Deck mit hoher Unentschieden-Quote am Major (Referenzwert 10,98 %) die Zahl in `past-meta` (Matchpunkte) und auf der Archetyp-Karte in `current-meta` (S/(S+N+U)) nebeneinanderlegen → Abweichung von rund 5 Punkten bestätigen. | SPIELER, DATEN | offen | |
+| D47 | Zwei Wege #2: Meta-Anteil, Donut vs. Tabelle | Für Mega Excadrill den Anteilswert im Donut (`feldGroesseAusAnteilen`) gegen den Wert in der danebenstehenden Tabelle (`share_numeric`) vergleichen — beide sollten nach der Reparatur übereinstimmen; bestätigen, dass ohne den rekonstruierten Nenner tatsächlich 8,1 % vs. 7,75 % aufgetreten wäre (Regressionstest). | SPIELER, DATEN | offen | |
+| D48 | Zwei Wege #3: Meta-Anteil, dritte Fassung (`share_kumulativ` vs. `share_numeric`) | Für dasselbe Deck `share_kumulativ` aus `limitless_online_fenster.csv` gegen `share_numeric` aus `limitless_online_decks.csv` vergleichen und die im Dateikopf selbst genannte Nenner-Differenz (38.398 vs. 39.826) nachvollziehen. | DATEN | offen | |
+| D49 | Zwei Wege #4: Top-8-Quote gewichtet vs. gezählt | Feldwert gewichtet (6,19 %) gegen gezählt (6,14 %) vergleichen; bestätigen, dass alle Ansichten seit dem 02.09.2026 einheitlich `gezaehlteZeilen()` folgen — **außer** `js/app-meta-call.js:6133`, das weiterhin `top8_conv_rate` liest, welches in allen Zeilen 0 ist (vgl. D40). | DATEN | offen | |
+| D50 | Zwei Wege #5: `consistency_score` im Warum-Dialog, zwei Skalen | Für ein Deck im neuen Bauer (Skala 0–100) und ein Deck im Alt-Pfad (Skala 0–120, Tech-Boni ±18/−20) den „Why?"-Dialog öffnen und die jeweilige Skala prüfen; bestätigen, dass die Wahl allein davon abhängt, ob der Archetyp ≥ 3 Listen im Formatfenster hat (Mega Excadrill mit 8 Listen sollte den **neuen** Bauer nutzen). | SPIELER, DATEN | offen | |
+| D51 | Zwei Wege #6: Max-Consistency-Bau, zwei Algorithmen | Für ein Deck im neuen (6-Phasen, Core 90/85/80 %) und ein Deck im Alt-Pfad (Stufen 0/0c/1/2/LRM, Core ≥75, Extended ≥40) den jeweils erzeugten Deckinhalt vergleichen; in der Konsole nach „Phase Y.2 declined" suchen, um den Umschaltpunkt sichtbar zu machen. | QA, DATEN | offen | |
+| D52 | Zwei Wege #7: Win-Rate-Glättung, zwei Prioren | Auf einem Bildschirm (z. B. Deck-Kachel + Heatmap-Zelle desselben Decks gleichzeitig sichtbar) bestätigen, dass k=50 (Deck-Ebene) und k=20 (Matchup-Ebene) nebeneinanderstehen, ohne dass ein Hinweis auf den Unterschied hinweist. | SPIELER, DATEN | offen | |
+| D53 | Zwei Wege #8: Zähler der Deck-Glättung, `games` vs. Listen | Für Dragapult (oder ein anderes Deck mit großem Unterschied Listen/Partien) `deck.new_count` (Listen, 3.138) gegen die tatsächlichen Partien (14.861) vergleichen; bestätigen, dass der Tooltip korrekt „aus N Listen" schreibt, während die Formel intern `games` nennt — Wirkung auf die Glättungsstärke (≈4,7×) nachvollziehen. | DATEN | offen | |
+| D54 | Zwei Wege #9: Archetyp-Zuordnung, Python vs. JavaScript | Für eine Karte mit Set-Kürzel oder „ex" im Namen (nicht Mega Excadrill, dort ist die Normalisierung trivial) bestätigen, dass die Python-Signatur (Symbole, `archetype_matcher.py`) und die JS-Normalisierung (`app-meta-cards.js`) zum selben Ergebnis kommen; die vier Paare in `archetype_aliases.json` gezielt gegenprüfen. | DATEN | offen | |
+| D55 | Zwei Wege #10: Formattor für Decklisten, `currentMeta`/`cityLeague` vs. `past-meta` | Für ein im Vorformat übernommenes Deck (Referenz Alakazam Dudunsparce, 61 von 75 Listen aus dem Vorformat) bestätigen, dass `past-meta` **kein** Datumstor anwendet, während `currentMeta`/`cityLeague` auf `in_person_legal_date` filtern — mit Mega Excadrill (nur Worlds-Listen, alle nach dem Formatbeginn) den Unterschied gegenprüfen, dass dort beide Pfade dieselbe Grundmenge nutzen. | SPIELER, DATEN | offen | |
 
 ---
 
-## 5. `#current-analysis`
+## Teil C — Hypothesen (aus „Was mir aufgefallen ist")
 
-Gerüst `index.html:1132–1786` — 169 `data-i18n`, 65 Knöpfe, 3 Auswahlfelder, 9 Eingabefelder, 14 `<th>`.
-
-| Nr | Ansicht/Route | Element | Art | Was genau geprüft wird | Team | Status |
-|---|---|---|---|---|---|---|
-| F092 | `#current-analysis` | „Deck-Analyse: aktuelles Meta" (`cm.analysisHeading`) + `cm.analyzeAndBuild` | Kachel | Route aufrufen. Überschrift und Untertitel prüfen. | QA | offen |
-| F093 | `#current-analysis` | „Wähle einen Archetyp, um die Analyse zu starten" (`cm.emptyTitle`, `cm.emptyHint`) | Kachel | Ohne Deckwahl. Erwartet: Leerzustand statt leerer Fläche. | QA | offen |
-| F094 | `#current-analysis` | Deckwahl `#currentMetaDeckSelect` (`cl.selectArchetype`) | Auswahlfeld | Deck wählen. Erwartet: Kartenübersicht, Matchups und Statistik füllen sich in einem Durchgang. | QA | offen |
-| F095 | `#current-analysis` | Zweitdeck `#currentMetaDeckSelectSecondary` — „+ Mit Archetyp fusionieren (Cooking)" (`cm.fuseWithLabel`, Leerwert `cm.fuseNone` = „-- Kein zweites Deck --") | Auswahlfeld | Zweites Deck wählen. Erwartet: Kartenübersicht vereinigt beide Archetypen; Zeilenzahl steigt. | Spieler | offen |
-| F096 | `#current-analysis` | „Schnellüberblick" / „Cooking" (`cm.viewModeVanilla`, `cm.viewModeDeepDive`, `setCurrentMetaViewMode`) | Reiter | Umschalten. Erwartet: „Cooking" zeigt zusätzliche Blöcke (Fusion, Tech Lab); „Schnellüberblick" blendet sie aus. | QA | offen |
-| F097 | `#current-analysis` | „Turnierformat-Filter:" (`cm.formatFilter`) mit „Alle"/„Limitless Decks"/„Major-Decks" (`cm.filterAll`, `cm.filterLive`, `cm.filterPlay`, `setCurrentMetaFormatFilter`) | Filter | Alle drei Stufen. Gegenprobe an `data/current_meta_card_data.csv`, Spalte `meta`: gemessen **3.248 Zeilen „Meta Live"** und **1.154 Zeilen „Meta Play!"**. Erwartet: „Alle" = Summe beider, „Limitless Decks" ≈ Live, „Major-Decks" ≈ Play!. | Daten | offen |
-| F098 | `#current-analysis` | „Datenfenster ab" `#currentMetaDateFrom` (`ui.dataWindowFrom`, `filter.dateFormatHint`) | Filter | Datum in der Mitte des Bestands setzen. Erwartet: Zeilenzahl sinkt. | Daten | offen |
-| F099 | `#current-analysis` | Datum zurücksetzen (`clearCurrentMetaDateFrom`) | Knopf | Erwartet: Feld leer, alte Zeilenzahl exakt wieder da. | QA | offen |
-| F100 | `#current-analysis` | „Referenz-Listen auf einen Blick" (`cm.quickRefTitle`, `cm.quickRefHint`) | Kachel | Erwartet: zwei Kacheln nebeneinander. | Spieler | offen |
-| F101 | `#current-analysis` | „Aktuelles Online · Typischer Build" (`cm.quickRefOnline`) | Kachel | Bilanz + Quote prüfen. **Muss** Matchpunkte `(3S+U)/(3·Partien)` zeigen (`js/current-meta-quickref.js:634–643`) und den Konventionshinweis im `title` tragen. Gegen `data/online_best_decklists.json` nachrechnen. **Befund erwartet, falls dort noch `win_pct` steht:** das ist die vierte, verworfene Formel `(S+0,5·U)/Partien`. | Daten | offen |
-| F102 | `#current-analysis` | „Aktuelles Major · Beste Platzierung" (`cm.quickRefMajor`) | Kachel | Wie F101 (`js/current-meta-quickref.js:591–600`). Beide Kacheln müssen **dieselbe** Formel zeigen. | Daten | offen |
-| F103 | `#current-analysis` | „3-Wege-Vergleich (Builder · Major · Online)" (`cm.quickRef3way`, `openThreeWayCompare`) | Knopf | Öffnen. Erwartet: Spalten „Card" / „Your Build" / „Latest Major" / „Latest Online" (`cm.threeWayCardCol`, `cm.threeWayColBuilder`, `cm.threeWayColMajor`, `cm.threeWayColOnline`). Ohne Builder-Liste: Leerzustand statt leerer Spalte. | Spieler | offen |
-| F104 | `#current-analysis` | 3-Wege schließen (`closeThreeWayCompare`) | Knopf | `Esc` und Knopf. Erwartet: beides schließt. | QA | offen |
-| F105 | `#current-analysis` | „Deck-Matchups" (`matchup.title`) — Spalten „Gegner"/„Win Rate"/„Record" (`matchup.opponent`, `matchup.winRate`, `matchup.record`; `index.html:1253–1255`) | Tabellenspalte | Eine Zeile gegen `data/limitless_online_decks_matchups.csv` nachrechnen. Erwartete Konvention: `S/(S+N)`. **Befund:** die Spalte heißt „Win Rate" ohne Konventionsangabe, während `stats.totalWinrate` auf derselben Seite ebenfalls „Win Rate" heißt und `S/(S+N+U)` rechnet. Prüfen, ob mindestens ein `title` die Konvention nennt. | Daten | offen |
-| F106 | `#current-analysis` | „Beste Matchups" (`matchup.best`) | Tabellenspalte | Erwartet: absteigend nach Win Rate, Top-N. Gegenprobe an der CSV. | Daten | offen |
-| F107 | `#current-analysis` | „Schlechteste Matchups" (`matchup.worst`) | Tabellenspalte | Erwartet: aufsteigend. **Prüfen, ob 0-%-Zeilen erscheinen:** gemessen 59 Zeilen mit `win_rate = 0` auf 32 Decks. Ein Deck mit einer 0-%-Paarung muss diese in „Schlechteste Matchups" zeigen. | Daten | offen |
-| F108 | `#current-analysis` | „Keine Daten verfügbar" (`matchup.noData`) | Kachel | Deck ohne Matchup-Zeilen wählen (35 der 135 Decks in `limitless_online_decks.csv` haben keine Zeile in der Matchup-Datei — 135 vs. 100). Erwartet: Hinweistext. | Daten | offen |
-| F109 | `#current-analysis` | „Matchups gegen Meta Call (Erwartetes Meta)" (`matchup.vsMetaCallTitle`) — Spalten „Gegner"/„Meta %"/„Win Rate" (`index.html:1461–1463`) | Tabellenspalte | Erwartet: „Meta %" stammt aus dem Meta-Call-Feld (`finalShare`), nicht aus dem Online-Share. Summe der „Meta %" über alle Zeilen + „Sonstige" = 100. | Daten | offen |
-| F110 | `#current-analysis` | „Dein Build vs Vanilla (Meta-Call-gewichtet)" (`matchup.userVsVanillaTitle`) — Spalten „Gegner"/„Meta %"/„Vanilla"/„Dein Build"/„Delta" | Tabellenspalte | Erwartet: `Delta = Dein Build − Vanilla` je Zeile; Vorzeichen und Farbe müssen zusammenpassen. | Daten | offen |
-| F111 | `#current-analysis` | Matchup-Legende (`matchup.legendStrongPos`, `.legendPos`, `.legendNeutral`, `.legendNeg`, `.legendStrongNeg`) | Kachel | Gegen die Schwellen in `js/app-anti-tech.js:84–89` prüfen: ≥60 stark positiv, ≥53 positiv, ≥47 neutral, ≥40 negativ, darunter stark negativ. Erwartet: Legende nennt dieselben Grenzen. | Daten | offen |
-| F112 | `#current-analysis` | Gegnersuche `#currentMetaOpponentSearch` (`matchup.searchOpponent`, `matchup.searchPlaceholder`) | Sucheingabe | Gegnernamen eintippen. Erwartet: Vorschlagsliste, Auswahl füllt `#currentMetaOpponentSelected`. | QA | offen |
-| F113 | `#current-analysis` | „Gesamte Win Rate — Limitless Online Turniere" (`stats.totalWinrate`) | Berechnung | Wert gegen `data/limitless_online_decks.csv` `win_rate_numeric` prüfen. Gemessen: die Spalte entspricht in **134 von 135 Zeilen** exakt `S/(S+N+U)`; **eine Zeile weicht ab** — welche, gehört in den Befundbericht. | Daten | offen |
-| F114 | `#current-analysis` | „Matchup gegen Top 20" (`stats.matchupTop20`) | Berechnung | Erwartet: anteilsgewichteter Schnitt über die 20 Decks mit dem höchsten Share. Gegen die Matchup-CSV nachrechnen. | Daten | offen |
-| F115 | `#current-analysis` | „Karten im Deck (verschiedene / Ø-Liste)" (`stats.cardsInDeck`) | Berechnung | Wie F085. | Daten | offen |
-| F116 | `#current-analysis` | „Tech Lab — finde Techs für jede Meta-Karte" (`techLab.heading`, `techLab.subtitle`) | Kachel | Bereich muss im Modus „Cooking" erscheinen. | Spieler | offen |
-| F117 | `#current-analysis` | Tech-Lab-Zielsuche `#techLabTargetSearch` (`techLab.targetLabel`, `techLab.startHint`) | Sucheingabe | Karte wählen. Erwartet: „Gewählt: <Karte>" (`techLab.selectedLabel`), vorher „keine" (`techLab.noneSelected`). | QA | offen |
-| F118 | `#current-analysis` | „Stark gegen — Karten die diese hier besiegt" (`techLab.beatsTitle`, `techLab.beatsHint`) | Kachel | Erwartet: Liste oder ein benannter Leerzustand. **Grenze:** die Regelbasis `data/card_capability_interactions.json` trägt Version `0.1` vom `2026-05-15` und genau **5 Paarungen** (gemessen). Ein leeres Ergebnis ist der Normalfall und muss als solcher dastehen. | Daten | offen |
-| F119 | `#current-analysis` | „Wird besiegt von" (`techLab.beatenByTitle`, `techLab.beatenByHint`) | Kachel | Wie F118 in der Gegenrichtung. | Daten | offen |
-| F120 | `#current-analysis` | „Konkrete Meta-Matchups" (`techLab.specificMatchupsTitle`) | Kachel | Erwartet: nur Gegner mit echter Matchup-Zeile. | Daten | offen |
-| F121 | `#current-analysis` | „Karten, die den Kartentext umgehen" (`techLab.cardTextBypassersTitle`) | Kachel | Erwartet: Treffer aus `attack.ignores_effects` (3 der 5 Regeln). | Daten | offen |
-| F122 | `#current-analysis` | „+ Fehlende Tech hinzufügen" (`techLab.addMissingBtn`) + `#techLabAddSearch` | Klickpfad | Karte hinzufügen, Seite neu laden. Erwartet: Eintrag überlebt (localStorage `techLab.overrides.v1`, `techLab.dataNote`). | QA | offen |
-| F123 | `#current-analysis` | „Overrides zurücksetzen" (`techLab.resetBtn`) | Knopf | Erwartet: eigene Einträge weg, Standardliste wieder da. | QA | offen |
-| F124 | `#current-analysis` | „Vorschläge kommen aus der Kartentext-Capability-Engine …" (`techLab.dataNote`) | Kachel | Der Hinweis muss Version und Datum der Regelbasis nennen (`TechIdeen.datenstand()`, `js/tech-ideen.js:463–477`). **Erwartet: `0.1` / `2026-05-15` / 5 Paarungen.** Fehlen sie, ist ein leeres Ergebnis nicht einzuordnen. | Daten | offen |
-| F125 | `#current-analysis` | „Build vs …" (`antiTech.buildVsBtn`, `openAntiTechModal`) | Knopf | Öffnen. Erwartet: Dialog Schritt 1 „Bauen gegen spezifische Decks" (`antiTech.modalTitle`). | QA | offen |
-| F126 | `#current-analysis` | Anti-Tech Schnellauswahl (`antiTech.quickPicksLabel` = „Schnellauswahl (aus dem Meta Call)") | Filter | Erwartet: höchstens 12 Vorschläge (`QUICK_PICK_LIMIT`, `js/app-anti-tech.js:41`). | Daten | offen |
-| F127 | `#current-analysis` | Anti-Tech WR-Pillen | Tabellenspalte | Farbe je Gegner gegen `_wrClass` (`js/app-anti-tech.js:83–90`) prüfen. | Daten | offen |
-| F128 | `#current-analysis` | Anti-Tech Aggressivität „Mild"/„Standard"/„Schwer" (`antiTech.mildName`, `.standardName`, `.heavyName`) | Filter | Alle drei. Erwartet: Zahl der vorgeschlagenen Tech-Karten steigt monoton von Mild zu Schwer. | Spieler | offen |
-| F129 | `#current-analysis` | „Weiter → Tech-Karten wählen" (`antiTech.continueBtn`, `advanceAntiTechModal`) | Knopf | Ohne Zielauswahl klicken. Erwartet: Hinweis statt Schritt 2. | QA | offen |
-| F130 | `#current-analysis` | „← Zurück" (`antiTech.backBtn`, `backToAntiTechStep1`) | Knopf | Erwartet: Auswahl aus Schritt 1 bleibt erhalten. | QA | offen |
-| F131 | `#current-analysis` | „Build mit N Karten" (`antiTech.buildBtn`, `confirmAntiTechBuild`) | Berechnung | Bestätigen. Erwartet: die gewählten Karten stehen fest im Deck (`techSlots`), höchstens 10 (`TECH_SLOTS_HARD_CAP`, `js/app-anti-tech.js:42`), danach läuft `autoCompleteConsistency` und das Deck hat wieder 60 Karten. | Spieler | offen |
-| F132 | `#current-analysis` | „Tech-Karten" (`techSlots.label`, `techSlots.hint`) + `#currentMetaTechSlotInput` | Sucheingabe | Karte von Hand eintragen. Erwartet: sie überlebt das nächste Generate. | Spieler | offen |
-| F133 | `#current-analysis` | „Leeren" (`techSlots.clearBtn`, `clearTechSlots`) | Knopf | Erwartet: alle festen Tech-Karten weg. | QA | offen |
-| F134 | `#current-analysis` | „Max Consistency" (`cl.genConsistency`, `autoCompleteConsistency`) | Berechnung | Wie F070. **Zusatz:** Datenfenster prüfen — die Quelle `data/tournament_decklists_per_player.csv` hat gemessen **1.201 Listen aus 3 Turnieren**; mit dem Formattor `minDate = 2026-07-31` (`data/format_window.json` → `in_person_legal_date`) bleiben davon **143 Listen aus genau einem Turnier** (Worlds 2026, 2026-08-28). Erwartet: der Warum-Dialog sagt das. | Daten | offen |
-| F135 | `#current-analysis` | Legende (`legend.title`, `legend.cardName`, `legend.setAndInclusion`, `legend.avgInDeck`, `legend.maxInDeck`, `legend.deckCoverage`, `legend.inYourDeck`, `legend.otherPrintsOwned`, `legend.lpPrice`, `legend.wishlist`, `legend.pinExclude`, `legend.plusMinus`, `legend.summary`) | Kachel | Jeden Legendeneintrag gegen ein echtes Element der Kartenzeile zuordnen. Erwartet: kein Legendeneintrag ohne Gegenstück und umgekehrt. | QA | offen |
-| F136 | `#current-analysis` | Restliche Deckbau-Knöpfe (`copyDeck`, `shareDeck`, `saveCurrentDeckToProfile`, `openDeckCompare`, `toggleCurrentMetaDeckGridView`, `sendCurrentDeckToProxyPrinter`, `exportToPTCGL`, `importFromPTCGL`, `openInShowdownFromBuilder`, `toggleDeckRarity`, `openDrawSimulator`, `clearDeck`) | Knopf | Je einmal wie F073–F084 auf dieser Route. | QA | offen |
-| F137 | `#current-analysis` | Übersichtssuche `#currentMetaOverviewSearch`, Raster-Suche `#currentMetaDeckGridSearch`, Metasuche `#currentMetaMetaSearch` | Sucheingabe | Alle drei mit demselben Begriff. Erwartet: jede filtert nur ihren eigenen Block. | QA | offen |
-| F138 | `#current-analysis` | Deep-Link `#current-analysis?deck=<Name>` | Deep-Link | `#current-analysis?deck=Dragapult%20Dusknoir` aufrufen. Erwartet: Deck vorbelegt (`js/inline-init.js:545–548`), Analyse läuft ohne weiteren Klick. | QA | offen |
-| F139 | `#current-analysis` | Deep-Link `#current-meta?deck=<Name>` | Deep-Link | Erwartet: derselbe Vorbelegungspfad greift (`tabId === 'current-meta'` ist mit abgedeckt), landet aber auf `#current-meta` — prüfen, ob die Vorbelegung dort wirkungslos bleibt. | QA | offen |
-| F140 | `#current-analysis` | Leerzustände `emptyState.deckEmpty`, `emptyState.metaLoading`, `cm.noCardsForFilter` | Kachel | Filter so eng stellen, dass nichts übrig bleibt. Erwartet: „Kein Treffer für diesen Filter" mit Beschreibung, nicht leerer Kasten. | QA | offen |
+| Nr | Element | Was geprüft wird | Team | Status | Nachweis |
+|---|---|---|---|---|---|
+| H1 | Drei berechnete Listen der City League werden nie gezeichnet | In `city-league` (Format „Past", da „Current" leer ist, vgl. D39) bestätigen, dass **nur** die Tabelle „Popularity Decreases/Seltener gespielt" (Absteiger) erscheint und **keine** Tabelle/Ansicht für Aufsteiger, neue oder verschwundene Archetypen existiert — obwohl `increased`, `newArchetypes`, `disappeared` laut Code berechnet werden. Widerlegt, wenn irgendwo doch eine dieser drei Listen sichtbar ist. | QA, DATEN | offen | |
+| H2 | Knopf „Meta-Analyse laden" in Deck Analysis (Global) benennt sich nie um | In `current-analysis` (F4.87) „Load Meta Analysis" anklicken und warten, bis die zwölf Kacheln geladen sind → prüfen, ob die Beschriftung auf „Reload"/„Erneut laden" wechselt (wie in `city-league-analysis`, F3.62) oder unverändert „Load Meta Analysis" stehen bleibt. Bestätigt, wenn sie stehen bleibt. | QA | offen | |
+| H3 | Sortierung der Spalte „Deck" liest Ziffern als Zahl | In `current-meta`, Tabelle „Meta-Performance" (F15.9–16), die Spalte „Deck" anklicken: prüfen, ob im aktuellen Datensatz ein Deckname eine Ziffer enthält (z. B. eine Set-/Versionsangabe); falls ja, beobachten, ob Zeilen mit Ziffer numerisch und Zeilen ohne Ziffer als Text ans Ende sortiert werden, und ob die Startrichtung von der ersten Zeile abhängt statt konsistent A→Z zu beginnen. Ohne Ziffer im Datensatz bleibt die Hypothese unentscheidbar — das im Nachweis vermerken. | QA, DATEN | offen | |
+| H4 | Tote Einträge in `PROFILE_SUBTAB_FOR_HASH` | `#hub`, `#uebersicht` und `#overview` einzeln in der Adressleiste aufrufen: `#hub`/`#uebersicht` sollten zu `meta-analysis-hub` führen (nicht zu einem Profil-Untertab); `#overview` sollte **nirgendwohin** führen und auch keine Konsolenmeldung erzeugen (stiller Tieflink ins Leere). Bestätigt, wenn `#overview` tatsächlich wirkungslos bleibt und still scheitert, statt wie sonst mit `[deep-link] no tab element for …` in der Konsole aufzufallen. | QA | offen | |
+| H5 | Abschnitt „Datenumfang" hat keinen Tieflink | `#quellen-umfang` in der Adressleiste aufrufen → prüfen, ob die Seite `quellen` öffnet, aber der Abschnitt „Datenumfang" **nicht** aufklappt (Rückfall auf `Quellen.open('')`), im Gegensatz zu den funktionierenden Aliassen wie `#quellen-begriffe`. Bestätigt, wenn der Abschnitt zu bleibt. | QA | offen | |
+| H6 | Kennzahlen ohne Definition daneben | Für „Matchup vs Top 20" (F4.21), „Total Win Rate Limitless Online Tournaments" (F4.20), „Avg Placement"/„Ø-Platzierung" (F3.10, F2.21 u. a.) und „Decks Used" (F3.9) prüfen, ob am jeweiligen Anzeigeort selbst (nicht nur unter Quellen & Methodik) eine Erklärung von Nenner/Schwelle/Rang-Grenze zu finden ist; zusätzlich beobachten, unter welcher Bedingung die Fußnote `cityLeagueStatDecksNote` (startet `hidden`) tatsächlich erscheint. | SPIELER | offen | |
+| H7 | Zwei Datumsfelder auf denselben Zustand | In `meta-call` das Datum in `#metacallDateFrom` (F5.7) ändern, dann zu `current-analysis` wechseln und `#currentMetaDateFrom` (F4.7) prüfen → müssen denselben Wert und denselben Statustext zeigen; danach umgekehrt in `current-analysis` ändern und in `meta-call` prüfen. Widerlegt, wenn die beiden Felder auseinanderlaufen. | QA | offen | |
+| H8 | Grenzen im Rechner: Markup und JS widersprechen sich | In `calculator`: „Cards in Deck" auf 99 setzen, dann versuchen, „Copies in Deck" über 60 zu setzen → prüfen, ob der Browser-Zähler bei 60 blockt, obwohl die Rechnung laut JS bis 99 zuließe. Ebenso: bei 5+ Kopien im Deck versuchen, „Already in Hand" über 4 zu setzen → prüfen, ob der Zähler bei 4 blockt. Bestätigt, wenn beide Grenzen tatsächlich am Markup-Maximum blocken. | QA | offen | |
+| H9 | Menüpunkt „Startseite" führt nicht auf die Kachelseite | Im Pokéball-Menü auf „Overview / Startseite" (F0.10) klicken → prüfen, ob tatsächlich `current-meta` statt `meta-analysis-hub` geöffnet wird. Bestätigt, wenn die Kachelseite dabei **nicht** erreicht wird und nur über `#hub` direkt erreichbar bleibt. | QA | offen | |
+| H10 | „Season pause"-Hinweis hängt an einer Inline-Angabe gegen eine CSS-Vorgabe | Prüfen, ob der Hinweis „📅 Season pause: …" erscheint, wenn „Current Meta" (Japan) leer ist (aktuell der Fall laut D39), und ob er verschwindet, sobald ein Turnier im aktuellen Fenster erscheint — und zwar **auf beiden** Stellen gleich (`city-league` **und** `city-league-analysis`, index.html:693 und :721). Zusätzlich: nach einer beliebigen Aktion, die die Blöcke neu zeichnet, erneut prüfen, ob der Hinweis noch sichtbar ist (Inline-`style`-Wert könnte zurückgesetzt worden sein). | QA, DATEN | offen | |
+| H11 | Karten-Legende nur an einer von drei gleichen Ansichten | Die Kartengitter in `city-league-analysis` (#cityLeagueDeckGrid), `current-analysis` (mit Legende, F4.50) und `past-meta` (#pastMetaDeckGrid) nebeneinander prüfen: nur `current-analysis` hat die `<details>`-Legende „Was bedeuten die Symbole auf den Karten?", obwohl alle drei dieselben Plaketten/Knöpfe A–K zeichnen. Bestätigt, wenn die Legende tatsächlich nur in `current-analysis` existiert. | SPIELER | offen | |
+| H12 | Fehler bleiben in der Konsole statt auf dem Bildschirm | Drei Fehlerpfade gezielt provozieren und dabei sowohl den Bildschirm als auch die Konsole beobachten: (a) Rangliste in `current-meta` nicht baubar → Bildschirm zeigt den Abschnitt „Meta-Performance" ersatzlos nicht, Konsole „Top-8-Block konnte nicht gerendert werden"; (b) `cityLeagueFilterSelect` nicht vorhanden → Konsole „cityLeagueFilterSelect not found …", Kartenübersicht bleibt leer ohne Meldung; (c) CSV für „Was gerade läuft" (F1.3) schlägt fehl → Block fehlt komplett ohne Meldung. Bestätigt, wenn der Bildschirm in allen drei Fällen ohne jede sichtbare Fehlermeldung bleibt. | QA | offen | |
+| H13 | Kein Meta-Card-Analysis-Block in Past Meta | In `past-meta` bestätigen, dass — anders als in `city-league-analysis` (F3.49–63) und `current-analysis` (F4.75–88) — kein Block „Meta Card Analysis (Top 10 Archetypes)" existiert; einschätzen, ob das im Nutzererleben als Lücke auffällt (SPIELER-Perspektive: gezielt versuchen, den Block zu finden, ohne vorher zu wissen, dass er fehlt). | QA, SPIELER | offen | |
+| H14 | Beschriftung „Deck ? Proxy" | An allen drei Stellen (`city-league-analysis` F3.42, `current-analysis` F4.64–73, `past-meta` F16.36–45) den Knopf „Deck → Proxy" ansehen, bevor und nachdem `js/i18n.js` sicher geladen hat (z. B. Seite mit geleertem Cache neu laden und den Ladeaugenblick beobachten) → prüfen, ob kurzzeitig „Deck ? Proxy" statt „Deck → Proxy" sichtbar ist, und ob der Zustand nach vollständigem Laden korrekt „→" zeigt. | QA | offen | |
 
 ---
 
-## 6. `#past-meta`
+## Teil D — Zählung
 
-Gerüst `index.html:1787–2063` — 79 `data-i18n`, 33 Knöpfe, 4 Auswahlfelder.
+**Zeilen insgesamt: 546** (Teil A: 477 · Teil B: 55 · Teil C: 14).
 
-| Nr | Ansicht/Route | Element | Art | Was genau geprüft wird | Team | Status |
-|---|---|---|---|---|---|---|
-| F141 | `#past-meta` | „Deck-Analyse: vergangene Turniere" (`pm.analysisHeading`, `pm.analyzeAndBuild`) | Kachel | Route aufrufen. | QA | offen |
-| F142 | `#past-meta` | „Meta/Format-Filter:" `#pastMetaFormatFilter` (`pm.formatFilter`, `pm.allFormats`) | Filter | Alle Formate durchgehen. Erwartet: die Liste enthält genau die Metas aus `data/labs_tournament_matchups.csv` — gemessen 13: BRS-PRE, BRS-SCR, BRS-SFA, BRS-SSP, SVI-ASC, SVI-BLK, SVI-DRI, SVI-JTG, SVI-MEG, SVI-PFL, TEF-CRI, TEF-PBL, TEF-POR. | Daten | offen |
-| F143 | `#past-meta` | „Turnier-Filter:" `#pastMetaTournamentFilter` (`pm.tournamentFilter`, `pm.allTournaments`) | Filter | Ein Turnier pinnen. Erwartet: Zeilenzahl sinkt; „Erfolgreichste Decklist" folgt dem gepinnten Turnier statt dem jüngsten (`pm.mostSuccessfulHint`). | Daten | offen |
-| F144 | `#past-meta` | Deckwahl `#pastMetaDeckSelect` | Auswahlfeld | Deck wählen. Erwartet: alle Blöcke füllen sich. | QA | offen |
-| F145 | `#past-meta` | Kartenfilter `#pastMetaFilterSelect` (`cl.allCards`/`cl.cards50`/`cl.cards70`/`cl.cards90`) | Filter | Wie F056–F058. | Daten | offen |
-| F146 | `#past-meta` | „Erfolgreichste Decklist" (`pm.mostSuccessfulTitle`, `pm.mostSuccessfulHint`) | Kachel | Bilanz + Quote prüfen. **Muss** Matchpunkte zeigen (`js/app-past-meta.js:2282–2291`) und den Hinweis `WinRateKonvention.hinweis('matchpunkte')` im `title` tragen. | Daten | offen |
-| F147 | `#past-meta` | Sortierung hinter „Erfolgreichste Decklist" | Sortierung | **Befund prüfen:** die Sortierung greift weiter auf `_pmListWinRate` zurück (`js/app-past-meta.js:2160`, benutzt in `:2267`) — das ist die vierte, im Haus verworfene Formel `(S+0,5·U)/Partien`. Angezeigt wird Matchpunkte. Prüfen, ob eine Liste ganz oben steht, die nach Matchpunkten nicht die beste ist. | Daten | offen |
-| F148 | `#past-meta` | „Turnier-Performance" (`pm.tournamentPerformance`, `pm.tournamentPerformanceHint`) | Berechnung | Win % gegen `data/labs_tournament_decks.csv` prüfen. Erwartet: Matchpunkte `(3S+U)/(3·Partien)` (`js/app-past-meta.js:1900–1903`). **Gegenmessung liegt vor:** über alle 4.711 Zeilen weicht `win_pct` maximal 0,005 pp von dieser Formel ab. | Daten | offen |
-| F149 | `#past-meta` | Day-1→Day-2-Konversion in der Performance-Sektion | Berechnung | `day2Conv = day2/day1 · 100`. **Prüfen, ob der Nenner sichtbar ist:** der Quelltext nennt 74 Zeilen mit exakt 100 % Konversion, davon 65 auf einem einzigen Spieler (`js/app-past-meta.js:1904–1916`). Erwartet: Spielerzahl steht daneben. | Daten | offen |
-| F150 | `#past-meta` | Matchup-Tabelle — Spalten `headerOpp` / `headerWr` / `headerGames` | Tabellenspalte | Kopf-`title` muss `WinRateKonvention.hinweis('matchpunkte')` tragen (`js/app-past-meta.js:2069–2070`). Erwartet: der Hinweis sagt, dass ein Spiegel-Matchup unter 50 % der Normalfall ist. | Daten | offen |
-| F151 | `#past-meta` | Matchup-Tabelle, dünne Paarungen | Tabellenspalte | Zeilen unter `MU_MIN_GAMES` müssen gedämpft (`is-muted`) dastehen. Zeilenzahl unter der Schwelle notieren. | Daten | offen |
-| F152 | `#past-meta` | Spalten „Card Name" / „Count" / „ACE SPEC" / „Action" | Tabellenspalte | **Befund:** diese vier `<th>` sind in `js/app-past-meta.js` **fest englisch verdrahtet, ohne `t()`** — auf einer deutschen Seite. | QA | offen |
-| F153 | `#past-meta` | „Karten im Deck (verschiedene / Ø-Liste)" (`pm.cardsInDeck`, `pm.cardsInDeckTitle`) | Berechnung | Wie F085. | Daten | offen |
-| F154 | `#past-meta` | „Format" / „Turnier" (`stats.format`, `stats.tournament`) | Tabellenspalte | Müssen das aktive Format bzw. Turnier nennen. | QA | offen |
-| F155 | `#past-meta` | „Max Consistency" auf dieser Route (`autoCompleteConsistency`) | Berechnung | Ein vergangenes Format wählen und generieren. Erwartet: `opts.minDate` darf hier **nicht** auf `in_person_legal_date` stehen, sonst käme kein einziges Deck heraus. Prüfen, welcher Wert wirklich übergeben wird. | Daten | offen |
-| F156 | `#past-meta` | Anti-Tech auf dieser Route (`openAntiTechModal`) | Klickpfad | Wie F125–F131. **Zusatz:** die WR-Quelle ist hier `_majorMatchupMap[<Format>]` mit einer Mindestzahl von 3 Partien (`MAJOR_MATCHUP_MIN_GAMES_PAST`, `js/app-meta-call.js:108`). | Daten | offen |
-| F157 | `#past-meta` | Restliche Deckbau-Knöpfe (`copyDeck`, `copyPastMetaDeckOverview`, `shareDeck`, `saveCurrentDeckToProfile`, `openDeckCompare`, `togglePastMetaDeckGridView`, `sendCurrentDeckToProxyPrinter`, `exportToPTCGL`, `importFromPTCGL`, `openInShowdownFromBuilder`, `setPastMetaOverviewCardTypeFilter`, `setPastMetaRarityMode`, `toggleDeckRarity`, `openDrawSimulator`, `clearDeck`, `clearTechSlots`, `showConsistencyBuildInfo`, `generateDeckGrid`) | Knopf | Je einmal wie auf `#city-league-analysis`. | QA | offen |
-| F158 | `#past-meta` | Deep-Link `#past-meta?deck=<Name>&format=<Meta>` | Deep-Link | `#past-meta?deck=Dragapult&format=TEF-POR` aufrufen. Erwartet: `navigateToPastMetaWithDeck` greift (`js/inline-init.js:527–530`) — erst Format, dann Deck nach dem Nachladen. | QA | offen |
-| F159 | `#past-meta` | Deep-Link mit unbekanntem Format | Deep-Link | `#past-meta?deck=X&format=ZZZ-ZZZ`. Erwartet: benannter Leerzustand, kein Absturz. | QA | offen |
+Teil-A-Zeilen bilden alle 662 nummerierten Oberflächenelemente aus `audit/inventar-oberflaeche.md`
+ab; wo das Inventar mehrere Nummern in einer Tabellenzeile bzw. einem Fließtextblock zu einem
+Bereich zusammengefasst hat (z. B. „F3.13–F3.21" für 9 Typfilter), ist dieser Bereich unverändert
+als eine Prüfzeile mit einer Handlung für alle enthaltenen Elemente übernommen — jede Nummer aus
+dem Inventar erscheint damit genau einmal, entweder einzeln oder als Teil eines im Inventar selbst
+gebildeten Bereichs.
 
----
+**Zeilen je Team** (Mehrfachnennung möglich, Summe größer als 546):
 
-## 7. `#meta-call`
-
-Gerüst `index.html:2064–2072` — die Ansicht besteht aus **einem leeren `<div id="metaCallHost">`**; alles zeichnet `js/app-meta-call.js` (13.788 Zeilen). Sichtbare Texte: 254 Schlüssel `mc.*` in `js/i18n.js`.
-
-| Nr | Ansicht/Route | Element | Art | Was genau geprüft wird | Team | Status |
-|---|---|---|---|---|---|---|
-| F160 | `#meta-call` | „Meta Call" (`mc.title`, `mc.subtitle`) | Kachel | Route direkt aufrufen. Erwartet: Ansicht zeichnet ohne Anmeldung. | QA | offen |
-| F161 | `#meta-call` | „← Startseite" (`metaHub.backToOverview`) | Knopf | Klicken → `#current-meta`. | QA | offen |
-| F162 | `#meta-call` | „Quelle" (`mc.panelSource`) mit „Aktuelles Meta"/„Vergangenes Meta"/„Aktuelle City League"/„Vergangene City League" (`mc.sourcePastMeta`, `mc.sourceCurrentCityLeague`, `mc.sourcePastCityLeague`; `MetaCall._setMetaSource`, `_onToggleSource`) | Reiter | Jede Quelle einmal. Erwartet: Prognose rechnet neu; bei fehlender Quelle steht „keine Daten" (`mc.sourceNoData`). | Daten | offen |
-| F163 | `#meta-call` | „Meta Call Modus" (`mc.panelMode`) — „Standard" / „Counter-Meta" (`mc.modeStandard`, `mc.modeCounter`, `MetaCall._setMetaCallMode`) | Reiter | Beide Modi. Erwartet: die Top-Familie wird im Counter-Modus gedrückt, adoptierte Counter angehoben (`mc.modeCounterHint`); Summe der Anteile bleibt 100. | Spieler | offen |
-| F164 | `#meta-call` | „Turniereinstellungen" (`mc.panelSettings`) — Turniertyp „Worlds"/„Regional/SPE"/„International"/„Lokaler Cup"/„Lokale Challenge" (`mc.tournamentType*`, `MetaCall._setTournamentType`) | Reiter | Jeden Typ. Erwartet exakt die Voreinstellungen aus `js/app-meta-call.js:999–1003`: Worlds 800/8/16, Regional 2000/8/16, International 3000/8/16, Challenge 24/5/13 (kein Top Cut), Cup 32/5/12 (Top 8). | Daten | offen |
-| F165 | `#meta-call` | „Spieler" (`mc.labelPlayers`) | Auswahlfeld | Zahl ändern. Erwartet: die Spielerzahl je Deck (`totalCount`) folgt `runde(Spieler · Anteil/100)` (`js/app-meta-call.js:8613`). | Daten | offen |
-| F166 | `#meta-call` | „Runden" (`mc.labelRounds`, `mc.rounds8`, `mc.rounds9`) | Auswahlfeld | 8 → 9 Runden. Erwartet: „Erwartete Begegnungen" skaliert linear (`mc.encounters`), Day-2-Chance ändert sich. | Daten | offen |
-| F167 | `#meta-call` | „Punkte für Day 2" `#mc-day2pts` (`mc.labelDay2Points`) | Auswahlfeld | Von 16 auf 15 senken. Erwartet: Day-2-Chance steigt (die Summe läuft über `dp[pt]` ab `day2Points`, `js/app-meta-call.js:8737`). Grenzen 1…45 prüfen. | Daten | offen |
-| F168 | `#meta-call` | „Zielpunkte (Top Cut)" / „Zielpunkte (1./2. Platz)" (`mc.labelTargetCutPoints`, `mc.labelTargetTopPoints`) | Auswahlfeld | Bei Cup und Challenge. Erwartet: Beschriftung des Ergebnisses folgt (`mc.predictTitleTopCut`, `mc.predictTitleTopFinish`). | QA | offen |
-| F169 | `#meta-call` | „Turnier" (`mc.labelTournamentName`, Platzhalter „z. B. Worlds 2026") | Sucheingabe | Namen eintragen. Erwartet: erscheint im Teilen-Bild. | QA | offen |
-| F170 | `#meta-call` | „Mein Deck" (`mc.panelMyDeck`, `mc.selectDeckPlaceholder` = „— Deck wählen —") | Auswahlfeld | Ohne Deck. Erwartet: „Wähle dein Deck oben aus, um die Day-2-Chance zu berechnen." (`mc.noDeckMsg`). | QA | offen |
-| F171 | `#meta-call` | „Day-2-Chance" (`mc.day2Chance`, `mc.day2Sub`) | Berechnung | Deck wählen. Erwartet: Prozentwert plus Unterzeile „{pts} Pkt. in {r} R. · {n} Spieler". Nachrechnen: Markow-Kette in `calcDay2` (`js/app-meta-call.js:8685–8748`) — siehe `audit/datenfluss.md`, Kennzahl 5. | Daten | offen |
-| F172 | `#meta-call` | „Unentschieden {q} — gemessen an {n} Partien ({meta})" (`mc.day2Unentschieden`) | Berechnung | Erwartet: die Quote stammt aus der Präsenzmessung, nicht aus der Online-Matrix. **Gegenmessung:** `data/labs_tournament_matchups.csv`, `meta = TEF-PBL`, 1.776 Zeilen, 12.242 gezählte Partien (jede Paarung doppelt) → 6.121 Partien, **Unentschieden-Quote 10,95 %**. | Daten | offen |
-| F173 | `#meta-call` | „Unentschieden {q} (Rückfall — für dieses Format ist keine Bilanz gemessen)" (`mc.day2UnentschiedenLeer`) | Berechnung | Ein Format ohne Bilanz wählen (alle außer TEF-PBL). Erwartet: Rückfalltext plus `MAJOR_MATCHUP_TIE_RATE = 0,02` (`js/app-meta-call.js:109`), und die Paarungen gehen **unverändert** in die Kette (`js/app-meta-call.js:8703–8706`). | Daten | offen |
-| F174 | `#meta-call` | „Day 1 Win Rate" (`mc.day1WinRate`, `mc.day1WinRateSub`) | Berechnung | Erwartet: `expWin / rounds`. Gegen die Kette nachrechnen. | Daten | offen |
-| F175 | `#meta-call` | „Ø Wins"/„Ø Losses"/„Ø Ties" (`mc.avgWins`, `mc.avgLosses`, `mc.avgTies`) | Berechnung | Erwartet: die drei Werte summieren sich exakt auf die Rundenzahl (`js/app-meta-call.js:8740–8747`). | Daten | offen |
-| F176 | `#meta-call` | „Punkteverteilung nach {r} Runden" (`mc.histTitle`) | Kachel | Balken summieren. Erwartet: Summe = 1 (bzw. 100 %); der Schwellenbalken ist als `above-threshold` markiert (`js/app-meta-call.js:10203`). | Daten | offen |
-| F177 | `#meta-call` | „≥{n} = {ziel}" (`mc.histZielLabel`, `mc.thresholdTag`) | Kachel | Erwartet: Schwelle = `day2Points`, und der ausgewiesene Prozentwert = `day2Points / (rounds·3)` (`js/app-meta-call.js:10211`). | Daten | offen |
-| F178 | `#meta-call` | „Zusammensetzung des Metas" (`mc.panelField`) — Spalten „Deck"/„Prognose %"/„Meine Schätzung"/„Final %"/„Spieler"/„Ø Begegnungen" (`mc.headerDeck`, `.headerOnline`, `.headerPersonal`, `.headerFinal`, `.headerPlayers`, `.headerAvgEnc`) | Tabellenspalte | Erwartet: die Tabelle zeigt höchstens 25 Decks (`TOP_N = 25`, `js/app-meta-call.js:1041`), der Rest fällt in „Sonstige" (`mc.junkDecks`). Summe der „Final %" + Sonstige = 100. | Daten | offen |
-| F179 | `#meta-call` | „Prognose %" Tooltip (`mc.headerOnlineTooltip`) | Berechnung | Der Tooltip sagt ausdrücklich: **nicht** der rohe Online-Share. Gegenprobe: der rohe Wert muss in der Detailzeile stehen (`mc.intelOnlineShareFenster` / `mc.intelOnlineShareKumulativ`). | Daten | offen |
-| F180 | `#meta-call` | „Meine Schätzung" (`mc.headerPersonal`, `mc.headerPersonalTooltip`, `MetaCall._onPersonalShare`) | Filter | Für ein Deck 20 % eintragen. Erwartet: dieses Deck steht mit 20 % in „Final %", die Differenz geht an „Sonstige" (`mc.personalShareExpl`) — **nicht** an die übrigen Decks. | Daten | offen |
-| F181 | `#meta-call` | „Ø Begegnungen" (`mc.headerAvgEnc`, `mc.headerAvgEncTooltip`) | Berechnung | Erwartet: `Runden · Anteil`. Farbschwellen prüfen: grün ≤0,8, gelb ≤1,2, rot >1,2. | Daten | offen |
-| F182 | `#meta-call` | „🔗 Familie zusammenfassen" / „📊 Varianten einzeln" (`mc.groupByPokemon`, `mc.flatView`, `MetaCall._toggleGroupField`) | Reiter | Umschalten. Erwartet: die Summe der Anteile ändert sich **nicht**; nur die Zeilenzahl. | Daten | offen |
-| F183 | `#meta-call` | „Alle ausklappen"/„Alle einklappen" (`mc.expandAll`, `mc.collapseAll`, `MetaCall._toggleAllDetails`) | Knopf | Erwartet: alle Detailzeilen auf/zu. | QA | offen |
-| F184 | `#meta-call` | Detailzeile „Online-Anteil ({tage} Tage)" (`mc.intelOnlineShareFenster`) | Berechnung | Gegen `data/limitless_online_fenster.csv` prüfen: Kopfzeile nennt „Fenster 2026-08-21 bis 2026-09-04 (14 Tage) · 10042 Decks im Fenster · 38398 kumulativ". Erwartet: die Beschriftung nennt 14 Tage, und `share_fenster` stimmt. | Daten | offen |
-| F185 | `#meta-call` | Detailzeile „kumulativ {wert} %" (`mc.intelOnlineShareKumulativ`) | Berechnung | Gegen `share_kumulativ` in derselben Datei. Erwartet: beide Zahlen unterscheiden sich — sonst greift das Fenster nicht. | Daten | offen |
-| F186 | `#meta-call` | „Trend ({tage} Tage)" / „Trend (7 Tage)" (`mc.intelTrendFenster`, `mc.intelTrend7d`) | Berechnung | Gegen `trend_fenster` bzw. `share_change` in `limitless_online_decks_comparison.csv`. **Prüfen, ob Fenster- und Kumulativwert gemischt werden** — genau davor warnt `js/app-meta-call.js:130–158`. | Daten | offen |
-| F187 | `#meta-call` | „Top-8-Quote (Online-Turniere)" (`mc.intelTop8Conv`, `mc.badgeTop8Conv`) | Berechnung | Gegen `data/online_tournament_top8_decks.csv` (121 Zeilen, `top8_conv_rate`). Erwartet: „vs. Schnitt" (`mc.intelTop8AvgSuffix`) nennt die 25-%-Basis. | Daten | offen |
-| F188 | `#meta-call` | „Letzter Major" (`mc.intelLastMajor`), „Day 1"/„Day 2"/„Conv." (`mc.intelMajorDay1`, `.intelMajorDay2`, `.intelMajorConv`) | Berechnung | Gegen `data/labs_tournament_decks.csv` (`day1_players`, `day2_players`, `day1_to_day2_conv`). | Daten | offen |
-| F189 | `#meta-call` | „Day-2-Major-Conversion" (`mc.d2ConvLabel`, `mc.d2ConvTooltip`) | Berechnung | Erwartet: recency-gewichtet über die vorliegenden Majors. Wert und Gewichtungsfenster gegen `_labsDay2ConvByDeck` prüfen. | Daten | offen |
-| F190 | `#meta-call` | „Ø Day-2-Win Rate (vorliegende Majors)" (`mc.d2WrLabel`, `mc.d2WrTooltip`, `mc.d2WrSample` = „n = {n} Major(s)") | Berechnung | Erwartet: nur Zeilen mit `day2_players ≥ 5` fließen ein (`js/app-meta-call.js:7063`). Der Multiplikator ist bei 50 % neutral, ±10 pp linear, gekappt auf [0,4; 1,6] (`js/app-meta-call.js:8938–8946`), und bei n = 1 Major nur halb so stark. | Daten | offen |
-| F191 | `#meta-call` | „Empfohlene Decks für dieses Meta" (`mc.panelRecommendations`) — Spalten „Deck"/„Day-2"/„Erw. Siege"/„Ø Win Rate" (`mc.recDeck`, `mc.recDay2`, `mc.recExpWins`, `mc.recAvgWr`) | Tabellenspalte | Erwartet: absteigend nach Day-2-Wahrscheinlichkeit; Kandidatenkreis = Top 25 der Prognoseliste + eigenes Deck + eigene Decks (`js/app-meta-call.js:8763–8800`). | Spieler | offen |
-| F192 | `#meta-call` | „unter 20 %" (`mc.recBelowThreshold`, `mc.recBelowThresholdTip`) | Tabellenspalte | Erwartet: die Liste zeigt immer zehn Zeilen; alles unter 20 % ist als solches gekennzeichnet. | QA | offen |
-| F193 | `#meta-call` | „Counter-Pick" (`mc.recCounterPickLabel`, `mc.recCounterPickTooltip`) | Tabellenspalte | Erwartet: Kennzeichen nur bei niedrigem Feldanteil mit starken Matchups. | Spieler | offen |
-| F194 | `#meta-call` | „Klicken um die Begründung zu sehen" (`mc.recReasonHint`, `MetaCall._toggleRecReason`) | Klickpfad | Aufklappen. Erwartet: „Erwartete Siege {wins} / {rounds} Runden → {day2} % Chance …" (`mc.reasonBreakdown`) plus Top-Matchups (`mc.reasonTopMatchups`); ohne Daten `mc.reasonNone`. | Spieler | offen |
-| F195 | `#meta-call` | „Im Deck-Analyse-Tab öffnen" (`mc.reasonOpenAnalysis`, `MetaCall._jumpToDeckAnalysis`) | Klickpfad | Klicken. Erwartet: `#current-analysis` mit vorbelegtem Deck. | QA | offen |
-| F196 | `#meta-call` | „Geheimtipps – könnten überraschen" (`mc.tipsTitle`, `mc.tipsHint`) | Kachel | Erwartet: nur Decks mit Online-Share < 3 % und mindestens einem starken Signal; jede Zeile trägt einen der Begründungstexte `mc.tipReason*`. | Spieler | offen |
-| F197 | `#meta-call` | „Win Rates anpassen ▼" (`mc.adjustWinRates`, `MetaCall._toggleOverrides`) — Spalten „Gegner"/„WR (gemischt)"/„Manuelle WR"/„Indikator" (`mc.colOpponent`, `mc.colWrBlended`, `mc.colManualWr`, `mc.colIndicator`) | Tabellenspalte | Für einen Gegner 80 % von Hand setzen. Erwartet: „von Hand gesetzt" (`mc.wrManuell`), Day-2-Chance steigt, `mc.overrideHint` erklärt den Vorrang. | Daten | offen |
-| F198 | `#meta-call` | „keine Partien erfasst" (`mc.wrOhneMessung`) | Tabellenspalte | Gegner ohne Online-Zeile suchen. Erwartet: Kennzeichen statt einer erfundenen Zahl. Der Quelltext nennt 33,5 % des erwarteten Gegnerfelds ohne Online-Quote (`js/app-meta-call.js:8247–8252`). | Daten | offen |
-| F199 | `#meta-call` | Nennerhinweis an der WR (`mc.wrNennerTitel`) | Tabellenspalte | Erwartet: Tooltip nennt Online-Partien **plus** eingemischte Major-Partien (`js/app-meta-call.js:8375–8378`). | Daten | offen |
-| F200 | `#meta-call` | „Eigene Decks" (`mc.customDecksTitle`, `mc.customDecksHint`, `MetaCall._addCustomDeck`) | Klickpfad | Deck mit Namen und Anteil hinzufügen. Erwartet: erscheint im Feld, wird in `calcRecommendations` mit ausgewertet. Obergrenze prüfen (`mc.customDecksMaxed`). | Spieler | offen |
-| F201 | `#meta-call` | „Entfernen" (`mc.remove`, `MetaCall._removeCustomDeck`) | Knopf | Erwartet: Deck weg, Anteile normalisieren sich neu. | QA | offen |
-| F202 | `#meta-call` | „Others-Spieler"/„Others-Win% (vs Others)" (`mc.labelJunkPlayers`, `mc.labelJunkWinRate`, `mc.junkExplanation`) | Filter | Others-Anteil auf 30 % stellen. Erwartet: Day-2-Chance ändert sich; `getBaseMatchup(x, '_junk')` benutzt genau diese Quote (`js/app-meta-call.js:8188–8191`). | Daten | offen |
-| F203 | `#meta-call` | „Datenquellen" (`mc.panelDataSources`, `mc.dataSourcesHint`) — City-League-Schalter | Filter | Beide Schalter einzeln und zusammen. Erwartet: die Prognoseformel wechselt den Zweig (`js/app-meta-call.js:4188–4260`); ohne Schalter gilt die Grundformel `0,40·labs·t8 + 0,20·brought + 0,15·ladder + 0,15·postMajor + 0,10·weekly`. | Daten | offen |
-| F204 | `#meta-call` | „Datenfenster ab:" (`mc.dateWindowLabel`, `mc.dateWindowAuto`, `mc.dateWindowActive`, `mc.dateWindowNone`) | Filter | Auto-Fenster (28 Tage) gegen ein selbst gesetztes Datum. Erwartet: Zahl der einfließenden Major-Zeilen sinkt, `mc.predStatusFilterDropped` nennt die Zahl. | Daten | offen |
-| F205 | `#meta-call` | Statusstreifen „Modus A · nur Online-Turniere" / „Modus B · {n} Major-Turnier-Zeilen gewichtet" (`mc.predStatusModeA`, `mc.predStatusModeB`) | Kachel | Erwartet: Modus B nur, wenn Major-Zeilen für das laufende Format vorliegen. **Gegenmessung:** `meta = TEF-PBL` hat in `data/labs_tournament_decks.csv` 44 Zeilen und in `data/labs_tournament_matchups.csv` 1.776 Zeilen — Modus B ist heute also erreichbar. | Daten | offen |
-| F206 | `#meta-call` | „Aktuelles Format: {set} ({name})" (`mc.predStatusFormatActive`, `mc.predStatusFormatPending`) | Kachel | Gegen `data/format_window.json`: `current_set = PBL`, `set_release_date = 2026-07-17`, `in_person_legal_date = 2026-07-31`, `lag_days = 14`. Erwartet: heute (2026-09-06) ist das Format bereits vor Ort legal, also `…FormatActive`. | Daten | offen |
-| F207 | `#meta-call` | Banner „Jüngstes Turnier: {date}" / „… — vor {days} Tagen" (`mc.bannerDataDate`, `mc.bannerDataStale`, `mc.bannerDataHelp`) | Kachel | Gegen das Maximum von `tournament_date` in `data/labs_tournament_decks.csv` — gemessen **2026-08-28**. Erwartet: 9 Tage Abstand zum Prüftag. | Daten | offen |
-| F208 | `#meta-call` | Banner „Nur Online-Daten — {new} wurde noch auf keinem Turnier vor Ort gespielt" (`mc.bannerLagWindow`) | Kachel | Erwartet: **nicht** sichtbar, da für PBL Major-Zeilen vorliegen. Erscheint er trotzdem, ist das ein Befund. | Daten | offen |
-| F209 | `#meta-call` | „Geschlossenes Meta — Fun-Event-Modus" (`mc.frozenBannerTitle`, `mc.frozenBannerHint`) | Kachel | Quelle auf „Vergangenes Meta" stellen. Erwartet: Banner erscheint, Live-Predictor aus. | QA | offen |
-| F210 | `#meta-call` | „Finaler Field-Share" (`mc.frozenShareTitle`, `mc.frozenShareBadge`) — Spalten „Deck"/„Spieler"/„Share %" | Tabellenspalte | Erwartet: `mc.frozenShareTotals` nennt Archetypen, Day-1-Spieler und Turnierzahl. Gegen `data/labs_tournament_decks.csv` je Meta nachzählen. | Daten | offen |
-| F211 | `#meta-call` | „Fun-Event-Empfehlungen" (`mc.frozenRecPanelTitle`) — Spalten „Deck"/„Spieler"/„Siege je Match"/„Day-2-Conv"/„Score" (`mc.frozenColPlayers`, `mc.frozenColWinPct`, `mc.frozenColDay2Conv`, `mc.frozenColScore`) | Tabellenspalte | **Zentrale Prüfung:** die Spalte heißt „Siege je Match" und muss `S/(S+N+U)` rechnen (`js/app-meta-call.js:1608`, Hinweis über `_frozenWrHinweis` → `WinRateKonvention.hinweis('mitUnentschieden')`). Score = `Siege je Match × (1 + Day-2-Conversion)` (`mc.frozenColScoreHint`). Eine Zeile von Hand nachrechnen. | Daten | offen |
-| F212 | `#meta-call` | „{n} Major-Turniere ausgewertet, Top {archetypes} Archetypen (min. 30 Spieler)" (`mc.frozenRecTournHint`) | Berechnung | Gegen `data/labs_tournament_decks.csv` je Meta zählen. Erwartet: die genannte Turnierzahl stimmt (insgesamt 71 Turniere über 14 Meta-Werte, davon einer leer). | Daten | offen |
-| F213 | `#meta-call` | „Keine Labs-Daten für dieses Format verfügbar …" (`mc.frozenRecEmpty`) | Kachel | Ein Meta ohne Zeilen wählen. Erwartet: Text statt leerer Tabelle. | QA | offen |
-| F214 | `#meta-call` | „Gespeicherte Meta Calls" (`mc.scenarios`, `mc.scenariosExplainer`, `MetaCall._saveScenario`) | Klickpfad | Szenario speichern, Seite neu laden, Szenario laden. Erwartet: Einstellungen und Prognose exakt wiederhergestellt. | QA | offen |
-| F215 | `#meta-call` | „Aktualisieren" / „Szenario löschen" (`mc.scenarioUpdate`, `mc.scenarioDelete`, `mc.scenarioDeleteConfirm`) | Knopf | Erwartet: Rückfrage vor dem Löschen. | QA | offen |
-| F216 | `#meta-call` | Szenario-Fehlerfälle (`mc.scenarioSaveError`, `mc.scenarioStorageCorrupted`, `mc.scenarioStorageEmpty`, `mc.scenarioNameTooLong`) | QA | Privaten Modus verwenden bzw. Namen > 60 Zeichen. Erwartet: benannte Meldung statt stillem Fehlschlag. | QA | offen |
-| F217 | `#meta-call` | „Bild generieren" (`mc.generateImage`, `mc.generateImageHint`, `mc.generateImageEmpty`, `mc.generateImageMissing`) | Knopf | Ohne Prognose klicken → `mc.generateImageEmpty`. Mit Prognose → Bild mit Top 10. | QA | offen |
-| F218 | `#meta-call` | „Teilen" (`mc.share`, `mc.shareDay2`, `mc.shareField`, `mc.shareFieldAndRecs`) | Knopf | Alle drei Varianten. Erwartet: Vorschau (`mc.sharePreviewTitle`), Herunterladen (`mc.download`) funktioniert. | QA | offen |
-| F219 | `#meta-call` | „Journal-Einfluss aktiv:" (`mc.journalInfluence`, `mc.journalMatchups`, `mc.journalWeightHint`, `mc.badgeJournal`) | Berechnung | Mit gefülltem Battle Journal. Erwartet: Gewichtung „Meta = 30 · Journal = Spielanzahl"; ohne Journal darf der Block nicht erscheinen. | Spieler | offen |
-| F220 | `#meta-call` | „🧱 Journal-Bricks" / „Inkl. Bricks" / „Exkl. Bricks" (`mc.journalBricks`, `mc.inclBricks`, `mc.exclBricks`, `MetaCall._onBrickFilter`) | Filter | Umschalten. Erwartet: die persönliche WR ändert sich, die Meta-Basis nicht. | Spieler | offen |
-| F221 | `#meta-call` | „Testing-Group-Share" / „Mein Matchup-Win (Testing Group)" (`mc.intelTgShare`, `mc.intelTgWr`, `mc.badgeTg`, `mc.badgeTgShare`) | Berechnung | Mit geladener Testing Group. Erwartet: Modus A + TG nutzt den Zweig `0,40·TG + 0,20·ladder + 0,20·brought + 0,10·top8 + 0,10·trend` (`js/app-meta-call.js:4232–4241`). | Daten | offen |
-| F222 | `#meta-call` | „Limitless Swiss-Calculator" (`mc.swissCalcLink`) + „Swiss-Hinweis" (`mc.swissNote`) | Klickpfad | Link öffnen. Erwartet: neuer Tab; der Hinweis erklärt, warum die Kette ab Runde 4–5 optimistisch ist. **Das ist die eingestandene Grenze der Modellierung — muss sichtbar sein.** | Spieler | offen |
-| F223 | `#meta-call` | Deep-Links `#meta-call`, `#metacall` | Deep-Link | Beide aufrufen. Erwartet: beide landen auf dem eigenständigen Tab, **nicht** im Profil (der Doppeleintrag war der Fehler vom 18.08.2026, `js/inline-init.js:401–412`). | QA | offen |
-| F224 | `#meta-call` | Diagnosemarken (`MetaCall.setDiagnostics(true)`) | QA | In der Konsole einschalten. Erwartet: zusätzliche Marken im Vorhersagestreifen; Standard ist aus (`js/app-meta-call.js:172–175`). | QA | offen |
-| F224a | `#meta-call` | „WR (gemischt)" gegen die Heatmap derselben Paarung | Berechnung | Dieselbe Paarung in `#meta-call` und in der Heatmap auf der Startseite aufrufen. **Erwartet ein Unterschied — und das ist der Befund:** die Heatmap zeigt die CSV-Spalte `win_rate` = `S/(S+N)`, der Meta Call rechnet aus `record` `S/(S+N+U)` (`js/app-meta-call.js:7382–7387`). Gemessen weichen **523 von 1.702 Zeilen** ab, Maximum 26,67 pp (Steven's Metagross vs Cynthia's Garchomp, 2-1-2: 40,00 gegen 66,67). Beide Werte notieren. | Daten | offen |
-| F224b | `#meta-call` | Ungeglättete Extremwerte in der Kette | Berechnung | Ein Deck mit einer 3-0-Paarung wählen (z. B. Blaziken Zoroark vs Raging Bolt Ogerpon, `3 - 0 - 0`) und die Begegnungsliste öffnen. **Erwartet laut Messung: 100,0 % ohne Glättung** — `_matchupMap` (`js/app-meta-call.js:7371–7405`) ruft `DsGlaettung` nicht auf, und `_clip(0,05; 0,95)` greift nur, wenn Predictor 5.3 eine Korrektur hat (`:8427`). Gemessen: **22 Paarungen bei 100 %, 59 bei 0 %, 81 außerhalb [5 %; 95 %]**. Prüfen, ob mindestens die Partienzahl daneben steht. | Daten | offen |
-
----
-
-## 8. `#cards`
-
-Gerüst `index.html:2074–2157`, Inhalt `js/app-cards-db.js` (4.909 Zeilen).
-
-| Nr | Ansicht/Route | Element | Art | Was genau geprüft wird | Team | Status |
-|---|---|---|---|---|---|---|
-| F225 | `#cards` | „Kartendatenbank" (`cards.heading`) | Kachel | Route aufrufen. | QA | offen |
-| F226 | `#cards` | „Daten:"-Chip (`data-quelle="all_cards_database.csv"`) | Kachel | **Befund prüfen:** der Chip nennt `all_cards_database.csv` (mtime 2026-08-25), die Ansicht lädt aber die Chunks aus `data/cards_manifest.json` (erzeugt 2026-09-06, 20.878 Karten in drei Dateien). Erwartet: Chip und tatsächlich geladene Daten haben dasselbe Datum. | Daten | offen |
-| F227 | `#cards` | „Karten werden geladen…" (`cards.loading`) | Kachel | Erwartet: Ladezustand endet; danach steht die Trefferzahl in `#cardResultsInfo`. Erwartet: **20.878** Karten insgesamt (`cards_manifest.json` → `totalCards`), aufgeteilt in standard 5.110 / extended 3.946 / legacy 11.822. | Daten | offen |
-| F228 | `#cards` | Suchfeld `#cardSearch` (`cards.searchLabel`, Platzhalter „z.B. Glurak, Pikachu…") | Sucheingabe | „Glurak" eintippen (deutscher Name). Erwartet: Treffer > 0 — der Platzhalter verspricht deutsche Namen. Trefferzahl vorher/nachher notieren. | Daten | offen |
-| F229 | `#cards` | Autovervollständigung `#cardSearchAutocomplete` | Sucheingabe | Drei Buchstaben tippen. Erwartet: Vorschlagsliste, Pfeiltasten + Enter wählen aus. | QA | offen |
-| F230 | `#cards` | Filter „Meta/Format" `#filter-meta-format` | Filter | Auf „Standard" stellen. Erwartet: Trefferzahl fällt auf ≈ 5.110. | Daten | offen |
-| F231 | `#cards` | Filter „Set" `#filter-set` | Filter | Ein Set wählen. Erwartet: alle Treffer tragen dieses `set_code`. | Daten | offen |
-| F232 | `#cards` | Filter „Seltenheit" `#filter-rarity` | Filter | Eine Seltenheit wählen. Erwartet: Trefferzahl sinkt, alle Treffer tragen den Wert. | Daten | offen |
-| F233 | `#cards` | Filter „Kategorie" `#filter-category` | Filter | Pokémon / Trainer / Energie einzeln. Erwartet: Summe = Trefferzahl ohne Filter. | Daten | offen |
-| F234 | `#cards` | Filter „Elementtyp" `#filter-element-type` | Filter | Erwartet: nur bei Kategorie Pokémon wirksam. | QA | offen |
-| F235 | `#cards` | Filter „Haupt-Pokémon" `#filter-main-pokemon` | Filter | Erwartet: Trefferzahl sinkt. | Daten | offen |
-| F236 | `#cards` | Filter „Archetyp" `#filter-archetype` (`cards.searchArchetype`) | Filter | Einen der 62 Archetypen aus `data/current_meta_card_data.csv` wählen. Erwartet: nur Karten, die dort für diesen Archetyp stehen. | Daten | offen |
-| F237 | `#cards` | Filter „Deck-Abdeckung" `#filter-deck-coverage` | Filter | Erwartet: sinkende Trefferzahl mit steigender Schwelle. | Daten | offen |
-| F238 | `#cards` | „Filter zurücksetzen" (`cards.resetFilters`, `resetCardFilters`) | Knopf | Nach mehreren Filtern klicken. Erwartet: Trefferzahl exakt wieder auf 20.878. | QA | offen |
-| F239 | `#cards` | „Filter ausblenden" (`cards.hideFilters`, `toggleCardsFilterPanel`) | Knopf | Erwartet: Panel klappt zu, `aria-expanded` folgt, Beschriftung wechselt. | QA | offen |
-| F240 | `#cards` | Sortierung `#cardSortOrder`: „Nach Set (Standard)" (`cards.sortBySet`) | Sortierung | Erwartet: Gruppierung nach Set, innerhalb aufsteigende Nummer. | QA | offen |
-| F241 | `#cards` | „Wie Deckübersicht" (`cards.sortLikeDeck`) | Sortierung | Erwartet: dieselbe Reihenfolge wie im Deckbau-Block. | Spieler | offen |
-| F242 | `#cards` | „Nach Abdeckung" (`cards.sortByCoverage`) | Sortierung | Erwartet: monoton fallend. | Daten | offen |
-| F243 | `#cards` | „Nach Pokédex-Nr." (`sort.pokedex`) | Sortierung | Erwartet: monoton steigend; Trainer/Energie ans Ende. | QA | offen |
-| F244 | `#cards` | „Standard-Druck" / „Alle Drucke" (`cards.standardPrint`, `cards.allPrints`, `setPrintView`) | Reiter | Umschalten. Erwartet: „Alle Drucke" liefert mehr Zeilen bei gleicher Zahl verschiedener Karten. | Daten | offen |
-| F245 | `#cards` | Preisangabe je Karte | Berechnung | Stichprobe gegen `data/price_data.csv` (20.419 Zeilen, Verknüpfung über `(set, number)`). Erwartet: bei `mapping_status = unmapped` (gemessen 3.033 Zeilen) steht **kein** Preis oder eine Kennzeichnung, keine stille Null. | Daten | offen |
-| F246 | `#cards` | Hilfe-Knopf | Knopf | `openTabHelp('cards')`. | QA | offen |
-
----
-
-## 9. `#proxy`
-
-Gerüst `index.html:2158–2221`.
-
-| Nr | Ansicht/Route | Element | Art | Was genau geprüft wird | Team | Status |
-|---|---|---|---|---|---|---|
-| F247 | `#proxy` | „Proxy-Drucker" (`tab.proxyPrinter`) | Kachel | Route aufrufen. | QA | offen |
-| F248 | `#proxy` | „Warteschlange" leer (`emptyState.proxyQueue`, `emptyState.proxyQueueText`, `emptyState.proxyQueueBtn`) | Kachel | Frisch öffnen. Erwartet: benannter Leerzustand mit Handlungsknopf. | QA | offen |
-| F249 | `#proxy` | „Einzelne Karte hinzufügen" (`section.addSingleCard`) — `#proxyManualName` / `#proxyManualSet` / `#proxyManualNumber` / `#proxyManualCount` | Sucheingabe | Name, Set, Nummer, Anzahl 2 eintragen, „Karte hinzufügen" (`proxy.addCardBtn`, `addManualProxyCard`). Erwartet: Zähler „Kopien" (`misc.copies`) +2, „einzigartig" (`misc.unique`) +1. | QA | offen |
-| F250 | `#proxy` | Ungültige Kartennummer | QA | Set „ZZZ", Nummer „999". Erwartet: benannte Meldung oder Platzhalterbild, kein stiller Eintrag ohne Bild. | QA | offen |
-| F251 | `#proxy` | „Deckliste importieren" (`section.importDecklist`, `proxy.decklistPlaceholder`, `importDecklistToProxy`) | Klickpfad | 60-Karten-Liste einfügen. Erwartet: Kopienzähler = 60. | QA | offen |
-| F252 | `#proxy` | „Deckliste zur Warteschlange" (`proxy.addDecklistBtn`) | Knopf | Erwartet: wie F251. | QA | offen |
-| F253 | `#proxy` | „Aktuelles Meta Deck hinzufügen" (`proxy.addCMDeck`, `addCurrentDeckToProxy`) | Klickpfad | Vorher auf `#current-analysis` ein Deck bauen. Erwartet: 60 Karten landen hier. | QA | offen |
-| F254 | `#proxy` | „City League Deck hinzufügen" (`proxy.addCLDeck`) | Klickpfad | Wie F253 von `#city-league-analysis`. | QA | offen |
-| F255 | `#proxy` | „Vergangenes Meta Deck hinzufügen" (`proxy.addPMDeck`) | Klickpfad | Wie F253 von `#past-meta`. | QA | offen |
-| F256 | `#proxy` | „Aus Binder laden" (`proxy.loadBinder`, `cbLoadBinderIntoProxy`, `cb.loadUnprintedTitle`) | Klickpfad | Erwartet: nur noch nicht gedruckte Karten. | Spieler | offen |
-| F257 | `#proxy` | „Warteschlange leeren" (`proxy.clearQueue`, `clearProxyQueue`) | Knopf | Erwartet: Zähler auf 0, Leerzustand zurück. | QA | offen |
-| F258 | `#proxy` | „Warteschlange drucken" (`proxy.printQueue`, `printProxyQueue`) | Knopf | Erwartet: Druckansicht, 9 Karten je Seite, Seitenzahl = ceil(Kopien/9). | Spieler | offen |
-| F259 | `#proxy` | „← Startseite" | Knopf | → `#current-meta`. | QA | offen |
-| F260 | `#proxy` | Hilfe-Knopf | Knopf | `openTabHelp('proxy')`. | QA | offen |
-
----
-
-## 10. `#tutorial`
-
-Gerüst `index.html:2222–2249`, Nachladen durch `js/ds-tutorial.js`.
-
-| Nr | Ansicht/Route | Element | Art | Was genau geprüft wird | Team | Status |
-|---|---|---|---|---|---|---|
-| F261 | `#tutorial` | „So funktioniert diese Website" (`tutorial.heading`, `tutorial.subtitle`) | Kachel | Route aufrufen. | QA | offen |
-| F262 | `#tutorial` | „Anleitung wird geladen …" (`tutorial.loading`) | Kachel | Erwartet: `tutorial/tutorial.de.html` wird nachgeladen, der Ladehinweis verschwindet, `data-state` wechselt von `idle`. | QA | offen |
-| F263 | `#tutorial` | Sprachwechsel bei offenem Tab | Klickpfad | Auf EN umschalten. Erwartet: `tutorial/tutorial.en.html` wird nachgeladen, nicht nur der Rahmen übersetzt. | QA | offen |
-| F264 | `#tutorial` | `<noscript>`-Rückfall | QA | JavaScript ausschalten. Erwartet: die beiden direkten Links „Anleitung (deutsch)" / „Guide (english)" sind da und funktionieren. | QA | offen |
-| F265 | `#tutorial` | Anleitung gegen die Oberfläche | Spieler | Stichprobe: jeder in der Anleitung genannte Knopf muss auf der Seite existieren und so heißen. Besonders: nennt die Anleitung noch den internen Playtester (seit dem Umzug auf TCG Showdown veraltet)? | Spieler | offen |
-| F266 | `#tutorial` | Hilfe-Knopf | Knopf | `openTabHelp('tutorial')`. | QA | offen |
-
----
-
-## 11. `#quellen`
-
-Gerüst `index.html:2260–2270`, Inhalt `js/app-quellen.js`.
-**Befund vorab:** dieser Bereich benutzt **kein `data-i18n` und kein `t()`** — weder die Überschrift `<h2 id="quellenTitel">Quellen & Methodik</h2>` (`index.html:2266`) noch der Zurück-Knopf (`index.html:2263`). Der Sprachwechsel läuft über ein eigenes Wörterbuch im Modul (`js/app-quellen.js:41`, `INHALT.de` / `INHALT.en`). `grep` findet 0 `t()`-Aufrufe in `js/app-quellen.js`.
-
-| Nr | Ansicht/Route | Element | Art | Was genau geprüft wird | Team | Status |
-|---|---|---|---|---|---|---|
-| F267 | `#quellen` | „Quellen & Methodik" | Kachel | Route aufrufen. **Kein `data-i18n`** — auf EN umschalten und prüfen, ob die Überschrift mitwechselt (`js/app-quellen.js` schreibt `#quellenTitel` selbst) oder deutsch stehen bleibt. | QA | offen |
-| F268 | `#quellen` | „← Startseite" (`#quellenZurueck`) | Knopf | **Kein `data-i18n`.** Auf EN umschalten. Erwartet laut `INHALT.en.zurueck`: „← Home". Bleibt „← Startseite" stehen, ist das ein Befund. | QA | offen |
-| F269 | `#quellen` | Abschnitt „Woher die Zahlen kommen" (`id: 'quellen'`, standardmäßig offen) | Kachel | Erwartet: sechs Quellenzeilen — Global, Japan, Past, Preise, Kartenbilder, Pokémon Champions (`js/app-quellen.js:47–70`). | Spieler | offen |
-| F270 | `#quellen` | Quellenzeile „Preise" | Kachel | Text prüfen: „Verknüpft wird über Set und Kartennummer oder die Cardmarket-Produkt-ID, nie über den Namen". Gegenprobe an `data/price_data.csv` — Schlüssel `(set, number)`, gemessen **20.419 eindeutige Paare bei 20.419 Zeilen**, also tatsächlich eindeutig. | Daten | offen |
-| F271 | `#quellen` | Abschnitt „Worauf die Zahlen beruhen" (`id: 'umfang'`) | Kachel | **Direkt öffnen, ohne vorher auf der Meta-Ansicht gewesen zu sein.** Erwartet: der Leertext „Der Umfang steht erst zur Verfügung, wenn die Meta-Ansicht in dieser Sitzung einmal geladen wurde." (`js/app-quellen.js:92–93`). Dann Meta-Ansicht besuchen und zurückkehren: Erwartet zwei Nenner. | Daten | offen |
-| F272 | `#quellen` | Abschnitt „Was die Begriffe heißen" (`id: 'begriffe'`) | Kachel | Erwartet: die Definitionsliste — Anteil, Gewichteter Antritt, Top-8-Quote, „…-mal so oft wie der Schnitt". | Spieler | offen |
-| F273 | `#quellen` | Abschnitt „Wie zuverlässig das ist" (`id: 'zuverlaessig'`) | Kachel | Erwartet: aufklappbar. | QA | offen |
-| F274 | `#quellen` | Abschnitt „Was getrennt bleibt" (`id: 'trennung'`) | Kachel | Erwartet: Japan / Global / Past werden nie gemischt. **Gegenprobe:** stimmt das in `#meta-call`, wenn beide City-League-Schalter an sind (F203)? Dort fließt Japan in eine globale Prognose ein. | Spieler | offen |
-| F275 | `#quellen` | Abschnitt „Wie aktuell das ist" (`id: 'stand'`) | Kachel | Erwartet: jede Ansicht trägt einen eigenen Stand. Stichprobe über alle 15 Routen: welche Route hat keinen Stand-Chip? | Daten | offen |
-| F276 | `#quellen` | Abschnitt „Rechtliches" (`id: 'rechtliches'`) | Kachel | Erwartet: vorhanden und aufklappbar. | QA | offen |
-| F277 | `#quellen` | Deep-Links `#quellen-begriffe`, `#quellen-quellen`, `#quellen-zuverlaessig`, `#quellen-trennung`, `#quellen-stand`, `#quellen-rechtliches` | Deep-Link | Alle sechs aufrufen. Erwartet: der jeweilige Abschnitt ist aufgeklappt (`js/inline-init.js:576–588`). | QA | offen |
-| F278 | `#quellen` | Deep-Link `#quellen-gibtsnicht` | Deep-Link | Erwartet: Seite öffnet, kein Abschnitt wird aufgeklappt, kein Scrollen ins Leere. | QA | offen |
-| F279 | `#quellen` | Kein Hilfe-Knopf | QA | **Befund prüfen:** diese Route hat als einzige Datenroute keinen `openTabHelp`-Knopf. Beabsichtigt oder Lücke? | QA | offen |
-
----
-
-## 12. `#admin`
-
-Gerüst `index.html:2276–2290`, Inhalt `js/app-admin.js`, Daten `data/datenluecken.json`.
-**Befund vorab:** wie `#quellen` **ohne `data-i18n`** — `<h2 id="adminTitel">Datenlücken</h2>` und `#adminZurueck` sind hart verdrahtet; das Wörterbuch liegt in `js/app-admin.js:76–120` (`T.de` / `T.en`). Die Route steht in **keinem Menü** und ist nur über `#admin` bzw. `#datenluecken` erreichbar (`js/inline-init.js:433–435`).
-
-| Nr | Ansicht/Route | Element | Art | Was genau geprüft wird | Team | Status |
-|---|---|---|---|---|---|---|
-| F280 | `#admin` | „Datenlücken" | Kachel | `#admin` aufrufen. Erwartet: Seite zeichnet ohne Anmeldung. | QA | offen |
-| F281 | `#admin` | Deep-Link `#datenluecken` | Deep-Link | Erwartet: dieselbe Ansicht. | QA | offen |
-| F282 | `#admin` | Einleitung (`T.de.lead`) | Kachel | Erwartet: Text sagt ausdrücklich „Diese Seite ändert keine Daten". | QA | offen |
-| F283 | `#admin` | Hinweis „Nicht zugangsgeschützt …" (`T.de.offenHinweis`) | Kachel | Erwartet: sichtbar. Die Route ist ohne Schutz erreichbar, und die Seite muss das sagen. | QA | offen |
-| F284 | `#admin` | Leerzustand „Keine offene Lücke." (`T.de.keine`, `T.de.keineText`) | Kachel | **Erwartet heute genau dieser Zustand:** `data/datenluecken.json` trägt `_meta.anzahl = 0` und eine leere `luecken`-Liste (gemessen). | Daten | offen |
-| F285 | `#admin` | Filterreihe „Alle" + Klassen (`T.de.alle`, `klassen.*`) | Filter | Erwartet: bei 0 Lücken keine Filterreihe, sondern der Leerzustand. Sobald Lücken vorliegen: vier Klassen — „Mega-Fähigkeit ohne Beleg", „Kein Nutzungsdatensatz", „Zwei deutsche Namen", „Bereich fehlt ganz". | Daten | offen |
-| F286 | `#admin` | „Quelle ansehen ↗" (`T.de.btnQuelle`) | Knopf | Nur mit Daten prüfbar. Erwartet: neuer Tab. | QA | offen |
-| F287 | `#admin` | „Bestätigen & senden ↗" (`T.de.btnSenden`) | Klickpfad | Erwartet: vorbefülltes GitHub-Issue mit Titel `[Datenlücke] …` (`js/app-admin.js:183`), **kein** direkter Schreibvorgang. | QA | offen |
-| F288 | `#admin` | „Alle %n Vorschläge auf einmal bestätigen ↗" (`T.de.btnAlle`, `T.de.btnAlleTeil`) | Knopf | Erwartet: Sammel-Issue; Zähler `%n` / `%g` müssen stimmen. | QA | offen |
-| F289 | `#admin` | „Inventar erzeugt" (`T.de.stand`) | Kachel | Erwartet: `2026-08-31 13:00:53 UTC` (aus `data/datenluecken.json` → `_meta.erzeugt`). **Befund:** das ist 6 Tage alt; `_job_heartbeats.json` weist für andere Läufe den 2026-09-06 aus. | Daten | offen |
-| F290 | `#admin` | Fehlerfall (`T.de.fehler`, `T.de.fehlerText`) | QA | Datei umbenennen und Route öffnen. Erwartet: „data/datenluecken.json fehlt oder ist unlesbar. Erzeugen mit: python3 scripts/datenluecken.py". | QA | offen |
-| F291 | `#admin` | „← Startseite" (`#adminZurueck`) | Knopf | **Kein `data-i18n`.** Auf EN umschalten, Beschriftung prüfen. | QA | offen |
-
----
-
-## 13. `#side-quest`
-
-Gerüst `index.html:2293–2320`, Inhalt `js/app-side-quest*.js` (8 Module).
-**Befund vorab:** die sieben Reiter tragen **kein `data-i18n`** — „Teams", „Usage", „Matchups", „Pokémon", „Team-Builder", „Status", „Look up" stehen fest im HTML (`index.html:2304–2310`), gemischt englisch/deutsch.
-
-| Nr | Ansicht/Route | Element | Art | Was genau geprüft wird | Team | Status |
-|---|---|---|---|---|---|---|
-| F292 | `#side-quest` | „Side Quest · Pokémon Champions" (`sideQuest.title`, `sideQuest.subtitle`) | Kachel | Route aufrufen. | QA | offen |
-| F293 | `#side-quest` | Deep-Links `#sidequest`, `#champions` | Deep-Link | Beide aufrufen. Erwartet: gleiche Ansicht (`js/inline-init.js:427–429`). | QA | offen |
-| F294 | `#side-quest` | Statuszeile `#sideQuestStatus` (`sideQuest.loading`, `sideQuest.lastUpdated` = „Stand:") | Kachel | Erwartet: „Stand: 2026-09-06" — aus `data/champions_replica_teams.json` → `_meta.last_updated` (gemessen). | Daten | offen |
-| F295 | `#side-quest` | Reiter „Teams" | Reiter | Erwartet: **112 Teams** (`_meta.team_count = 112`, `teams`-Liste hat 112 Einträge, gemessen). **Kein `data-i18n`.** | Daten | offen |
-| F296 | `#side-quest` | Replica-Code antippen | Klickpfad | Erwartet: Code in der Zwischenablage, sichtbare Rückmeldung. | QA | offen |
-| F297 | `#side-quest` | Reiter „Usage" | Reiter | Erwartet: **238 Pokémon** (`data/champions_usage.json` → `_meta.count = 238`, gemessen), Quelle championsbattledata.com, Stand `2026-09-06T05:11:30+00:00`. **Kein `data-i18n`.** | Daten | offen |
-| F298 | `#side-quest` | Usage: Format-Umschalter doubles/singles | Filter | Beide Formate (`_meta.formats`). Erwartet: Liste wechselt, Zeilenzahl unterscheidet sich. | Daten | offen |
-| F299 | `#side-quest` | Reiter „Matchups" | Reiter | Erwartet: Matrix aus `js/app-side-quest-matchups.js`. **Kein `data-i18n`.** | Spieler | offen |
-| F300 | `#side-quest` | Reiter „Pokémon" (Pokédex) | Reiter | Erwartet: Suche, deutsche Namen aus `data/champions_names_de.json`. **Kein `data-i18n`.** | QA | offen |
-| F301 | `#side-quest` | Pokédex-Zeile „Meist genutzt" | Berechnung | Erwartet: die Zeile kommt aus `champions_usage.json`, nicht mehr aus der älteren VGCPastes-Stichprobe (so sagt es `_meta.note`). Stichprobe nachrechnen. | Daten | offen |
-| F302 | `#side-quest` | Reiter „Team-Builder" | Reiter | Erwartet: Team zusammenstellen, Typabdeckung gegen `data/champions_type_chart.json`. **Kein `data-i18n`.** | Spieler | offen |
-| F303 | `#side-quest` | Reiter „Status" (Statuszustände) | Reiter | Erwartet: Liste aus `data/champions_statuszustaende.json`. **Kein `data-i18n`.** | QA | offen |
-| F304 | `#side-quest` | Reiter „Look up" (Resources) | Reiter | Erwartet: Nachschlagewerk aus `data/champions_resources.json`. **Kein `data-i18n`; „Look up" ist englisch auf einer deutschen Seite.** | QA | offen |
-| F305 | `#side-quest` | Reiterwechsel und `hidden` | QA | Durch alle sieben Reiter. Erwartet: genau ein Host sichtbar, `aria-selected` folgt, `role="tab"`-Tastaturbedienung (Pfeiltasten) funktioniert. | QA | offen |
-| F306 | `#side-quest` | Regulationswechsel M-B / M-A | Filter | `_meta.regulations = ['M-B','M-A']`, `current_regulation = 'M-B'`. Erwartet: Umschalter vorhanden; Teamzahl ändert sich. | Daten | offen |
-| F307 | `#side-quest` | „← Startseite" | Knopf | → `#current-meta`. | QA | offen |
-| F308 | `#side-quest` | Kein Hilfe-Knopf | QA | Prüfen: diese Route hat keinen `openTabHelp`-Knopf. Beabsichtigt? | QA | offen |
-
----
-
-## 14. `#calculator`
-
-Gerüst `index.html:2323–2379`, Rechnung `js/app-calculator.js` (233 Zeilen).
-**Befund vorab:** `js/app-calculator.js` enthält **0 `t()`-Aufrufe** und arbeitet mit einer eigenen Sprachweiche; die Ergebnistexte kommen also nicht aus `js/i18n.js`. Der Rahmen (14 Schlüssel `calc.*`) schon.
-
-| Nr | Ansicht/Route | Element | Art | Was genau geprüft wird | Team | Status |
-|---|---|---|---|---|---|---|
-| F309 | `#calculator` | „TCG-Wahrscheinlichkeitsrechner" (`calc.heading`, `calc.subtitle`) | Kachel | Route aufrufen. | QA | offen |
-| F310 | `#calculator` | Deep-Links `#probability`, `#wahrscheinlichkeit` | Deep-Link | Beide aufrufen. Erwartet: gleiche Ansicht (`js/inline-init.js:407–409`). | QA | offen |
-| F311 | `#calculator` | „Karten im Deck" `#calc-deck-size` (`calc.deckSize`) | Filter | Standard prüfen (erwartet 60). Auf 40 setzen. Erwartet: alle drei Ergebnisse ändern sich. | Daten | offen |
-| F312 | `#calculator` | „Kopien im Deck" `#calc-copies` (`calc.copies`) | Filter | Auf 4 setzen. | Daten | offen |
-| F313 | `#calculator` | „Gezogene Karten (z.B. 7 für die Starthand)" `#calc-drawn` (`calc.drawn`) | Filter | Auf 7 setzen. | Daten | offen |
-| F314 | `#calculator` | „Bereits auf der Hand" `#calc-in-hand` (`calc.inHand`) | Filter | Auf 0 und auf 1 setzen. Erwartet: Prize- und Topdeck-Werte ändern sich, der Ziehen-Wert nicht. | Daten | offen |
-| F315 | `#calculator` | „Ziehen (mindestens 1)" (`calc.drawLabel`) | Berechnung | **Referenzrechnung:** Deck 60, Kopien 4, gezogen 7 → hypergeometrisch `1 − C(56,7)/C(60,7) = 39,93 %`. Erwartet: die Seite zeigt ≈ 39,9 %. | Daten | offen |
-| F316 | `#calculator` | „In den Prizes" (`calc.prizeLabel`, `calc.prizeNote` = „(mindestens 1, nach der Starthand)") | Berechnung | Deck 60, Kopien 4, gezogen 7, Hand 0 → Wahrscheinlichkeit, dass mindestens eine der 4 Kopien unter den 6 Prizes liegt. Von Hand nachrechnen und vergleichen. | Daten | offen |
-| F317 | `#calculator` | „Topdeck-Chance" (`calc.topdeckLabel`, `calc.topdeckNote` = „(nächste gezogene Karte)") | Berechnung | Erwartet: `verbleibende Kopien / verbleibende Karten`. Bei Deck 60, Kopien 4, gezogen 7, Hand 0 → 4/53 ≈ 7,5 % (bzw. 4/47, je nach Prize-Annahme) — welche Annahme gilt, muss aus dem Text hervorgehen. | Daten | offen |
-| F318 | `#calculator` | Randfälle | QA | Kopien > Deckgröße; gezogen > Deckgröße; alle Felder auf 0; negative Zahl. Erwartet: benannte Meldung oder Deckelung, **kein** `NaN` und kein `Infinity` im Ergebnis. | QA | offen |
-| F319 | `#calculator` | Sprachwechsel | QA | Auf EN umschalten. Erwartet: auch die Ergebniszeilen wechseln (siehe Befund oben: `app-calculator.js` benutzt kein `t()`). | QA | offen |
-| F320 | `#calculator` | „← Startseite" / Hilfe-Knopf | Knopf | Beide. | QA | offen |
-
----
-
-## 15. `#profile`
-
-Gerüst `index.html:2380–3972` — 305 `data-i18n`, 142 Knöpfe, 21 Auswahlfelder, 33 Eingabefelder, 11 Unterreiter.
-
-| Nr | Ansicht/Route | Element | Art | Was genau geprüft wird | Team | Status |
-|---|---|---|---|---|---|---|
-| F321 | `#profile` | „Benutzerprofil" (`profile.heading`) | Kachel | Route abgemeldet aufrufen. Erwartet: „Anmelden, um alle Funktionen freizuschalten" (`profile.signInPrompt`) statt leerer Seite. | QA | offen |
-| F322 | `#profile` | „Anmelden / Registrieren" (`profile.signInBtn`, `showAuthModal`) | Klickpfad | Dialog öffnen. Erwartet: E-Mail (`auth.email`), Passwort (`auth.password`), „Mit Google anmelden" (`auth.googleSignIn`), „Passwort vergessen?" (`auth.forgotPassword`). | QA | offen |
-| F323 | `#profile` | Registrieren (`auth.createAccount`, `auth.confirmPassword`, `auth.minChars`) | Klickpfad | Zu kurzes Passwort. Erwartet: Meldung mit Mindestlänge. Nicht übereinstimmende Passwörter → eigene Meldung. | QA | offen |
-| F324 | `#profile` | „Abmelden" (`signOut`) | Knopf | Erwartet: lokale Daten bleiben, Cloud-Daten verschwinden. | QA | offen |
-| F325 | `#profile` | Unterreiter „Meine Sammlung" (`profile.myCollection`) | Reiter | Erwartet: Standard-Unterreiter beim Öffnen (`profile-collection` trägt `active`, `index.html:2537`). | QA | offen |
-| F326 | `#profile` | Sammlung: `#collection-search`, `#collection-sort`, `#collection-filter` (`profile.filterAll`, `profile.filterPokemon*`, `profile.filterSupporter`, `profile.filterItem`, `profile.filterTool`, `profile.filterBasicEnergy`, `profile.filterSpecialEnergy`, `profile.allSets`) | Filter | Jeden Typfilter. Erwartet: Summe der Einzelzahlen = Gesamtzahl bei „Filter: Alle Karten". | Daten | offen |
-| F327 | `#profile` | „Karten im Besitz" / „Sammlungswert" (`profile.cardsOwned`, `profile.collectionValue`) | Berechnung | Erwartet: Wert = Σ (Anzahl × `eur_price` aus `data/price_data.csv`). Karten mit `mapping_status = unmapped` (3.033 von 20.419) dürfen den Wert nicht stillschweigend mit 0 senken — prüfen, ob sie ausgewiesen werden. | Daten | offen |
-| F328 | `#profile` | „Sammlung leeren" (`profile.clearCollection`, `clearCollection`) | Knopf | Erwartet: Rückfrage. | QA | offen |
-| F329 | `#profile` | „📋 Liste einfügen" (`profile.botImport`, `profile.botImportHint`, `wishlistBotImportOpen`) | Klickpfad | Telegram-Liste einfügen. Erwartet: Karten landen in der Sammlung; nicht zuordenbare Zeilen werden benannt. | QA | offen |
-| F330 | `#profile` | „Dex Import" (`profile.dexImport`, `profile.dexImportHint`, `dexImportOpenFilePicker`, `#dexImportFileInput`) | Klickpfad | CSV-Export laden. Erwartet: Trefferbericht (übernommen / nicht zuordenbar). | QA | offen |
-| F331 | `#profile` | Unterreiter „Gespeicherte Decks" (`profile.savedDecks`, `profile.decksNote`) + `#decks-search` | Reiter | Erwartet: gespeicherte Decks, Suche filtert. Leerzustand `emptyState.savedDecks`. | QA | offen |
-| F332 | `#profile` | „Neuer Ordner" (`profile.newFolder`, `createDeckFolder`) | Knopf | Erwartet: Ordner anlegen, Deck hineinziehen. | QA | offen |
-| F333 | `#profile` | „Nur IRL Gebaute" (`profile.filterBuilt`, `toggleBuiltFilter`) | Filter | Erwartet: Zeilenzahl sinkt auf die als gebaut markierten Decks. | QA | offen |
-| F334 | `#profile` | Unterreiter „Wunschliste" (`profile.wishlist`) + `#wishlist-search`, `#wishlist-set-filter` | Reiter | Erwartet: Filter wirken; Leerzustand `emptyState.wishlist`. | QA | offen |
-| F335 | `#profile` | „Für Cardmarket kopieren" (`copyWishlistForCardmarket`, `cmw.*`) | Klickpfad | Erwartet: Dialog „Wunschliste für Cardmarket" mit Einfügetext (`cmw.copyPaste`) und Link „Wants öffnen" (`cmw.openWants`). | Spieler | offen |
-| F336 | `#profile` | „Als Bild exportieren" (`exportWishlistAsImage`) | Knopf | Erwartet: Bild mit allen Karten. | QA | offen |
-| F337 | `#profile` | Unterreiter „Trade List" (`profile.tradelist`) + `#tradelist-search`, `#tradelist-set-filter`, `copyTradelistToClipboard`, `exportTradelistAsImage`, `clearTradelist` | Reiter | Wie F334–F336. | QA | offen |
-| F338 | `#profile` | Unterreiter „Meta Binder" (`profile.metaBinder`, `mb.generate`, `mb.addWishlist`, `mb.sendProxy`, `mb.proxyNew`) | Reiter | „Generieren" drücken. Erwartet: Binder aus den aktuellen Meta-Karten; Leerzustand `emptyState.metaBinder`. | Spieler | offen |
-| F339 | `#profile` | Meta Binder „Weggefallene Karten" (`closeMetaBinderDroppedModal`) | Klickpfad | Nach einem Neuaufbau. Erwartet: Dialog listet die Karten, die aus dem Meta gefallen sind. | Spieler | offen |
-| F340 | `#profile` | Unterreiter „Custom Binder" (`profile.customBinder`, `cb.subtitle`) | Reiter | Erwartet: Leerzustand `emptyState.customBinder`. | QA | offen |
-| F341 | `#profile` | Custom Binder Schwellen „Alle"/„Core"/„Tech" (`cb.thresholdAll`, `cb.thresholdCore`, `cb.thresholdTech`, `cbSetThreshold`) | Filter | Alle drei. Erwartet: Kartenzahl fällt monoton von „Alle" über „Core" zu „Tech" (oder die Reihenfolge ist dokumentiert). | Daten | offen |
-| F342 | `#profile` | Custom Binder Modus „Sammlung"/„Druck" (`cb.modeCollection`, `cb.modePrint`, `cbSetMode`) | Reiter | Erwartet: „Druck" zeigt nur ungedruckte Karten. | Spieler | offen |
-| F343 | `#profile` | Custom Binder Archetypauswahl (`#cbArchetypeSearch`, `cbToggleArchetypeDropdown`, `cb.topMeta` / `cbAddTopMetaArchetypes`) | Sucheingabe | „Top-Meta hinzufügen" drücken. Erwartet: die Top-Archetypen der aktuellen Tierliste landen in der Auswahl. | Spieler | offen |
-| F344 | `#profile` | Custom Binder „Binder speichern" / „Als neu speichern" (`cb.saveBinder`, `cb.saveAsNew`, `cbSpeichereBinder`) | Knopf | Erwartet: Binder überlebt einen Neuladen. | QA | offen |
-| F345 | `#profile` | Unterreiter „Offline Battle Journal" (`bj.title`, `bj.profileTitle`, `bj.profileSubtitle`) | Reiter | Erwartet: Liste der Einträge. | QA | offen |
-| F346 | `#profile` | Journal-Eintrag anlegen (`openBattleJournalSheet`, `bj.tournamentName`, `bj.tournamentType`, `bj.ownDeck`, `bj.opponentDeck`, `bj.result`, `bj.turnOrder`, `bj.bestOf`, `bj.brick`, `bj.mulligan`, `bj.saveBtn`) | Klickpfad | Vollständigen Eintrag speichern. Erwartet: erscheint in der Liste und im Meta-Call-Einfluss (F219). | Spieler | offen |
-| F347 | `#profile` | Journal offline | QA | Netz trennen, Eintrag speichern, Netz zurück. Erwartet: „Ausstehende Einträge" (`bj.pendingEntries`, `bj.pendingSync`), danach „Jetzt synchronisieren" (`bj.syncNow`, `flushBattleJournalOutbox`) räumt die Warteschlange. | QA | offen |
-| F348 | `#profile` | Journal-Filter `#journalFilterMeta`, `#journalFilterType`, `#journalFilterTournament`, `#journalFilterResult` (`bj.allMetas`, `bj.allTypes`, `bj.allTournaments`, `bj.allResults`) | Filter | Jeden Filter. Erwartet: Zeilenzahl sinkt entsprechend, „Alle…" stellt sie wieder her. | QA | offen |
-| F349 | `#profile` | Journal „Alle kopieren" / „Journal leeren" (`bj.copyAll`, `bj.clearJournal`, `copyAllJournalEntries`, `clearAllJournalEntries`) | Knopf | Erwartet: Rückfrage vor dem Leeren. | QA | offen |
-| F350 | `#profile` | „Matchup-Analyse" (`matchupAnalysis.title`, `.subtitle`, `toggleMatchupStats`) | Kachel | Erwartet: „Beste"/„Schlechteste"/„Alle" (`matchupAnalysis.bestTitle`, `.worstTitle`, `.allTitle`) aus den eigenen Journal-Einträgen. | Spieler | offen |
-| F351 | `#profile` | Matchup-Analyse Brick-Filter (`matchupAnalysis.brickIncl`, `.brickExcl`, `.brickOnly`, `#maFilterBrick`) | Filter | Alle drei. Erwartet: „Nur Bricks" zeigt eine Teilmenge von „Inkl. Bricks". | Spieler | offen |
-| F352 | `#profile` | Unterreiter „Decklisten vergleichen" (`profile.compareDecklists`, `compare.option1`, `compare.option2`, `compare.pasteDesc`, `compare.selectDesc`) | Reiter | Zwei Listen einfügen, „Vergleichen" (`compare.compareBtn`). Erwartet: Diff mit +/− je Karte. | Spieler | offen |
-| F353 | `#profile` | „Gebaute Decks vergleichen" (`profile.compareBuilt`, `compareActiveDecks`) | Knopf | Erwartet: die beiden zuletzt gebauten Decks werden verglichen. | Spieler | offen |
-| F354 | `#profile` | Unterreiter „Deck Builder" (`profile.deckBuilder`) | Reiter | Erwartet: eigenständiger Builder (`js/app-profile-deck-builder.js`). | Spieler | offen |
-| F355 | `#profile` | Unterreiter „Testing Groups" (`#profile-testinggroups`) | Reiter | Erwartet: Gruppen anlegen/beitreten; Deep-Link `#tg-join=<Code>` (`js/app-testing-groups.js:1745`) funktioniert. | QA | offen |
-| F356 | `#profile` | Unterreiter „Einstellungen" (`profile.settings`) — Anzeigename (`profile.displayName`, `#settings-display-name`, `saveDisplayName`) | Klickpfad | Namen speichern, neu laden. Erwartet: bleibt. | QA | offen |
-| F357 | `#profile` | „Telegram-Preisalarme" (`profile.priceAlerts.title`, `.toggle`, `.chatIdLabel`, `.chatIdHelp`, `.thresholdLabel`, `.thresholdHelp`, `savePriceAlerts`) | Klickpfad | Einschalten, Chat-ID und Schwelle setzen, speichern. Erwartet: Bestätigung; ohne Chat-ID eine benannte Meldung. | QA | offen |
-| F358 | `#profile` | „Ziehsimulator" (`draw.title`, `draw.newHand`, `draw.drawCard`, `draw.remaining`, `drawNewHand`, `drawExtraCard`) | Klickpfad | Erwartet: 7 Karten, „Karte ziehen" senkt „Verbleibend" um 1. | Spieler | offen |
-| F359 | `#profile` | „Kombinations-Rechner" (`draw.comboTitle`, `draw.comboDesc`, `#comboTarget1`…`#comboTarget4`, `runComboCalculation`, `clearComboTargets`) | Berechnung | Zwei Zielkarten setzen. Erwartet: Wahrscheinlichkeit, beide in der Starthand zu haben — gegen eine Handrechnung halten. | Daten | offen |
-| F360 | `#profile` | Deep-Links `#collection`, `#wishlist`, `#tradelist`, `#metabinder`, `#custombinder`, `#testinggroups`, `#journal` | Deep-Link | Alle sieben. Erwartet: `#profile` **plus** der passende Unterreiter (`PROFILE_SUBTAB_FOR_HASH`, `js/inline-init.js:456–482`). | QA | offen |
-| F361 | `#profile` | Deep-Link `#wishlist?focusCard=<SET>|<Nr>` | Deep-Link | Aufrufen. Erwartet: die Zeile wird angesprungen und 3 s bernsteinfarben umrandet (`js/inline-init.js:594–640`); nach 50 Versuchen (~5 s) gibt der Versuch still auf — prüfen, ob das bei kaltem Start reicht. | QA | offen |
-| F362 | `#profile` | „Cloud-Sync erzwingen" (`forceCloudSync`) | Knopf | Erwartet: Rückmeldung über Erfolg oder Fehlschlag. | QA | offen |
-| F363 | `#profile` | Alle Dialoge schließen | QA | Jeden der 20 `close*`-Aufrufe (`closeAuthModal`, `closeDeckCompare`, `closeDrawSimulator`, `closeEditEntryModal`, `closeEditTournamentModal`, `closeFullscreenCard`, `closeHelpModal`, `closeImageView`, `closeMatchupAnalysisModal`, `closeMetaBinderDroppedModal`, `closeRaritySwitcher`, `closeShareImageModal`, `closeSingleCard`, `closeTradelistGridModal`, `closeWishlistGridModal`, `closeCardmarketWishlistModal`, `closeAntiTechModal`, `closeBattleJournalSheet`, `closeDeckGridPreview`, `closeThreeWayCompare`) einmal per Knopf und einmal per `Esc`. Erwartet: beides schließt, Fokus kehrt zurück, Seite scrollt nicht an den Anfang. | QA | offen |
-
----
-
-## 16. Routenübergreifend
-
-| Nr | Ansicht/Route | Element | Art | Was genau geprüft wird | Team | Status |
-|---|---|---|---|---|---|---|
-| F364 | alle | Hauptmenü (`toggleMainMenu`, `#mainMenuTrigger`) | Klickpfad | Öffnen, jeden Menüpunkt einmal. Erwartet: aktive Ansicht wird im Menü markiert (`data-tab-id`), Adresszeile folgt, `aria-expanded` stimmt. | QA | offen |
-| F365 | alle | Menüpunkte: „Kartendatenbank", „Deck Builder", „Werkzeuge" (Untermenü: „Proxy-Drucker", „Playtester (TCG Showdown ↗)", „Rechner"), „Meta Call", „Mein Profil", „Side Quest: Pokémon Champions Replica", „Anleitung", „Quellen & Methodik" | Reiter | Jeden gegen die Route prüfen, auf die er führt. | QA | offen |
-| F366 | alle | Sprachumschalter `#langToggleBtn` (`header.switchLanguageTitle`) | Knopf | Auf jeder der 15 Routen einmal umschalten. Erwartet: **kein** deutscher Resttext im englischen Modus. Bekannte Kandidaten: `#quellen`, `#admin`, die sieben Reiter in `#side-quest`, die vier `<th>` in `#past-meta`. | QA | offen |
-| F367 | alle | Voreingestellte Sprache | QA | Browser auf `en-US` stellen, ohne gespeicherte Wahl laden. Erwartet: Englisch. Browser auf `fr` → Erwartet: Deutsch (`i18nPreferredLang`, `js/i18n.js:22–33`). | QA | offen |
-| F368 | alle | Themenumschalter `#themeToggleBtn` (`header.theme`) | Knopf | Umschalten, Seite neu laden. Erwartet: Wahl bleibt, `aria-pressed` stimmt. | QA | offen |
-| F369 | alle | Journal-Schnellzugriff `#battleJournalFab` (`bj.openShort`) | Knopf | Von jeder Route. Erwartet: Blatt öffnet, Zähler `#battleJournalFabBadge` zeigt die ausstehenden Einträge. | QA | offen |
-| F370 | alle | „Zum Inhalt springen" (`index.html:455`, Text englisch: „Skip to content") | Klickpfad | Erste Tabulatortaste nach dem Laden. Erwartet: Sprungmarke sichtbar und funktionsfähig. **Befund: kein `data-i18n`, fest englisch.** | QA | offen |
-| F371 | alle | Unbekannter Hash | Deep-Link | `#gibtsnicht` aufrufen. Erwartet: `applyHash` steigt still aus (`js/inline-init.js:492`) und die zuletzt aktive Ansicht bleibt stehen — **keine** leere Seite. | QA | offen |
-| F372 | alle | Hash auf eine Ansicht ohne DOM-Element | Deep-Link | Hash mit einem Alias auf eine stillgelegte Kennung testen. Erwartet: Konsolenwarnung `[deep-link] no tab element for …` und keine Routenänderung (`js/inline-init.js:508–511`). | QA | offen |
-| F373 | alle | Doppelte Schlüssel in `HASH_ALIASES` | QA | `tests/unit/test-tieflinks.js` laufen lassen. Erwartet: grün — genau dieser Test verhindert die Wiederkehr des `#meta-call`-Fehlers vom 18.08.2026. | QA | offen |
-| F374 | alle | Datenstand-Chips (`js/ds-datenstand.js`, `.js-data-freshness`) | Kachel | Auf jeder Route mit Chip: Datum gegen die mtime der genannten Datei halten. Erwartet: kein Chip bleibt auf „…" stehen. | Daten | offen |
-| F375 | alle | Offline-Betrieb (`service-worker.js`, `js/offline-prefetch.js`) | QA | Seite laden, Netz trennen, jede Route aufrufen. Erwartet: gecachte Ansichten öffnen, nicht gecachte zeigen einen benannten Offline-Hinweis. | QA | offen |
-| F376 | alle | Fehlerprotokoll (`js/error-tracking.js`) | QA | Konsole während des gesamten Durchlaufs mitschreiben. Erwartet: **null** unbehandelte Ausnahmen; jede gemeldete Zeile mit Route und Auslöser festhalten. | QA | offen |
-
----
-
-**Erfasst: 378 Zeilen (F001–F376 plus F224a, F224b), alle auf `offen`.**
-
-### Zeilen je Route
-
-| Route | Zeilen |
+| Team | Zeilen |
 |---|---|
-| Startseite (ohne Hash) / `#current-meta` | 26 (F001–F026) |
-| `#meta-analysis-hub` | 11 (F027–F037) |
-| `#city-league` | 13 (F038–F050) |
-| `#city-league-analysis` | 41 (F051–F091) |
-| `#current-analysis` | 49 (F092–F140) |
-| `#past-meta` | 19 (F141–F159) |
-| `#meta-call` | 67 (F160–F224b) |
-| `#cards` | 22 (F225–F246) |
-| `#proxy` | 14 (F247–F260) |
-| `#tutorial` | 6 (F261–F266) |
-| `#quellen` | 13 (F267–F279) |
-| `#admin` | 12 (F280–F291) |
-| `#side-quest` | 17 (F292–F308) |
-| `#calculator` | 12 (F309–F320) |
-| `#profile` | 43 (F321–F363) |
-| routenübergreifend | 13 (F364–F376) |
-| **gesamt** | **378** |
+| QA (Technik) | 303 |
+| SPIELER (Nutzersicht Mega Excadrill) | 137 |
+| DATEN (Scraper/Datenbasis) | 149 |
 
-Nach Team: **QA 190 · Daten 141 · Spieler 47** (an der fertigen Datei ausgezählt).
+**Zeilen je Teil:**
+
+| Teil | Zeilen |
+|---|---|
+| Teil A — Oberflächenelemente (F0–F19) | 477 |
+| Teil B — Datenprüfzeilen (D1–D55) | 55 |
+| Teil C — Hypothesen (H1–H14) | 14 |
+| **Gesamt** | **546** |
+
+**Zeilen je Gruppe in Teil A:**
+
+| Gruppe | Zeilen | Zugrundeliegende Inventar-Elemente |
+|---|---|---|
+| F0 | 35 | 35 |
+| F1 | 17 | 17 |
+| F2 | 22 | 22 |
+| F3 | 56 | 74 |
+| F4 | 70 | 101 |
+| F5 | 37 | 37 |
+| F6 | 18 | 18 |
+| F7 | 16 | 16 |
+| F8 | 5 | 5 |
+| F9 | 10 | 15 |
+| F10 | 12 | 12 |
+| F11 | 40 | 48 |
+| F12 | 17 | 17 |
+| F13 | 13 | 13 |
+| F14 | 30 | 119 |
+| F15 | 30 | 38 |
+| F16 | 21 | 47 |
+| F17 | 2 | 2 |
+| F18 | 3 | 3 |
+| F19 | 23 | 23 |
+| **Summe** | **477** | **662** |
+
+**Zeilen je Kategorie in Teil B:**
+
+| Kategorie | Zeilen |
+|---|---|
+| Kennzahl gegen Formel und Rohdatei (D1–D18) | 18 |
+| Verwaiste Datei (D19–D38) | 20 |
+| Leere Rechnung (D39–D45) | 7 |
+| Zwei Rechenwege für dieselbe Zahl (D46–D55) | 10 |

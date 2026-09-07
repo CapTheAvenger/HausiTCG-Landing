@@ -1,0 +1,233 @@
+name: Online-Einzellisten
+
+# Einzellisten von play.limitlesstcg.com in
+# data/tournament_decklists_per_player.csv — dieselbe Datei, dieselben
+# Spalten wie beim Papier-Scraper, plus die Herkunftsspalte `quelle`.
+#
+# WARUM DIESER LAUF IN CI SEIN MUSS
+# ---------------------------------
+# limitlesstcg.com und play.limitlesstcg.com sind aus dem Bausandkasten
+# nicht erreichbar (Egress-Proxy, 403). Der Scraper laesst sich dort
+# schreiben und gegen tests/fixtures/ pruefen, aber nicht gegen die
+# echte Seite laufen. Genau dafuer ist dieser Ablauf da.
+#
+# WAS ER LOEST
+# ------------
+# Im Format TEF-PBL stand am 07.09.2026 EIN Turnier in der Datei
+# (Worlds 2026, 143 Listen, davon acht Mega Excadrill). Papier-Majors
+# veroeffentlichen rund 18 % ihrer Listen; online sind es praktisch
+# 100 % — 253 von 253 bei "Rare Candy Club Showdown #43". Ein einziges
+# Online-Turnier bringt also mehr Einzellisten als der ganze Bestand
+# des laufenden Formats.
+#
+# TEMPO
+# -----
+# Ein Turnier mit 250 Listen sind 251 Abrufe mit 1,0 s Pause dazwischen:
+# gut vier Minuten reine Wartezeit je Turnier. Das ist Absicht —
+# Limitless schuldet uns nichts. `turniere` deckelt die Zahl der
+# Turniere; ohne Deckel kann ein Lauf eine Stunde dauern.
+#
+# KEIN ZEITPLAN, SOLANGE ER NICHT EINMAL VON HAND GRUEN WAR
+# ---------------------------------------------------------
+# Ob der Github-Laeufer bei play.limitlesstcg.com ueberhaupt
+# durchkommt, ist unbekannt: der Bausandkasten kann es nicht messen,
+# und bei game8.co scheitert genau das (HTTP 202 aus dem
+# Rechenzentrums-Adressbereich, siehe pocket-tierlist.yml). Ein
+# Zeitplan, der jede Nacht eine Warnung erzeugt und nie eine Zeile
+# Daten, ist schlimmer als kein Zeitplan — man gewoehnt sich an die
+# Meldung und uebersieht die echte. Erst ein gruener Lauf von Hand,
+# dann ein Zeitplan.
+#
+# Anstoss: GitHub -> Actions -> Online-Einzellisten -> Run workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      mindest_spieler:
+        description: 'Turniere mit weniger Teilnehmern ueberspringen'
+        type: string
+        default: '50'
+      turniere:
+        description: 'Hoechstens N Turniere holen (0 = alle gefundenen; Vorsicht, das dauert)'
+        type: string
+        default: '2'
+      format:
+        description: 'Limitless-Formatzahl aus data-format (4 = laufendes Standard, Stand 07.09.2026; "alle" schaltet den Filter ab)'
+        type: string
+        default: '4'
+      trocken:
+        description: 'Nichts schreiben, nur berichten'
+        type: boolean
+        default: false
+      schrumpfen_erlauben:
+        description: 'Deutlich weniger Zeilen als bisher trotzdem schreiben'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions:  write
+
+concurrency:
+  group: online-decklists
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # card_scraper_shared.get_data_dir() zeigt auf backend/core/data,
+      # nicht auf data/. Diese Merkwuerdigkeit ist geerbt; jeder Ablauf,
+      # der einen dieser Scraper faehrt, gleicht sie durch Hin- und
+      # Zurueckkopieren aus (siehe per-decklist-scrape.yml). Ohne das
+      # Saeen liest der Riegel einen leeren Bestand und der Lauf
+      # ueberschriebe 30.459 Zeilen mit ein paar hundert.
+      - name: backend/core/data/ aus data/ saeen
+        run: |
+          mkdir -p backend/core/data
+          for f in tournament_decklists_per_player.csv \
+                   all_cards_database.csv \
+                   all_cards_database.json \
+                   japanese_cards_database.csv \
+                   sets.json \
+                   format_window.json; do
+            if [ -f "data/$f" ]; then cp "data/$f" "backend/core/data/$f"; fi
+          done
+
+      - name: Online-Einzellisten holen
+        env:
+          # Ueber die Umgebung, nicht per ${{ }} in die Shell hinein.
+          # Was jemand ins Actions-Feld tippt, liefe sonst als
+          # Shell-Text mit.
+          MINDEST_SPIELER: ${{ inputs.mindest_spieler }}
+          TURNIERE: ${{ inputs.turniere }}
+          FORMAT: ${{ inputs.format }}
+          TROCKEN: ${{ inputs.trocken }}
+          SCHRUMPFEN: ${{ inputs.schrumpfen_erlauben }}
+        run: |
+          set +e
+          args=""
+          if [ -n "$MINDEST_SPIELER" ]; then args="$args --mindest-spieler $MINDEST_SPIELER"; fi
+          if [ -n "$TURNIERE" ]; then args="$args --turniere $TURNIERE"; fi
+          if [ -n "$FORMAT" ]; then args="$args --format $FORMAT"; fi
+          if [ "$TROCKEN" = "true" ]; then args="$args --trocken"; fi
+          if [ "$SCHRUMPFEN" = "true" ]; then args="$args --schrumpfen-erlauben"; fi
+
+          ziel=backend/core/data/tournament_decklists_per_player.csv
+          vorher=0
+          if [ -f "$ziel" ]; then vorher=$(( $(wc -l < "$ziel") - 1 )); fi
+
+          # NICHT in ::group:: — eine zugeklappte Gruppe ist der falsche
+          # Ort fuer einen Abbruch. Im Protokoll stuende sonst nur
+          # "Scraper endete mit 1".
+          python backend/scrapers/limitless_online_decklist_scraper.py $args 2>&1 \
+            | tee /tmp/online.log
+          rc=${PIPESTATUS[0]}
+
+          nachher=0
+          online=0
+          if [ -f "$ziel" ]; then
+            nachher=$(( $(wc -l < "$ziel") - 1 ))
+            # Kein Heredoc: sein Ende muss in Spalte 0 stehen und
+            # zerschnitte damit den YAML-Blockskalar.
+            online=$(ZIEL="$ziel" python -c 'import csv, os; f = open(os.environ["ZIEL"], newline="", encoding="utf-8"); print(sum(1 for r in csv.DictReader(f) if (r.get("quelle") or "") == "online"))')
+          fi
+          {
+            echo "### Online-Einzellisten"
+            echo ""
+            echo "| | vorher | nachher |"
+            echo "| --- | ---: | ---: |"
+            echo "| Zeilen | $vorher | $nachher |"
+            echo ""
+            echo "davon \`quelle=online\`: **$online** · Rueckgabewert: \`$rc\` · Argumente: \`$args\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # WARUM DIESER SCHRITT ROT WERDEN DARF
+          # ------------------------------------
+          # Der Ablauf laeuft nur auf Knopfdruck. Dann ist genau EIN
+          # Mensch da, der das Ergebnis sehen will, und ein gruener
+          # Haken ueber einem Abbruch belaegt ihn. Konkret neutralisierte
+          # ein `exit 0` die harten Abbrueche im Scraper: leerer
+          # Formatfilter, Deckliste die nicht aufgeht, Riegel gegen die
+          # geschrumpfte Quelle. Alle drei sind dafuer gebaut, dass
+          # jemand hinsieht.
+          if [ $rc -ne 0 ]; then
+            letzte="$(grep -m1 '::error::' /tmp/online.log | sed 's/^::error:://' || true)"
+            echo "::error::Online-Scraper abgebrochen (Code $rc): ${letzte:-siehe Protokoll oben}"
+            exit $rc
+          fi
+
+      - name: Ergebnis nach data/ zurueckschreiben
+        if: ${{ success() && inputs.trocken != true }}
+        run: |
+          if [ -f backend/core/data/tournament_decklists_per_player.csv ]; then
+            cp backend/core/data/tournament_decklists_per_player.csv \
+               data/tournament_decklists_per_player.csv
+          fi
+
+      - name: Commit + push
+        id: commit
+        # `success() &&` ist hier nicht ueberfluessig: ein eigenes `if:`
+        # ersetzt die sonst stillschweigende Bedingung success(). Ohne
+        # das wuerde nach einem Abbruch des Scrapers trotzdem committet —
+        # genau das, was die Abbrueche verhindern sollen.
+        if: ${{ success() && inputs.trocken != true }}
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name  "github-actions[bot]"
+          echo "pushed=false" >> "$GITHUB_OUTPUT"
+          git add data/tournament_decklists_per_player.csv
+          if git diff --cached --quiet; then
+            echo "unveraendert — kein Push."
+            exit 0
+          fi
+          ts="$(date -u +'%Y-%m-%d %H:%M UTC')"
+          git commit -m "Auto: Online-Einzellisten — ${ts}
+
+          Quelle: play.limitlesstcg.com (quelle=online)
+          Triggered by .github/workflows/online-decklists.yml
+          Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          for i in 1 2 3; do
+            git pull --rebase --autostash origin main && break
+            sleep $((i * 5))
+          done
+          for i in 1 2 3; do
+            if git push origin HEAD:main; then
+              echo "pushed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Push $i fehlgeschlagen — neu aufsetzen und erneut"
+            git pull --rebase --autostash origin main || true
+            sleep $((i * 5))
+          done
+          echo "::error::Push nach drei Versuchen fehlgeschlagen"
+          exit 1
+
+      # Ohne diesen Schritt veraltet die Seite still: ein Push mit dem
+      # GITHUB_TOKEN loest `on: push` NICHT aus (Rekursionsschutz von
+      # GitHub Actions). Dieselbe Zeile steht in jedem Datenlauf, der
+      # nach main pusst; tests/python/test_deploy_dispatch.py haelt das
+      # fest.
+      - name: Deploy anstossen (GITHUB_TOKEN-Push triggert ihn nicht)
+        if: ${{ success() && steps.commit.outputs.pushed == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy-pages.yml --ref main

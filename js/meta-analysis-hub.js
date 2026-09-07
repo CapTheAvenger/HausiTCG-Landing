@@ -712,6 +712,31 @@
         if (sideBtn) sideBtn.classList.add('active');
     }
 
+    /* BEFUND (07.09.2026, live gemessen): die sechs Kacheln wechselten
+       den Reiter korrekt, aber `location.hash` blieb stehen. Von #hub
+       aus auf "City League Meta" geklickt: Reiter city-league, Hash
+       weiterhin #hub. Folge: der Zustand ist nicht verlinkbar, nicht
+       als Lesezeichen speicherbar, und der Zurueck-Knopf des Browsers
+       fuehrt woandershin — er kennt den Wechsel gar nicht.
+
+       Ursache: window.switchTab() schaltet nur um. Die Adresse schreibt
+       switchTabAndUpdateMenu() (js/inline-init.js), und zwar ueber
+       kanonischerHash() — der vorhandene Weg, den alle Menuepunkte
+       gehen. Genau den nehmen wir jetzt auch, statt einen zweiten zu
+       erfinden. Der Rueckweg (exitToHub) muss mit, sonst stuende nach
+       "← Uebersicht" die Adresse der Unteransicht ueber der
+       Kachelseite — dieselbe Luege, nur umgekehrt.
+
+       Rueckfallebene bleibt switchTab(), damit ein Ladefehler in
+       inline-init.js die Kacheln nicht ganz stillegt. */
+    function wechsleReiter(tabId) {
+        if (typeof window.switchTabAndUpdateMenu === 'function') {
+            window.switchTabAndUpdateMenu(tabId);
+        } else if (typeof window.switchTab === 'function') {
+            window.switchTab(tabId);
+        }
+    }
+
     function enterSubTab(subTabId) {
         const def = SUB_TABS.find(s => s.id === subTabId);
         if (!def) return;
@@ -720,9 +745,7 @@
             // activate the profile sub-tab, then inject our sub-nav at
             // the top of the profile-metacall container.
             const topTab = def.topTab || 'profile';
-            if (typeof window.switchTab === 'function') {
-                window.switchTab(topTab);
-            }
+            wechsleReiter(topTab);
             if (typeof window.switchProfileTab === 'function') {
                 window.switchProfileTab(def.profileSubTab);
             }
@@ -730,9 +753,7 @@
             setSideMenuActive(topTab);
             return;
         }
-        if (typeof window.switchTab === 'function') {
-            window.switchTab(subTabId);
-        }
+        wechsleReiter(subTabId);
         // switchTab is hooked to call injectSubNav, but call here too to be safe.
         injectSubNav(subTabId);
         setSideMenuActive(subTabId);
@@ -740,9 +761,7 @@
 
     function exitToHub() {
         clearAllSubNavHosts();
-        if (typeof window.switchTab === 'function') {
-            window.switchTab('meta-analysis-hub');
-        }
+        wechsleReiter('meta-analysis-hub');
         // The hub now HAS its own top-level entry, so highlight it instead of
         // leaving the menu with nothing selected — the "← Übersicht" buttons
         // route through switchTabAndUpdateMenu and do highlight it, and two

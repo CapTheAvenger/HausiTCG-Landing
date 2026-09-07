@@ -118,6 +118,12 @@ window.MetaCall = (function () {
      Kumulativstand und sagt es in der Konsole. Wer die Zahl anzeigt,
      muss diesen Wert lesen, damit die Quote ihren Nenner traegt. */
   let _fensterMeta = null;
+  /* Der Pfad der Umfangsdatei — EINMAL, weil ihn zwei Stellen brauchen:
+     der Ladeschritt (§1b) und die Quellenangabe im Banner. Bis zum
+     07.09.2026 standen dort zwei verschiedene Namen, und der im
+     sichtbaren Text war der falsche. Ein gemeinsamer Wert macht das
+     Auseinanderlaufen unmoeglich statt nur unwahrscheinlich. */
+  const FENSTER_META_DATEI = 'data/limitless_online_fenster_meta.json';
   const FENSTER_MAX_ALTER_TAGE = 10;    // aelter -> eingefroren, verwerfen
   const FENSTER_MIN_DECKUNG    = 0.8;   // weniger Namensdeckung -> verwerfen
   const FENSTER_MIN_DECKS      = 1500;  // duennere Stichprobe -> verwerfen
@@ -1086,7 +1092,7 @@ window.MetaCall = (function () {
   // ── CSV Helper ─────────────────────────────────────────────
   // Naive CSV parser for app-meta-call's own consumers. The big PapaParse
   // pipeline lives in app-core (fetchAndParseCSV) and handles every CSV
-  // the rest of the app downloads \u2014 this module reads its own files
+  // the rest of the app downloads — this module reads its own files
   // (labs_tournament_*.csv, limitless_online_*.csv, etc.) which are all
   // well-formed: ASCII headers, no quoted commas, no embedded newlines.
   // For the one source that needs RFC-4180 quoting (the labs matchups
@@ -5938,7 +5944,7 @@ window.MetaCall = (function () {
            nie feuert. Die Datei ist wenige hundert Byte gross. */
         const [fRes, fMetaRes, fwRes] = await Promise.all([
           fetch('data/limitless_online_fenster.csv?t=' + Date.now()),
-          fetch('data/limitless_online_fenster_meta.json?t=' + Date.now()),
+          fetch(FENSTER_META_DATEI + '?t=' + Date.now()),
           fetch('data/format_window.json?t=' + Date.now()).catch(() => null),
         ]);
         if (!fRes.ok || !fMetaRes.ok) {
@@ -7969,9 +7975,33 @@ window.MetaCall = (function () {
   // Matchup map (_matchupMap) is reused as-is — we don't have
   // historical per-meta matchups; the current online matrix is the
   // best proxy and is flagged in the UI when source = past.
+  /* BEFUND (Live-Pruefung 07.09.2026, M1): der Knopf "Vergangenes Meta"
+     schien wirkungslos. Die Pille ruft `_setMetaSource('past')` OHNE
+     Format-Schluessel auf (siehe renderMetaSourcePanel). `formatKey` ist
+     dann undefined, `_pastMetaFormatKey` beim ersten Klick null — die
+     Funktion landete im Zweig darunter, setzte `_shareList = []` und
+     rief renderAll(). Gemessen im Browser (127.0.0.1, Reiter Meta Call):
+     `.metacall-table tbody tr` ging von 51 Zeilen auf 0, die
+     Empfehlungstabelle ebenfalls auf 0. Wer nicht genau hinsah, sah
+     einen Knopf, der die Tabelle "nicht aenderte" — er leerte sie.
+
+     Der Knopf muss ein Meta ZEIGEN, nicht eins wegnehmen. Fehlt der
+     Schluessel, faellt er auf das juengste verfuegbare Format zurueck
+     (`_pastMetaAvailableFormats` ist in _loadPastMetaCatalog nach
+     maxDate absteigend sortiert). Das Auswahlfeld darunter steht dann
+     auf genau diesem Format, statt auf "— select format —".
+
+     Die ausdrueckliche Abwahl ueber das Auswahlfeld bleibt moeglich:
+     das <select> uebergibt einen String (auch den leeren), der
+     Rueckfall greift nur bei `formatKey === undefined`, also beim
+     Pillenklick. */
   async function _setMetaSource(source, formatKey) {
     const nextSource = source === 'past' ? 'past' : 'current';
-    const nextKey = nextSource === 'past' ? (formatKey || _pastMetaFormatKey) : null;
+    let nextKey = nextSource === 'past' ? (formatKey || _pastMetaFormatKey) : null;
+    if (nextSource === 'past' && !nextKey && formatKey === undefined
+        && Array.isArray(_pastMetaAvailableFormats) && _pastMetaAvailableFormats.length > 0) {
+      nextKey = _pastMetaAvailableFormats[0].key;
+    }
     if (nextSource === _metaSource && nextKey === _pastMetaFormatKey) return;
     _metaSource = nextSource;
     _pastMetaFormatKey = nextKey;
@@ -7981,7 +8011,12 @@ window.MetaCall = (function () {
         // No format selected yet — render empty placeholder until user picks
         _shareList = [];
         _trendMap = {};
-        try { renderAll(); } catch (_e) { /* tolerate */ }
+        /* Der Fehler wird gemeldet, nicht geschluckt. Bis zum 07.09.2026
+           stand hier ein leerer catch-Zweig. Genau der macht einen
+           fehlgeschlagenen Umschalter von einem wirkungslosen Knopf
+           ununterscheidbar: die Aktivmarkierung bleibt stehen, die
+           Tabelle bleibt stehen, und in der Konsole steht nichts. */
+        try { renderAll(); } catch (e) { console.error('[MetaCall] renderAll nach Quellenwechsel fehlgeschlagen:', e); }
         return;
       }
       const aggregate = await _loadPastMetaShares(_pastMetaFormatKey);
@@ -7989,7 +8024,7 @@ window.MetaCall = (function () {
         console.warn(`[MetaCall] Past Meta load failed for ${_pastMetaFormatKey}`);
         _shareList = [];
         _trendMap = {};
-        try { renderAll(); } catch (_e) { /* tolerate */ }
+        try { renderAll(); } catch (e) { console.error('[MetaCall] renderAll nach Quellenwechsel fehlgeschlagen:', e); }
         return;
       }
       _shareList = _pastMetaToShareList(aggregate);
@@ -8061,8 +8096,8 @@ window.MetaCall = (function () {
         // forget renderAll() below ensures the Final-Cumulative panel
         // paints once even if shares came from the cards-CSV fallback.
         _loadPastMetaLabsAggregate(_pastMetaFormatKey).then(() => {
-          try { renderAll(); } catch (_e) { /* tolerate */ }
-        }).catch(() => { /* tolerate */ });
+          try { renderAll(); } catch (e) { console.error('[MetaCall] renderAll nach Quellenwechsel fehlgeschlagen:', e); }
+        }).catch((e) => { console.warn('[MetaCall] Labs-Aggregat fuer das eingefrorene Past-Meta nicht ladbar:', e); });
       }
       // 2026-06 — Past Meta predictor runs IF the format matches the
       // current labs rotation (TEF-POR during the lag window). The
@@ -8086,8 +8121,8 @@ window.MetaCall = (function () {
       if (!frozen) {
         _runPredictor();
       }
-      try { await _decorateMetaCallEntries(); } catch (_e) { /* tolerate */ }
-      try { renderAll(); } catch (_e) { /* tolerate */ }
+      try { await _decorateMetaCallEntries(); } catch (e) { console.warn('[MetaCall] Anreicherung nach Quellenwechsel fehlgeschlagen:', e); }
+      try { renderAll(); } catch (e) { console.error('[MetaCall] renderAll nach Quellenwechsel fehlgeschlagen:', e); }
       // Diagnostic: surface whether _majorMatchupMap has data for this
       // past format. When it's empty, getBaseMatchup falls back to
       // 50/50 for every (deck, opp) pair → recs collapse to identical
@@ -8113,8 +8148,8 @@ window.MetaCall = (function () {
         return;
       }
       _runPredictor();
-      try { await _decorateMetaCallEntries(); } catch (_e) { /* tolerate */ }
-      try { renderAll(); } catch (_e) { /* tolerate */ }
+      try { await _decorateMetaCallEntries(); } catch (e) { console.warn('[MetaCall] Anreicherung nach Quellenwechsel fehlgeschlagen:', e); }
+      try { renderAll(); } catch (e) { console.error('[MetaCall] renderAll nach Quellenwechsel fehlgeschlagen:', e); }
       console.info('[MetaCall] source = current');
     }
   }
@@ -9430,6 +9465,13 @@ window.MetaCall = (function () {
       .replace(/\n/g, '\\n');
   }
 
+  /* Die Sprachfrage an EINER Stelle. Vier Bloecke im Modul stellten sie
+     bis zum 07.09.2026 jeder fuer sich; jeder neue Satz mit deutschem
+     Text und englischem Rueckfall haette die fuenfte Kopie gebracht. */
+  function _mcIstDeutsch() {
+    return (typeof getLang === 'function' && getLang() === 'de');
+  }
+
   // Dezimalzahl in der Sprache der Oberfläche: Komma für de, Punkt für en.
   // Ohne das rendert der Meta-Call rohes toFixed als '10.00%' in der
   // deutschen UI, direkt neben Komma-Werten wie '7,1' im selben Reiter (F11).
@@ -9511,6 +9553,45 @@ window.MetaCall = (function () {
       return MAJOR_DAY2_POINTS[r] || Math.max(3, r * 3 - 8);
     }
     return null;
+  }
+
+  /* ── Woher die Rundenzahl kommt ──
+   *
+   * BEFUND B3 (07.09.2026). Bei Challenge und Cup zieht `_onSetting`
+   * die Runden aus der Spielerzahl nach (`_suggestSwissRounds`, die
+   * Tabelle des Limitless Swiss Calculators). Bei den drei
+   * Major-Typen tut sie das ausdruecklich NICHT — dort bleibt der
+   * Vorgabewert 8 stehen, egal ob 200 oder 2.700 Spieler eingetragen
+   * sind. Das ist eine bewusste Entscheidung und bleibt eine; falsch
+   * war nur, dass sie nirgends stand.
+   *
+   * WAS HIER NICHT PASSIERT: eine Rundenregel fuer Majors ableiten.
+   * Es gibt im Repo keine Quelle dafuer — data/labs_tournament_decks*.csv
+   * fuehrt `total_players`, aber keine Rundenzahl, und die Tabelle des
+   * Swiss Calculators gilt fuer eintaegige Swiss-Turniere, nicht fuer
+   * die Day-1/Day-2-Struktur eines Regionals. Eine Zahl zu behaupten,
+   * die nirgends gemessen ist, waere schlimmer als die Luecke.
+   *
+   * Was der Satz stattdessen sagt: die Rundenzahl ist eine EINGABE, und
+   * welche Folge ihre Aenderung hat. Das Punkteziel dazu kommt aus
+   * MAJOR_DAY2_POINTS, steht also nicht als Text hier, sondern wird
+   * gelesen. */
+  function _rundenHerkunftHinweis(type) {
+    if (!MAJOR_TYPES.includes(type)) return '';
+    const r     = Number(_settings.rounds) || 0;
+    const ander = r === 9 ? 8 : 9;
+    const ziel  = MAJOR_DAY2_POINTS[ander];
+    if (!ziel) return '';
+    const satz = _mcIstDeutsch()
+      ? `Runden sind hier eine Eingabe, keine Ableitung aus der Spielerzahl `
+        + `(anders als bei Challenge und Cup). Vor dem Turnier gegen die `
+        + `Ausschreibung prüfen: ${ander} statt ${r} Runden setzt das `
+        + `Punkteziel auf ${ziel}.`
+      : `Rounds are an input here, not derived from attendance (unlike `
+        + `Challenge and Cup). Check the organiser's announcement before `
+        + `the event: ${ander} rounds instead of ${r} moves the target to `
+        + `${ziel} points.`;
+    return `<p class="mc-tt-hint mc-runden-herkunft">${esc(satz)}</p>`;
   }
 
   function _typeLabelI18nKey(type) {
@@ -9611,22 +9692,26 @@ window.MetaCall = (function () {
       <input type="number" id="mc-players" min="2" max="9999"
              value="${_playersInputTouched ? s.totalPlayers : ''}"
              placeholder="${s.totalPlayers}"
-             oninput="MetaCall._onSetting('totalPlayers', +this.value)">
+             oninput="MetaCall._onSetting('totalPlayers', +this.value)"
+             onchange="MetaCall._onSettingCommit('totalPlayers', this)">
     </div>
     <div class="metacall-field-group">
       <label for="mc-rounds">${t('mc.labelRounds')}</label>
       ${istMajor
-        ? `<select id="mc-rounds" onchange="MetaCall._onSetting('rounds', +this.value)">
+        ? `<select id="mc-rounds" onchange="MetaCall._onSettingCommit('rounds', this)">
              <option value="8"${s.rounds === 9 ? '' : ' selected'}>${t('mc.rounds8')}</option>
              <option value="9"${s.rounds === 9 ? ' selected' : ''}>${t('mc.rounds9')}</option>
            </select>`
         : `<input type="number" id="mc-rounds" min="1" max="15" value="${s.rounds}"
-             oninput="MetaCall._onSetting('rounds', +this.value)">`}
+             oninput="MetaCall._onSetting('rounds', +this.value)"
+             onchange="MetaCall._onSettingCommit('rounds', this)">`}
+      ${_rundenHerkunftHinweis(type)}
     </div>
     <div class="metacall-field-group">
       <label for="mc-day2pts">${t(targetLabelKey)}</label>
       <input type="number" id="mc-day2pts" min="1" max="45" value="${s.day2Points}"
-             oninput="MetaCall._onSetting('day2Points', +this.value)">
+             oninput="MetaCall._onSetting('day2Points', +this.value)"
+             onchange="MetaCall._onSettingCommit('day2Points', this)">
     </div>
     ${cupTopCutField}
     <div class="metacall-field-group mc-turnier-name">
@@ -9637,6 +9722,12 @@ window.MetaCall = (function () {
              oninput="MetaCall._onTournamentName(this.value)">
     </div>
   </div>
+  ${/* Kein Eintrag in css/ — die Datei gehoert in diesem Durchgang
+        einem anderen Agenten. Die Warnfarbe kommt aus den Token, die
+        die Seite ohnehin fuehrt, damit der Satz im Dunkelmodus nicht
+        verschwindet. */ ''}
+  <p class="mc-grenzen-hinweis" id="mc-grenzen-hinweis" role="status" aria-live="polite"
+     style="margin:6px 0 0;font-size:0.85rem;font-weight:600;color:var(--tint-warn-ink,#b8860b)" hidden></p>
   <p class="mc-tt-hint">${t(targetHintKey)} ${swissLink}</p>
   <div class="mc-bild-zeile">
     <button type="button" class="mc-bild-btn" onclick="MetaCall.generateTournamentImage()">
@@ -9662,6 +9753,28 @@ window.MetaCall = (function () {
   // really three toggles. Each sub-row is one compact line: label on
   // the left, pill toggles in the middle, hint on the right (or
   // below on narrow viewports — flexbox handles it).
+  /* BEFUND (Live-Pruefung 07.09.2026, M1): der Quellen-Umschalter war
+     im eingefrorenen Past-Meta eine Sackgasse. renderAll blendete in
+     diesem Zustand die GANZE Konfigurationskachel aus — samt der
+     Pillenzeile "Current Meta | Vergangenes Meta". Wer einmal auf ein
+     abgeschlossenes Format geschaltet hatte, kam ohne Neuladen der
+     Seite nicht mehr zurueck: gemessen im Browser gingen die
+     .mc-tt-tab-Pillen von 4 auf 0 und die Feldtabelle von 51 Zeilen
+     auf 0.
+
+     Mode-Umschalter und Datenquellen bleiben ausgeblendet — sie haben
+     im eingefrorenen Blick keine Bedeutung, das war die Absicht der
+     Ausblendung. Die QUELLE selbst muss stehenbleiben, sonst ist der
+     Weg zurueck weg. */
+  function _renderFrozenSourceOnlyPanel() {
+    const source = renderMetaSourcePanel();
+    if (!source) return '';
+    return `
+<div class="metacall-panel mc-combo-panel">
+  ${source}
+</div>`;
+  }
+
   function _renderCombinedConfigPanel() {
     const source = renderMetaSourcePanel();
     const mode   = renderMetaCallModePanel();
@@ -10172,6 +10285,53 @@ window.MetaCall = (function () {
 </div>`;
   }
 
+  /* BEFUND (Live-Pruefung 07.09.2026, M4): der Umschalter
+     "Inkl./Exkl. Bricks" aenderte sichtbar nichts. Nachgemessen im
+     Browser: er aendert auch nichts, SOLANGE das Battle Journal keine
+     Partien fuer das gewaehlte Deck fuehrt — `_onBrickFilter` ruft
+     `_onMyDeck`, das `getBattleJournalWinRates` neu einliest; ohne
+     Journaleintraege bleibt `_journalStats` leer, und leer gefiltert
+     ist genauso leer. Der Schalter ist also nicht tot, er hat nur
+     nichts zu filtern.
+
+     Ein Schalter, der nichts anzeigt, ist von einem kaputten nicht zu
+     unterscheiden. Also schreibt er an, worauf er wirkt: die Zahl der
+     Journalpartien, die er gerade traegt — und wenn es keine gibt, dass
+     es keine gibt. Erfundene Zahlen gibt es hier nicht; steht nichts im
+     Journal, steht es genau so da. */
+  function _brickFilterStand() {
+    if (!_settings.myDeck) {
+      return '<span class="mc-brick-filter-stand" style="margin-left:8px;font-size:0.8rem;color:var(--ink-2,#667)">wirkt erst, wenn ein Deck gewählt ist</span>';
+    }
+    const partien = Object.keys(_journalStats)
+      .reduce((n, opp) => n + ((_journalStats[opp] || {}).total || 0), 0);
+    const gegner = Object.keys(_journalStats)
+      .filter(opp => ((_journalStats[opp] || {}).total || 0) > 0).length;
+    const text = partien > 0
+      ? `wirkt auf ${zahlLokal(partien)} Journalpartie(n) gegen ${zahlLokal(gegner)} Deck(s)`
+      : 'keine Journalpartien für dieses Deck — der Filter hat nichts zu filtern';
+    return `<span class="mc-brick-filter-stand" style="margin-left:8px;font-size:0.8rem;color:var(--ink-2,#667)">${esc(text)}</span>`;
+  }
+
+  /* Gegenstueck fuer das Eingabefeld "Mein Deck". `_onMyDeckInput`
+     uebernimmt nur bei EXAKTER Uebereinstimmung mit einem Deck aus
+     `_shareList` — sonst passiert stillschweigend nichts, und genau so
+     sah es bei der Pruefung am 07.09.2026 aus wie ein totes Feld.
+     Jetzt sagt die Zeile darunter, ob das Deck angekommen ist. */
+  function _myDeckStatusText() {
+    if (!_settings.myDeck) return 'Noch kein Deck gewählt — tippe einen Namen aus der Liste, dann erscheint die Day-2-Kachel darunter.';
+    return `Gewählt: ${esc(_settings.myDeck)} — die Day-2-Chance unten rechnet gegen dieses Deck.`;
+  }
+
+  /* Der laufende Hinweis waehrend des Tippens: was da steht, ist (noch)
+     kein Deck aus der Liste. Wird von _onMyDeckInput gesetzt, ohne
+     Neuaufbau der Ansicht — ein renderAll() bei jedem Tastendruck
+     stiehlt den Fokus (siehe den Befund M3 bei refreshResults). */
+  function _setzeMyDeckStatus(text) {
+    const el = document.getElementById('mc-my-deck-status');
+    if (el) el.textContent = text;
+  }
+
   function renderMyDeckPanel() {
     const decks   = (_shareList || []).map(d => d.name);
     const options = decks.map(n => `<option value="${esc(n)}"></option>`).join('');
@@ -10203,8 +10363,11 @@ window.MetaCall = (function () {
         <option value="all" ${!_settings.excludeBricks ? 'selected' : ''}>${t('mc.inclBricks')}</option>
         <option value="exclude" ${_settings.excludeBricks ? 'selected' : ''}>${t('mc.exclBricks')}</option>
       </select>
+      ${_brickFilterStand()}
     </div>
   </div>
+  <p class="mc-my-deck-status" id="mc-my-deck-status" role="status" aria-live="polite"
+     style="margin:6px 0 0;font-size:0.85rem;color:var(--ink-2,#667)">${_myDeckStatusText()}</p>
   <div class="mc-override-panel" id="mc-override-panel">
     ${renderOverrideTable()}
   </div>
@@ -10248,6 +10411,39 @@ window.MetaCall = (function () {
   </thead>
   <tbody>${rows}</tbody>
 </table>`;
+  }
+
+  /* ── Was in die Day-2-Zahl eingeht, und was danebensteht ──
+   *
+   * BEFUND B2 (07.09.2026). Unter der Prozentzahl stand
+   * "16 Pkt. in 8 R. · 2.700 Spieler" — drei Zahlen in einer Zeile,
+   * als waeren es drei Eingaben derselben Rechnung. Sie sind es nicht:
+   * `calcDay2` liest `rounds`, `day2Points`, die Feldanteile und die
+   * Paarungen. `totalPlayers` kommt in der Kette nicht vor. Gemessen am
+   * 07.09.2026: 1, 2, 100, 2.700 und 9.999 Spieler ergeben dieselbe
+   * Chance. Bei einem einzigen Spieler las sich die Zeile dann wie eine
+   * Aussage ueber ein Turnier mit einem Teilnehmer.
+   *
+   * Die Spielerzahl ist damit nicht wertlos — sie fuellt die
+   * Spieler-Spalte der Feldtabelle und steht auf den Bildern. Sie
+   * gehoert nur nicht in dieselbe Zeile wie die Rechengroessen,
+   * sondern eine Zeile tiefer und ausdruecklich als Rahmen
+   * gekennzeichnet.
+   *
+   * Kein neuer i18n-Schluessel: js/i18n.js gehoert in diesem Durchgang
+   * einem anderen Agenten. Die Zeile setzt sich aus vorhandenen
+   * Schluesseln (mc.ptsAbbr, mc.roundsAbbr, mc.labelPlayers) zusammen,
+   * der erklaerende Satz steht deutsch mit englischem Rueckfall —
+   * so, wie es das Modul an anderen Stellen schon haelt. */
+  function _day2RechnungsZeile() {
+    return `${_settings.day2Points} ${t('mc.ptsAbbr')} in ${_settings.rounds} ${t('mc.roundsAbbr')}`;
+  }
+
+  function _day2RahmenZeile() {
+    const n = zahlLokal(_settings.totalPlayers);
+    return _mcIstDeutsch()
+      ? `Turnierrahmen: ${n} ${t('mc.labelPlayers')} — geht nicht in diese Chance ein. Sie folgt aus Runden, Punkteziel, Feldanteilen und Paarungen.`
+      : `Tournament frame: ${n} ${t('mc.labelPlayers')} — not an input to this chance. It follows from rounds, target points, field shares and matchups.`;
   }
 
   function renderResultsPanel(field) {
@@ -10331,10 +10527,8 @@ window.MetaCall = (function () {
       </div>`;
     }).join('');
 
-    const day2Sub = t('mc.day2Sub')
-      .replace('{pts}', _settings.day2Points)
-      .replace('{r}',   _settings.rounds)
-      .replace('{n}',   zahlLokal(_settings.totalPlayers));
+    const day2Sub    = _day2RechnungsZeile();
+    const day2Rahmen = _day2RahmenZeile();
 
     /* Die Unentschieden-Annahme gehoert unter die Zahl, nicht in den
        Quelltext. Sie verschiebt das Ergebnis um mehrere Prozentpunkte
@@ -10365,6 +10559,7 @@ window.MetaCall = (function () {
       <div class="mc-day2-pct${cls}">${pct}${_mcPz()}</div>
       <div class="mc-day2-label">${t(_predictTitleKey())}</div>
       <div class="mc-day2-sub">${day2Sub}</div>
+      <div class="mc-day2-sub mc-day2-rahmen">${day2Rahmen}</div>
       <div class="mc-day2-sub mc-day2-unentschieden">${_uqText}</div>
       <div class="mc-day2-stats">
         <div class="mc-day2-stat">
@@ -10466,7 +10661,7 @@ window.MetaCall = (function () {
     ${renderScenariosBar()}
     ${dateBanner}
   </div>
-  ${_inFrozenPastMode() ? '' : _renderCombinedConfigPanel()}
+  ${_inFrozenPastMode() ? _renderFrozenSourceOnlyPanel() : _renderCombinedConfigPanel()}
   ${renderSettingsPanel()}
   ${_inFrozenPastMode() ? renderFrozenBanner() : ''}
   ${/* Der GROSSE Statusstreifen (_renderPredictorStatusBanner) bleibt
@@ -11208,16 +11403,89 @@ window.MetaCall = (function () {
       ? ` <span class="mc-predictor-banner-accuracy" title="Mean Absolute Error of the prediction made ${_formatDDMM(_lastAccuracyReport.baselineDate)} vs the major on ${_formatDDMM(_lastAccuracyReport.majorDate)}">Letzte Prognose-Accuracy: ø ${String(_lastAccuracyReport.mae).replace('.', ',')} pp Abweichung</span>`
       : '';
 
+    /* BEFUND (07.09.2026, M6): der Betreiber spielt am 26.09.2026 in
+       Frankfurt, TEF-PBL, rund 2.700 Spieler. Er kann Spielerzahl,
+       Format und Deck eingeben — was der Prognose fehlte, war die
+       Angabe, WORAUF sie beruht und WIE GROSS die Stichprobe ist. Der
+       Banner nannte bis heute nur die Zahl der Major-Turnier-Zeilen;
+       die zweite Saeule, das Online-Fenster, blieb ohne Umfang. In der
+       Konsole stand sie laengst ("Online-Anteile aus dem 15-Tage-
+       Fenster 2026-08-22 bis 2026-09-06 (10330 Decks)"), auf dem
+       Bildschirm nicht.
+
+       Die Zahlen kommen aus `_fensterMeta`, also aus der geladenen
+       Datei — nichts davon wird hier gerechnet oder geschaetzt. Fehlt
+       das Fenster (verworfen wegen Alter, Deckung, Umfang oder
+       Rotationsschutz), steht das ebenfalls da, statt die duenne
+       Datenlage unbeschrieben zu lassen. */
+    const stichprobe = (() => {
+      if (_metaSource === 'past') return '';
+      if (_fensterMeta && Number(_fensterMeta.decks_im_fenster) > 0) {
+        const n    = Number(_fensterMeta.decks_im_fenster);
+        const tage = Number(_fensterMeta.fenster_tage) || 0;
+        const von  = String(_fensterMeta.fenster_von || '').split('-').reverse().join('.');
+        const bis  = String(_fensterMeta.fenster_bis || '').split('-').reverse().join('.');
+        const spanne = (von && bis) ? ` (${von}–${bis})` : '';
+        /* BEFUND B1 (07.09.2026): hier stand `data/online_fenster.json`.
+           Diese Datei gibt es nicht. Geladen wird das Fenster in zwei
+           Teilen — die Anteile aus data/limitless_online_fenster.csv,
+           der Umfang (decks_im_fenster, fenster_tage, fenster_von/bis),
+           den dieser Satz anschreibt, aus
+           data/limitless_online_fenster_meta.json. Eine Quellenangabe,
+           die auf eine nicht vorhandene Datei zeigt, ist schlimmer als
+           gar keine: sie ist nicht nachpruefbar und sieht so aus, als
+           waere sie es. Der Name steht in EINER Konstante, die auch der
+           Ladepfad benutzt — damit koennen die beiden nicht mehr
+           auseinanderlaufen. */
+        return ` <span class="mc-predictor-banner-stichprobe" title="Umfang der Online-Stichprobe, aus der die Anteilsspalte kommt. Direkt aus ${FENSTER_META_DATEI} — nicht gerechnet.">Online-Stichprobe: ${zahlLokal(n)} Decks aus ${zahlLokal(tage)} Tagen${spanne}</span>`;
+      }
+      return ' <span class="mc-predictor-banner-stichprobe" style="color:var(--tint-warn-ink,#b8860b)" title="Ohne gültiges Tagesfenster gilt der Kumulativstand — der reicht weiter zurück und reagiert träger auf frische Verschiebungen.">Online-Stichprobe: kein gültiges Tagesfenster — es gilt der Kumulativstand</span>';
+    })();
+
+    /* BEFUND B4 (07.09.2026): der Banner nannte beide Quellen — Major
+       auf Papier und Online-Ladder — aber nicht, mit welchem Gewicht
+       sie in die Paarungen eingehen. Wer die Day-2-Chance liest, liest
+       damit eine Mischung, deren Mischungsverhältnis nirgends steht.
+       Und die zweite Verschiebung, der Piloten-Dämpfer aus
+       Predictor 5.3, stand überhaupt nur in der Konsole.
+
+       ALLE ZAHLEN ZUR LAUFZEIT GELESEN: die Anteile aus den drei
+       MATCHUP_BLEND_WEIGHT_*-Konstanten, die Verschiebung aus
+       `_deckWRAdjustment` für das gewählte Deck. Nichts davon ist hier
+       abgeschrieben; wer eine Konstante ändert, ändert diesen Satz mit.
+
+       Was der Satz NICHT behauptet: dass jede einzelne Paarung genau so
+       gemischt wird. Fehlt eine Quelle für ein Deckpaar, verteilt
+       getBaseMatchup die übrigen Gewichte neu — das steht im Titel. */
+    const gewichtung = (() => {
+      const pz = (w) => _mcNum(w * 100, 0) + _mcPz();
+      const papier = MATCHUP_BLEND_WEIGHT_DAY2 + MATCHUP_BLEND_WEIGHT_DAY1;
+      const kern = _mcIstDeutsch()
+        ? `Gewichtung der Paarungen: ${pz(papier)} Papier (${pz(MATCHUP_BLEND_WEIGHT_DAY2)} Day 2 · ${pz(MATCHUP_BLEND_WEIGHT_DAY1)} Day 1) · ${pz(MATCHUP_BLEND_WEIGHT_ONLINE)} Online`
+        : `Matchup weighting: ${pz(papier)} paper (${pz(MATCHUP_BLEND_WEIGHT_DAY2)} Day 2 · ${pz(MATCHUP_BLEND_WEIGHT_DAY1)} Day 1) · ${pz(MATCHUP_BLEND_WEIGHT_ONLINE)} online`;
+      const deck = _settings.myDeck || '';
+      const adj  = deck ? (_deckWRAdjustment[normalize(deck)] || 0) : 0;
+      const schub = adj
+        ? (_mcIstDeutsch()
+            ? ` · Predictor 5.3 für ${deck}: ${adj > 0 ? '+' : '−'}${_mcNum(Math.abs(adj), 2)} pp`
+            : ` · Predictor 5.3 for ${deck}: ${adj > 0 ? '+' : '−'}${_mcNum(Math.abs(adj), 2)} pp`)
+        : '';
+      const titel = _mcIstDeutsch()
+        ? 'Nennwerte des Paarungs-Mixes. Fehlt für ein Deckpaar eine Quelle, werden die verbleibenden Gewichte auf 100 % hochgerechnet. Der Predictor-5.3-Wert ist die gemessene Differenz zwischen der Win % des Decks beim letzten Major und seiner kumulativen Online-Win % — sie wird in getBaseMatchup auf die Siegwahrscheinlichkeit aufgeschlagen.'
+        : 'Nominal weights of the matchup mix. When a source is missing for a pair, the remaining weights are renormalised to 100 %. The Predictor 5.3 value is the measured gap between the deck\u2019s Win % at the last major and its cumulative online Win % — getBaseMatchup adds it to the win probability.';
+      return ` <span class="mc-predictor-banner-gewichtung" title="${esc(titel)}">${esc(kern + schub)}</span>`;
+    })();
+
     if (_predictorMode === 'B') {
       const tournNum = _labsMajorRows;
       return `<div class="mc-predictor-banner mc-predictor-banner-b">
         <span class="mc-predictor-banner-icon">📊</span>
-        <span class="mc-predictor-banner-text">${t('mc.bannerModeB').replace('{n}', tournNum)}${sourceTag}${activeTag}${_lagWindowChip}${staleTag}${trendSuffix}${clSuffix}${accuracySuffix}</span>
+        <span class="mc-predictor-banner-text">${t('mc.bannerModeB').replace('{n}', tournNum)}${sourceTag}${activeTag}${_lagWindowChip}${staleTag}${stichprobe}${gewichtung}${trendSuffix}${clSuffix}${accuracySuffix}</span>
       </div>`;
     }
     return `<div class="mc-predictor-banner mc-predictor-banner-a">
       <span class="mc-predictor-banner-icon">⚡</span>
-      <span class="mc-predictor-banner-text">${t('mc.bannerModeA')}${sourceTag}${activeTag}${_lagWindowChip}${staleTag}${trendSuffix}${clSuffix}${accuracySuffix}</span>
+      <span class="mc-predictor-banner-text">${t('mc.bannerModeA')}${sourceTag}${activeTag}${_lagWindowChip}${staleTag}${stichprobe}${gewichtung}${trendSuffix}${clSuffix}${accuracySuffix}</span>
     </div>`;
   }
 
@@ -11623,10 +11891,68 @@ window.MetaCall = (function () {
     const field = buildField();
     const fieldTbody = container.querySelector('.metacall-table tbody');
     if (fieldTbody) {
+      /* BEFUND (Live-Pruefung 07.09.2026, M3): "Final %" liess sich
+         nicht zuruecknehmen. Wer in "Meine Schaetzung" 50 eintrug und
+         das Feld danach wieder leerte, blieb auf 50,00 % stehen statt
+         auf die Prognose (gemessen: 14,76 %) zurueckzufallen.
+
+         Die Ursache steht direkt darunter: `fieldTbody.innerHTML = ...`
+         wirft die ganze Zeilenmenge weg — samt dem Eingabefeld, in dem
+         der Nutzer gerade steht. `_onPersonalShare` ruft refreshResults
+         mit 600 ms Verzoegerung; genau dann verschwindet das Feld unter
+         dem Cursor. Im Browser nachgemessen: document.activeElement
+         war vor dem Tippen `INPUT.mc-personal-input`, danach `BODY`.
+         Die folgenden Backspaces gingen ins Leere, `oninput` feuerte
+         nie, `_personalShares` behielt die 50 — der Knopf war nicht
+         kaputt, der Tastendruck kam nie an.
+
+         Also: merken, wo der Cursor stand, und ihn nach dem Tausch
+         wieder dorthin setzen. Der Schluessel ist das data-deck des
+         Eingabefeldes, nicht seine Position — bei Umsortierung des
+         Feldes landet der Fokus sonst auf einem fremden Deck. */
+      const aktivVorher = document.activeElement;
+      const merkeDeck = (aktivVorher
+        && aktivVorher.classList
+        && aktivVorher.classList.contains('mc-personal-input')
+        && fieldTbody.contains(aktivVorher))
+        ? {
+            deck:  aktivVorher.getAttribute('data-deck'),
+            start: aktivVorher.selectionStart,
+            ende:  aktivVorher.selectionEnd,
+          }
+        : null;
+
       const tmp = document.createElement('div');
       tmp.innerHTML = renderFieldPanel(field);
       const newTbody = tmp.querySelector('tbody');
       if (newTbody) fieldTbody.innerHTML = newTbody.innerHTML;
+
+      if (merkeDeck && merkeDeck.deck) {
+        const wieder = fieldTbody.querySelector(
+          `.mc-personal-input[data-deck="${(window.CSS && CSS.escape) ? CSS.escape(merkeDeck.deck) : merkeDeck.deck}"]`);
+        if (wieder) {
+          wieder.focus();
+          /* Der Cursor gehoert zurueck ins Feld. Bei `type="number"`
+             gibt es keinen Auswahlbereich — selectionStart ist null und
+             setSelectionRange wirft. Nachgemessen im Browser
+             (07.09.2026): nach blossem focus() steht der Cursor VOR der
+             Zahl, und der erste Backspace loescht nichts. Genau die
+             Taste, um die es im Befund geht.
+
+             Das Neuzuweisen des eigenen Wertes setzt den Cursor ans
+             Ende — dann loescht Backspace die letzte Ziffer, wie der
+             Nutzer es erwartet. Bei Feldern mit Auswahlbereich bleibt
+             die urspruengliche Cursorstelle erhalten. */
+          let bereichGesetzt = false;
+          try {
+            if (merkeDeck.start != null) {
+              wieder.setSelectionRange(merkeDeck.start, merkeDeck.ende);
+              bereichGesetzt = true;
+            }
+          } catch (_e) { /* type=number ohne Auswahlbereich */ }
+          if (!bereichGesetzt) { const v = wieder.value; wieder.value = ''; wieder.value = v; }
+        }
+      }
       /* BEFUND (Abnahmerunde 30.08.2026): hier wird nur der <tbody>
          getauscht. Die Kopfzeile traegt aber die Rundenzahl —
          "Ø Begegnungen (8 R.)". Wer die Runden auf 9 stellte, bekam
@@ -12437,10 +12763,32 @@ window.MetaCall = (function () {
   }
 
   // ── B) Day 2 Share Image (with personal deck) ─────────────
+  /* ENTSCHEIDUNG (07.09.2026, Befund M5): VERDRAHTEN, nicht entfernen.
+   *
+   * Der Befund lautete "erzeugt keine Vorschau, und ein zugehoeriger
+   * Knopf fehlt in der Oberflaeche". Nachgemessen im Browser: die
+   * Funktion ist vollstaendig und malt dieselbe Vorschau wie die drei
+   * anderen Bild-Exporte (`_showSharePreview` am Ende, gemessen: eine
+   * <canvas> entsteht, die Vorschau oeffnet). Ihr Knopf steht in
+   * renderResultsPanel — und diese Kachel gibt es nur, wenn ein Deck
+   * gewaehlt ist. Ohne Deck gibt es also weder Knopf noch Bild, und
+   * genau so sah es bei der Pruefung aus: das Deck war nicht
+   * angekommen (siehe Befund M4).
+   *
+   * Tote Funktion war es damit nicht. Was fehlte, war die Auskunft,
+   * warum nichts passiert — deshalb sagt der Abbruch das jetzt, statt
+   * stumm `return` zu machen. */
   function exportDay2ShareImage() {
-    if (!_shareList || !_settings.myDeck) return;
+    if (!_shareList || !_settings.myDeck) {
+      console.warn('[MetaCall] Day-2-Bild nicht moeglich: es ist kein Deck gewaehlt (mc-my-deck).');
+      _setzeMyDeckStatus('Für das Day-2-Bild fehlt das eigene Deck — wähle oben eins aus der Liste.');
+      return;
+    }
     const field = buildField();
-    if (!field.length) return;
+    if (!field.length) {
+      console.warn('[MetaCall] Day-2-Bild nicht moeglich: das prognostizierte Feld ist leer.');
+      return;
+    }
 
     const { day2Prob, expWin, expTie, expLoss } = calcDay2(field);
     const pct = _mcNum(day2Prob * 100, 1);
@@ -12760,8 +13108,113 @@ window.MetaCall = (function () {
     });
   }
 
+  /* Die Grenzen der Turniereinstellungen — EINE Wahrheit, im Code.
+   *
+   * BEFUND (Live-Pruefung 07.09.2026, M2): `min`/`max` standen im
+   * Markup, gehalten hat sie niemand. Gemessen im Browser: Spielerzahl
+   * 1 blieb stehen (Feldtabelle: "Dragapult 0 Spieler"), Spielerzahl
+   * 10000 blieb stehen und die Feldtabelle rechnete damit weiter
+   * ("Dragapult 1.476 Spieler"), Day-2-Punkte 99 blieben stehen —
+   * obwohl 8 Runden hoechstens 24 Punkte hergeben. `_onSetting` prueft
+   * bis heute nur `isNaN(val) || val <= 0`; alles darueber ging durch.
+   *
+   * index.html darf hier nicht angefasst werden, also klemmt es JS.
+   * Die Werte spiegeln genau das, was im Markup steht (mc-players
+   * min=2 max=9999, mc-rounds min=1 max=15, mc-day2pts min=1 max=45).
+   *
+   * Zwei Zeitpunkte, mit Absicht:
+   *   - beim TIPPEN nur die Obergrenze. Wer "2700" tippt, laeuft
+   *     unterwegs durch "2" und "27"; eine Untergrenze wuerde ihm die
+   *     Zahl unter den Fingern umschreiben.
+   *   - beim VERLASSEN des Feldes (change) beide Grenzen.
+   * Beides mit sichtbarer Rueckmeldung — stille Korrektur waere
+   * derselbe Fehler in gruen. */
+  const SETTING_GRENZEN = {
+    totalPlayers: { min: 2, max: 9999, feld: 'mc-players',  name: 'Spieler' },
+    rounds:       { min: 1, max: 15,   feld: 'mc-rounds',   name: 'Runden' },
+    day2Points:   { min: 1, max: 45,   feld: 'mc-day2pts',  name: 'Punkte' },
+  };
+
+  /* Klemmt `val` in die Grenzen von `key`. Gibt { wert, geklemmt, grund }
+   * zurueck; `geklemmt` ist false, wenn nichts zu tun war oder der
+   * Schluessel keine Grenzen hat. `nurMax = true` laesst die
+   * Untergrenze in Ruhe (Tippfall, siehe oben). */
+  function _klemmeEinstellung(key, val, nurMax) {
+    const g = SETTING_GRENZEN[key];
+    if (!g || !Number.isFinite(val)) return { wert: val, geklemmt: false, grund: '' };
+    /* Das Punkteziel kann nicht ueber dem liegen, was die Runden
+       hergeben: ein Sieg zaehlt drei. Bei 8 Runden sind 24 das Maximum,
+       nicht die 45 aus dem Markup (die decken 15 Runden ab). Ohne diese
+       Kante nimmt die Seite ein Ziel an, das an dem Turnier nicht
+       erreichbar ist, und rechnet die Day-2-Chance dagegen — gemessen
+       am 07.09.2026 stand dort widerspruchslos 99. */
+    const max = (key === 'day2Points')
+      ? Math.min(g.max, Math.max(1, (Number(_settings.rounds) || 0) * 3))
+      : g.max;
+    if (val > max) {
+      return { wert: max, geklemmt: true,
+               grund: key === 'day2Points'
+                 ? `${g.name}: ${zahlLokal(val)} sind in ${zahlLokal(Number(_settings.rounds) || 0)} Runden nicht erreichbar — auf ${zahlLokal(max)} gesetzt (ein Sieg zählt 3).`
+                 : `${g.name}: ${zahlLokal(val)} liegt über dem Höchstwert — auf ${zahlLokal(max)} gesetzt.` };
+    }
+    if (!nurMax && val < g.min) {
+      return { wert: g.min, geklemmt: true,
+               grund: `${g.name}: ${zahlLokal(val)} liegt unter dem Mindestwert — auf ${zahlLokal(g.min)} gesetzt.` };
+    }
+    return { wert: val, geklemmt: false, grund: '' };
+  }
+
+  /* Die Rueckmeldung steht neben den Feldern, nicht in der Konsole.
+   * Ohne den Satz waere die Klemmung eine stille Korrektur: der Nutzer
+   * tippt 10000, sieht 9999 und weiss nicht, ob er sich vertippt hat
+   * oder die Seite ihn ueberstimmt hat. */
+  function _zeigeKlemmHinweis(text) {
+    const el = document.getElementById('mc-grenzen-hinweis');
+    if (!el) return;
+    el.textContent = text || '';
+    el.hidden = !text;
+    clearTimeout(_zeigeKlemmHinweis.__timer);
+    if (text) {
+      _zeigeKlemmHinweis.__timer = setTimeout(() => {
+        const e2 = document.getElementById('mc-grenzen-hinweis');
+        if (e2) { e2.textContent = ''; e2.hidden = true; }
+      }, 6000);
+    }
+  }
+
+  /* onchange der Zahlenfelder: beide Grenzen, und der DOM-Wert wird
+   * auf das Geklemmte zurueckgeschrieben, damit Anzeige und Rechnung
+   * dasselbe sagen. */
+  function _onSettingCommit(key, el) {
+    if (!el) return;
+    const roh = parseFloat(el.value);
+    if (!Number.isFinite(roh)) {
+      // Leeres Feld beim Verlassen — der zuletzt gueltige Wert steht.
+      el.value = String(_settings[key]);
+      return;
+    }
+    const k = _klemmeEinstellung(key, roh, false);
+    if (k.geklemmt) {
+      el.value = String(k.wert);
+      _zeigeKlemmHinweis(k.grund);
+    }
+    /* Ein bereits stehender Hinweis wird hier NICHT geloescht: wer 99
+       tippt, wird beim Tippen auf 24 geklemmt und verlaesst danach ein
+       Feld mit gueltigem Wert. Ein Loeschen an dieser Stelle haette
+       genau die Erklaerung weggenommen, um die es geht. Der Hinweis
+       raeumt sich nach sechs Sekunden selbst ab. */
+    _onSetting(key, k.wert);
+  }
+
   function _onSetting(key, val) {
     if (isNaN(val) || val <= 0) return;
+    const k = _klemmeEinstellung(key, val, true);
+    if (k.geklemmt) {
+      val = k.wert;
+      const el = document.getElementById(SETTING_GRENZEN[key].feld);
+      if (el) el.value = String(val);
+      _zeigeKlemmHinweis(k.grund);
+    }
     _settings[key] = val;
     if (key === 'totalPlayers') {
       _playersInputTouched = true;
@@ -12924,6 +13377,7 @@ window.MetaCall = (function () {
     const trimmed = (val || '').trim();
     if (!trimmed) {
       if (_settings.myDeck) _onMyDeck('');
+      else _setzeMyDeckStatus('Noch kein Deck gewählt — tippe einen Namen aus der Liste, dann erscheint die Day-2-Kachel darunter.');
       return;
     }
     const list = _shareList || [];
@@ -12931,6 +13385,18 @@ window.MetaCall = (function () {
                || list.find(d => d.name.toLowerCase() === trimmed.toLowerCase());
     if (match && match.name !== _settings.myDeck) {
       _onMyDeck(match.name);
+      return;
+    }
+    /* Kein Treffer — und bis zum 07.09.2026 passierte an dieser Stelle
+       GAR NICHTS: kein Fehler, keine Meldung, kein Eintrag. Wer sich
+       vertippte oder ein Deck suchte, das nicht im prognostizierten
+       Feld steht, sah ein Feld, das seine Eingabe schluckt. Der Satz
+       darunter sagt jetzt, woran es liegt. */
+    if (!match) {
+      const treffer = list.filter(d => d.name.toLowerCase().includes(trimmed.toLowerCase()));
+      _setzeMyDeckStatus(treffer.length > 0
+        ? `„${trimmed}" ist noch kein vollständiger Deckname. Gemeint: ${treffer.slice(0, 3).map(d => d.name).join(', ')}${treffer.length > 3 ? ' …' : ''}`
+        : `„${trimmed}" steht nicht im prognostizierten Feld — dort stehen ${zahlLokal(list.length)} Decks. Nur diese lassen sich wählen.`);
     }
   }
 
@@ -13778,6 +14244,7 @@ window.MetaCall = (function () {
     // matchup row exists.
     getBaseMatchup: (deckA, deckB) => getBaseMatchup(deckA, deckB),
     _onSetting,
+    _onSettingCommit,
     _onTournamentName,
     generateTournamentImage,
     _setTournamentType,

@@ -27,6 +27,17 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+// Die Quelle selbst — der Spiegel unten muss sich an ihr messen lassen.
+const MODUL_SRC = fs.readFileSync(
+    path.join(__dirname, '..', '..', 'js', 'app-meta-call.js'), 'utf8');
+function quellGewicht(name) {
+    const m = MODUL_SRC.match(new RegExp('const\\s+' + name + '\\s*=\\s*([0-9]*\\.?[0-9]+)\\s*;'));
+    assert.ok(m, `Konstante nicht gefunden: ${name}`);
+    return parseFloat(m[1]);
+}
 
 // Production-mirrored constants — keep in lockstep with
 // js/app-meta-call.js (search "MATCHUP_BLEND_WEIGHT_").
@@ -273,5 +284,37 @@ describe('3-source matchup blend — constants stay realistic', () => {
     it('Sample floors: Day-2/Day-1 lower than Overall (smaller per-pair samples are normal)', () => {
         assert.ok(MIN_GAMES_DAY2 < MIN_GAMES_OVERALL);
         assert.ok(MIN_GAMES_DAY1 < MIN_GAMES_OVERALL);
+    });
+});
+
+// ── Der Spiegel muss halten, was er verspricht ─────────────────
+//
+// BEFUND (Mutationslauf 07.09.2026, M-11): dieser ganze Block rechnet
+// mit EIGENEN Konstanten. MATCHUP_BLEND_WEIGHT_DAY2 im Modul von 0,45
+// auf 0,55 zu setzen liess alle Zusicherungen hier gruen — der Spiegel
+// bewegt sich nicht mit dem Original. Damit war ausgerechnet die
+// Gewichtung, aus der die Day-2-Chance entsteht, ungedeckt.
+//
+// Das Verhalten des echten Mischblocks prueft
+// tests/unit/test-metacall-befunde-fix6-07-09.js. Hier wird nur
+// sichergestellt, dass dieser Spiegel nicht unbemerkt vom Original
+// abweicht.
+describe('3-source matchup blend — der Spiegel deckt sich mit dem Modul', () => {
+    it('Day-2-, Day-1- und Online-Gewicht stehen im Modul genau so', () => {
+        assert.strictEqual(quellGewicht('MATCHUP_BLEND_WEIGHT_DAY2'), W_DAY2);
+        assert.strictEqual(quellGewicht('MATCHUP_BLEND_WEIGHT_DAY1'), W_DAY1);
+        assert.strictEqual(quellGewicht('MATCHUP_BLEND_WEIGHT_ONLINE'), W_ONLINE);
+    });
+
+    it('die Partienschwellen ebenfalls', () => {
+        assert.strictEqual(quellGewicht('MAJOR_MATCHUP_MIN_GAMES'), MIN_GAMES_OVERALL);
+        assert.strictEqual(quellGewicht('MAJOR_MATCHUP_MIN_GAMES_DAY1'), MIN_GAMES_DAY1);
+        assert.strictEqual(quellGewicht('MAJOR_MATCHUP_MIN_GAMES_DAY2'), MIN_GAMES_DAY2);
+    });
+
+    it('der Overall-Rueckfall wird im Modul als Summe gebildet, nicht als eigene Zahl', () => {
+        const m = MODUL_SRC.match(/const MATCHUP_BLEND_WEIGHT_OVERALL_FALLBACK\s*=\s*([^;]+);/);
+        assert.ok(m);
+        assert.strictEqual(m[1].trim(), 'MATCHUP_BLEND_WEIGHT_DAY1 + MATCHUP_BLEND_WEIGHT_DAY2');
     });
 });

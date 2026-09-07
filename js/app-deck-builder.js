@@ -1090,6 +1090,78 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
             });
         }
 
+        /* ── DER ZAEHLER UND DAS RASTER MUESSEN DASSELBE SAGEN ──
+         *
+         * BEFUND 07.09.2026, live nachgemessen (QA-C, FEHLER-3, Mega
+         * Excadrill im Reiter "Aktuelles Meta"):
+         *
+         *   Suchfeld "Ultra" getippt  -> 1 Kachel sichtbar, "1 Karten".
+         *   Danach "Max Consistency"  -> 50 Kacheln sichtbar,
+         *                                "50 Karten" — das Suchfeld
+         *                                trug weiterhin "Ultra".
+         *
+         * Zwei Schreiber, die nichts voneinander wissen:
+         * `updateCurrentMetaCardCounts` (app-current-meta-analysis.js)
+         * schreibt die DATENzahl der gefilterten Kartenliste,
+         * `uebersichtKachelnFiltern` (deck-analysis-shared.js) schreibt
+         * die Zahl der SICHTBAREN Kacheln. Jede Neuzeichnung durch den
+         * Deckbauer setzt den ersten Wert und laesst Suche und
+         * Typfilter fallen; der naechste Tastendruck im Suchfeld setzt
+         * den zweiten. Deshalb bleibt nach dem Leeren des Suchfelds die
+         * typgefilterte Zahl stehen, und deshalb steht nach einem Bau
+         * eine Zahl da, die zum Suchfeld daneben nicht passt.
+         *
+         * Behoben wird der Ausloeser, der diesem Modul gehoert: nach
+         * JEDER Neuzeichnung, die der Deckbauer anstoesst, wird der
+         * Uebersichtsfilter nachgezogen. Danach zaehlt und zeigt die
+         * Uebersicht wieder dasselbe, und zwar das, was im Suchfeld und
+         * an den Typknoepfen steht.
+         *
+         * WARUM GEWARTET WIRD: zwei der drei Raster zeichnen in Schueben
+         * von 12 Kacheln je Frame (app-past-meta.js Z. ~1585,
+         * app-current-meta-analysis.js Z. ~4195 fuer "alle
+         * Archetypen"). Ein Filterlauf mitten im Schub zaehlt nur die
+         * bereits eingehaengten Kacheln — genau die "0 Karten, aber 24
+         * im Raster", die QA-C gemeldet hat. Also wird gewartet, bis die
+         * Kachelzahl zwei Messungen lang gleich bleibt, und erst dann
+         * gefiltert. Gewartet wird ueber setTimeout und NICHT ueber
+         * requestAnimationFrame: die Schuebe haengen selbst an rAF —
+         * bleibt der Frame aus (B1), waechst das Raster nicht mehr, und
+         * eine rAF-Kette wuerde mit ihm einschlafen. */
+        const UEBERSICHT_GITTER = {
+            cityLeague:  'cityLeagueDeckGrid',
+            currentMeta: 'currentMetaDeckGrid',
+            pastMeta:    'pastMetaDeckGrid'
+        };
+        const UEBERSICHT_FILTER = {
+            cityLeague:  'filterOverviewCards',
+            currentMeta: 'filterCurrentMetaOverviewCards',
+            pastMeta:    'filterPastMetaOverviewCards'
+        };
+
+        function _uebersichtFilterNachziehen(source, _versuche, _zuletzt) {
+            const gitterId = UEBERSICHT_GITTER[source];
+            const filterName = UEBERSICHT_FILTER[source];
+            if (!gitterId || !filterName) return;
+            const filter = (typeof window !== 'undefined') ? window[filterName] : null;
+            if (typeof filter !== 'function') return;
+
+            const gitter = document.getElementById(gitterId);
+            if (!gitter) return;
+            const jetzt = gitter.querySelectorAll('.card-item').length;
+            const rest = (typeof _versuche === 'number') ? _versuche : 12;
+
+            // Waechst das Raster noch, wird nicht gezaehlt — sonst steht
+            // die Zahl des ersten Schubs da.
+            if (rest > 0 && jetzt !== _zuletzt) {
+                setTimeout(function () {
+                    _uebersichtFilterNachziehen(source, rest - 1, jetzt);
+                }, 20);
+                return;
+            }
+            try { filter(); } catch (e) { devLog('[Uebersichtsfilter] nicht nachgezogen:', e); }
+        }
+
         function scheduleDeckDependentRefresh(source) {
             if (pendingDeckRefreshBySource[source]) {
                 cancelAnimationFrame(pendingDeckRefreshBySource[source]);
@@ -1116,6 +1188,12 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                     } else if (source === 'pastMeta') {
                         renderPastMetaCards();
                     }
+
+                    // Die Neuzeichnung oben wirft das Raster weg und baut
+                    // es neu — OHNE die Suche und den Typfilter, die der
+                    // Nutzer stehen hat. Ohne das Nachziehen unten
+                    // widersprechen sich Zaehler und Inhalt (B2).
+                    _uebersichtFilterNachziehen(source);
 
                     updateOpeningHandStats(source);
 
@@ -3637,6 +3715,83 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
             return teile.join(' · ');
         }
 
+        /* ── WORAUF EINE IDEE BERUHT, STEHT AN DER IDEE ──────────
+         *
+         * ENTSCHEIDUNG DES BETREIBERS (07.09.2026), woertlich:
+         * "Empfehlungen auf das begrenzen, was belegt ist, Rest offen
+         * als 'keine Daten' anschreiben."
+         *
+         * GEMESSENE LAGE: jede Zeile dieses Blocks kommt aus einer
+         * Paarung in data/card_capability_interactions.json — Version
+         * 0.1 vom 15.05.2026, FUENF Paarungen. Die Paarung ist
+         * benannt und nachschlagbar; die Karte selbst hat in diesem
+         * Archetyp keine einzige Partie hinter sich. Beides gehoert
+         * an die Zeile, und zwar sichtbar und nicht im Titel-Attribut:
+         * was im Tooltip steht, liest auf dem Telefon niemand.
+         *
+         * `t()` mit Rueckfall, weil js/i18n.js in diesem Durchgang
+         * einem anderen Arbeitsgang gehoert — dasselbe Muster wie bei
+         * buildInfo.nearMissTitle ein Stueck weiter unten. */
+        function _ideenText(key, de) {
+            const v = (typeof t === 'function') ? t(key) : null;
+            return (v && v !== key) ? v : de;
+        }
+
+        /* WAS HIER GERECHNET WIRD, DARF NICHT KONSTANT SEIN.
+         *
+         * BEFUND DER ABNAHME (07.09.2026): diese Funktion las `v.beleg`
+         * ueberhaupt nicht. Mit `{karte:'X', beleg:'heuristik',
+         * partien:358}` kam trotzdem "belegt · …" heraus, und ganz ohne
+         * `beleg`-Feld ebenso. Richtig war die Ausgabe nur zufaellig,
+         * weil js/tech-ideen.js heute ausnahmslos `beleg: 'paarung'`
+         * setzt. Eine Kennzeichnung, die sich nicht aendern KANN, ist
+         * keine Kennzeichnung, sondern eine Beschriftung — und beim
+         * naechsten Vorschlag aus einer duenneren Quelle waere sie
+         * eine falsche Angabe.
+         *
+         * Die drei Grade sind dieselben wie im Build-vs-Assistenten
+         * (js/app-anti-tech.js), damit derselbe Sachverhalt an beiden
+         * Stellen gleich heisst. */
+        function _ideenBelegSatz(v, stand) {
+            const grad = String((v && v.beleg) || '').trim();
+            if (grad === 'nutzer') {
+                return _ideenText('buildInfo.belegNutzer', 'vom Nutzer eingetragen')
+                    + ' · '
+                    + _ideenText('buildInfo.belegNutzerSatz', 'nicht an Partien gemessen');
+            }
+            if (grad !== 'paarung') {
+                /* Die vorsichtige Richtung: wer keine benannte Paarung
+                   mitbringt, wird nicht zum Beleg erklaert — auch dann
+                   nicht, wenn eine Partienzahl danebensteht. Die Zahl
+                   gehoert zum Matchup, nicht zur Karte. */
+                return _ideenText('buildInfo.belegNein', 'unbelegt')
+                    + ' · '
+                    + _ideenText('buildInfo.belegHeuristik',
+                        'aus dem Kartentext abgeleitet, nicht an Partien gemessen');
+            }
+            const st = stand || {};
+            const quelle = String((v && v.quelleDatei) || 'data/card_capability_interactions.json')
+                .replace(/^data\//, '');
+            const teile = [_ideenText('buildInfo.belegJa', 'belegt')];
+            teile.push(quelle + (st.version ? ' v' + st.version : ''));
+            teile.push(_ideenText('buildInfo.belegStand', 'Stand') + ' ' + _ideenDatum(st.datum));
+            const n = Number(v && v.partien) || 0;
+            teile.push(n > 0
+                ? _ideenText('buildInfo.belegPartien', 'Matchup aus {n} Partien').replace('{n}', String(n))
+                : _ideenText('buildInfo.belegOhnePartien', 'Partienzahl des Matchups nicht bekannt'));
+            return teile.join(' · ');
+        }
+
+        /* Die Klasse sagt dasselbe wie der Satz — sie war bis zum
+           07.09.2026 fest auf "-ja" verdrahtet und haette eine
+           unbelegte Zeile als belegt eingefaerbt. */
+        function _ideenBelegKlasse(v) {
+            const grad = String((v && v.beleg) || '').trim();
+            if (grad === 'paarung') return 'build-info-beleg-ja';
+            if (grad === 'nutzer')  return 'build-info-beleg-nutzer';
+            return 'build-info-beleg-nein';
+        }
+
         /* Zeichnet den Ideen-Block. Getrennt von der Dialogfunktion,
            weil er asynchron nachlädt und der Dialog schon steht. */
         async function _maleTechIdeen(wrap, report) {
@@ -3669,6 +3824,14 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                gebraucht wurde. */
             const _ohne = (erg && Array.isArray(erg.ohneIdee)) ? erg.ohneIdee : [];
             const _maleLuecke = () => {
+                /* Die Schranke bleibt, wie sie am 06.09.2026 gesetzt
+                   wurde (bezeugt in test-spielersicht-luecken.js): ohne
+                   bekannten Datenstand wird die Luecke NICHT behauptet.
+                   Der Satz nennt Zahl und Datum der Paarungen — beides
+                   ohne gelesene Regelbasis hinzuschreiben waere eine
+                   erfundene Angabe, und die ist schlimmer als keine.
+                   Neu ist am 07.09.2026 nur der Vorspann: die Lage
+                   heisst beim Namen "keine Daten". */
                 if (!_ohne.length || !stand || !stand.interaktionen) return;
                 const liste = _ohne.slice(0, 5).map(g =>
                     t('buildInfo.techIdeenOhneEintrag')
@@ -3678,7 +3841,8 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                 ).join(', ');
                 const p = document.createElement('p');
                 p.className = 'build-info-alt-detail build-info-tech-luecke';
-                p.textContent = t('buildInfo.techIdeenOhne')
+                const kopf = _ideenText('buildInfo.belegKeine', 'keine Daten') + ': ';
+                p.textContent = kopf + t('buildInfo.techIdeenOhne')
                     .replace('{liste}', liste)
                     .replace('{n}', stand.interaktionen)
                     .replace('{datum}', _ideenDatum(stand.datum));
@@ -3793,6 +3957,14 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                         + t('buildInfo.techIdeenSicherheit' + (
                             gr.sicherheit === 'high' ? 'Hoch'
                           : gr.sicherheit === 'medium' ? 'Mittel' : 'Niedrig'));
+                    /* Die Einordnung steht UNTER dem Grund, in eigener
+                       Zeile — sie gehoert zur Empfehlung, nicht zum
+                       Satz aus der Regelbasis. */
+                    const beleg = document.createElement('div');
+                    beleg.className = 'build-info-alt-detail build-info-beleg '
+                        + _ideenBelegKlasse(gr.karten[0]);
+                    beleg.textContent = _ideenBelegSatz(gr.karten[0], stand);
+                    detail.appendChild(beleg);
                     row.appendChild(karte);
                     row.appendChild(detail);
                     wrap.appendChild(row);
@@ -7548,17 +7720,41 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
             else if (source === 'currentMeta') saveCurrentMetaDeck();
             else if (source === 'pastMeta')   savePastMetaDeck();
 
-            // Trigger the UI re-render. The legacy path uses
-            // scheduleDeckDisplayUpdate (debounced rAF wrapper around
-            // updateDeckDisplay) — without it the deck panel keeps
-            // showing the pre-build state even though
-            // window.*Deck has the new cards. First-cut PR shipped
-            // without this call and produced a "toast says 60/60 but
-            // UI is empty" report (2026-06-09).
-            if (typeof scheduleDeckDisplayUpdate === 'function') {
-                scheduleDeckDisplayUpdate(source);
-            } else if (typeof updateDeckDisplay === 'function') {
-                updateDeckDisplay(source);  // fallback
+            /* ── DIE ANZEIGE DARF NICHT AN EINEM FRAME HAENGEN ──
+             *
+             * BEFUND 07.09.2026, live nachgemessen (QA-A, F3.28/F4.51):
+             * nach "Consistency Generate" bzw. "Max Consistency" meldete
+             * der Toast "60/60 Karten", `window.currentMetaDeck` trug 60
+             * Karten und der Autospeicher hatte sie — aber der Zaehler
+             * `#currentMetaDeckCount` stand weiter auf "0" und die Karte
+             * "Dein Deck" behielt `d-none`. Erst ein beliebiger
+             * +/--Klick liess das Deck erscheinen.
+             *
+             * Die Ursache ist DIESE Stelle. `scheduleDeckDisplayUpdate`
+             * ist ein Umweg ueber `requestAnimationFrame`, und der
+             * ganze Abschluss des Baus haengt an diesem einen Frame:
+             * NUR `updateDeckDisplay` schreibt den Zaehler, und NUR
+             * diese Schrift blendet ueber den Beobachter in
+             * index.html (Z. 963-979 / 1011-1043) "Dein Deck" und die
+             * Kennzahlenleiste ein. Bleibt der Frame aus — verdecktes
+             * oder gedrosseltes Dokument, verworfener Frame —, bleibt
+             * die ganze Turniervorbereitung unsichtbar, obwohl das Deck
+             * fertig im Speicher liegt.
+             *
+             * Falsifizierbare Probe: mit einem `requestAnimationFrame`,
+             * das den Rueckruf nie aufruft, ist der gemessene Zustand
+             * exakt der gemeldete (Zaehler "0", `d-none` an
+             * #cityLeagueMyDeckVisual, Deck 60 Karten im Speicher).
+             * Mit dem direkten Aufruf hier steht der Zaehler auf 60,
+             * ohne dass ein einziger Frame gelaufen ist.
+             *
+             * Also: direkt aufrufen. Der Bau laeuft einmal pro Klick —
+             * die Entprellung ueber rAF ist fuer schnelle +/--Folgen
+             * gedacht, nicht fuer den Abschluss eines Baus. */
+            if (typeof updateDeckDisplay === 'function') {
+                updateDeckDisplay(source);
+            } else if (typeof scheduleDeckDisplayUpdate === 'function') {
+                scheduleDeckDisplayUpdate(source);  // Rueckfall
             }
 
             // Verify the deck actually populated (silent fails inside
@@ -10837,7 +11033,14 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                     }
                 } catch (e) { devLog('[autoCompleteConsistency] vanilla snapshot failed:', e); }
 
-                scheduleDeckDisplayUpdate(source);
+                /* Direkt statt ueber rAF — derselbe Befund wie im
+                   Y.2-Pfad oben (07.09.2026, QA-A F3.28/F4.51): der
+                   Zaehler ist die einzige Schrift, die "Dein Deck"
+                   einblendet, und wenn der Frame ausbleibt, bleibt das
+                   fertige Deck unsichtbar. Die Entprellung gehoert zu
+                   +/--Folgen, nicht zum Abschluss eines Baus. */
+                if (typeof updateDeckDisplay === 'function') updateDeckDisplay(source);
+                else scheduleDeckDisplayUpdate(source);
                 if (typeof resetDeckRarityToggle === 'function') resetDeckRarityToggle(source);
 
                 // Build-vs auto-fill: when the user opened the anti-tech
