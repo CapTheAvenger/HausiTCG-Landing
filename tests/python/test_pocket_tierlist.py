@@ -409,6 +409,63 @@ def test_der_lauf_haengt_die_kartenliste_ans_deck(mod, monkeypatch, deckseite):
         f"die Setnummer fehlt oder ist falsch: {d['pokemon'][0]!r}")
 
 
+def test_eine_trennstelle_zwischen_zwei_karten_wird_abgelehnt(mod, deckseite):
+    """Die Trennstelle muss GENAU auf eine Kartengrenze fallen.
+
+    Mutationsprobe der Abnahme am 07.09.2026: `lauf == n_pokemon` durch
+    `lauf >= n_pokemon` zu ersetzen ueberlebte beide Suiten. Mit `>=`
+    schneidet die Trennung beim ersten Ueberschreiten — die Zahl der
+    Pokémon stimmt dann nicht mehr, und die Oberflaeche zeigt Trainer
+    unter Pokémon.
+
+    Der Fall wird hier gebaut, nicht gesucht: zwei Pokémon-Zeilen
+    werden zu einer zusammengefasst. Die Summe bleibt 20, aber die
+    Grenze, die der Code nennt, liegt jetzt MITTEN in einer Zeile.
+    """
+    with io.open(AUSGABE_ECHT, encoding="utf-8") as f:
+        decks = {d["name"]: d for d in json.load(f)["decks"] if d.get("pokemon")}
+    name = "Mega Sceptile ex and Greninja"
+    if name not in decks:
+        pytest.skip(f"'{name}' steht nicht mehr in der Datei")
+    d = decks[name]
+    pokemon = [dict(k) for k in d["pokemon"]]
+    trainer = [dict(k) for k in d["trainer"]]
+    assert pokemon and trainer
+    # Die LETZTE Pokémon-Zeile mit der ERSTEN Trainer-Zeile verschmelzen.
+    # Zwei Pokémon-Zeilen zusammenzulegen genuegt nicht: die Grenze
+    # laege danach immer noch am Ende der verschmolzenen Zeile.
+    letzte = pokemon.pop()
+    trainer[0] = dict(trainer[0],
+                      name=letzte["name"] + "+" + trainer[0]["name"],
+                      anzahl=letzte["anzahl"] + trainer[0]["anzahl"])
+    karten = pokemon + trainer
+    assert sum(k["anzahl"] for k in karten) == 20, "die Probe hat die Summe verschoben"
+    _p, _t, grund = mod.teile_karten(karten, d["code"])
+    assert grund and "Kartengrenze" in grund, (
+        f"eine Trennstelle mitten in einer Zeile wurde angenommen: {grund!r}")
+
+
+def test_eine_quote_unter_zwei_dritteln_bricht_ab(mod, monkeypatch):
+    """Die 66-%-Schwelle, im Band zwischen den beiden anderen Riegeln.
+
+    Mutationsprobe 07.09.2026: die Schwelle abzuschalten ueberlebte
+    beide Suiten. Der vorhandene Fall (3 von 49) faellt naemlich schon
+    durch die ZWEITE Bremse (`len(fertig) < versucht * 0.3`) — er prueft
+    die 66 % gar nicht mit.
+
+    Hier: 25 von 52 gelesen. Das sind 48 % — ueber der 30-%-Bremse und
+    unter zwei Dritteln. Nur die 66-%-Schwelle kann das fangen.
+    """
+    tier = [(f"D{i}", "S", str(i), f"hm_{i}") for i in range(52)]
+    fertig = [{"name": f"D{i}", "code": "X"} for i in range(25)]
+    ausfaelle = [(f"D{i}", "HTTP 202") for i in range(25, 52)]
+    rc, geschrieben = _lauf(mod, monkeypatch, tier, [], fertig, ausfaelle, [])
+    assert rc == 1, (
+        f"25 von 52 Decks gelesen (48 %) und der Lauf meldet Erfolg ({rc}) — "
+        f"die Schwelle von zwei Dritteln greift nicht")
+    assert not geschrieben
+
+
 def test_die_trennung_allein_beweist_nicht_dass_der_code_zum_deck_gehoert(mod):
     """Festhalten, was die Pruefung NICHT kann — damit es niemand behauptet.
 
@@ -454,18 +511,45 @@ def test_die_vielfachheiten_sind_die_schaerfere_angabe(mod):
     assert eigen >= len(decks) - 2, (
         f"nur {eigen} von {len(decks)} eigenen Decks bestehen den strengen "
         f"Abgleich — das waere ein Datenbefund, kein Rundungsfehler")
-    paare = durch = 0
+    # ZWEI WEGE, UND NUR EINER ZAEHLT.
+    #
+    # Die erste Fassung dieses Tests hat die richtige Trennung des Decks
+    # behalten und nur den Code ausgetauscht — 2,0 %. Diese Information
+    # hat der Lauf aber nicht: `sammle` trennt die Karten mit
+    # `teile_karten` nach DEMSELBEN Code, der danach geprueft wird. Auf
+    # diesem Weg sind es 11,1 %, also 5,6-mal so viel. Die unabhaengige
+    # Abnahme am 07.09.2026 hat das nachgerechnet; hier steht jetzt der
+    # Produktivwert, und der ideale daneben, damit niemand ihn wieder
+    # verwechselt.
+    paare = durch_lauf = durch_ideal = 0
     for a in decks:
+        karten = a["pokemon"] + a["trainer"]
         for b in decks:
             if b is a:
                 continue
             paare += 1
+            pk, tr, grund = mod.teile_karten(karten, b["code"])
+            if grund is None and mod.abgleich_vielfachheiten(pk, tr, b["code"]) is None:
+                durch_lauf += 1
             if mod.abgleich_vielfachheiten(a["pokemon"], a["trainer"],
                                            b["code"]) is None:
-                durch += 1
-    assert durch / paare < 0.10, (
-        f"der strenge Abgleich laesst {durch}/{paare} fremde Codes durch "
-        f"({durch/paare:.1%}) — dann ist er nicht schaerfer als die Trennung")
+                durch_ideal += 1
+    assert durch_lauf / paare < 0.20, (
+        f"der strenge Abgleich laesst auf dem Weg des Laufs {durch_lauf}/{paare} "
+        f"fremde Codes durch ({durch_lauf/paare:.1%}) — dann ist er nicht mehr "
+        f"schaerfer als die Trennung (74 %)")
+    assert durch_lauf > durch_ideal, (
+        f"der Produktivweg ({durch_lauf}) laesst nicht mehr durch als der ideale "
+        f"({durch_ideal}) — dann misst dieser Test die Verwechslung nicht mehr, "
+        f"die die Abnahme gefunden hat, und die Zahlen in _meta und im Docstring "
+        f"gehoeren geprueft")
+
+    # Und die Zahl in der ausgelieferten Datei muss die des Laufs sein.
+    with io.open(AUSGABE_ECHT, encoding="utf-8") as f:
+        hinweis = json.load(f)["_meta"].get("karten_hinweis", "")
+    assert "11,1" in hinweis or "11.1" in hinweis, (
+        "_meta.karten_hinweis nennt nicht den Produktivwert — dort stand am "
+        "07.09.2026 die um 5,6-fach zu guenstige Zahl 2 %")
 
 
 def test_ein_deck_ohne_strengen_abgleich_traegt_den_grund(mod):
