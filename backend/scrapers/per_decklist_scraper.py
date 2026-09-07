@@ -54,6 +54,7 @@ Network notes:
 """
 
 import argparse
+import contextlib
 import csv
 import json
 import logging
@@ -96,6 +97,12 @@ from tournament_scraper_JH import (
     _derive_meta_from_date_JH,
     _clean_deck_name,
     normalize_tournament_format,
+    # BEFUND 07.09.2026: fehlte hier. Der JH-Scraper geht an beiden
+    # Schreibstellen durch den Datums-Override, dieser Scraper ging
+    # daran vorbei — und schrieb fuer Turnier 518 (NAIC 2026) in
+    # 16.960 Zeilen das rohe Quelldatum 2026-06-10 statt des
+    # belegten 2026-06-12. Siehe Kommentar bei t_date_raw.
+    _datum_mit_override,
 )
 
 setup_console_encoding()
@@ -751,7 +758,16 @@ def scrape_one_tournament(
 
     info = get_tournament_info(t_url)
     t_name = info.get('name', '') or ''
-    t_date_raw = info.get('date', '') or ''
+    # Limitless ist die Quelle, aber nicht unfehlbar. Turnier 518 (NAIC
+    # 2026, New Orleans) steht auf der Turnierseite auf dem 10.06.2026 —
+    # einem Mittwoch. Gelaufen ist es vom 12. bis 14. Juni; labs fuehrt es
+    # unter 0070 mit dem 12.06. Fuer genau solche Faelle gibt es
+    # data/labs_tournament_id_overrides.json. Der JH-Scraper wendet den
+    # Override an beiden eigenen Schreibstellen an, dieser hier tat es
+    # bis zum 07.09.2026 nicht — Folge: 16.960 Zeilen mit dem falschen
+    # Datum, waehrend tournament_cards_data_overview.csv fuer dasselbe
+    # Turnier das richtige trug.
+    t_date_raw = _datum_mit_override(tid_lim, info.get('date', '') or '')
     t_date_iso = _parse_iso_date(t_date_raw)
 
     # Meta: prefer the scraped format, fall back to date-based JH helper
@@ -1013,6 +1029,194 @@ def bilanzen_nachtragen(zeilen: List[Dict],
     return zaehlung
 
 
+@contextlib.contextmanager
+def _overrides_aus(datenverzeichnis: Optional[str]):
+    """Liest die Overrides fuer die Dauer des Blocks aus `datenverzeichnis`
+    — und danach wieder aus dem gewohnten Ort.
+
+    BEFUND (07.09.2026), an der Suite gemessen:
+
+        Hier stand `_jh.get_data_dir = lambda: datenverzeichnis` ohne
+        Ruecknahme, auf dem ECHTEN Modulobjekt in sys.modules. Der
+        Wachhund-Test in tests/python/test_per_decklist_datum_override.py,
+        dessen Docstring "Dieser Test biegt bewusst NICHTS um" sagt, lief
+        danach unter einem bereits umgebogenen Modul. Folge: das
+        Zurueckdrehen des Fixes in `tournament_scraper_JH._overrides_verzeichnis`
+        liess die gesamte Suite gruen (1583 passed) — der Wachhund konnte
+        den Fehler, den er bewachen soll, nicht mehr sehen.
+
+    Der Ort wird darum nur noch fuer die Dauer des Blocks umgebogen, und
+    zwar an der Stelle, die ihn heute wirklich bestimmt:
+    `_overrides_verzeichnis()`. `get_data_dir` wird derselben
+    Vollstaendigkeit halber mitgesetzt, damit der Parameter auch dann
+    wirkt, wenn das JH-Modul den Ort wieder direkt darueber bezieht.
+    Beide Caches werden geleert (sonst antwortete der alte Bestand) und
+    hinterher samt Funktionen im `finally` zurueckgegeben.
+    """
+    if not datenverzeichnis:
+        yield
+        return
+    import tournament_scraper_JH as _jh  # noqa: PLC0415
+    vorher = {
+        '_overrides_verzeichnis': getattr(_jh, '_overrides_verzeichnis', None),
+        'get_data_dir': _jh.get_data_dir,
+        '_DATE_OVERRIDES_CACHE': _jh._DATE_OVERRIDES_CACHE,
+        '_LABS_ID_OVERRIDES_CACHE': _jh._LABS_ID_OVERRIDES_CACHE,
+    }
+    if vorher['_overrides_verzeichnis'] is not None:
+        _jh._overrides_verzeichnis = lambda: datenverzeichnis
+    _jh.get_data_dir = lambda: datenverzeichnis
+    _jh._DATE_OVERRIDES_CACHE = None
+    _jh._LABS_ID_OVERRIDES_CACHE = None
+    try:
+        yield
+    finally:
+        if vorher['_overrides_verzeichnis'] is not None:
+            _jh._overrides_verzeichnis = vorher['_overrides_verzeichnis']
+        _jh.get_data_dir = vorher['get_data_dir']
+        _jh._DATE_OVERRIDES_CACHE = vorher['_DATE_OVERRIDES_CACHE']
+        _jh._LABS_ID_OVERRIDES_CACHE = vorher['_LABS_ID_OVERRIDES_CACHE']
+
+
+def datum_nachtragen(ziel: str, datenverzeichnis: Optional[str] = None,
+                     trocken: bool = False) -> Dict:
+    """`--datum-nachtragen`: die Datumsspalte im Bestand nachziehen — ohne Netz.
+
+    WARUM ES DAS GIBT
+
+    Limitless liefert einzelne Turniere mit falschem Datum aus. Turnier
+    518 (NAIC 2026, New Orleans) steht in der Liste UND auf der
+    Turnierseite auf dem 10.06.2026, einem Mittwoch; gelaufen ist es vom
+    12. bis 14. Juni. Belegt am 07.09.2026:
+
+      Quelle labs /0070/decks : "June 12-14, 2026"
+      data/labs_tournament_decks.csv        0070 -> 2026-06-12
+      data/tournament_cards_data_overview.csv 518 -> 12th June 2026
+      data/tournament_decklists_per_player.csv 518 -> 2026-06-10  (falsch)
+
+    Die Korrektur selbst steht seit dem 22.08.2026 in
+    data/labs_tournament_id_overrides.json; dieser Scraper ging bis zum
+    07.09.2026 an ihr vorbei. Der Scrape-Weg ist repariert (siehe
+    `scrape_one_tournament`) — dieser Schalter zieht den vorhandenen
+    Bestand nach, ohne 30.459 Zeilen neu holen zu muessen.
+
+    WAS ANGEFASST WIRD
+
+    Ausschliesslich `tournament_date`, und nur in Zeilen, deren
+    `limitless_tournament_id` einen hinterlegten Override hat. Alle
+    uebrigen Spalten werden vor und nach dem Nachtrag Zelle fuer Zelle
+    verglichen; weichen sie ab, wird NICHTS geschrieben.
+
+    DER PARAMETER `datenverzeichnis`
+
+    Er sagt, aus WELCHEM Verzeichnis labs_tournament_id_overrides.json
+    gelesen wird — Standard ist der Ort, den das JH-Modul selbst waehlt.
+    Er war eine Zeit lang wirkungslos: gesetzt wurde `get_data_dir`,
+    waehrend `_overrides_verzeichnis()` den Ort bestimmt und
+    `get_data_dir()` nur noch als Rueckfall benutzt. Jetzt geht er durch
+    `_overrides_aus` und biegt genau die Stelle um, die zaehlt. Geprueft
+    in tests/python/test_r2_override_mechanik.py mit einem erfundenen
+    Override in tmp_path: das Ergebnisdatum ist der Wert aus DIESEM
+    Verzeichnis, nicht der aus data/.
+
+    Rueckgabe: Bericht als dict (auch im Probelauf).
+    """
+    with _overrides_aus(datenverzeichnis):
+        return _datum_nachtragen_kern(ziel, trocken)
+
+
+def _datum_nachtragen_kern(ziel: str, trocken: bool = False) -> Dict:
+    """Der Nachtrag selbst. Laeuft immer innerhalb von `_overrides_aus`,
+    damit `_datum_mit_override` waehrenddessen aus dem gewuenschten
+    Verzeichnis liest und danach wieder aus dem gewohnten."""
+    kopf, zeilen = _bestand_lesen(ziel)
+    bericht: Dict = {
+        'zeilen_vorher': len(zeilen),
+        'zeilen_nachher': len(zeilen),
+        'geaendert': 0,
+        'je_turnier': {},
+        'geschrieben': False,
+    }
+    if not zeilen:
+        return bericht
+
+    # Abdruck aller Spalten AUSSER tournament_date — vorher und nachher.
+    andere = [k for k in kopf if k != 'tournament_date']
+    abdruck_vorher = [tuple(z.get(k, '') for k in andere) for z in zeilen]
+
+    # Je Turnier EINMAL aufloesen, nicht je Zeile: _datum_mit_override
+    # schreibt bei jedem Treffer seine Begruendung ins Log, und der
+    # Bestand hat fuer Turnier 518 allein 16.960 Zeilen.
+    aufgeloest: Dict[str, str] = {}
+
+    def _ziel_datum(lid: str) -> str:
+        if lid in aufgeloest:
+            return aufgeloest[lid]
+        # Leerer Eingabewert: _datum_mit_override gibt den Override
+        # zurueck, wenn einer da ist, sonst wieder den leeren String.
+        # So bleibt ein Turnier ohne Override garantiert unberuehrt.
+        roh = _datum_mit_override(lid, '')
+        iso = _parse_iso_date(roh) if roh else ''
+        # Unlesbarer Override — lieber nichts anfassen als raten.
+        if not re.match(r'^\d{4}-\d{2}-\d{2}$', iso or ''):
+            iso = ''
+        aufgeloest[lid] = iso
+        return iso
+
+    for z in zeilen:
+        lid = (z.get('limitless_tournament_id') or '').strip()
+        if not lid:
+            continue
+        neu_iso = _ziel_datum(lid)
+        if not neu_iso or (z.get('tournament_date') or '') == neu_iso:
+            continue
+        alt = z.get('tournament_date') or ''
+        z['tournament_date'] = neu_iso
+        bericht['geaendert'] += 1
+        bericht['je_turnier'].setdefault(lid, {'von': alt, 'auf': neu_iso, 'zeilen': 0})
+        bericht['je_turnier'][lid]['zeilen'] += 1
+
+    abdruck_nachher = [tuple(z.get(k, '') for k in andere) for z in zeilen]
+    bericht['zeilen_nachher'] = len(zeilen)
+    if len(zeilen) != bericht['zeilen_vorher'] or abdruck_nachher != abdruck_vorher:
+        bericht['fehler'] = ('der Nachtrag haette ausserhalb von '
+                             'tournament_date etwas veraendert')
+        return bericht
+
+    if bericht['geaendert'] and not trocken:
+        _schreibe_atomar(ziel, kopf, zeilen)
+        bericht['geschrieben'] = True
+    return bericht
+
+
+def _lauf_datum(ziel: str, trocken: bool = False) -> int:
+    """CLI-Huelle um `datum_nachtragen` — misst, meldet, schreibt."""
+    b = datum_nachtragen(ziel, trocken=trocken)
+    if not b['zeilen_vorher']:
+        print(f"::error::{ziel} hat keine Zeilen — nichts nachzutragen.")
+        return 1
+    if b.get('fehler'):
+        print(f"::error::{b['fehler']} — es wird nichts geschrieben.")
+        return 1
+    print(f"{b['zeilen_vorher']} Zeile(n) im Bestand.")
+    if not b['je_turnier']:
+        print("  kein Turnier mit hinterlegtem Datums-Override weicht ab — "
+              "nichts zu tun.")
+        return 0
+    for lid, e in sorted(b['je_turnier'].items()):
+        print(f"  Turnier {lid}: {e['von']} -> {e['auf']} "
+              f"({e['zeilen']} Zeilen)")
+    print(f"  geaenderte Zellen: {b['geaendert']} — ausschliesslich in "
+          f"tournament_date (alle uebrigen Spalten Zelle fuer Zelle geprueft)")
+    print(f"  Zeilenzahl: {b['zeilen_vorher']} -> {b['zeilen_nachher']}")
+    if trocken:
+        print("Probelauf — es wird nichts geschrieben.")
+        return 0
+    if b['geschrieben']:
+        print(f"geschrieben: {ziel}")
+    return 0
+
+
 def _lauf_bilanzen(ziel: str, trocken: bool = False) -> int:
     """`--bilanzen-nachtragen`: den vorhandenen Bestand reparieren, ohne Netz.
 
@@ -1098,13 +1302,31 @@ def main():
                          'mit 0-0-0 aus data/player_continuity.csv fuellen. '
                          'Was dort nicht steht, bekommt LEERE Felder statt '
                          'einer 0. Nur wins/losses/ties werden angefasst.')
+    ap.add_argument('--datum-nachtragen', action='store_true',
+                    dest='datum_nachtragen',
+                    help='Ohne Netz: im vorhandenen Bestand die Spalte '
+                         'tournament_date fuer die Turniere nachziehen, fuer '
+                         'die data/labs_tournament_id_overrides.json ein '
+                         'belegtes Datum fuehrt. Nur diese eine Spalte wird '
+                         'angefasst; alle uebrigen werden vor und nach dem '
+                         'Lauf Zelle fuer Zelle verglichen.')
     ap.add_argument('--trocken', action='store_true',
                     help='Nur berichten, nichts schreiben (mit '
-                         '--bilanzen-nachtragen).')
+                         '--bilanzen-nachtragen oder --datum-nachtragen).')
     args = ap.parse_args()
 
     data_dir = get_data_dir()
     out_path = os.path.join(data_dir, args.output)
+
+    if args.datum_nachtragen:
+        # Reiner Dateilauf wie --bilanzen-nachtragen: kein Netz, keine
+        # Kartendatenbank, kein Turnierindex.
+        ziel = out_path
+        if args.output == OUTPUT_FILE:
+            im_repo = os.path.join(_PROJECT_ROOT, 'data', OUTPUT_FILE)
+            if os.path.exists(im_repo):
+                ziel = im_repo
+        return _lauf_datum(ziel, args.trocken)
 
     if args.bilanzen_nachtragen:
         # Reiner Dateilauf: kein Netz, keine Kartendatenbank, kein
