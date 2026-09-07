@@ -52,12 +52,23 @@ describe('Es gibt genau eine Startseite', () => {
     });
 
     it('der Menüpunkt führt genau dorthin', () => {
-        const zeile = HTML.split('\n').find(z => z.includes('id="menu-btn-meta-analysis-hub"'));
+        // Gesucht wird der Punkt an seinem SINN (data-i18n="menu.hub"), nicht
+        // an seiner Kennung: die Kennung hat am 07.09.2026 gewechselt, weil
+        // `menu-btn-meta-analysis-hub` einen Reiter benannte, den der Punkt
+        // gar nicht öffnet (Befund B3). Der Sinn ist das Beständige.
+        const zeile = HTML.split('\n').find(z => z.includes('data-i18n="menu.hub"'));
         assert.ok(zeile, 'der Menüeintrag fehlt');
         assert.match(zeile, new RegExp(`switchTabAndUpdateMenu\\('${startTab()}'\\)`),
             'der Menüpunkt zeigt woanders hin als die Startseite');
-        assert.match(zeile, new RegExp(`data-tab-id="${startTab()}"`),
-            'data-tab-id und onclick laufen auseinander — die Menü-Markierung wäre dann falsch');
+        // data-tab-id ist auf diesem Punkt seit dem 07.09.2026 fort — es stand
+        // ein zweites Mal auf `menu-btn-current-meta`, und der Ersatzweg in
+        // js/app-core.js nahm den ersten der beiden. Steht es wieder da, muss
+        // es wenigstens dasselbe sagen wie das onclick.
+        const merkmal = zeile.match(/data-tab-id="([^"]*)"/);
+        if (merkmal) {
+            assert.equal(merkmal[1], startTab(),
+                'data-tab-id und onclick laufen auseinander — die Menü-Markierung wäre dann falsch');
+        }
     });
 
     it('er heißt auch so, in beiden Sprachen', () => {
