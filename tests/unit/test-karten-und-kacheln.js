@@ -216,8 +216,12 @@ describe('Der Datenumfang — von der Startseite nach Quellen & Methodik', () =>
 
 describe('Karten der Format-Staples', () => {
     it('jede Karte bietet Wunschliste und Artworks an', () => {
-        assert.match(TIER, /addToWishlist\('\$\{escapeJsStr\(kartenId\)\}'\)/);
-        assert.match(TIER, /openRaritySwitcherFromDB\('\$\{escapeJsStr\(card\.name\)\}'/);
+        // Seit dem 07.09.2026 steckt die JS-Maskierung zusaetzlich in
+        // escapeHtmlAttr: der Wert landet in einem HTML-Attribut, und der
+        // HTML-Zerteiler laeuft vor dem JS-Zerteiler. escapeJsStr allein
+        // liess ein " aus dem onclick ausbrechen.
+        assert.match(TIER, /addToWishlist\('\$\{escapeHtmlAttr\(escapeJsStr\(kartenId\)\)\}'\)/);
+        assert.match(TIER, /openRaritySwitcherFromDB\('\$\{escapeHtmlAttr\(escapeJsStr\(card\.name\)\)\}'/);
     });
 
     it('die Karten-Kennung hat das Format, das die Wunschliste erwartet', () => {

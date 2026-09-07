@@ -268,10 +268,25 @@ function abzeichenAusInlineInit(tabName) {
 
 describe('B12/A-F0.2c — Fenstertitel und Abzeichen nennen dieselbe Ansicht', () => {
     it('current-meta: der Titel nimmt denselben Menuepunkt wie das Abzeichen', () => {
-        const doppelt = MENUE.filter(m => m.tab === 'current-meta');
-        assert.ok(doppelt.length > 1,
-            'diese Zusicherung prueft nur etwas, solange es fuer current-meta wirklich '
-            + 'mehrere Menuepunkte gibt — gefunden: ' + JSON.stringify(doppelt));
+        /* URSPRUENGLICH stand hier eine Wache: die Zusicherung pruefe nur
+           etwas, SOLANGE es fuer current-meta mehrere Menuepunkte gebe —
+           den Punkt der Ansicht selbst und den Rueckweg zur Startseite,
+           beide mit data-tab-id="current-meta". Der Ersatzweg in
+           js/app-core.js nimmt per querySelector den ersten der beiden,
+           und das war der Rueckweg mit der Beschriftung "Startseite".
+
+           Am 07.09.2026 (Befund B3) ist das doppelte Merkmal aus
+           index.html entfernt worden — der Rueckweg traegt keins mehr.
+           Damit ist die Wache ins Gegenteil zu drehen: es darf nur noch
+           EINEN Menuepunkt fuer current-meta geben. Kaeme der zweite
+           zurueck, entschiede wieder die Reihenfolge im Markup, welche
+           Beschriftung in den Fenstertitel geht — und die Zusicherungen
+           darunter fielen. */
+        const fuerCurrentMeta = MENUE.filter(m => m.tab === 'current-meta');
+        assert.equal(fuerCurrentMeta.length, 1,
+            'Fuer current-meta gibt es wieder mehr als einen Menuepunkt mit '
+            + 'data-tab-id — dann nimmt der Ersatzweg in js/app-core.js den ersten, '
+            + 'nicht unbedingt den richtigen: ' + JSON.stringify(fuerCurrentMeta));
         const r = titelSetzen('current-meta', 'Overview');
         const ausAbzeichen = abzeichenAusInlineInit('current-meta');
         assert.equal(r.abzeichen, ausAbzeichen,
