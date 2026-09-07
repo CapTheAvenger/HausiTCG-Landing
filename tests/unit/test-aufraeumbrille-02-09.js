@@ -468,8 +468,17 @@ describe('dieselbe Funktion heisst auf beiden Reitern gleich', () => {
         assert.doesNotMatch(HTML, /id="cityLeagueDeckPrice"[^>]*data-i18n/,
             'auch der Deckpreis wird zur Laufzeit beschrieben');
         const PM = ohneKomm(lies('js/app-past-meta.js'));
-        assert.match(PM, /\['pastMetaCardCount', 'cl\.cards'\]/,
+        /* Bis zum 07.09.2026 stand hier die Paarliste
+           ['pastMetaCardCount', 'cl.cards'] als Zeichenkette. Befund B5
+           hat sie aufgeloest: der Zaehler ging an dem einen Schreiber
+           vorbei und machte aus "12 / 34 Karten …" ein behauptetes
+           "12 Karten". Geprueft wird deshalb nur noch, DASS die beiden
+           Zaehler im Sprachwechsel vorkommen — WIE sie nachgezogen
+           werden, fuehrt tests/unit/test-uebersicht-zaehler.js aus. */
+        assert.match(PM, /'pastMetaCardCount'/,
             'der Sprachwechsel zieht die Kartenzaehler nicht mehr nach');
+        assert.match(PM, /'cityLeagueCardCount'/,
+            'der Sprachwechsel zieht den City-League-Zaehler nicht mehr nach');
         assert.match(PM, /cityLeagueDeckPrice/,
             'der Sprachwechsel zieht das Trennzeichen des Preises nicht mehr nach');
     });

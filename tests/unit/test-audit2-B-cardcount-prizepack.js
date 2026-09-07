@@ -66,6 +66,11 @@ function messeZaehler(cards, ppsIdx) {
     showAllCards: true,
     cardsPerPage: 100,
     currentCardsPage: 1,
+    /* Der Druck-Hinweis wird seit dem 07.09.2026 VOR dem Leerzustand
+       gebildet (sonst nennt eine Suche mit null Treffern ihren Grund
+       nicht) und liegt damit ausserhalb dieser Region. Hier leer, weil
+       diese Pruefung den Zaehler misst und nicht den Hinweis. */
+    druckSatz: '',
   };
   const names = Object.keys(scope);
   // eslint-disable-next-line no-new-func
