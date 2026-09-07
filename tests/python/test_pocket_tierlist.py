@@ -247,6 +247,276 @@ def test_eine_seite_traegt_mehrere_muster(mod, deckseite):
         "verrutscht")
 
 
+# ── Die Kartenliste (ab 07.09.2026) ───────────────────────────────────
+
+
+def test_zu_jedem_muster_steht_eine_kartenliste(mod, deckseite):
+    """Die Liste steht im Fließtext derselben Seite, die schon geholt ist.
+
+    Bis zum 07.09.2026 hat der Lauf sie weggeworfen. Gemessen am
+    Ausschnitt: alle vier Abschnitte tragen genau 20 Karten — die
+    Deckgroesse in Pocket.
+    """
+    for name, adr in mod.deck_abschnitte(deckseite):
+        karten = mod.karten_zum_muster(deckseite, adr)
+        assert karten, f"zu '{name}' wurde keine Kartenliste gefunden"
+        gesamt = sum(k["anzahl"] for k in karten)
+        assert gesamt == 20, (
+            f"'{name}' ergibt {gesamt} Karten statt 20 — dann liest der "
+            f"Parser Zellen mit, die nicht zum Deck gehoeren, oder er "
+            f"verliert welche")
+
+
+def test_eine_karte_traegt_namen_anzahl_und_setnummer(mod, deckseite):
+    _n, adr = mod.deck_abschnitte(deckseite)[0]
+    erste = mod.karten_zum_muster(deckseite, adr)[0]
+    assert erste == {"name": "Froakie", "anzahl": 1, "set": "A1", "nummer": "087"}, (
+        f"die erste Karte kam als {erste!r} an")
+
+
+def test_ein_setkuerzel_mit_bindestrich_geht_nicht_verloren(mod, deckseite):
+    """BEFUND 07.09.2026, am echten Lauf gemessen.
+
+    Mit `[A-Za-z0-9]+` als Kuerzel blieben 66 Karteneintraege ohne
+    Setnummer — alle aus dem Promo-Set **P-A**. Der Ausdruck brach am
+    Bindestrich ab und lieferte `set: null`, ohne Meldung. Genau diese
+    Karten stehen fast in jedem Deck (Poke Ball, Professor's Research).
+    """
+    karten = [k for _n, adr in mod.deck_abschnitte(deckseite)
+              for k in mod.karten_zum_muster(deckseite, adr)]
+    ohne = [k["name"] for k in karten if not k["set"]]
+    assert not ohne, f"{len(ohne)} Karten ohne Setnummer: {sorted(set(ohne))}"
+    promo = {k["set"] for k in karten if k["set"] and "-" in k["set"]}
+    assert promo, (
+        "im Ausschnitt kommt kein Kuerzel mit Bindestrich mehr vor — dann "
+        "prueft dieser Test nichts mehr und der Ausschnitt gehoert erneuert")
+
+
+def test_ein_unbekanntes_muster_liefert_keine_fremde_liste(mod, deckseite):
+    """Sonst bekaeme ein Deck die Karten eines anderen."""
+    assert mod.karten_zum_muster(deckseite, "https://img.game8.co/gibtsnicht.png") == []
+
+
+def test_der_scan_code_nennt_die_trennstelle_und_sie_geht_auf(mod, deckseite):
+    """Die einzige Pruefung hier, in der Game8s eigene Angaben vorkommen.
+
+    Die Kartenzahlen stehen im Fließtext, die Aufteilung in Pokémon und
+    Trainer steckt im Muster. Zwei getrennte Wege. `probe()` kann das
+    nicht: dort kommt Game8s Bild ueberhaupt nicht vor.
+
+    Gemessen: von den vier Abschnitten des Ausschnitts stehen drei auch
+    in der ausgelieferten Datei; bei allen drei geht die Trennstelle auf.
+    """
+    with io.open(AUSGABE_ECHT, encoding="utf-8") as f:
+        decks = {d["name"]: d for d in json.load(f)["decks"]}
+    geprueft = 0
+    for name, adr in mod.deck_abschnitte(deckseite):
+        if name not in decks:
+            continue
+        karten = mod.karten_zum_muster(deckseite, adr)
+        pokemon, trainer, grund = mod.teile_karten(karten, decks[name]["code"])
+        assert grund is None, f"'{name}': {grund}"
+        assert sum(k["anzahl"] for k in pokemon) + sum(k["anzahl"] for k in trainer) == 20
+        geprueft += 1
+    assert geprueft >= 3, (
+        f"nur {geprueft} Abschnitte des Ausschnitts stehen noch in der Datei — "
+        f"dann prueft dieser Test kaum etwas")
+
+
+def test_eine_liste_mit_falscher_kartenzahl_wird_abgelehnt(mod, deckseite):
+    """Die Gegenprobe: sonst prueft die Trennung nur, dass sie nie meckert.
+
+    Abgelehnt wird zuverlaessig nur, was in der SUMME nicht passt — und
+    genau das ist der Fall, den ein verrutschter Parser erzeugt.
+    """
+    with io.open(AUSGABE_ECHT, encoding="utf-8") as f:
+        decks = {d["name"]: d for d in json.load(f)["decks"]}
+    name, adr = next((n, a) for n, a in mod.deck_abschnitte(deckseite) if n in decks)
+    karten = mod.karten_zum_muster(deckseite, adr)
+    _p, _t, grund = mod.teile_karten(karten + [{"name": "Zuviel", "anzahl": 1}],
+                                     decks[name]["code"])
+    assert grund and "21" in grund, (
+        f"eine Liste mit 21 Karten wurde gegen einen 20er-Code angenommen: {grund}")
+
+
+def test_die_trennstelle_liegt_dort_wo_der_code_sie_nennt(mod, deckseite):
+    """Nicht nur "es geht auf", sondern WO es aufgeht.
+
+    Ohne diesen Fall bliebe eine Trennung bei der ersten Karte
+    unbemerkt: die Summe stimmte weiter, `grund` bliebe None, und die
+    Oberflaeche zeigte 1 Pokémon und 19 Trainer. Die Mutationsprobe am
+    07.09.2026 hat genau das ueberlebt.
+
+    Das Deck heisst "… and 18 Trainers" — die Zahl steht im Namen.
+    """
+    with io.open(AUSGABE_ECHT, encoding="utf-8") as f:
+        decks = {d["name"]: d for d in json.load(f)["decks"]}
+    name = "Team Rocket's Articuno ex and 18 Trainers"
+    adr = next(a for n, a in mod.deck_abschnitte(deckseite) if n == name)
+    pokemon, trainer, grund = mod.teile_karten(
+        mod.karten_zum_muster(deckseite, adr), decks[name]["code"])
+    assert grund is None, grund
+    assert sum(k["anzahl"] for k in pokemon) == 2, (
+        f"{sum(k['anzahl'] for k in pokemon)} Pokémon statt 2: "
+        f"{[k['name'] for k in pokemon]}")
+    assert sum(k["anzahl"] for k in trainer) == 18, (
+        f"{sum(k['anzahl'] for k in trainer)} Trainer statt 18 — "
+        f"und im Namen des Decks steht 18")
+    assert [k["name"] for k in pokemon] == ["Team Rocket's Articuno ex"]
+
+    # ZWEITER ZEUGE, UND ER IST DER EIGENTLICHE.
+    # Beim Articuno-Deck steht die einzige Pokémon-Karte zweimal drin —
+    # die Trennstelle faellt dort schon nach der ERSTEN Zeile. Eine
+    # Trennung, die immer nach der ersten Zeile schneidet, kaeme damit
+    # durch (Mutationsprobe 07.09.2026, ueberlebt). Dieses Deck hier
+    # trennt erst nach der siebten Zeile.
+    name2 = "Mega Sceptile ex and Greninja"
+    adr2 = next(a for n, a in mod.deck_abschnitte(deckseite) if n == name2)
+    pk2, tr2, grund2 = mod.teile_karten(
+        mod.karten_zum_muster(deckseite, adr2), decks[name2]["code"])
+    assert grund2 is None, grund2
+    assert len(pk2) == 7 and sum(k["anzahl"] for k in pk2) == 8, (
+        f"{len(pk2)} Zeilen / {sum(k['anzahl'] for k in pk2)} Pokémon statt "
+        f"7 / 8: {[k['name'] for k in pk2]}")
+    assert sum(k["anzahl"] for k in tr2) == 12
+    assert pk2[-1]["name"] == "Furfrou" and tr2[0]["name"] == "Cyrus", (
+        f"die Trennstelle liegt woanders: ... {pk2[-1]['name']} | "
+        f"{tr2[0]['name']} ...")
+
+
+def test_der_lauf_haengt_die_kartenliste_ans_deck(mod, monkeypatch, deckseite):
+    """Die Verdrahtung, nicht nur die Funktion.
+
+    Die Mutationsprobe am 07.09.2026 hat `karten_zum_muster(...)` in
+    `sammle` durch `[]` ersetzt — und alle Zusicherungen blieben gruen,
+    weil sie die fertige Datei lasen statt den Lauf. Die Datei stammt
+    aber aus einem frueheren Lauf; sie beweist nichts ueber den heutigen
+    Code.
+    """
+    with io.open(AUSGABE_ECHT, encoding="utf-8") as f:
+        decks = {d["name"]: d for d in json.load(f)["decks"]}
+    name = "Team Rocket's Articuno ex and 18 Trainers"
+    netz = _Netz({f"{mod.BASIS}/games/Pokemon-TCG-Pocket/archives/9": deckseite})
+    _verkabelt(mod, monkeypatch, netz, code=decks[name]["code"])
+    fertig, ausfaelle, _v, _z = mod.sammle([(name, "B", "9", None)], [], still=True)
+    assert fertig, f"kein Deck durchgekommen: {ausfaelle}"
+    d = fertig[0]
+    assert d.get("pokemon") and d.get("trainer"), (
+        f"der Lauf hat keine Kartenliste ans Deck gehaengt: "
+        f"{sorted(d)} / Hinweis: {d.get('karten_hinweis')!r}")
+    assert sum(k["anzahl"] for k in d["pokemon"] + d["trainer"]) == 20
+    assert d["pokemon"][0]["set"] == "B4a", (
+        f"die Setnummer fehlt oder ist falsch: {d['pokemon'][0]!r}")
+
+
+def test_die_trennung_allein_beweist_nicht_dass_der_code_zum_deck_gehoert(mod):
+    """Festhalten, was die Pruefung NICHT kann — damit es niemand behauptet.
+
+    Der Entwurf vom 07.09.2026 hat sie als "die nicht-zirkulaere
+    Pruefung" verkauft. Nachgemessen ueber alle 33 x 32 Paarungen:
+    **74,1 % der fremden Codes werden angenommen**. Dieser Test ist
+    bewusst herum — er verlangt, dass mindestens die Haelfte durchgeht.
+    Faellt er eines Tages um, ist die Pruefung schaerfer geworden, und
+    dann muessen `_meta.karten_hinweis` und der Docstring nachgezogen
+    werden, statt eine ueberholte Zahl weiterzutragen.
+    """
+    with io.open(AUSGABE_ECHT, encoding="utf-8") as f:
+        decks = [d for d in json.load(f)["decks"] if d.get("pokemon")]
+    paare = durch = 0
+    for a in decks:
+        karten = a["pokemon"] + a["trainer"]
+        for b in decks:
+            if b is a:
+                continue
+            paare += 1
+            if mod.teile_karten(karten, b["code"])[2] is None:
+                durch += 1
+    assert paare > 500, f"zu wenige Paarungen fuer eine Aussage: {paare}"
+    assert durch / paare > 0.5, (
+        f"nur {durch}/{paare} fremde Codes gehen durch ({durch/paare:.1%}) — die "
+        f"Pruefung ist schaerfer geworden als die Zahl, die in _meta und im "
+        f"Docstring steht")
+
+
+def test_die_vielfachheiten_sind_die_schaerfere_angabe(mod):
+    """Und sie ist eine ANGABE, keine Sperre.
+
+    Gemessen am 07.09.2026: das eigene Deck besteht sie bei 32 von 33,
+    ein fremder Code bei 21 von 1056 (2,0 %). Der eine Ausreisser ist
+    erklaerbar — Game8 fasst zwei Drucke derselben Karte in einer Zeile
+    zusammen, der Code unterscheidet sie.
+    """
+    with io.open(AUSGABE_ECHT, encoding="utf-8") as f:
+        decks = [d for d in json.load(f)["decks"] if d.get("pokemon")]
+    eigen = sum(1 for d in decks
+                if mod.abgleich_vielfachheiten(d["pokemon"], d["trainer"],
+                                               d["code"]) is None)
+    assert eigen >= len(decks) - 2, (
+        f"nur {eigen} von {len(decks)} eigenen Decks bestehen den strengen "
+        f"Abgleich — das waere ein Datenbefund, kein Rundungsfehler")
+    paare = durch = 0
+    for a in decks:
+        for b in decks:
+            if b is a:
+                continue
+            paare += 1
+            if mod.abgleich_vielfachheiten(a["pokemon"], a["trainer"],
+                                           b["code"]) is None:
+                durch += 1
+    assert durch / paare < 0.10, (
+        f"der strenge Abgleich laesst {durch}/{paare} fremde Codes durch "
+        f"({durch/paare:.1%}) — dann ist er nicht schaerfer als die Trennung")
+
+
+def test_ein_deck_ohne_strengen_abgleich_traegt_den_grund(mod):
+    """Wer die Angabe still weglaesst, macht aus 32 von 33 eine 33."""
+    with io.open(AUSGABE_ECHT, encoding="utf-8") as f:
+        daten = json.load(f)
+    streng = daten["_meta"]["uebersicht"].get("kartenliste_streng")
+    gezaehlt = sum(1 for d in daten["decks"]
+                   if d.get("pokemon") and not d.get("karten_abgleich"))
+    assert streng == gezaehlt, (
+        f"_meta sagt {streng} streng geprueft, gezaehlt sind es {gezaehlt}")
+    for d in daten["decks"]:
+        if d.get("pokemon") and d.get("karten_abgleich"):
+            assert len(d["karten_abgleich"]) > 20, (
+                f"{d['name']}: der Grund ist zu duenn, um ihn zu beurteilen: "
+                f"{d['karten_abgleich']!r}")
+
+
+def test_ein_unbrauchbarer_code_teilt_nicht(mod):
+    _p, _t, grund = mod.teile_karten([{"name": "X", "anzahl": 20}], "kein base64!!")
+    assert grund and "Aufbau" in grund
+
+
+def test_die_ausgelieferten_decks_tragen_stimmige_kartenlisten(mod):
+    """Am ECHTEN Auslieferungsstand, nicht am Ausschnitt.
+
+    Ein Deck darf ohne Liste ausgeliefert werden — der Scan-Code ist das
+    Hauptstueck. Aber wenn eine Liste da ist, muss sie aufgehen, und
+    wenn keine da ist, muss der Grund danebenstehen.
+    """
+    with io.open(AUSGABE_ECHT, encoding="utf-8") as f:
+        daten = json.load(f)
+    fehler = []
+    mit = 0
+    for d in daten["decks"]:
+        if d.get("pokemon") or d.get("trainer"):
+            mit += 1
+            stueck = sum(k["anzahl"] for k in d["pokemon"] + d["trainer"])
+            if stueck != 20:
+                fehler.append(f"{d['name']}: {stueck} Karten statt 20")
+            for k in d["pokemon"] + d["trainer"]:
+                if not k.get("name") or not k.get("anzahl"):
+                    fehler.append(f"{d['name']}: unvollstaendige Karte {k!r}")
+        elif not d.get("karten_hinweis"):
+            fehler.append(f"{d['name']}: keine Liste und kein Grund dafuer")
+    assert not fehler, "\n".join(fehler)
+    assert daten["_meta"]["uebersicht"]["mit_kartenliste"] == mit, (
+        f"_meta sagt {daten['_meta']['uebersicht']['mit_kartenliste']} Decks mit "
+        f"Liste, gezaehlt sind es {mit}")
+
+
 def test_der_name_kommt_aus_der_ueberschrift_und_ueberlebt_den_apostroph(mod, deckseite):
     namen = [n for n, _a in mod.deck_abschnitte(deckseite)]
     assert "Team Rocket's Articuno ex and 18 Trainers" in namen, (
@@ -1096,6 +1366,99 @@ def test_ein_probelauf_ersetzt_die_produktionsdatei_nicht(mod, monkeypatch):
     assert rc == 0
     assert not any("pocket_tierlist.json" in str(p) for p in geschrieben), (
         f"ein Probelauf hat die Produktionsdatei ersetzt: {geschrieben}")
+
+
+def _mit_bestand(tmp_path, wieviele):
+    """Eine Zieldatei anlegen, die schon `wieviele` Decks traegt."""
+    ziel = tmp_path / "pocket_tierlist.json"
+    ziel.write_text(json.dumps({
+        "_meta": {"anzahl": wieviele},
+        "decks": [{"name": f"Alt{i}", "code": "X", "tier": "B"}
+                  for i in range(wieviele)],
+    }, ensure_ascii=False), encoding="utf-8")
+    return ziel
+
+
+def test_eine_geschrumpfte_quelle_ersetzt_den_bestand_nicht(mod, monkeypatch, tmp_path):
+    """Das Loch, das die Gegenpruefung am 07.09.2026 nachgestellt hat.
+
+    Die beiden vorhandenen Schwellen rechnen nur auf dem Lauf selbst.
+    Listet die Quelle nur noch drei Decks und werden alle drei sauber
+    gelesen, sind das 100 % der angegangenen Eintraege — kein Ausfall,
+    keine Warnung, Rueckgabe 0. Ausgefuehrt ersetzte das 33 Decks durch
+    3 und stiess den Deploy an.
+    """
+    ziel = _mit_bestand(tmp_path, 33)
+    tier = [(f"D{i}", "S", str(i), f"hm_{i}") for i in range(3)]
+    fertig = [{"name": f"D{i}", "code": "X"} for i in range(3)]
+    rc, geschrieben = _lauf(mod, monkeypatch, tier, [], fertig, [], [], ziel=ziel)
+    assert rc == 1, (
+        f"drei Decks gegen 33 im Bestand, und der Lauf meldet Erfolg ({rc})")
+    assert not any("pocket_tierlist.json" in str(x) for x in geschrieben), (
+        f"der Bestand wurde trotzdem ersetzt: {geschrieben}")
+    danach = json.loads(ziel.read_text(encoding="utf-8"))
+    assert len(danach["decks"]) == 33, (
+        f"die Datei traegt nach dem abgebrochenen Lauf "
+        f"{len(danach['decks'])} Decks statt 33")
+
+
+def test_ein_echter_set_wechsel_laesst_sich_durchsagen(mod, monkeypatch, tmp_path):
+    """Die Gegenprobe: sonst prueft der Riegel nur, dass nie geschrieben wird.
+
+    Schrumpft Game8s Liste wirklich, muss der Lauf durchgehen — aber nur
+    auf ausdrueckliche Anweisung, damit die Entscheidung im Protokoll
+    steht statt still zu passieren.
+    """
+    ziel = _mit_bestand(tmp_path, 33)
+    tier = [(f"D{i}", "S", str(i), f"hm_{i}") for i in range(3)]
+    fertig = [{"name": f"D{i}", "code": "X"} for i in range(3)]
+    rc, geschrieben = _lauf(mod, monkeypatch, tier, [], fertig, [],
+                            ["--schrumpfen-erlauben"], ziel=ziel)
+    assert rc == 0, f"der ausdrueckliche Set-Wechsel wurde abgewiesen ({rc})"
+    assert any("pocket_tierlist.json" in str(x) for x in geschrieben), (
+        f"und geschrieben wurde auch nichts: {geschrieben}")
+
+
+def test_der_riegel_faellt_bei_normaler_schwankung_nicht(mod, monkeypatch, tmp_path):
+    """Ein Riegel, der jeden Lauf abweist, ist kein Riegel, sondern ein Stopp.
+
+    Genau an der Schwelle (7 von 10 = 70 %) muss geschrieben werden;
+    darunter nicht. Ohne diesen Fall bliebe ein `<=` statt `<` — oder
+    eine Schwelle von 0.99 — unbemerkt.
+    """
+    ziel = _mit_bestand(tmp_path, 10)
+    tier = [(f"D{i}", "S", str(i), f"hm_{i}") for i in range(7)]
+    fertig = [{"name": f"D{i}", "code": "X"} for i in range(7)]
+    rc, geschrieben = _lauf(mod, monkeypatch, tier, [], fertig, [], [], ziel=ziel)
+    assert rc == 0, f"7 von 10 Decks sind noch keine geschrumpfte Quelle ({rc})"
+    assert any("pocket_tierlist.json" in str(x) for x in geschrieben)
+
+
+def test_der_erste_lauf_wird_nicht_vom_riegel_aufgehalten(mod, monkeypatch, tmp_path):
+    """Ohne Vorlage gibt es keinen Bestand zu schuetzen.
+
+    Sonst koennte die Tier-Liste nach einem Verlust der Datei nie wieder
+    entstehen — der Riegel wuerde sich selbst im Weg stehen.
+    """
+    ziel = tmp_path / "pocket_tierlist.json"        # existiert absichtlich nicht
+    tier = [(f"D{i}", "S", str(i), f"hm_{i}") for i in range(3)]
+    fertig = [{"name": f"D{i}", "code": "X"} for i in range(3)]
+    rc, geschrieben = _lauf(mod, monkeypatch, tier, [], fertig, [], [], ziel=ziel)
+    assert rc == 0, f"der erste Lauf wurde abgewiesen ({rc})"
+    assert any("pocket_tierlist.json" in str(x) for x in geschrieben)
+
+
+def test_eine_unlesbare_vorlage_haelt_den_lauf_nicht_auf(mod, monkeypatch, tmp_path):
+    """Kaputtes JSON im Ziel ist kein Bestand, den man schuetzen koennte.
+
+    Wer hier abbraeche, machte eine beschaedigte Datei unreparierbar.
+    """
+    ziel = tmp_path / "pocket_tierlist.json"
+    ziel.write_text("{ das ist kein JSON", encoding="utf-8")
+    tier = [(f"D{i}", "S", str(i), f"hm_{i}") for i in range(3)]
+    fertig = [{"name": f"D{i}", "code": "X"} for i in range(3)]
+    rc, _geschrieben = _lauf(mod, monkeypatch, tier, [], fertig, [], [], ziel=ziel)
+    assert rc == 0, f"eine kaputte Vorlage hat den Lauf aufgehalten ({rc})"
 
 
 def test_eine_fehlende_set_tabelle_bricht_den_lauf_ab(mod):
