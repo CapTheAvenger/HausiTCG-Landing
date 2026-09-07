@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "last_updated": "2026-09-06",
+    "last_updated": "2026-09-07",
     "window_days": 14,
-    "window_start": "2026-08-23",
-    "window_end": "2026-09-06",
-    "team_count": 112,
-    "sample_count": 668,
-    "species_count": 86,
+    "window_start": "2026-08-24",
+    "window_end": "2026-09-07",
+    "team_count": 110,
+    "sample_count": 656,
+    "species_count": 85,
     "source": "VGCPastes Champions M-A spreadsheet (gid=791705272)"
   },
   "samples": [
@@ -4601,90 +4601,6 @@
       "nature": "Careful",
       "date": "24 Aug 2026",
       "replica": "Y1PNKVEBEU"
-    },
-    {
-      "species": "Staraptor",
-      "evs": "23 HP / 11 Atk / 32 Spe",
-      "nature": "Jolly",
-      "date": "23 Aug 2026",
-      "replica": "M277RUKC6P"
-    },
-    {
-      "species": "Glimmora",
-      "evs": "1 HP / 32 SpA / 1 SpD / 32 Spe",
-      "nature": "Modest",
-      "date": "23 Aug 2026",
-      "replica": "M277RUKC6P"
-    },
-    {
-      "species": "Farigiraf",
-      "evs": "29 HP / 16 Def / 21 SpD",
-      "nature": "Sassy",
-      "date": "23 Aug 2026",
-      "replica": "M277RUKC6P"
-    },
-    {
-      "species": "Torkoal",
-      "evs": "32 HP / 1 Def / 32 SpA / 1 SpD",
-      "nature": "Quiet",
-      "date": "23 Aug 2026",
-      "replica": "M277RUKC6P"
-    },
-    {
-      "species": "Whimsicott",
-      "evs": "32 HP / 10 Def / 4 SpD / 20 Spe",
-      "nature": "Timid",
-      "date": "23 Aug 2026",
-      "replica": "M277RUKC6P"
-    },
-    {
-      "species": "Sneasler",
-      "evs": "4 HP / 30 Atk / 32 Spe",
-      "nature": "Adamant",
-      "date": "23 Aug 2026",
-      "replica": "M277RUKC6P"
-    },
-    {
-      "species": "Pidgeot",
-      "evs": "7 HP / 27 SpA / 32 Spe",
-      "nature": "Modest",
-      "date": "23 Aug 2026",
-      "replica": "MWBU6J634G"
-    },
-    {
-      "species": "Venusaur",
-      "evs": "24 HP / 10 SpA / 32 Spe",
-      "nature": "Modest",
-      "date": "23 Aug 2026",
-      "replica": "MWBU6J634G"
-    },
-    {
-      "species": "Mamoswine",
-      "evs": "2 HP / 32 Atk / 32 Spe",
-      "nature": "Adamant",
-      "date": "23 Aug 2026",
-      "replica": "MWBU6J634G"
-    },
-    {
-      "species": "Ninetales",
-      "evs": "12 HP / 10 Def / 20 SpA / 24 Spe",
-      "nature": "Timid",
-      "date": "23 Aug 2026",
-      "replica": "MWBU6J634G"
-    },
-    {
-      "species": "Sneasler",
-      "evs": "20 Atk / 16 Def / 30 Spe",
-      "nature": "Adamant",
-      "date": "23 Aug 2026",
-      "replica": "MWBU6J634G"
-    },
-    {
-      "species": "Basculegion",
-      "evs": "23 Atk / 11 Def / 32 Spe",
-      "nature": "Jolly",
-      "date": "23 Aug 2026",
-      "replica": "MWBU6J634G"
     }
   ]
 }

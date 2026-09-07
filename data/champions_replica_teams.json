@@ -2,7 +2,7 @@
   "_meta": {
     "title": "Pokémon Champions — Current Top Doubles Teams",
     "subtitle": "Replica codes from top tournament finishes. Tap a code to copy.",
-    "last_updated": "2026-09-06",
+    "last_updated": "2026-09-07",
     "source": "VGCPastes Champions spreadsheet (auto-discovered tabs: M-B=gid1458357160, M-A=gid791705272)",
     "source_url": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTXHOfUSKTZyVoxF7BO-XIEqtbrsq1OSh_4bSaO0bhAMHqtsvYqM_4eZWIMqdZ--SKCb86EXuk75o1i/pub?gid=1458357160&single=true&output=csv",
     "current_regulation": "M-B",
@@ -10,7 +10,7 @@
       "M-B",
       "M-A"
     ],
-    "team_count": 112
+    "team_count": 110
   },
   "teams": [
     {
@@ -10838,204 +10838,6 @@
             "Darkest Lariat",
             "Parting Shot",
             "Fake Out"
-          ]
-        }
-      ],
-      "strategy": []
-    },
-    {
-      "rank": 111,
-      "replica_code": "M277RUKC6P",
-      "team_name": "gahaku's Solo Staraptor Team",
-      "tournament": "-",
-      "trainer": "Masahiro Ito",
-      "format": "VGC Champions",
-      "regulation": "M-B",
-      "sheet_rank": "",
-      "date_shared": "23 Aug 2026",
-      "pokepaste_url": "https://pokepast.es/9b1cd82e2b738cc7",
-      "pokemon": [
-        {
-          "name": "Staraptor",
-          "item": "Staraptite",
-          "ability": "Intimidate",
-          "tera_type": "",
-          "evs": "23 HP / 11 Atk / 32 Spe",
-          "nature": "Jolly",
-          "moves": [
-            "Brave Bird",
-            "Close Combat",
-            "Roost",
-            "Protect"
-          ]
-        },
-        {
-          "name": "Glimmora",
-          "item": "Focus Sash",
-          "ability": "Toxic Debris",
-          "tera_type": "",
-          "evs": "1 HP / 32 SpA / 1 SpD / 32 Spe",
-          "nature": "Modest",
-          "moves": [
-            "Sludge Bomb",
-            "Power Gem",
-            "Earth Power",
-            "Spiky Shield"
-          ]
-        },
-        {
-          "name": "Farigiraf",
-          "item": "Sitrus Berry",
-          "ability": "Armor Tail",
-          "tera_type": "",
-          "evs": "29 HP / 16 Def / 21 SpD",
-          "nature": "Sassy",
-          "moves": [
-            "Psychic",
-            "Trick Room",
-            "Helping Hand",
-            "Protect"
-          ]
-        },
-        {
-          "name": "Torkoal",
-          "item": "Charcoal",
-          "ability": "Drought",
-          "tera_type": "",
-          "evs": "32 HP / 1 Def / 32 SpA / 1 SpD",
-          "nature": "Quiet",
-          "moves": [
-            "Eruption",
-            "Heat Wave",
-            "Weather Ball",
-            "Protect"
-          ]
-        },
-        {
-          "name": "Whimsicott",
-          "item": "Occa Berry",
-          "ability": "Prankster",
-          "tera_type": "",
-          "evs": "32 HP / 10 Def / 4 SpD / 20 Spe",
-          "nature": "Timid",
-          "moves": [
-            "Moonblast",
-            "Tailwind",
-            "Charm",
-            "Fake Tears"
-          ]
-        },
-        {
-          "name": "Sneasler",
-          "item": "Life Orb",
-          "ability": "Poison Touch",
-          "tera_type": "",
-          "evs": "4 HP / 30 Atk / 32 Spe",
-          "nature": "Adamant",
-          "moves": [
-            "Close Combat",
-            "Poison Jab",
-            "Rock Slide",
-            "Fake Out"
-          ]
-        }
-      ],
-      "strategy": []
-    },
-    {
-      "rank": 112,
-      "replica_code": "MWBU6J634G",
-      "team_name": "Gworf's Pidgeot Sun Team V2",
-      "tournament": "-",
-      "trainer": "Zach Knight",
-      "format": "VGC Champions",
-      "regulation": "M-B",
-      "sheet_rank": "",
-      "date_shared": "23 Aug 2026",
-      "pokepaste_url": "https://pokepast.es/06cba16bfbaa1804",
-      "pokemon": [
-        {
-          "name": "Pidgeot",
-          "item": "Pidgeotite",
-          "ability": "Tangled Feet",
-          "tera_type": "",
-          "evs": "7 HP / 27 SpA / 32 Spe",
-          "nature": "Modest",
-          "moves": [
-            "Hurricane",
-            "Heat Wave",
-            "Tailwind",
-            "Protect"
-          ]
-        },
-        {
-          "name": "Venusaur",
-          "item": "Wide Lens",
-          "ability": "Chlorophyll",
-          "tera_type": "",
-          "evs": "24 HP / 10 SpA / 32 Spe",
-          "nature": "Modest",
-          "moves": [
-            "Leaf Storm",
-            "Sludge Bomb",
-            "Sleep Powder",
-            "Protect"
-          ]
-        },
-        {
-          "name": "Mamoswine",
-          "item": "Focus Sash",
-          "ability": "Oblivious",
-          "tera_type": "",
-          "evs": "2 HP / 32 Atk / 32 Spe",
-          "nature": "Adamant",
-          "moves": [
-            "Ice Shard",
-            "Earthquake",
-            "High Horsepower",
-            "Protect"
-          ]
-        },
-        {
-          "name": "Ninetales",
-          "item": "Life Orb",
-          "ability": "Drought",
-          "tera_type": "",
-          "evs": "12 HP / 10 Def / 20 SpA / 24 Spe",
-          "nature": "Timid",
-          "moves": [
-            "Heat Wave",
-            "Encore",
-            "Roar",
-            "Protect"
-          ]
-        },
-        {
-          "name": "Sneasler",
-          "item": "White Herb",
-          "ability": "Unburden",
-          "tera_type": "",
-          "evs": "20 Atk / 16 Def / 30 Spe",
-          "nature": "Adamant",
-          "moves": [
-            "Fake Out",
-            "Dire Claw",
-            "Close Combat",
-            "Protect"
-          ]
-        },
-        {
-          "name": "Basculegion",
-          "item": "Choice Scarf",
-          "ability": "Adaptability",
-          "tera_type": "",
-          "evs": "23 Atk / 11 Def / 32 Spe",
-          "nature": "Jolly",
-          "moves": [
-            "Wave Crash",
-            "Aqua Jet",
-            "Last Respects",
-            "Flip Turn"
           ]
         }
       ],
