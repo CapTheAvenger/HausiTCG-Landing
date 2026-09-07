@@ -281,7 +281,71 @@
 }
 .btn-toggle-item:last-child { border-right: none; }
 .btn-toggle-item:hover { background: var(--ui-outline-bg-hover); color: var(--ink); }
-.btn-toggle-item.btn-success, .btn-toggle-item.active { background: var(--pokemon-blue) !important; color: white !important; box-shadow: inset 0 -2px 0 rgba(0,0,0,0.15); }
+/* BEFUND C4 / A-F3.22-24 (gemessen 07.09.2026): die Leiste zeigte den
+ * FALSCHEN Knopf als gewaehlt an. index.html liefert "Niedrige
+ * Seltenheit" fest mit btn-success aus (Z. 801/1330/1929), umgeschaltet
+ * wird danach aber ueber btn-active / btn-inactive
+ * (js/app-city-league.js setOverviewRarityMode,
+ * js/app-current-meta-analysis.js setCurrentMetaOverviewRarityMode,
+ * js/app-past-meta.js setPastMetaRarityMode — dreimal dieselbe Leiste).
+ * btn-success blieb also an dem Knopf haengen, den niemand mehr gewaehlt
+ * hatte, und .btn-active in css/ui-components.css:632 setzt nur
+ * Deckkraft, Schriftstaerke und einen Ring — also gar keinen Hintergrund.
+ *
+ * NACHMESSUNG B1 (07.09.2026, zweite Runde): der erste Versuch, das mit
+ * :not(.btn-inactive) zu loesen, hat nur die eigene Regel abgeschaltet.
+ * Danach gewann fuer den abgewaehlten Startknopf
+ * css/ui-components.css:962 `.btn-success { background: linear-gradient(
+ * 135deg,#0b7f58,#047f59) !important; box-shadow: 0 0 8px
+ * rgba(16,185,129,0.5) !important; color: #fff !important }`, dazu
+ * css/pokeball-menu.css:219 `.btn-success { background-color:
+ * var(--color-success) !important; border-color: #2ecc71 !important }`.
+ * Beide tragen !important und schlagen `.btn-toggle-item { background:
+ * transparent }` ohne !important. Der abgewaehlte Knopf war also nicht
+ * neutral, sondern GRUEN mit gruenem Schein bei 60 % Deckkraft — neben
+ * dem blauen gewaehlten Knopf.
+ *
+ * Ein :not() kann das nicht heilen: es nimmt der eigenen Regel den
+ * Zugriff, es nimmt der fremden nichts. Abwaehlen braucht deshalb eine
+ * EIGENE Regel, die den fremden !important-Hintergrund, den fremden
+ * Schatten, die fremde Schriftfarbe und den fremden Rahmen zurueckholt.
+ * Genau die steht unten; sie ist spezifischer (0,2,0 gegen 0,1,0) und
+ * steht spaeter, also gewinnt sie in jedem Fall — und weil sie es tut,
+ * braucht die Hervorhebung darueber kein :not() mehr. Zwei Mechanismen
+ * fuer dieselbe Sache waeren beide ungeprueft, weil jeder den anderen
+ * deckt; es bleibt einer, und der ist gemessen.
+ *
+ * BEFUND B3 (dieselbe Runde): der Schatten hiess frueher `inset 0 -2px 0
+ * rgba(0,0,0,0.15)` und hat damit den Auswahlring `0 0 0 2px #3B4CCA33`
+ * aus css/ui-components.css:632 VERDRAENGT — box-shadow ist eine
+ * Eigenschaft, nicht zwei. Der Kommentar behauptete das Gegenteil.
+ * Jetzt setzt die Hervorhebung genau denselben Ring: er bleibt damit in
+ * allen drei gewaehlten Zustaenden erhalten, statt nur in einem. */
+.btn-toggle-item.btn-success,
+.btn-toggle-item.active,
+.btn-toggle-item.btn-active {
+    background: var(--pokemon-blue) !important;
+    color: #fff !important;
+    /* B3: box-shadow ist EINE Eigenschaft. Der Ring aus
+       css/ui-components.css:632 und die eigene Innenkante muessen deshalb
+       in derselben Liste stehen, sonst verdraengt die eine die andere —
+       genau das war der Fehler. Ring zuerst, damit er aussen liegt. */
+    box-shadow: 0 0 0 2px #3B4CCA33, inset 0 -2px 0 rgba(0,0,0,0.15) !important;
+    border-color: var(--line-strong) !important;
+}
+/* Abgewaehlt heisst neutral — und muss das gegen .btn-success aus
+ * css/ui-components.css:962 und css/pokeball-menu.css:219 durchsetzen.
+ * Steht bewusst NACH der Hervorhebung: bei gleicher Spezifitaet
+ * entscheidet die Quellreihenfolge, und `btn-success btn-inactive` ist
+ * genau der Zustand, um den es geht. */
+.btn-toggle-item.btn-inactive {
+    /* die Kurzform setzt background-color UND background-image zurueck —
+       genau die zwei, die .btn-success mit !important besetzt haelt */
+    background: transparent !important;
+    color: var(--ink-2) !important;
+    box-shadow: none !important;
+    border-color: var(--line-strong) !important;
+}
 
 .deck-builder-toolbar {
     justify-content: space-between;
