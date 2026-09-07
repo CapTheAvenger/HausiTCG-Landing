@@ -197,11 +197,50 @@ def test_jeder_bewachte_job_hat_eine_begruendete_kadenz():
             f"{job} hat eine Schwelle von {max_alter} Tagen ohne genannte Kadenz"
 
 
-def test_die_echte_datei_passt_zur_bewachten_liste():
-    """Die Bewachungsliste darf nicht an der echten Datei vorbeigehen.
+def _workflow_texte():
+    """Alle Workflow-Dateien als ein Text — dort entstehen die Job-Schluessel."""
+    import glob as _glob
+    ordner = os.path.join(ROOT, ".github", "workflows")
+    stuecke = []
+    for pfad in sorted(_glob.glob(os.path.join(ordner, "*.yml"))):
+        with open(pfad, encoding="utf-8") as f:
+            stuecke.append(f.read())
+    return "\n".join(stuecke)
 
-    Ein Tippfehler im Job-Schluessel wuerde sonst zu einem stillen WARN
-    ('schreibt keinen Herzschlag') statt zu einer Bewachung.
+
+def test_jeder_bewachte_job_wird_von_einem_workflow_geschrieben():
+    """Die Bewachungsliste darf nicht an dem vorbeigehen, was wirklich geschrieben wird.
+
+    Bis zum 07.09.2026 wurde diese Frage an der ECHTEN Herzschlagdatei
+    geprueft: jeder bewachte Schluessel musste dort schon stehen. Das hat
+    einen Tippfehler gefunden — und gleichzeitig verhindert, dass man einen
+    Job ueberhaupt in die Bewachung aufnehmen kann, bevor er das erste Mal
+    gelaufen ist. Genau in diese Sperre lief die Aufnahme der vier
+    Online-Jobs: bewacht ab sofort, geschrieben erst beim naechsten Lauf.
+
+    Geprueft wird deshalb jetzt die QUELLE der Schluessel statt ihr
+    Ergebnis. Das ist die schaerfere Frage: ein Schluessel, den kein
+    Workflow schreibt, ist auch dann falsch, wenn er zufaellig einmal in
+    der Datei gelandet ist.
+    """
+    g = _guardian()
+    text = _workflow_texte()
+    assert "_job_heartbeats.json" in text, \
+        "kein Workflow schreibt ueberhaupt einen Herzschlag"
+    fehlend = [job for job in sorted(g.HERZSCHLAG) if job not in text]
+    assert not fehlend, (
+        f"bewacht, aber von keinem Workflow geschrieben: {fehlend} — ein "
+        f"solcher Schluessel erzeugt dauerhaft ein stilles WARN statt einer "
+        f"Bewachung")
+
+
+def test_kein_bewachter_job_verfehlt_seinen_eintrag_nur_um_den_pfad():
+    """Ein Pfad-Tippfehler sieht aus wie 'hat noch nie gelaufen'.
+
+    'scrapers/x.py' und 'backend/scrapers/x.py' sind zwei Schluessel und ein
+    Job. Steht der bewachte nicht in der Datei, waehrend ein anderer mit
+    demselben Dateinamen dort steht, ist das kein neuer Job — das ist ein
+    Schreibfehler, und er wuerde sich nie von selbst aufloesen.
     """
     g = _guardian()
     pfad = os.path.join(ROOT, "data", g.HEARTBEAT_DATEI)
@@ -210,10 +249,15 @@ def test_die_echte_datei_passt_zur_bewachten_liste():
     with open(pfad, encoding="utf-8") as f:
         echt = json.load(f)
     vorhanden = {k for k in echt if not k.startswith("_")}
-    fehlend = set(g.HERZSCHLAG) - vorhanden
-    assert not fehlend, (
-        f"bewacht, aber in der echten Datei nicht vorhanden: {sorted(fehlend)} — "
-        f"vorhanden sind {sorted(vorhanden)}")
+    nach_name = {os.path.basename(k): k for k in vorhanden}
+    for job in sorted(g.HERZSCHLAG):
+        if job in vorhanden:
+            continue
+        zwilling = nach_name.get(os.path.basename(job))
+        assert zwilling is None, (
+            f"bewacht wird {job!r}, geschrieben wird aber {zwilling!r} — "
+            f"derselbe Job unter zwei Pfaden, also ein Tippfehler in einer "
+            f"der beiden Stellen")
 
 
 def test_die_bewachten_spalten_stehen_wirklich_im_kopf():
