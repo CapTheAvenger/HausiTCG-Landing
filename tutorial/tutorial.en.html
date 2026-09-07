@@ -905,7 +905,12 @@
                                     <li><strong>Consistency</strong> — auto-generates the 60-card list from per-card avg-when-used. Math.round + Largest-Remainder + Reverse-LRM math; lands <em>exactly</em> on 60.</li>
                                     <li><strong>Max Rarity ↔ Low Rarity</strong> — flip every card to its highest- or lowest-rarity print in one click. Bidirectional toggle. Resets to Max on every fresh Generate.</li>
                                     <li><strong>Test Draw</strong> — opening-hand simulator. Draws 7 cards + tracks mulligans (<em>Basic in hand 77.8 % · Mulligan 22.2 %</em> in the screenshot).</li>
-                                    <li><strong>TCG Showdown ↗</strong> — copies the list and opens <code>tcg-showdown.com</code> in a new tab for full external playtesting.</li>
+                                    <!-- 07.09.2026: hier stand tcg-showdown.com nur als Text. Die deutsche
+                                         Fassung verlinkt die Seite zweimal (im Anhang "Verfügbare Tabs" und im
+                                         Playtester-Block), die englische kein einziges Mal — gemessen 10 <a>
+                                         gegen 12. Den Anhang gibt es auf Englisch nicht, also tragen die beiden
+                                         Stellen im gemeinsamen Text die Verweise. -->
+                                    <li><strong>TCG Showdown ↗</strong> — copies the list and opens <a href="https://tcg-showdown.com/" target="_blank" rel="noopener"><code>tcg-showdown.com</code></a> in a new tab for full external playtesting.</li>
                                     <li><strong>Save</strong> — persists the build to your profile's <em>My Decks</em> with a name + format tag. Synced across devices.</li>
                                     <li><strong>Compare</strong> — side-by-side diff with another build (paste a list or pick a saved one). Colour-coded changes.</li>
                                     <li><strong>Deck → Proxy</strong> — sends the whole 60 to the Proxy Printer queue with one click. Sleeve and test.</li>
@@ -1681,7 +1686,7 @@
                                     <li><strong>Build vs…</strong> — opens the target-picker modal (covered next). Cooking-only.</li>
                                     <li><strong>Max Rarity ↔ Low Rarity</strong> — flips every print between the highest- and lowest-rarity variant. Bidirectional toggle.</li>
                                     <li><strong>Test Draw</strong> — opening-hand simulator (7 + mulligans) for stress-testing consistency before you ship.</li>
-                                    <li><strong>TCG Showdown ↗</strong> — copies the list + opens tcg-showdown.com in a new tab for full external playtesting.</li>
+                                    <li><strong>TCG Showdown ↗</strong> — copies the list + opens <a href="https://tcg-showdown.com/" target="_blank" rel="noopener">tcg-showdown.com</a> in a new tab for full external playtesting.</li>
                                     <li><strong>Tech Cards slot row (0 / 10)</strong> — PIN'd cards land here. Forced into Stage-0 of every subsequent Generate. Persists across reloads, scoped per source so Current-Meta pins don't leak into Past-Meta.</li>
                                 </ul>
                                 <div class="feature-banner-protip">
