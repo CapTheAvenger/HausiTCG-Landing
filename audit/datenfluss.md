@@ -1,844 +1,684 @@
-# Datenflusskarte — von der Quelle bis zur Zahl auf dem Schirm
+# Datenfluss — Quelle → Scraper → Datei → Berechnung → Anzeige
 
-**Stand der Erhebung:** 2026-09-07 · **Grundlage:** `main` = `5ec1e742`
+**Stand:** `main` = `5d9ab9a8` · erstellt 07.09.2026 · rein aus Quelltext und
+Datendateien gelesen; alle Zahlen unter „Zeilen heute" sind an den Dateien im
+Arbeitsbaum nachgezählt, nicht abgeschrieben.
 
-**Regel dieser Datei.** Jede Formel ist im Quelltext nachgelesen und mit
-`Datei:Zeile` belegt. Jede Stichprobengröße ist mit `python3`/`csv` an der
-echten Datei unter `data/` gemessen, nicht aus einem Kommentar abgeschrieben.
-Wo eine Formel nicht auffindbar war, steht das ausdrücklich als
-*nicht gefunden — <Datei:Zeile> geprüft* statt einer Vermutung.
+**Zweck:** Arbeitsmittel für Prüfagenten. Zu jeder angezeigten Information der
+vollständige Weg, mit Datei:Zeile für jede Formel.
 
----
+## Lesehilfe
 
-## Inhalt
-
-1. [Die Zulieferer: Quelle → Scraper → Ablauf → Ablage](#1-die-zulieferer)
-2. [Zeitpläne und letzter Lauf](#2-zeitplaene)
-3. [Kennzahl **Win %**](#3-win-)
-4. [Kennzahl **Meta-Anteil**](#4-meta-anteil)
-5. [Kennzahl **Max Consistency**](#5-max-consistency)
-6. [Kennzahl **Tech-Cut-Empfehlungen**](#6-tech-cut)
-7. [**Archetyp-Erkennung** (inkl. Mega Excadrill)](#7-archetyp-erkennung)
-8. [Weitere Kennzahlen: Platzierungen, Preise, Kartentrends, Stichprobe, Datenstand](#8-weitere)
-9. [Verwaiste Daten](#9-verwaiste-daten)
-10. [Leere Rechnungen](#10-leere-rechnungen)
-11. [Zwei Wege zur selben Zahl](#11-zwei-wege)
+* **Win %** ist die Limitless-Bezeichnung. Das Haus kennt **drei** Konventionen
+  (§3.1); „Win %" gehört laut `js/win-rate-konvention.js:113–114` allein der
+  Konvention MATCHPUNKTE. Wo eine Anzeige das Wort für eine andere Formel
+  benutzt, steht das in §4.
+* **NICHT GEPRÜFT** heißt: aus dem Quelltext nicht belegbar. Es steht nie eine
+  gerundete Vermutung an dieser Stelle.
+* Zeilenzahlen sind **Datenzeilen** (ohne Kopfzeile).
+* Alle Cron-Angaben sind aus der jeweiligen YAML gelesen und stehen in **UTC**.
 
 ---
 
-<a id="1-die-zulieferer"></a>
-## 1. Die Zulieferer: Quelle → Scraper → Ablauf → Ablage
+## 1. Quellen und Scraper
 
-| Originalquelle (Adresse) | Scraper (Datei:Funktion) | Ablauf | Ablage unter `data/` | Zeilen (gemessen 07.09.) |
-|---|---|---|---|---|
-| `play.limitlesstcg.com/decks` (Tabelle „N tournaments, M players, K matches") | `backend/scrapers/limitless_online_scraper.py:100 scrape_deck_statistics` | `weekly-full-update.yml:267` | `limitless_online_decks.csv`, `limitless_online_decks_comparison.csv`, `limitless_meta_stats.json` | 136 Decks; Kopf 569 Turniere / 41.193 Spieler / 93.297 Matches |
-| `play.limitlesstcg.com/decks/<deck>/matchups/` | derselbe (`:720` schreibt `_matchups.csv`) | dito | `limitless_online_decks_matchups.csv` | 1.716 Paarungen |
-| `labs.limitlesstcg.com/decks/` + `/standings` | `backend/scrapers/labs_tournament_scraper.py` (`:1981` Decks, `:1937` Matchups, `:738` Turnierliste) | `weekly-full-update.yml:387` (`--matchups --matchup-days overall day1 day2`) | `labs_tournament_decks.csv`, `labs_tournament_matchups.csv`, je Format `…_<META>.csv`, `labs_tournaments.json` | 4.713 Deck-Zeilen; 47.986 Matchup-Zeilen |
-| `limitlesstcg.com/tournaments/<id>` + `/decks/list/<id>` | `backend/scrapers/per_decklist_scraper.py:600 scrape_tournament` (Titel aus `.decklist-title`, `:245`) | `weekly-full-update.yml:462` und `per-decklist-scrape.yml` (Di 12:00 UTC) | `tournament_decklists_per_player.csv` | 30.459 Zeilen · 3 Turniere · 53 Archetypen |
-| `labs.limitlesstcg.com` (Spieler-Historie) | `backend/scrapers/player_continuity_scraper.py:63` | `weekly-full-update.yml:432`, `player-continuity-scrape.yml` (nur Hand) | `player_continuity.csv` | 2,2 MB |
-| `play.limitlesstcg.com` (Turnier-Standings, Top-8) | `backend/scrapers/online_tournament_scraper.py:361 _tournament_weight`, `:461` Quoten | `weekly-full-update.yml:267` | `online_tournament_top8_decks.csv`, `online_tournament_winners.csv` | 121 Decks / 97 Sieger |
-| `play.limitlesstcg.com/decks` **und** `labs.limitlesstcg.com` (Kartenlisten je Archetyp) | `backend/scrapers/current_meta_analysis_scraper.py` (`:245`, `:931`, `:942`) | `weekly-full-update.yml:267` | `current_meta_card_data.csv`, `online_tournament_dated_cards.csv`, `online_best_decklists.json` | 4.484 / 28.756 Kartenzeilen |
-| `limitlesstcg.com/tournaments` (City League JP, laufend) | `backend/scrapers/city_league_analysis_scraper.py:106` / `city_league_archetype_scraper.py:97` | `weekly-full-update.yml:267` | `city_league_analysis.csv`, `city_league_archetypes*.csv` | **0 Datenzeilen** (nur Kopf) → §10 |
-| dieselbe Quelle, Vorformat | `city_league_past_analysis_scraper.py:118` / `city_league_past_archetype_scraper.py:100` | dito | `city_league_analysis_past.csv`, `city_league_archetypes_past*.csv` | 315 / 26 Zeilen, **ein** Turnier (568) |
-| `limitlesstcg.com/cards` (EN) | `backend/scrapers/all_cards_scraper.py:707` | `weekly-full-update.yml:267` | `all_cards_database.csv/.json` | 9,9 MB |
-| `limitlesstcg.com/cards/jp` | `backend/scrapers/japanese_cards_scraper.py:85` | dito | `japanese_cards_database.csv` | 103 KB |
-| `limitlesstcg.com/cards/<set>/<nr>` (Kartentext) | `pokemon_card_text_scraper.py:64`, `pokemon_card_effects_scraper.py:82` | dito | `pokemon_card_text.json`, `pokemon_card_effects.json` | 0,6 / 12 MB |
-| `downloads.s3.cardmarket.com/productCatalog/…` (`products_singles_6.json`, `products_nonsingles_6.json`, `price_guide_6.json`) | `daily-price-refresh.yml:124–126` (curl) → `cardmarket_id_mapper.py:581` → `cardmarket_price_merger.py` | `daily-price-refresh.yml` (täglich 08:00 UTC) | `cardmarket_id_mapping.csv`, `price_data.csv` | 20.419 Preiszeilen |
-| `cardmarket.com` Produktseiten (Live-Prüfung) | `scripts/verify_cardmarket_mapping.py` | `verify-cardmarket-mapping.yml` (Mi 04:20 UTC) | `cardmarket_mapping_verified.csv` | 970 KB |
-| `play.pokemon.com` CloudFront (Prize-Pack-Galerie) | `scripts/build_prizepack_official_images.py` | `prizepack-official-images.yml` (So 07:45 UTC) | `prizepack_official_images.csv/.json` | 58 KB |
-| `r2.limitlesstcg.net/pokemon/gen9/` + `play.limitlesstcg.com/decks` | `backend/scrapers/archetype_icons_scraper.py:58` | `weekly-full-update.yml:267` + `:358` Nachprüfung | `archetype_icons.json` | **542 Archetypen** |
-| `championsbattledata.com` | `scripts/scrape_champions_usage.py` | `champions-usage-refresh.yml` (tgl. 05:00 UTC), `champions-replica-scrape.yml` (tgl. 04:00 UTC) | `champions_usage.json` | 954 KB |
-| `docs.google.com/spreadsheets/…` + `pokepast.es` | `backend/scrapers/champions_replica_scraper.py:170` | `champions-replica-scrape.yml` | `champions_replica_teams.json`, `champions_speed_corpus.json` | 285 / 113 KB |
-| `raw.githubusercontent.com/otterlyclueless/pokemon-champions-data`, `raw.githubusercontent.com/PokeAPI/pokeapi` | `scripts/build_champions_pokedex.py`, `scripts/build_champions_resources.py` | `champions-replica-scrape.yml` | `champions_pokedex.json`, `champions_resources.json`, `champions_*_reference.json` | 300 / 496 KB |
-| `serebii.net/pokemonchampions/items.shtml` | `scripts/scrape_champions_items.py` | dito | `champions_available_items.json` | 3,7 KB |
-| `pokebase.app/pokemon-champions/pokemon` | `scripts/scrape_champions_roster.py` | dito | `champions_roster_extra.json`, `pokemon_battle_data.json` | 2,4 KB |
-| `pokewiki.de/api.php`, `pokemonexperte.de/items/` | `scripts/scrape_de_names.py` | dito | `champions_names_de.json`, `de_name_overrides.json` | 119 / 44 KB |
-| `game8.co/games/Pokemon-TCG-Pocket/archives/477754` | `scripts/scrape_pocket_tierlist.py:87` | `pocket-tierlist.yml` — **nur `workflow_dispatch`, kein Zeitplan** | `pocket_tierlist.json` | 59 KB |
-| `pokemonproxies.com` | `backend/scrapers/scrape_pokemonproxies_urls.py:91` / `scripts/scrape_pokemonproxies.py` | `weekly-full-update.yml:267` bzw. `champions-replica-scrape.yml` | `pokemonproxies_url_map.json`, `pokemonproxies_index.json` | 6,7 / 3,7 KB |
-| **keine** — Spielregeln, von Hand gepflegt | — | — | `champions_type_chart.json`, `deck_families.json`, `archetype_aliases.json`, `card_capability_*.json`, `labs_tournament_id_overrides.json`, `cardmarket_mapping_manual.csv` | s. §10 |
+### 1.1 Die Arbeitsabläufe und ihr Takt
 
-**Zusammenführungen ohne eigene Quelle** (rechnen nur aus dem Obigen):
-
-| Skript | liest | schreibt | Ablauf |
-|---|---|---|---|
-| `backend/core/prepare_card_data.py:801–911` | `all_cards_database`, `price_data.csv`, City-League-Dateien | `all_cards_merged.csv/.json`, `cards_chunk_{standard,extended,legacy}.json`, `cards_manifest.json` | `weekly-full-update`, `daily-price-refresh` |
-| `backend/tools/build_threat_intel.py:341 build()` | `pokemon_card_effects.json`, `current_meta_card_data.csv`, `limitless_online_decks.csv`, `format_window.json`, `sets.json` | `active_threats.json` | `weekly-full-update.yml:274` |
-| `scripts/build_online_fenster.py:145 baue()` | `data/online_share_history/*.csv` (68 Stände) | `limitless_online_fenster.csv`, `limitless_online_fenster_meta.json` | `weekly-full-update.yml:383` |
-| `scripts/build_deckempfehlung.py:178 bewerte()` | `labs_tournament_decks.csv` | `deckempfehlung.json` | `weekly-full-update.yml:717` |
-| `scripts/build_data_stand.py` | Git-Verlauf | `data_stand.json` | `weekly-full-update.yml:720` |
-| `scripts/data_guardian.py` | fast alles unter `data/` | `_guardian_baseline.json`, `_job_heartbeats.json`, GitHub-Issue | `data-guardian.yml` |
-| `scripts/datenluecken.py` | Champions-Dateien | `datenluecken.json` | **kein Ablauf** → §9 |
-
----
-
-<a id="2-zeitplaene"></a>
-## 2. Zeitpläne und letzter Lauf
-
-Alle Zeiten UTC. `data/_job_heartbeats.json` führt nur die *nicht blockierenden*
-Einzelschritte, nicht die Abläufe selbst.
-
-| Ablauf | Zeitplan (`cron`) | Schreibt vor allem | Herzschlag / Dateistand |
-|---|---|---|---|
-| `weekly-full-update.yml` | `0 6 * * 2,5` — Di + Fr 06:00 | 20 Scraper + Labs + per-Decklist + Nachrechnungen | `labs_tournament_scraper.py` OK **2026-09-06 16:38 UTC**; `per_decklist_scraper.py` OK 2026-09-06 16:38; `player_continuity_scraper.py` OK 2026-09-06 16:38 |
-| `daily-price-refresh.yml` | `0 8 * * *` | `price_data.csv`, `cardmarket_id_mapping.csv` | `price_data.csv` mtime **2026-09-07 09:08** |
-| `champions-replica-scrape.yml` | `0 4 * * *` | Champions-Bestand | 5 Herzschläge OK **2026-09-07 04:05 UTC** |
-| `champions-usage-refresh.yml` | `0 5 * * *` | `champions_usage.json` | `scrape_champions_usage.py` OK 2026-09-07 04:05 |
-| `data-guardian.yml` | `30 9 * * *` | Baseline + Herzschläge + Befund-Issue | `_job_heartbeats.json` mtime 2026-09-07 09:08 |
-| `per-decklist-scrape.yml` | `0 12 * * 2` — Di 12:00 | `tournament_decklists_per_player.csv` | s. o. |
-| `verify-cardmarket-mapping.yml` | `20 4 * * 3` — Mi | `cardmarket_mapping_verified.csv` | mtime 2026-09-02 06:19 |
-| `cardmarket-card-images.yml` | `30 7 * * 0` — So | `cardmarket_card_images.csv`, `cm_expansions.csv` | mtime 2026-09-06 09:06 |
-| `prizepack-official-images.yml` | `45 7 * * 0` — So | `prizepack_official_images.csv` | CSV mtime **2026-08-17** (JSON 2026-09-07) |
-| `bot-keepalive.yml` | `*/5 * * * *` | nichts unter `data/` | — |
-| `deploy-pages.yml` | `push` auf `main` + Hand | Test → Build → Pages | — |
-| `data-consistency.yml`, `sprachreinheit.yml`, `visual-nonmeta.yml` | `push`/`pull_request` | nichts unter `data/` | — |
-| **ohne Zeitplan** (nur `workflow_dispatch`): `pocket-tierlist`, `ace-spec-reparatur`, `champions-sprites`, `pokepricelab-index`, `pokepricelab-verify`, `probe-cardmarket-expansions`, `probe-pokepricelab`, `tutorial-screenshots`, `visual-fullpage`, `player-continuity-scrape` | — | — | `pocket_tierlist.json` zuletzt 2026-09-07 08:38 (von Hand) |
-
----
-
-<a id="3-win-"></a>
-## 3. Kennzahl **Win %**
-
-### 3.1 Die Steckbriefe
-
-| Feld | Inhalt |
-|---|---|
-| **Name in der Oberfläche** | „Win %" (Turnierseite), „Siege je Match" (Online-Decks), „Siege je entschiedenem Match" (Matchups). Alle drei Bezeichner kommen aus `js/win-rate-konvention.js:88 / :105 / :119` (`kurzDe`). |
-| **Originalquelle** | `labs.limitlesstcg.com` (Präsenzturniere) und `play.limitlesstcg.com/decks` (Online-Turniere). **Es gibt keine Ladder** — `js/win-rate-konvention.js:135–151` hält fest, dass das Wort am 03.09.2026 überall entfernt wurde. |
-| **Scraper** | `labs_tournament_scraper.py:1981` bzw. `limitless_online_scraper.py:180–235` |
-| **Ablauf** | `weekly-full-update.yml` (Di + Fr 06:00 UTC) |
-| **Ablage** | `labs_tournament_decks.csv` (`wins,losses,ties,win_pct`), `limitless_online_decks.csv` (`wins;losses;ties;win_rate_numeric`), `limitless_online_decks_matchups.csv` (`record;win_rate;total_games`) |
-| **Anzeige** | s. Tabelle 3.4 |
-
-### 3.2 Die drei Konventionen, mit der echten Formel
-
-`js/win-rate-konvention.js:69–129` führt genau drei; eine vierte ist dort
-ausdrücklich als erfunden markiert (`:34–38`).
-
-| Bezeichner | Formel (Quelltext) | Zeile |
+| Arbeitsablauf | Takt (UTC, aus der YAML) | Datei:Zeile |
 |---|---|---|
-| `matchpunkte` → **angezeigt als „Win %"** | `((3·S + U) / (3·(S+N+U))) · 100` | Formel `js/win-rate-konvention.js:72`, Code `:97–100` |
-| `mitUnentschieden` → „Siege je Match" | `(S / (S+N+U)) · 100` | Formel `js/win-rate-konvention.js:104`, Code `:111–114` |
-| `ohneUnentschieden` → „Siege je entschiedenem Match" | `(S / (S+N)) · 100` | Formel `js/win-rate-konvention.js:118`, Code `:124–127` |
-| *verworfen* | `(S + 0,5·U) / Partien` | `js/win-rate-konvention.js:34–38` |
+| `weekly-full-update.yml` | `0 6 * * 2,5` — Di + Fr 06:00 | `.github/workflows/weekly-full-update.yml:31` |
+| `daily-price-refresh.yml` | `0 8 * * *` | `daily-price-refresh.yml:36` |
+| `data-guardian.yml` | `30 9 * * *` | `data-guardian.yml:15` |
+| `champions-replica-scrape.yml` | `0 4 * * *` | `champions-replica-scrape.yml:31` |
+| `champions-usage-refresh.yml` | `0 5 * * *` | `champions-usage-refresh.yml:18` |
+| `per-decklist-scrape.yml` | `0 12 * * 2` — Di 12:00 | `per-decklist-scrape.yml:48` |
+| `cardmarket-card-images.yml` | `30 7 * * 0` — So | `cardmarket-card-images.yml:18` |
+| `prizepack-official-images.yml` | `45 7 * * 0` — So | `prizepack-official-images.yml:15` |
+| `verify-cardmarket-mapping.yml` | `20 4 * * 3` — Mi | `verify-cardmarket-mapping.yml:21` |
+| `bot-keepalive.yml` | `*/5 * * * *` | `bot-keepalive.yml:41` |
+| `online-decklists.yml` | **kein Zeitplan**, nur `workflow_dispatch` — Begründung im Kopf der Datei | `online-decklists.yml:30–44` |
+| `pocket-tierlist.yml` | **kein Zeitplan** (entfernt: Game8 antwortet dem GitHub-Läufer mit HTTP 202) | `pocket-tierlist.yml:24–48` |
+| `player-continuity-scrape.yml` | nur `workflow_dispatch`; läuft faktisch im Wochenlauf mit | `player-continuity-scrape.yml:12`, `weekly-full-update.yml:495` |
+| `champions-sprites`, `pokepricelab-*`, `probe-*`, `ace-spec-reparatur` | nur `workflow_dispatch` | jeweils `on:`-Block |
+| `deploy-pages`, `data-consistency`, `sprachreinheit`, `visual-nonmeta` | `push` auf `main` / `pull_request` | jeweils `on:`-Block |
 
-**Zähler und Nenner je Quelldatei — heute nachgemessen:**
+`weekly-full-update.yml:269–286` nennt die Scraper-Reihenfolge des Wochenlaufs;
+`:422` (Online-Fenster), `:461` (Labs), `:495` (Spielerkontinuität), `:522`
+(Einzellisten), `:784` (Deckempfehlung), `:787` (Datenstände) sind die
+nachgelagerten Schritte.
 
-| Datei / Spalte | Zeilen | Konvention | Messergebnis |
+### 1.2 Datei · Scraper · Quelle · Takt · Umfang
+
+| Datei (`data/`) | Scraper / Skript | Quelle | Arbeitsablauf | Takt | Zeilen heute | Zeitraum (Feld) |
+|---|---|---|---|---|---|---|
+| `limitless_online_decks.csv` | `backend/scrapers/limitless_online_scraper.py:39` | `play.limitlesstcg.com/decks` | weekly-full-update | Di+Fr 06:00 | **136** | **kein Datumsfeld** — Kumulativstand seit Formatbeginn |
+| `limitless_online_decks_comparison.csv` | dto. `:653` | dto. | weekly-full-update | Di+Fr | 136 | kein Datumsfeld (alt/neu-Vergleich zweier Läufe) |
+| `limitless_online_decks_matchups.csv` | dto. `:720` | dto. (Top 100, `config/scraper_settings.json` `top_decks_for_matchup`) | weekly-full-update | Di+Fr | **1.716** | kein Datumsfeld |
+| `limitless_meta_stats.json` | dto. `:147` | Kopfzeile der Limitless-Tabelle | weekly-full-update | Di+Fr | — | `generated_at` = 2026-09-06T16:28:50Z; 569 Turniere / 41.193 Spieler / 93.297 Partien |
+| `online_share_history/YYYY-MM-DD.csv` | dto. `:580–617` | dto. | weekly-full-update | Di+Fr | **67 Stände** ab 2026-04-29 (Manifest: 2026-04-29 … 2026-09-06) | Dateiname = Standdatum |
+| `limitless_online_fenster.csv` + `_meta.json` | `scripts/build_online_fenster.py:113` | Differenz zweier Tagesstände | weekly-full-update `:422` | Di+Fr | **137** | `fenster_von` 2026-08-22 → `fenster_bis` 2026-09-06, 15 Tage, 10.330 Decks |
+| `online_tournament_top8_decks.csv` | `backend/scrapers/online_tournament_scraper.py:94` | `play.limitlesstcg.com` Turnierliste, `min_players: 100` | weekly-full-update | Di+Fr | **121** | nur `last_seen_date` je Deck: 2026-08-10 … 2026-09-06 |
+| `online_tournament_winners.csv` | dto. `:570` | dto. | weekly-full-update | Di+Fr | **97** | `tournament_date` 2026-06-30 … 2026-09-06 |
+| `current_meta_card_data.csv` | `backend/scrapers/current_meta_analysis_scraper.py:245` | `play.limitlesstcg.com/decks` + `labs.limitlesstcg.com` | weekly-full-update | Di+Fr | **4.484** (3.330 „Meta Live", 1.154 „Meta Play!") | **kein Datumsfeld** |
+| `online_tournament_dated_cards.csv` | dto. `:931` | dto., je Turnier | weekly-full-update | Di+Fr | **28.756** | `tournament_date` 2026-07-17 … 2026-09-06 |
+| `online_best_decklists.json` | dto. `:942` | dto. | weekly-full-update | Di+Fr | 45 Archetypen | NICHT GEPRÜFT (kein Datumsfeld gelesen) |
+| `tournament_cards_data_overview.csv` | `backend/scrapers/tournament_scraper_JH.py:422` | `limitlesstcg.com/tournaments` | weekly-full-update | Di+Fr | **111** | `tournament_date` als Klartext („28th August 2026"); 16 Formate, davon TEF-PBL = **1 Turnier** |
+| `tournament_cards_data_cards_<META>.csv` (16 Stück) | dto. `:843`, aufgeteilt von `backend/core/prepare_card_data.py:1266` | dto. | weekly-full-update | Di+Fr | TEF-PBL **879**, TEF-POR 7.464, TEF-CRI 2.737 | `tournament_date` je Zeile |
+| `labs_tournament_decks.csv` (+ 13 `_<META>.csv`) | `backend/scrapers/labs_tournament_scraper.py:83` | `labs.limitlesstcg.com` | weekly-full-update `:461` | Di+Fr | **4.713** gesamt, **46** für TEF-PBL | `tournament_date` 2024-09-14 … 2026-08-28; **96 Zeilen ohne Datum** |
+| `labs_tournament_matchups.csv` (+ 13 `_<META>.csv`) | dto. `:84` | dto. | weekly-full-update | Di+Fr | **47.986** gesamt, **1.866** für TEF-PBL | `tournaments_used` / `scraped_at`; `day_filter` ∈ {overall, day1, day2} |
+| `labs_tournaments.json` | dto. | dto. | weekly-full-update | Di+Fr | Liste; 0071 = Worlds SF, 797 Spieler, 2026-08-28 | `tournament_date` |
+| `labs_tournament_decks_verzeichnis.json`, `labs_tournament_matchups_verzeichnis.json` | `scripts/schreibe_labs_verzeichnis.py:19` | die Dateien in `data/` | weekly-full-update `:696` | Di+Fr | 13 `meta_keys` | `stand` = 2026-09-01T19:04:56Z |
+| `player_continuity.csv` | `backend/scrapers/player_continuity_scraper.py:8` | `labs.limitlesstcg.com` | weekly-full-update `:495` (+ eigener Dispatch) | Di+Fr | **21.299** | `tournament_date` 2026-04-03 … 2026-08-28 |
+| `tournament_decklists_per_player.csv` | `backend/scrapers/per_decklist_scraper.py:27` | `limitlesstcg.com` Einzellisten | per-decklist-scrape + weekly `:522` | Di 12:00 / Di+Fr | **30.459** Zeilen = **1.201 Listen aus 3 Turnieren** (NAIC 0070 16.960 / Turin 0069 9.800 / Worlds 0071 3.699) | `tournament_date` 2026-06-06 … 2026-08-28; im laufenden Format (≥ 31.07.) **143 Listen, 27 Archetypen** |
+| `city_league_archetypes.csv` | `backend/scrapers/city_league_archetype_scraper.py:97` | `limitlesstcg.com/tournaments` (JP) | weekly-full-update | Di+Fr | **0** | `date`; Fenster ab 31.07.2026 (`config/scraper_settings.json` `city_league_archetype.start_date`) |
+| `city_league_analysis.csv` | `backend/scrapers/city_league_analysis_scraper.py:106` | dto. | weekly-full-update | Di+Fr | **0** | `period`; Fenster ab 31.07.2026 |
+| `city_league_archetypes_comparison.csv`, `_deck_stats.csv` | `city_league_archetype_scraper.py:456/417` | abgeleitet | weekly-full-update | Di+Fr | **0** / **0** | — |
+| `city_league_archetypes_past.csv` | `city_league_past_archetype_scraper.py:12` | dto. | weekly-full-update | Di+Fr | **26** | 22.05. – 30.07.2026 |
+| `city_league_analysis_past.csv` | `city_league_past_analysis_scraper.py:12` | dto. | weekly-full-update | Di+Fr | **315** | dto. |
+| `all_cards_database.csv/.json` | `backend/scrapers/all_cards_scraper.py:707` | `limitlesstcg.com/cards` | weekly-full-update | Di+Fr | **20.419** | kein Datum |
+| `japanese_cards_database.csv` | `backend/scrapers/japanese_cards_scraper.py:104` | `limitlesstcg.com/cards` (JP) | weekly-full-update | Di+Fr | NICHT GEPRÜFT | — |
+| `price_data.csv` | `backend/scrapers/cardmarket_price_merger.py:5` | Cardmarket-JSON-Dumps + `cardmarket_id_mapping.csv` | daily-price-refresh `:141` | täglich 08:00 | **20.419** | `last_updated` je Zeile |
+| `cardmarket_id_mapping.csv` | `backend/scrapers/cardmarket_id_mapper.py:17` | Cardmarket-Dumps + `cardmarket_mapping_verified.csv` | daily-price-refresh `:134` | täglich | NICHT GEPRÜFT | — |
+| `cardmarket_mapping_verified.csv` | `scripts/verify_cardmarket_mapping.py:34` | Limitless-Preisabdruck als Fingerabdruck | verify-cardmarket-mapping | Mi 04:20 | NICHT GEPRÜFT | `checked_at` |
+| `all_cards_merged.json/.csv`, `cards_chunk_*.json`, `cards_manifest.json` | `backend/core/prepare_card_data.py:628/801/827` | `all_cards_database` + `price_data` | daily-price-refresh `:153` | täglich | — | — |
+| `active_threats.json` | `backend/tools/build_threat_intel.py:76` | `pokemon_card_effects.json` + `current_meta_card_data.csv` + `limitless_online_decks.csv` | weekly-full-update `:286` | Di+Fr | 7 Schlüssel; `format_label` TEF-PBL | `generated_at` 2026-09-06T16:33:33Z |
+| `pokemon_card_effects.json` / `pokemon_card_text.json` | `backend/scrapers/pokemon_card_effects_scraper.py:15` / `pokemon_card_text_scraper.py:6` | `limitlesstcg.com/cards` | weekly-full-update | Di+Fr | — | — |
+| `card_capability_interactions.json` | **handgepflegt** (kein Scraper) | — | — | — | **5 Paarungen**, `version` 0.1, `generated_at` 2026-05-15 | — |
+| `archetype_icons.json` | `backend/scrapers/archetype_icons_scraper.py:7` | `play.limitlesstcg.com/decks`, `r2.limitlesstcg.net` | weekly-full-update | Di+Fr | — | — |
+| `ace_specs.json` | `scripts/repariere_ace_spec.py:7`, geprüft in `weekly-full-update.yml:753` | `all_cards_database` | weekly-full-update | Di+Fr | — | `timestamp` |
+| `format_window.json` | `backend/core/update_sets.py` (Aufruf im Wochenlauf) | `limitlesstcg.com/cards` EN + JP | weekly-full-update | Di+Fr | — | `current_set` PBL, `set_release_date` 2026-07-17, `in_person_legal_date` 2026-07-31, `current_set_jp` M6, `jp_release_date` 2026-07-31 |
+| `deckempfehlung.json` | `scripts/build_deckempfehlung.py:2` | `labs_tournament_decks*.csv` + `limitless_online_decks.csv` | weekly-full-update `:784` | Di+Fr | 1 Empfehlung | `erzeugt` 2026-09-06; Anker = Worlds SF, 797 Spieler |
+| `data_stand.json` | `scripts/build_data_stand.py:2` | Git-Verlauf | weekly-full-update `:787` | Di+Fr | 15 Dateien + `leer`-Liste | `erzeugt_am` 2026-09-06T16:39:09Z |
+| `datenluecken.json` | `scripts/datenluecken.py:11` | Champions-Dateien | champions-* | täglich | **0 Lücken**, `erzeugt` 2026-08-31 | — |
+| `champions_usage.json` | `scripts/scrape_champions_usage.py:3` | `championsbattledata.com` | champions-usage-refresh (+ replica) | täglich 05:00 | 238 Pokémon | `scraped_at` 2026-09-07T05:10:52Z |
+| `champions_replica_teams.json` | `backend/scrapers/champions_replica_scraper.py:8` | `docs.google.com` + `pokepast.es` | champions-replica-scrape | täglich 04:00 | — | `_meta` |
+| `champions_pokedex.json`, `_resources.json`, `_names_de.json`, `_roster_extra.json`, `_available_items.json`, `_team_strategies.json`, `_sprites.json` | `scripts/build_champions_*.py`, `scrape_champions_*.py`, `generate_team_strategies.py` | dto. | champions-replica-scrape | täglich 04:00 | — | Herzschläge in `data/_job_heartbeats.json` |
+| `pocket_tierlist.json` | `scripts/scrape_pocket_tierlist.py:85` | `game8.co` | pocket-tierlist (**nur von Hand**) | — | **33 Decks** | `_meta.quelle_url` |
+| `pokemonproxies_url_map.json` / `pokemonproxies_index.json` | `backend/scrapers/scrape_pokemonproxies_urls.py:15` / `scripts/scrape_pokemonproxies.py:2` | `pokemonproxies.com` | weekly-full-update / champions | Di+Fr | — | — |
+| `prizepack_official_images.csv/.json` | `scripts/build_prizepack_official_images.py:2` | offizielle Play!-Galerie (PDF) | prizepack-official-images | So 07:45 | — | — |
+| `cardmarket_card_images.csv`, `cm_expansions.csv` | `scripts/build_cardmarket_card_images.py:2`, `build_cm_expansions.py:2` | Cardmarket-Dumps | cardmarket-card-images | So 07:30 | — | — |
+| `testing_group_bootstrap.json` | **einmalig von Hand** (2026-04-22) | Tabellenblatt des Betreibers | — | — | 21 Decks | `_meta.lastUpdated` 2026-04-22 |
+| `deck_families.json`, `archetype_aliases.json`, `de_name_overrides.json`, `labs_tournament_id_overrides.json` | handgepflegte Überschreibungen | — | — | — | — | — |
+
+---
+
+## 2. Ladewege — welche `js/`-Datei liest welche `data/`-Datei
+
+### 2.1 Feste Pfade
+
+| Datei (`data/`) | gelesen von (Datei:Zeile) |
+|---|---|
+| `limitless_online_decks.csv` | `js/app-meta-call.js:8324`, `js/app-archetype-card.js:23` (via `load()` `:387`), `js/ds-post-quellen.js:331`, `js/win-rate-konvention.js:167` |
+| `limitless_online_decks_matchups.csv` | `js/app-current-meta-analysis.js:4044`, `js/app-meta-call.js:7486`, `js/tech-ideen.js:186`, `js/ds-post-quellen.js:418`, `js/win-rate-konvention.js:199` |
+| `limitless_online_decks_comparison.csv` | `js/app-meta-call.js:5921` |
+| `limitless_online_fenster.csv` | `js/app-meta-call.js:6051` |
+| `limitless_online_fenster_meta.json` | `js/app-meta-call.js:191` (Konstante `FENSTER_META_DATEI`) |
+| `limitless_meta_stats.json` | `js/ds-post-quellen.js:332` |
+| `online_tournament_top8_decks.csv` | `js/meta-analysis-hub.js:93`, `js/app-tier-meta.js:1722`, `js/app-meta-call.js:6208`, `js/app-archetype-card.js:24`, `js/ds-post-quellen.js:777` |
+| `online_tournament_winners.csv` | `js/app-meta-call.js:8030` |
+| `online_tournament_dated_cards.csv` | `js/app-meta-call.js:2008`, `js/current-meta-quickref.js:48/754`, `js/app-current-meta-analysis.js:1641` (via `loadCSV`) |
+| `current_meta_card_data.csv` | `js/tech-ideen.js:185`, `js/ds-post-quellen.js:879`, `js/app-cards-db.js:750` |
+| `labs_tournament_decks.csv` | `js/app-meta-call.js:6453`, `js/deck-builder-consistency.js:408`, `js/win-rate-konvention.js:120` |
+| `labs_tournament_matchups.csv` | `js/app-meta-call.js:7658` |
+| `player_continuity.csv` | `js/app-meta-call.js:6370` |
+| `tournament_decklists_per_player.csv` | `js/deck-builder-consistency.js:64` |
+| `tournament_cards_data_overview.csv` | `js/deck-builder-consistency.js:440` (nur Brücke `tournament_id` → `labs_tournament_id`) |
+| `format_window.json` | `js/app-meta-call.js:6053/6272`, `js/app-current-meta-analysis.js:61/1074`, `js/app-city-league.js:30`, `js/app-deck-builder.js:8535`, `js/app-profile-deck-builder.js:722`, `js/current-meta-quickref.js:171` |
+| `active_threats.json` | `js/app-anti-tech.js:218`, `js/app-current-meta-analysis.js:2704`, `js/app-deck-builder.js:9473` |
+| `card_capability_taxonomy/_patterns/_interactions.json` | `js/card-capability-engine.js:69–71`, `js/app-tech-lab.js:52/110/444`, `js/tech-ideen.js:75/191/500`, `js/app-anti-tech.js:98`, `js/app-deck-builder.js:4112` |
+| `ace_specs.json` | `js/app-core.js:3240`, `js/deck-builder-consistency.js:365`, `js/pokemon-loading-screen.js:25` |
+| `city_league_analysis.csv` | `js/app-city-league.js:574`, `js/app-cards-db.js:544/749`, `js/pokemon-loading-screen.js:17` |
+| `city_league_archetypes.csv` / `_comparison.csv` | `js/app-city-league.js:575/576`, `js/app-meta-call.js:7296`, `js/pokemon-loading-screen.js:18/20` |
+| `city_league_*_past*.csv` | `js/app-city-league.js:574–576/614`, `js/app-meta-call.js:7297` |
+| `data_stand.json` | `js/ds-datenstand.js:62` |
+| `deckempfehlung.json` | `js/ds-post-quellen.js:1110`, `js/app-deckempfehlung.js:49` (Basis) |
+| `datenluecken.json` | `js/app-admin.js:49/100/128` |
+| `pocket_tierlist.json` | `js/ds-pocket.js:52`, `js/ds-post-quellen.js:1029` |
+| `champions_*.json` | `js/app-side-quest*.js`, `js/champions-namen.js:40` |
+| `all_cards_merged.json`, `cards_chunk_*.json`, `cards_manifest.json` | `js/app-core.js:3107/2990/3034/3047/3080`, `js/app-profile-deck-builder.js:687/705` |
+| `online_share_history/manifest.json` + `<datum>.csv` | `js/app-meta-call.js:1831/2421/6324/6336` |
+| `offline-manifest.json`, `offline-images-manifest.json` | `js/offline-prefetch.js:61–63` |
+
+### 2.2 Ladeschlüssel, die erst zur Laufzeit auf eine Formatdatei aufgelöst werden
+
+Drei Familien. In allen dreien steht im Quelltext **ein Schlüssel**, geladen wird
+eine **andere, formatabhängige Datei**. Wer nur nach dem Dateinamen greppt,
+findet den echten Leser nicht.
+
+| Schlüssel im Code | aufgelöst durch | tatsächlich geladen (heute) | Datei:Zeile |
 |---|---|---|---|
-| `labs_tournament_decks.csv` · `win_pct` | 4.713 | **Matchpunkte** | max. Abweichung **0,005 pp** von `(3S+U)/(3n)`; gegen `S/(S+N+U)` bis **25,0 pp** |
-| `limitless_online_decks.csv` · `win_rate_numeric` | 136 | **mitUnentschieden** | 135 von 136 Zeilen < 0,05 pp; **1 Ausreißer**, max. 0,118 pp |
-| `limitless_online_decks_matchups.csv` · `win_rate` | 1.716 | **ohneUnentschieden** | **0 Abweichungen**, max. 0,005 pp |
+| `tournament_cards_data_cards.csv` | `data/tournament_cards_manifest.json` + `format_window.current_set`, Auswahl in `waehleAktuellenChunk()` | `data/tournament_cards_data_cards_TEF-PBL.csv` (879 Zeilen) | `js/app-core.js:2538–2564`, `:2665`, `js/app-cards-db.js:466–500`, `js/app-meta-call.js:1492` |
+| `labs_tournament_decks_<META>.csv` | `labs_tournament_decks_verzeichnis.json` + `oldest_legal_set`-`current_set` | `labs_tournament_decks_TEF-PBL.csv` (46 Zeilen) | `js/app-archetype-card.js:307–330`, `js/app-meta-call.js:1627`, `js/app-past-meta.js:1860` |
+| `labs_tournament_matchups_<META>.csv` | `labs_tournament_matchups_verzeichnis.json`, gleiche Schlüsselbildung | `labs_tournament_matchups_TEF-PBL.csv` (1.866 Zeilen) | `js/app-current-meta.js:53–75`, `js/app-meta-call.js:156` |
 
-Die Werte werden **nicht** im Haus gerechnet: `limitless_online_scraper.py:186–213`
-liest `share` und `win_rate` als Text aus der Limitless-Tabelle ab. Nur beim
-Zusammenlegen doppelt gelisteter Decks (`:245–260`) rechnet der Scraper die
-Quote aus der summierten Bilanz neu.
+**Leer ist eine gültige Antwort.** Passt kein Chunk auf `current_set`, gibt
+`waehleAktuellenChunk` `[]` zurück (`js/app-core.js:2549`) und die Turnierebene
+bleibt leer statt auf den nächstälteren — rotierten — Chunk zu fallen.
 
-### 3.3 Unentschieden
+**Zwei Trennzeichen.** Die Labs-Auszüge sind **kommagetrennt**, die
+Haus-Exporte **semikolongetrennt** (`js/app-archetype-card.js:300–306`,
+`js/app-current-meta.js:74–77`). Mit dem falschen Trenner zerfällt die Datei
+still zu Einfeldzeilen und alles fällt auf „kein Major" zurück.
 
-* Matchpunkte: ein Unentschieden zählt **1 statt 3** — bei Unentschieden liegt der Gleichstand deshalb **unter 50 %** (`js/win-rate-konvention.js:91–95`).
-* mitUnentschieden: Unentschieden stehen **im Nenner, nicht als halber Sieg**.
-* ohneUnentschieden: Unentschieden fallen **ganz heraus**.
-* Der Unterschied ist keine Feinheit: `js/app-archetype-card.js:68–73` beziffert **10,98 %** Unentschieden am Major gegen **1,26 %** online — auf derselben Skala kostet das die Major-Spalte rund fünf Punkte ohne jede Leistungsänderung.
+---
 
-### 3.4 Wo welche Konvention steht, und ab welcher Stichprobe
+## 3. Kennzahlen mit Formel
 
-| Anzeigestelle | Reiter | Gerechnet in | Konvention | Glättung | Mindest-Stichprobe |
+### 3.1 Win % — drei Konventionen, eine Bezeichnung
+
+Alle drei sind echt und in `js/win-rate-konvention.js` samt Belegdatei hinterlegt;
+`tests/unit/test-win-rate-konventionen-belegt.js` rechnet sie gegen die Dateien nach.
+
+| Konvention | Formel (Zitat) | Datei:Zeile | Quelldatei/Spalte | Nenner | Stichprobe heute | Zeitraum |
+|---|---|---|---|---|---|---|
+| **MATCHPUNKTE** = „Win %" | `return p > 0 ? ((3 * (s \|\| 0) + (u \|\| 0)) / (3 * p)) * 100 : NaN;` | `js/win-rate-konvention.js:139` | `labs_tournament_decks.csv` Spalte `win_pct`; ebenso `labs_tournament_matchups.csv` `my_deck_overall_win_pct` | `3 · (S+N+U)` | 4.713 Zeilen, Toleranz 0,0051, 4.713 Treffer (`:126–131`) | Turnierdaten 2024-09-14 … 2026-08-28 |
+| **MIT_UNENTSCHIEDEN** | `return p > 0 ? ((s \|\| 0) / p) * 100 : NaN;` | `js/win-rate-konvention.js:183` | `limitless_online_decks.csv` Spalte `win_rate_numeric` | `S+N+U` | 136 Zeilen, 135 Treffer, Ausnahme Wailord (`:170–179`) | Kumulativ, **kein Datum** |
+| **OHNE_UNENTSCHIEDEN** | `return e > 0 ? ((s \|\| 0) / e) * 100 : NaN;` | `js/win-rate-konvention.js:211` | `limitless_online_decks_matchups.csv` Spalte `win_rate` | `S+N` | 1.716 Zeilen, 1.716 Treffer (`:203–207`) | Kumulativ, **kein Datum** |
+
+**Nicht vergleichbar ohne Umrechnung.** Nachgezählt an den Dateien:
+online enden **2.322 von 180.414** Partien unentschieden (**1,29 %**,
+`limitless_online_decks.csv`), am Major **684 von 6.192** (**11,05 %**,
+`labs_tournament_matchups_TEF-PBL.csv`, `day_filter='overall'`). Nur
+OHNE_UNENTSCHIEDEN kürzt diesen Anteil heraus; `differenz()` in
+`js/win-rate-konvention.js` verweigert die Subtraktion über Konventionsgrenzen.
+Dieselben zwei Zahlen stehen maschinenlesbar in
+`js/app-meta-call.js:153–171` (`BELEGTE_FELDQUOTEN`) — beide stimmen mit der
+Nachzählung überein.
+
+**Angezeigt wird Win % an:**
+
+| Anzeige | Formel/Quelle | Datei:Zeile | Nenner | Datenfenster |
+|---|---|---|---|---|
+| Kachel „Total Win Rate Limitless Online Tournaments" (Deck Analysis Global) | Spalte `win_rate_numeric` unverändert | `js/app-current-meta-analysis.js:2216–2223`, Fußnote `:1739–1745` | `wins+losses+ties` derselben Zeile | **wirkt nicht** (Datei hat kein Datum) |
+| Kachel „Win Rate" der Archetyp-Karte, Online-Seite | `winRate: num(r.win_rate_numeric)` | `js/app-archetype-card.js:395` | dto. | **wirkt nicht** (`:904–935`) |
+| Kachel „Win Rate", Major-Seite | `e.winRate = e.partien > 0 ? (e.siege / e.partien) * 100 : null;` — **neu gerechnet**, ausdrücklich **nicht** `win_pct` | `js/app-archetype-card.js:359–362` | Σ wins+losses+ties aller Zeilen des Decks im Meta-Auszug | **wirkt nicht** |
+| Paarungsdetail „Win %" (Matchup-Ansicht) | Spalte `win_rate` (OHNE_UNENTSCHIEDEN) | `js/app-current-meta-analysis.js:4345` | `record` = S+N | wirkt nicht |
+| Past Meta, Kachel „Cumulative Win %" | Konvention MATCHPUNKTE, Hinweis aus `WK.hinweis('matchpunkte')` | `js/app-past-meta.js:2028–2029`, Bilanz `:1986–1995` | `3·(S+N+U)` über alle Zeilen des Decks | eigener Formatschlüssel, kein „Daten ab" |
+| Heatmap-Zelle / Archetyp-Karte-Paarung | geglättet: `return ((w + kk / 2) / nenner) * 100;` mit `nenner = w + l + kk`, `K = 20` | `js/matchup-glaettung.js:84–87`, `K` `:57` | `S+N+20` | wirkt nicht |
+
+### 3.2 Meta-Anteil
+
+**Zwei verschiedene Größen tragen fast denselben Namen.**
+
+| Anzeige | Formel (Zitat) | Datei:Zeile | Zähler | Nenner | Wert Dragapult heute |
 |---|---|---|---|---|---|
-| Win Rate auf der Deck-Kachel der Tierliste | `current-meta` (Startseite) | `js/app-tier-meta.js:69–75` (`adjWR`), Anzeige `:2380` | `mitUnentschieden` | Beta-Prior **k = 50** auf 50 %: `adjWR = (wins + 50·0,5)/(games + 50)·100` | wird **immer** gezeigt; unter `ROGUE_MIN_LISTEN = CONV_MIN_N = 20` (`js/app-tier-meta.js:2389`) als dünn markiert |
-| Heatmap-Zelle, Zeile „online" | `current-meta` | `js/app-current-meta.js:644–647` (`majorDuenn`) über `js/matchup-glaettung.js:82–89` | `ohneUnentschieden` | `quote = ((S + k/2)/(S+N+k))·100`, **k = 20** (`js/matchup-glaettung.js:59`) | unter **10** Matches kursiv (`js/app-current-meta.js:644`) |
-| Matchup-Tabelle der Archetyp-Karte | `current-meta` (Kartenansicht) | `js/app-archetype-card.js` | `ohneUnentschieden`, geglättet k = 20 | dito | `THIN_GAMES = 20` (`js/app-archetype-card.js:87`) markiert, blendet nicht aus |
-| Major-Win-Rate auf der Archetyp-Karte | `current-meta` | `js/app-archetype-card.js:56–66` | **`mitUnentschieden`, neu gerechnet aus `wins/losses/ties`** — `win_pct` der Labs-Datei wird **bewusst nicht gelesen** | keine | wird ab der ersten Partie gezeigt; unter `MAJOR_DUENN_PARTIEN = 100` (`js/app-archetype-card.js:118`) gedämpft |
-| „Cumulative Win %" | `past-meta` | `js/app-past-meta.js:1901`, Hinweis `:1926` | **`matchpunkte`** (`WK.hinweis('matchpunkte')`) | keine | — |
-| Labs-Beitrag zum Tier-Score | `current-meta` | `js/app-tier-meta.js:82–96` | `win_pct` = Matchpunkte | keine | **`ent.games >= 15`** (`js/app-tier-meta.js:86`), sonst `labsComp = 0` |
-| Matchup-Mischung im Meta Call | `meta-call` | `js/app-meta-call.js:81–89` | Day-2 0,45 / Day-1 0,35 / Online 0,20 | `matchup-glaettung.js` | — |
+| Tier-Liste / Deck-Analyse / Archetyp-Karte „Anteil" | `share: num(r.share_numeric)` | `js/app-archetype-card.js:394`; ebenso `js/app-current-meta-analysis.js:610` | Listen des Decks im Onlinefeld (`count`) | Feldgröße, die Limitless zugrunde legt — **steht nicht in der Datei**; Σ `share_numeric` = **96,19 %** (Rest = „Other", vom Scraper verworfen) | **7,62 %** (`count` 39.694 gesamt gelistet) |
+| Startseite „Meta-Anteil" (Kachel „Erfolgreichstes Deck") | `sharePct: (brought / totalBrought) * 100,` | `js/meta-analysis-hub.js:164`; Wortwahl `:520–523` | `total_brought` des Decks | **Σ `total_brought` über alle 121 Zeilen = 12.287 Antritte** | **9,77 %** |
+| Meta Call, Spalte „Online" | dto. aus derselben Datei | `js/app-meta-call.js:6238–6241` | `total_brought_weighted` | Σ `total_brought_weighted` = 7.501,5 | — |
+| Meta Call, Spalte „Final" | `finalShare : alloc[deck.name],` — Vorhersage + persönliche Überschreibungen + Junk-Regler | `js/app-meta-call.js:8944` | — | Summe = 100 % über Feld inkl. `_junk` (`:8963–8967`) | — |
+| Fenster-Anteil (14/15 Tage) | `zaehler_fenster = count(heute) - count(vor N Tagen)` | `scripts/build_online_fenster.py:52` (Kopf), `FENSTER_TAGE = 14` `:88` | Differenz zweier Kumulativstände | Decks im Fenster = **10.330** | — |
 
-### 3.5 Welche Turniere einfließen, welches Zeitfenster
+Die Feldgröße hinter `share_numeric` wird bei Bedarf aus den Anteilen selbst
+eingegrenzt: `N ∈ [count/(s+0,005) , count/(s−0,005)]`, Mehrheitsschnitt über
+alle Zeilen, Rückgabe 0 bei mehr als einem Fünftel Widerspruch —
+`js/app-utils.js:1629–1673` (`feldGroesseAusAnteilen`).
 
-* **Online-Win-Rate**: alles, was `play.limitlesstcg.com/decks` unter
-  `game=PTCG&format=STANDARD&rotation=2026&set=PBL` (`config/scraper_settings.json`,
-  Abschnitt `limitless_online`) kumulativ seit Formatbeginn führt — heute
-  569 Turniere, 41.193 Spieler, 93.297 Matches (`data/limitless_meta_stats.json`).
-  **Kein gleitendes Fenster.**
-* **Major-Win-Rate**: `labs_tournament_decks.csv`, gefiltert auf den
-  Meta-Schlüssel des laufenden Formats (`TEF-PBL`). Das sind heute
-  **46 Zeilen aus genau einem Turnier** (Worlds 2026, 28.08.). Die
-  Datei insgesamt trägt 4.713 Zeilen über alle Formate.
-* **Matchup-Win-Rate**: dieselbe kumulative Online-Erhebung, je Paarung.
-  Median 16 Partien; 36 % der Paarungen unter 10 Partien
-  (`js/matchup-glaettung.js:5–14`).
+Fensterübernahme im Meta Call ist an fünf Wächter gebunden:
+`FENSTER_MAX_ALTER_TAGE = 10`, `FENSTER_MIN_DECKUNG = 0.8`,
+`FENSTER_MIN_DECKS = 1500`, `FENSTER_MAX_TAGE = 21`, `FENSTER_MIN_TAGE = 3`
+(`js/app-meta-call.js:192–201`). Schlägt einer an, rechnet die Seite mit dem
+Kumulativstand.
 
----
-
-<a id="4-meta-anteil"></a>
-## 4. Kennzahl **Meta-Anteil**
-
-**Es gibt vier verschiedene Nenner für „Anteil", und sie messen Verschiedenes.**
-Das ist der Kern dieses Abschnitts.
-
-### 4.1 Online-Anteil, kumulativ (`share_numeric`)
-
-| Feld | Inhalt |
-|---|---|
-| Name in der Oberfläche | „Anteil", „Share online" |
-| Originalquelle | `play.limitlesstcg.com/decks`, Spalte `Share` — **von Limitless gerechnet, nicht von uns** |
-| Scraper | `limitless_online_scraper.py:186` (`share = texts[name_idx + 2]`), `:207–213` Zahlwandlung |
-| Ablauf | `weekly-full-update.yml` |
-| Ablage | `limitless_online_decks.csv`, Spalten `count;share;share_numeric` |
-| Berechnung | **Nenner = Zahl der Decklisten**, die Limitless im Zeitraum gezählt hat, **einschließlich der Zeile „Other"**, die der Scraper wegwirft (`limitless_online_scraper.py:166`). Heute gemessen: Summe `share_numeric` = **96,19 %**, Summe `count` = **39.694** → implizites Feld ≈ **41.266 Listen**, also ~1.572 Listen „Other". |
-| Anzeige | Kachel und Tabelle in `js/app-tier-meta.js:1251`, Archetyp-Karte `js/app-archetype-card.js:345` |
-
-**Der Donut rechnet mit einem rekonstruierten Nenner.**
-`js/app-current-meta-analysis.js:600–615` ruft
-`window.feldGroesseAusAnteilen()` (`js/app-utils.js:1629–1671`) auf. Die
-Funktion schätzt die wahre Feldgröße aus der Rundung: je Zeile das Intervall
-`[ c/((s+0,005)/100) , c/((s-0,005)/100) ]`, dann der Punkt mit der größten
-Überdeckung, akzeptiert nur wenn ≥ 80 % der Intervalle überlappen und die
-Anteilssumme zwischen 50 % und 99,5 % liegt. **Ohne** diesen Schritt zeigte
-der Donut für Mega Excadrill 8,1 %, die Tabelle daneben 7,75 %
-(`js/app-current-meta-analysis.js:602–605`).
-
-### 4.2 Online-Anteil im 14/15-Tage-Fenster (`share_fenster`)
-
-| Feld | Inhalt |
-|---|---|
-| Name in der Oberfläche | „Fenster", Trend-Spalte im Meta Call |
-| Originalquelle | dieselbe Tabelle, aber **als Differenz zweier Tagesstände** |
-| Scraper | keiner — `scripts/build_online_fenster.py:145 baue()` liest `data/online_share_history/YYYY-MM-DD.csv` (68 Stände seit 29.04.2026) |
-| Ablauf | `weekly-full-update.yml:383` (`--apply`) |
-| Ablage | `limitless_online_fenster.csv` + `limitless_online_fenster_meta.json` |
-| Berechnung | `count_fenster = count(heute) − count(vor N Tagen)` (`build_online_fenster.py:340`), dann `share_fenster = count_fenster / Σ count_fenster · 100` (`:423`); daneben `share_kumulativ = count_kumulativ / Σ count(heute) · 100` (`:395`); `trend_fenster = share_fenster − share_vorfenster` (`:483`) |
-| Anzeige | `js/app-meta-call.js:5940–5968` |
-| Stichprobe | heute Fenster **2026-08-22 … 2026-09-06 (15 Tage), 10.330 Decks** gegen 39.694 kumulativ. Summe `share_fenster` = 100,06 % (Rundung, `build_online_fenster.py:430–438`) |
-
-**Der Nenner ist hier ein anderer als in 4.1**: `share_fenster` normiert auf die
-Summe der *Fensterzuwächse*, `share_kumulativ` auf die Summe der *gelisteten*
-Stände — beide ohne „Other".
-
-### 4.3 Anteil bei Präsenzturnieren (`share_pct`)
-
-| Feld | Inhalt |
-|---|---|
-| Name in der Oberfläche | „Anteil Major", „Field Share" |
-| Originalquelle | `labs.limitlesstcg.com` Standings |
-| Scraper | `labs_tournament_scraper.py:1981` |
-| Ablage | `labs_tournament_decks.csv`: `player_count, share_pct, day1_players, day1_share_pct, day2_players, day2_share_pct` |
-| Berechnung | **Nenner = Zahl der SPIELER** eines Turniers (`total_players`), nicht der Listen. `share_pct = player_count / total_players · 100` — der Scraper übernimmt die Spalte von Labs. |
-| Anzeige | `js/app-archetype-card.js` (Kachel „Anteil Major"), `js/app-meta-call.js:6648`, `:6920` |
-
-### 4.4 Antritte in Online-Turnieren (`total_brought`)
-
-| Feld | Inhalt |
-|---|---|
-| Name in der Oberfläche | „Antritte", „gebracht" |
-| Scraper | `online_tournament_scraper.py:390–436` |
-| Berechnung | **Zwei Spaltenpaare in derselben Datei.** `total_brought_weighted` zählt jedes Turnier mit `_tournament_weight` (`:361–370`): ≤ 7 Tage → **1,0**, älter oder ohne Datum → **0,5**. `total_brought` zählt schlicht Köpfe. Heute gemessen: gezählt 12.287 Antritte / 754 Top-8; gewichtet 7.501,5 / 464,5. |
-| Tor | `js/app-utils.js:1530–1552 gezaehlteZeilen()` — **alles oder nichts, je Zeile**: nur wenn *jede* Zeile ganzzahlige `total_brought`/`top8_count` mit `top8 ≤ brought` trägt, schalten alle Ansichten auf die gezählten Spalten; sonst alle auf die gewichteten. |
-
-### 4.5 Prognostizierter Anteil („Prognose %", „Final %")
-
-| Feld | Inhalt |
-|---|---|
-| Name in der Oberfläche | „Prognose", „Final %" im Meta Call |
-| Reiter | `meta-call` |
-| Datenbasis | `_majorSharesByDeck` aus `labs_tournament_decks.csv` (Day-1-Anteil, Day-1-Win-%, Day-1-Spieler) |
-| Berechnung | `js/app-meta-call.js:3559 _prognoseKern()`, drei Bausteine: |
+### 3.3 Kartenabdeckung (Kartendatenbank, Plakette „x % Coverage")
 
 ```
-1. Rezenzgewichteter Anker  (js/app-meta-call.js:3565–3573)
-     g(rang) = (1 − λ)^rang           λ = PROGNOSE_LAMBDA = 0,40   (:3530)
-     basis(d) = Σ_t g(rang_t) · anteil(d,t)  /  Σ_t g(rang_t)
-   Gewichtet nach TURNIERRANG, nicht nach Datum.
-
-2. Leistungsfaktor  (js/app-meta-call.js:3577–3600)
-     eigen(d)   = Σ (winrate · koepfe) / Σ koepfe   über die letzten
-                  PROGNOSE_NT = 2 Turniere          (:3536)
-     feldMittel = dasselbe über alle Decks
-     faktor(d)  = max(0,85 , 1 + 0,04 · (eigen − feldMittel))
-                  PROGNOSE_DELTA = 0,04, PROGNOSE_UNTEN = 0,85  (:3534/:3535)
-
-3. Mittelwertrueckkehr  (js/app-meta-call.js:3602)
-     aus(d) = (basis(d) · faktor(d)) ^ 0,92          γ = 0,92     (:3531)
+prozent: (zaehler / nenner) * 100
 ```
+`js/app-cards-db.js:3925`
 
-Normiert wird erst beim Aufrufer; die Feldliste entsteht in
-`js/app-meta-call.js:8631–8641` (`finalShare = alloc[deck.name]`), die
-Spielerzahl **folgt aus dem Anteil** (`:8639`, ausdrücklich, weil zwei
-Rechenwege in einer Zeile 469 statt 468 Spieler ergaben — `:8681–8687`).
+* **Zähler** `zaehler` — Σ `deck_count` (ersatzweise `deck_inclusion_count`) über
+  die gefilterten Archetypen, **je Archetyp gedeckelt auf die Archetypgröße**
+  (`js/app-cards-db.js:3907–3913`); wird gedeckelt, trägt die Plakette „≤".
+* **Nenner** `nenner` — Σ `total_decks_in_archetype` **einer einzigen Erhebung**
+  (`js/app-cards-db.js:3877–3879`).
+* **Erhebung** = Quelle + rohes Meta-Label (`js/app-cards-db.js:841`). Heute
+  fallen drei auf denselben Formatschlüssel TEF-PBL, nachgezählt:
 
-**Rückfall**, wenn der Kern ein Deck nicht kennt (`js/app-meta-call.js:4227–4232`,
-Modus B ohne City-League-Schalter):
+  | Erhebung | Archetypen | Decks |
+  |---|---|---|
+  | `Tournament / TEF-PBL` (`tournament_cards_data_cards_TEF-PBL.csv`) | 27 | **143** |
+  | `Current Meta / Meta Live` (`current_meta_card_data.csv`) | 60 | **1.187** |
+  | `Current Meta / Meta Play!` (dto.) | 34 | **253** |
+  | `City League / …` (`city_league_analysis.csv`) | **0** | **0** — Datei leer |
 
-```
-predicted = 0,40 · labsPct · labsT8Boost
-          + 0,20 · broughtPct
-          + 0,15 · ladderPctDamped
-          + 0,15 · postMajorSignal
-          + 0,10 · weeklySignal
-          + metaDynBoostPp
-```
+* Gewählt wird die Erhebung mit dem **größten Nenner**
+  (`js/app-cards-db.js:3938–3941`); abweichende weitere Erhebungen werden im
+  `title` beim Namen genannt (`:3948–3956`).
+* **Zeitraum:** was in der gewählten Erhebung steht. `current_meta_card_data.csv`
+  führt kein Datum; Turnierzeilen werden gegen das Set-Erscheinungsdatum
+  gefiltert (`js/app-cards-db.js:3888–3893`).
+* **Filter, die wirken:** Meta, Archetyp, Haupt-Pokémon
+  (`js/app-cards-db.js:3792–3844`). **Wirkt nicht:** das Datenfenster
+  „Daten ab" der Deck-Analyse (es lebt in `app-current-meta-analysis.js`).
 
-Mit City-League-Schaltern verschieben sich die Gewichte auf 0,32/0,35
-(`js/app-meta-call.js:4197 / :4208 / :4218`); Modus A ohne Labs auf
-0,20/0,45/0,10/0,10/0,15 (`:4249 ff.`).
-Vorher greift Phase β (`js/app-meta-call.js:3906–3908`):
-`ladderPct = majorMedian · 0,70 + rawLadderPct · 0,30`, wenn ein Major-Median
-vorliegt.
-
-**Gemessene Güte** (`js/app-meta-call.js:3486–3529`, Strecke
-`tools/prognose_strecke.py`, 54 Turniere): Kern **1,256 pp** mittlerer
-absoluter Fehler; Grundlinie „Mittel der letzten zwei Turniere" 1,376 pp;
-der frühere 46-stufige Motor 1,714 pp; Orakel-Untergrenze 1,020 pp.
-
----
-
-<a id="5-max-consistency"></a>
-## 5. Kennzahl **Max Consistency**
-
-| Feld | Inhalt |
-|---|---|
-| **Name in der Oberfläche** | „Max Consistency" (`js/i18n.js:692`, `:3285`, Schlüssel `cl.genConsistency`), im Warum-Dialog „Consistency Generate" |
-| **Originalquelle** | `limitlesstcg.com/tournaments/<id>` + `/decks/list/<id>` — die **veröffentlichten Decklisten von Präsenzturnieren** |
-| **Scraper** | `backend/scrapers/per_decklist_scraper.py:600` (Karten aus der Listenseite, Archetypname aus `.decklist-title`, `:245–264`) |
-| **Ablauf** | `weekly-full-update.yml:462` (Di+Fr) und `per-decklist-scrape.yml` (Di 12:00 UTC) |
-| **Ablage** | `data/tournament_decklists_per_player.csv` — 21 Spalten, u. a. `tournament_id, tournament_date, meta, place, player_name, deck_archetype, wins, losses, ties, card_name, set_code, set_number, count, is_ace_spec`. **30.459 Zeilen.** Turniergrößen kommen aus `labs_tournament_decks.csv` (`total_players`, `js/deck-builder-consistency.js:305–318`) |
-| **Anzeige** | Knopf „Max Consistency" in den Deck-Buildern der Reiter `current-analysis`, `city-league-analysis`, `past-meta`; gezeichnet von `js/app-deck-builder.js` (Warum-Dialog `:7585 ff.`) |
-
-### 5.1 Der Konsistenzbegriff — es ist eine **gewichtete Häufigkeit**, kein Modell
-
-Kein Wahrscheinlichkeitsmodell, keine Simulation. Die Zahl ist der
-**erfolgsgewichtete Anteil der Listen, die eine Karte spielen**:
+### 3.4 Usage Share (Karte innerhalb eines Archetyps)
 
 ```
-js/deck-builder-consistency.js:645–651
-
-  weightedShare(Karte)    = Σ w(Liste, die Karte spielt) / Σ w(alle Listen)
-  weightedAvgCount(Karte) = Σ (w · Anzahl im Deck) / Σ w(Listen mit Karte)
-  topCutFreq(Karte)       = Σ w(Top-8-Listen mit Karte) / Σ w(Top-8-Listen)
+: (totalDecksInArchetype > 0 && decksWithCard > 0 ? (decksWithCard / totalDecksInArchetype) * 100 : …
 ```
+`js/app-current-meta-analysis.js:5191–5193`
 
-Das Listengewicht (`js/deck-builder-consistency.js:246–251`):
+* Bevorzugt gelesen wird die fertige Spalte `percentage_in_archetype`; nur wenn
+  die fehlt, wird selbst gerechnet — beide Wege ergeben denselben Bruch.
+* **Zähler** `deck_count` / `deck_inclusion_count`, **Nenner**
+  `total_decks_in_archetype` — beide stehen sichtbar in Klammern hinter der
+  Quote (`js/app-current-meta-analysis.js:5245`).
+* **Quelle** `data/current_meta_card_data.csv`; bei Filter „Major" stattdessen
+  der aufgelöste Turnier-Chunk (`js/app-current-meta-analysis.js:1912–1932`).
+* **Zeitraum:** Fußnote `js/app-current-meta-analysis.js:5222–5227` — „die
+  Turnierzeilen, die der aktive Turnierfilter und das Datenfenster ‚Daten ab'
+  übrig lassen". Das gilt für den Major-Pfad und für den datierten
+  Ersatzaggregat-Pfad; für den unveränderten `current_meta_card_data.csv`-Pfad
+  wirkt das Fenster **nicht** (siehe §6).
+* Dieselbe Größe im Japan-Reiter: `js/app-city-league.js:3783` — gleiche Formel,
+  **ohne** Quellen- und Nennerfußnote, auf einer **leeren** Datei.
+
+### 3.5 Max Consistency (Deck-Bau aus Turnierlisten)
+
+Quelle: `data/tournament_decklists_per_player.csv` (`DATA_URL`,
+`js/deck-builder-consistency.js:64`), Feldgrößen aus
+`data/labs_tournament_decks.csv` Spalte `total_players`
+(`:408–419`), Brücke `tournament_id` → `labs_tournament_id` aus
+`data/tournament_cards_data_overview.csv` (`:440–457`).
+
+**Listengewicht**
 
 ```
-  w(Liste) = Platzgewicht(platz, feldgroesse) · Groessengewicht(feldgroesse)
+return pl * sz;
 ```
+`js/deck-builder-consistency.js:324`, mit
 
-**Platzgewicht** (`:215–235`) ist das **Maximum aus absoluter und
-feldrelativer Skala** — nie ein Ersatz, damit ein Gewicht nur steigen kann:
+```
+const pl = _placementWeight(list.place, feld);
+const sz = _sizeWeight(feld);
+```
+`:322–323`
 
-| absolut (`:62–68`) | | feldrelativ (`:135–142`) | |
+**Platzgewicht** — Maximum aus absoluter und feldrelativer Skala:
+
+```
+return Math.max(absolut, relativ);
+```
+`js/deck-builder-consistency.js:308`
+
+* absolute Bänder: Platz ≤ 4 → 1,0 · ≤ 8 → 0,7 · ≤ 16 → 0,5 · ≤ 32 → 0,3 ·
+  sonst 0,1 (`:84–90`)
+* Perzentilbänder: q ≤ 0,01 → 1,0 · ≤ 0,02 → 0,8 · ≤ 0,05 → 0,6 · ≤ 0,10 → 0,4 ·
+  ≤ 0,25 → 0,2 · sonst 0,1 (`:179–186`), mit `const q = p / feld;` (`:303`)
+* Ohne Feldgröße **oder** ohne gültigen Platz gilt nur das absolute Band
+  (`:302`) — kein geratenes Quantil.
+
+**Größengewicht**
+
+```
+return Math.min(1.0, Math.log(n) / Math.log(SIZE_WEIGHT_REFERENCE));
+```
+`js/deck-builder-consistency.js:314`, `SIZE_WEIGHT_REFERENCE = 2000` (`:207`),
+`SIZE_WEIGHT_FLOOR = 0.5` bei `n <= 1` (`:208`, `:313`).
+
+**Kartenkennzahlen**
+
+```
+const weightedShare = totalW > 0 ? a.shareNumerator / totalW : 0;
+const weightedAvgCount = a.shareNumerator > 0 ? a.countNumerator / a.shareNumerator : 0;
+const topCutFreq = topCutWeight > 0 ? a.topCutWeight / topCutWeight : 0;
+```
+`js/deck-builder-consistency.js:750–756`
+
+* **Nenner** `weightedShare`: Summe **aller** Listengewichte des Archetyps.
+* **Nenner** `weightedAvgCount`: Gewichtssumme nur der Listen **mit** der Karte.
+* **Nenner** `topCutFreq`: Gewichtssumme der Listen mit `place ≤ 8` —
+  ausdrücklich **innerhalb** des Tag-2-Cut, nicht „wie oft die Karte den Cut
+  erreicht" (`:631–636`).
+* Mehrfachdrucke werden **je Liste** zusammengefasst, bevor über Listen
+  aggregiert wird (`:660–668`) — sonst zählte eine Liste doppelt.
+
+**Zeitraum / Stichprobe.** `opts.minDate` = `format_window.in_person_legal_date`
+= **2026-07-31** (`js/app-deck-builder.js:7940`), Filter
+`js/deck-builder-consistency.js:1512–1519`. Damit bleiben von 1.201 Listen
+**143** übrig (nur Worlds SF), verteilt auf 27 Archetypen; Mega Excadrill = 8.
+Unter `MIN_WEIGHTED_LISTS = 3` (`:227`) verweigert der Bau.
+
+### 3.6 Tech-Cut-Empfehlung
+
+Drei Bausteine, drei Quellen.
+
+**A · Bedrohungslage** (`data/active_threats.json`)
+
+```
+weighted_share += share * ms
+```
+`backend/tools/build_threat_intel.py:492`, mit `share` = **Maximum** der
+`share_in_archetype` je Archetyp (`:411–415`, kein Doppelzählen) und `ms` =
+Meta-Anteil dieses Archetyps aus `limitless_online_decks.csv`
+Spalte `share_numeric` (`:297–314`, Spalte gelesen `:309`).
+
+* Schwellen: `META_SHARE_FLOOR = 0.005` (`:114`), `INCLUSION_FLOOR = 0.25`
+  (`:119`), `CATEGORY_FLOOR = 0.02` (`:123`); Kategorien unter dem
+  Kategorie-Boden fallen raus (`:494`).
+* Nur Zeilen mit `meta == "Meta Live"` gehen ein (`:326`) — 3.330 von 4.484.
+* Konter werden auf formatlegale Sets beschränkt (`:422–426`).
+* **Zeitraum:** `generated_at` 2026-09-06T16:33:33Z, `format_label` TEF-PBL.
+
+**B · Tech-Audit im Bauer** — liest `active_threats.json` und stellt Konterkarten
+in die Tech-Slots (`js/app-deck-builder.js:9473–9566`).
+
+**C · Tech-Ideen** — Ableitung aus Kartentext:
+Quelle `data/card_capability_interactions.json` (`js/tech-ideen.js:75`),
+**Version 0.1 vom 15.05.2026 mit genau 5 Paarungen**. Kandidatenkreis nur die im
+Format gespielten Karten aus `current_meta_card_data.csv` (`:185`).
+Schwellen: `SCHLECHT_AB = 47.0` (`js/tech-ideen.js:84`), `MIN_PARTIEN = 30`
+(`:90`), `PRO_GEGNER = 3` (`:79`). Vorschläge tragen **bewusst keine** Anteils-,
+Platzierungs- oder Siegquote (`:33–36`).
+
+### 3.7 Tier-Einordnung (Current Meta)
+
+```
+score: shareComp + wrComp + labsComp,
+```
+`js/app-tier-meta.js:134`, zusammengesetzt aus
+
+```
+const adjWR = games > 0 ? (wins + TIER_SCORE.PRIOR_GAMES * 0.5) / (games + TIER_SCORE.PRIOR_GAMES) * 100 : 50;
+const shareComp = Math.min(share, TIER_SCORE.ANTEIL_DECKEL) * TIER_SCORE.ANTEIL_GEWICHT;
+const wrComp = Math.max(0, Math.min(adjWR - 50, TIER_SCORE.WR_DECKEL)) * TIER_SCORE.WR_GEWICHT;
+```
+`js/app-tier-meta.js:108–113` und, sobald eine Labs-Datei geladen ist,
+
+```
+const labsWRComp = Math.max(0, Math.min((ent.winPct || 0) - 50, TIER_SCORE.LABS_WR_DECKEL)) * TIER_SCORE.LABS_WR_GEWICHT;
+const day2Comp = Math.max(0, Math.min(ent.day2Conv || 0, TIER_SCORE.TAG2_DECKEL)) * TIER_SCORE.TAG2_GEWICHT;
+```
+`js/app-tier-meta.js:124–132`
+
+Alle Stellschrauben stehen **einmal**, in `Object.freeze(TIER_SCORE)`
+(`js/app-tier-meta.js:87–100`): `PRIOR_GAMES 50`, `ANTEIL_DECKEL 15`/
+`ANTEIL_GEWICHT 0.6`, `WR_DECKEL 10`/`WR_GEWICHT 0.8`, `LABS_MIN_PARTIEN 15`,
+`LABS_WR_DECKEL 12`/`LABS_WR_GEWICHT 1.5`, `TAG2_DECKEL 0.4`/`TAG2_GEWICHT 8`.
+
+* **Zähler/Nenner** `adjWR`: `wins = games · rawWR/100` mit `games = new_count`
+  (Listen), `rawWR = deck.winrate` (= `win_rate_numeric`, Konvention
+  MIT_UNENTSCHIEDEN) — der Nenner ist also **Listen**, nicht Partien
+  (`js/app-tier-meta.js:103–109`). Das ist eine Näherung: die Bayes-Glättung
+  zieht mit 50 Pseudo-**Listen**, nicht mit 50 Pseudo-Partien.
+* **Einteilung** in Tier 1/2/3: Rangfolge nach `score` (`:1617–1618`), dann
+  Mengendeckel + Qualitätstor `T1_MIN_WR = 49.0` auf `sc.adjWR` **oder**
+  `labsWR` (`:1640`, `:1662–1666`).
+* **Zeitraum:** Onlineteil kumulativ ohne Datum; Labsteil = der
+  aufgelöste Meta-Auszug (heute TEF-PBL, 46 Zeilen, 1 Turnier vom 28.08.2026).
+* Die **City-League-Tier-Liste** wird anders gebildet: rein nach Rangplatz,
+  `idx <= 2` → Tier 1, `<= 9` → Tier 2, `<= 19` → Tier 3
+  (`js/app-tier-meta.js:962–967`) — heute auf **0 Zeilen**.
+
+### 3.8 Day-2-Chance (Meta Call, Markow-Kette)
+
+```
+let day2Prob = 0;
+for (let pt = day2Points; pt <= maxPts; pt++) day2Prob += dp[pt];
+```
+`js/app-meta-call.js:9128–9129`
+
+* **Zustandsraum:** Punkte 0 … `rounds·3`; je Runde wird über das ganze Feld
+  gefaltet: `newDp[pts+3] += p·share·m.pWin`, `newDp[pts+1] += p·share·m.pTie`,
+  `newDp[pts] += p·share·m.pLoss` (`:9121–9124`).
+* **Nenner:** `share = deck.finalShare / 100` (`:9112`) — die Summe der
+  `finalShare` über das Feld inkl. `_junk` ist 100 %.
+* **Schwelle:** `day2Points` je Turniertyp — Regional/IC/Worlds 16 Punkte bei
+  8 Runden, Challenge 13 bei 5, Cup 12 bei 5 (`js/app-meta-call.js:1070–1074`).
+* **Unentschieden:** jede Paarung wird vor der Kette auf die **gemessene
+  Präsenzquote** umgestellt (`:9095–9100`, Umrechnung `:9067–9074`) — aber nur,
+  wenn `uq.gemessen` wahr ist; sonst bleibt sie unverändert.
+* **Spiegel:** fest `{ pWin: 0.45, pTie: 0.10, pLoss: 0.45 }` (`:9118`).
+* **Stichprobe:** Präsenz-Remisquote heute 684/6.192 = 11,05 % aus
+  `labs_tournament_matchups_TEF-PBL.csv`.
+* Für die Empfehlungsliste wird `day2Prob` zusätzlich mit der gemessenen
+  Day-2-Quote verblendet (`:9368–9388`) und mit einem d2WR-Faktor skaliert
+  (`:9314`); Anzeigewert ist dann `_rang` (`:9454`), der Simulationswert steht
+  daneben als `simDay2Prob` (`:9456`).
+
+### 3.9 Matchup gegen Top 20
+
+```
+const _wr = siege / partien * 100;
+```
+`js/app-current-meta-analysis.js:1806`, gefüllt aus
+
+```
+partien += games;
+siege += (games * winRate / 100);
+```
+`js/app-current-meta-analysis.js:1793–1794`
+
+* **Zähler** Σ `total_games · win_rate/100` der Paarungen gegen die Ränge 1–20.
+* **Nenner** Σ `total_games` derselben Paarungen — steht als Zahl in der Fußnote
+  (`:1848`).
+* **Auswahl der Top 20:** `d.rank <= 20` aus `limitless_online_decks.csv`
+  (`js/app-current-meta-analysis.js:1773–1775`).
+* **Der Spiegel zählt mit** und wird in der Fußnote beziffert (`:1803`,
+  `:1847–1851`).
+* **Roh, nicht geglättet.** Hier wird `m.win_rate` direkt gewichtet; die Zellen
+  darunter zeigen den mit `K = 20` geglätteten Wert (§4.5).
+* **Zeitraum:** Gesamtstand des letzten Scraper-Laufs, „nicht nach Datum
+  eingegrenzt" (`:1861`). Datenfenster wirkt nicht.
+
+### 3.10 Top-8-Quote
+
+Ein Tor, eine Funktion, fünf Ansichten.
+
+```
+const brauchbar = (r) => ganzeZahl(r.total_brought) && ganzeZahl(r.top8_count)
+    && num(r.total_brought) > 0
+    && num(r.top8_count) <= num(r.total_brought);
+const hatRoh = !!rows && rows.length > 0 && rows.every(brauchbar);
+```
+`js/app-utils.js:1533–1537` — alles oder nichts, **je Zeile**.
+
+```
+const expected = totalBrought > 0 ? totalTop8 / totalBrought : 0;
+const smoothed = (top8 + CONV_PRIOR * expected) / (brought + CONV_PRIOR);
+rawPct: ((top8 / brought) / expected - 1) * 100,
+perfPct: (smoothed / expected - 1) * 100,
+```
+`js/app-utils.js:1558`, `:1566`, `:1570–1571`; `CONV_PRIOR = 50`,
+`CONV_THIN_N = 50`, `CONV_MIN_N = 20` (`:1498–1500`).
+
+* **Feldschnitt `expected`** heute: gezählt **754 / 12.287 = 6,14 %**,
+  gewichtet **464,5 / 7.501,5 = 6,19 %**.
+* **Angezeigte Quote je Deck** = `top8 / brought` derselben Zeile:
+  `js/meta-analysis-hub.js:178`, `js/app-tier-meta.js:1763–1767` (`quoteAus`),
+  `js/app-archetype-card.js:805`, `js/app-meta-call.js:6246–6247`.
+* **Gewichtung in der Datei:** `recent_days_high_weight: 7`,
+  `recent_weight: 1.0`, `older_weight: 0.5`
+  (`config/scraper_settings.json`, Abschnitt `online_tournament_scraper`).
+* **Zeitraum:** kumulativ über alle erfassten Onlineturniere; nur
+  `last_seen_date` je Deck (2026-08-10 … 2026-09-06). Datenfenster wirkt nicht.
+
+### 3.11 Day-2-Quote (Präsenz)
+
+```
+e.day2Quote = e.day1 > 0 ? (e.day2 / e.day1) * 100 : null;
+```
+`js/app-archetype-card.js:364`
+
+* **Zähler** Σ `day2_players`, **Nenner** Σ `day1_players` über alle Zeilen des
+  Decks im Meta-Auszug `labs_tournament_decks_TEF-PBL.csv`.
+* **Schwelle:** unter `DAY2_MIN_ANTRITTE = 5` Tag-1-Antritten wird keine Quote
+  gezeigt (`js/app-archetype-card.js:131`, Prüfung `:868`).
+* **Feldvergleich:** `day2Quote: day1 > 0 ? (day2 / day1) * 100 : null` über
+  alle Decks (`js/app-archetype-card.js:602`).
+* **Zeitraum:** ausgewiesen aus den geladenen Zeilen selbst
+  (`js/app-archetype-card.js:936–962`) — heute 1 Turnier vom 28.08.2026.
+* **Zweiter Rechenweg** im Tier-Panel: `const day2Conv = e.day1 > 0 ? e.day2 / e.day1 : 0;`
+  (`js/app-tier-meta.js:370`) — dieselbe Formel, eigener Aggregationslauf.
+* **Dritter Weg** im Prognosemotor: die **fertige Spalte** `day1_to_day2_conv`,
+  aktualitätsgewichtet gemittelt und erst ab `day1_players >= 10`
+  (`js/app-meta-call.js:7145–7160`); ebenso `scripts/build_deckempfehlung.py:196`.
+
+### 3.12 EV-Rechner: Abdeckung des Metas
+
+```
+abdeckung: feldSumme > 0 ? (abgedeckt / feldSumme) * 100 : 0,
+gerechnet: feldSumme > 0 ? (gerechnet / feldSumme) * 100 : 0,
+```
+`js/ds-ev-rechner.js:233–234`
+
+* **Nenner** `feldSumme` = Summe **aller** Feldanteile, auch bei den Modi
+  „gleich" und „top8" (`:208–211`) — sonst behauptete die Zahl eine
+  Vollständigkeit, die nur aus der eigenen Auswahl stammt.
+* Beide Zahlen stehen nebeneinander, sobald sie um ≥ 1 pp auseinanderliegen
+  (`:280`).
+* Vorbehaltsmarke bei `EV_MIN_PARTIEN = 30` oder `EV_MIN_ABDECKUNG = 25`
+  (`:293–299`).
+
+### 3.13 Weitere gezeigte Größen (Kurzform)
+
+| Kennzahl | Formel | Datei:Zeile | Nenner |
 |---|---|---|---|
-| Platz ≤ 4 | 1,0 | Quantil ≤ 0,01 | 1,0 |
-| ≤ 8 | 0,7 | ≤ 0,02 | 0,8 |
-| ≤ 16 | 0,5 | ≤ 0,05 | 0,6 |
-| ≤ 32 | 0,3 | ≤ 0,10 | 0,4 |
-| sonst | 0,1 | ≤ 0,25 | 0,2 |
-| | | sonst | 0,1 |
-
-Ist die Feldgröße 0 **oder** der Platz ungültig, bleibt es beim absoluten Band
-(`:229–232`) — ein Quantil aus einem geratenen Zähler wäre eine erfundene Zahl.
-
-**Größengewicht** (`:237–241`): `min(1,0 ; ln(n)/ln(2000))`, Boden **0,5** für
-unbekannte Feldgröße (`SIZE_WEIGHT_FLOOR`, `:146`).
-
-### 5.2 Welche Listen einfließen
-
-* **Turniere:** alles, was in `tournament_decklists_per_player.csv` steht.
-  Heute sind das **genau drei**: Worlds 2026 (0071, 28.08., TEF-PBL, 3.699 Zeilen),
-  NAIC 2026 (0070, 10.06., TEF-CRI, 16.960), Special Event Turin (0069, 06.06.,
-  TEF-CRI, 9.800).
-* **Platzierungen:** alle veröffentlichten, nicht nur der Cut. Die Turniere
-  veröffentlichen rund 18–19 % ihres Feldes (`js/deck-builder-consistency.js:79–85`:
-  Worlds 143 von 774, NAIC 675 von 3.743, Turin 383 von 2.032).
-* **Zeitraum / Formattor:** `opts.minDate` aus
-  `format_window.json:in_person_legal_date` = **2026-07-31**
-  (`js/app-deck-builder.js:7423–7427`, Filter in
-  `js/deck-builder-consistency.js:1357–1385`). Zeilen ohne ISO-Datum werden
-  **behalten**, nicht verworfen (`:1363`).
-  Das Tor gilt für `currentMeta` **und** `cityLeague`, **nicht** für
-  `past-meta` (`js/app-deck-builder.js:7422`).
-* **Wirkung heute gemessen:** ohne Tor 53 Archetypen mit Listen; **mit** Tor
-  bleiben **27 Archetypen aus einem einzigen Turnier** (Worlds). Mega Excadrill
-  hat in beiden Fällen **8 Listen** (Plätze 37–122).
-
-### 5.3 Mindest-Stichprobe und Rückfall
-
-* `MIN_WEIGHTED_LISTS = 3` (`js/deck-builder-consistency.js:161`) — darunter
-  liefert `_assessDataQuality` (`:1294`) `sufficient: false` und `build()`
-  gibt ein **leeres Deck** zurück (`:1394`).
-* **Heute gemessen: 15 der 27 Archetypen im Formatfenster haben < 3 Listen.**
-  Für sie fällt `js/app-deck-builder.js:8367` auf den **Alt-Pfad** zurück
-  (Stufen 0/0c/1/2/LRM/EnergyFloor/FinalFill), der mit aggregierten
-  Anteilen aus `current_meta_card_data.csv` rechnet.
-* Der Datenqualitätsblock nennt seit 05.09.2026 auch Turnierzahl, Namen,
-  jüngstes Datum und Platzspanne (`js/deck-builder-consistency.js:1272–1302`),
-  weil „8 decklists analyzed" für Mega Excadrill acht Listen **eines einzigen
-  Turniers** meinte.
-
-### 5.4 Die sechs Phasen, mit Schwellen
-
-| Phase | Was | Schwelle / Formel | Zeile |
-|---|---|---|---|
-| 0 | Kartenbewertung | s. 5.1 | `:536–670` |
-| 1 | ACE SPEC | höchster `weightedShare`; liegen Erster und Zweiter innerhalb **`ACE_SPEC_TIEBREAK_WINDOW = 0,10`** (10 pp), entscheidet `topCutFreq` | `:155`, `:678–740` |
-| 2 | Core | `weightedShare ≥ thr`, `thr` aus **`[0,90 ; 0,85 ; 0,80]`** der Reihe nach, bis ≥ **`CORE_MIN_DISTINCT_CARDS = 12`** Karten übrig sind; sonst der Boden 0,80. Kopien = `round(weightedAvgCount)`, gedeckelt auf 4 (Basis-Energie 59) | `:151–152`, `:822–870` |
-| 3 | Tech-Pakete | zwei Karten gelten als Paket, wenn sie in **≥ 70 %** der Listen gemeinsam auftreten, in denen eine von beiden vorkommt (`TECH_PACKAGE_COOCCURRENCE`) | `:158` |
-| 4 | Tech-Auffüllung | Restplätze nach `weightedShare`, Gruppenwert = `max(weightedShare)` der Gruppe | `:1038–1072` |
-| 4.5 | Alternativvorschlag (nur Diagnose) | feuert bei `round`-Rest 0,30–0,70 **und** Mehrheit ≥ 50 % **und** ≥ 5 Listen **und** ≥ 50 Plätze Medianabstand | `:178–184` |
-| 5 | Trimm auf 60 | niedrigster `weightedShare` fliegt zuerst | `:1235–1240` |
-| 6 | Datenqualität | s. 5.3 | `:1260–1310` |
-
-### 5.5 Der zweite, ältere Rechenweg — er läuft weiter
-
-`js/app-deck-builder.js:9120–9192` (Alt-Pfad) rechnet einen **anderen**
-`consistencyScore`:
-
-```
-  sharePercent   = percentage_in_archetype aus current_meta_card_data.csv  (0..100)
-  metaShare      = Metaanteil des Archetyps                                (0..100)
-  metaBoost      = (metaShare / 100) · 0,15                    max +15 %   (:9137)
-  weightedShare  = Zeitzerfallsanteil, wenn vorhanden          (:8655–8668)
-  scoreShare     = weightedShare ?? sharePercent                           (:9180)
-  consistencyScore = clamp(scoreShare · (1 + metaBoost), 0, 120)           (:9186)
-  wenn Karte auf dem jüngsten Major fehlt:  min(score, 24)                 (:9191)
-  Tech-Audit: gewählter Konter +18, redundanter Konter −20                 (:9212 / :9220)
-```
-
-Stufenschwellen des Alt-Pfads: Core `≥ 75`, Extended `≥ 40`, Tech-Tor
-`_techGate`, gewählter Konter `≥ 25`
-(`js/app-deck-builder.js:10128 / :10149 / :10209`).
+| Matchup-Glättung (Heatmap, Karte) | `((w + kk / 2) / nenner) * 100` mit `nenner = w + l + kk` | `js/matchup-glaettung.js:85–87`, `K = 20` `:57` | S+N+20 |
+| Feldgröße aus Anteilen | Mehrheitsschnitt der Intervalle `count/(s±0,005)` | `js/app-utils.js:1629–1673` | — |
+| Spieler-Klebrigkeit (Predictor 5.8) | `sticky_pct: u > 0 ? (r / u) * 100 : 0` | `js/app-meta-call.js:6420` | Spieler mit ≥ 1 Antritt je Archetyp |
+| Deckempfehlung „Day-2-Anteil" | `out[k] = zahl(r.get("day1_to_day2_conv")) * 100.0` | `scripts/build_deckempfehlung.py:196` | **Spieler** des Decks, gemittelt über 44 Turniere — ausdrücklich **nicht** Turniere (`js/app-deckempfehlung.js:150–166`) |
+| Deckempfehlung „Schrumpfung" | `schrumpfung_k: 30`, `feldkonversion_anker: 17.94` | `data/deckempfehlung.json` | — |
+| **Kartenpreis** (Kartendatenbank, Proxy, Wunschliste) | `const price = parseLocaleNumber(card.eur_price, 0);` — `js/app-cards-db.js:3379`, `:3481` | Feld `eur_price` aus `all_cards_merged.json` / `cards_chunk_*.json`, dorthin gemischt von `backend/core/prepare_card_data.py:344–366` aus `data/price_data.csv` | Vertrauensmarken `price_status` und `mapping_status` sind zwei getrennte Achsen (siehe `data/_consumers.md`); Takt täglich 08:00 UTC |
+| **Archetyp-Zuordnung** | zwei unabhängige Normalisierungen: Python `signature(slugs)` = sortierte Icon-Slugs (`backend/core/archetype_matcher.py:59`) · JavaScript `normalizeArchetypeForMatch` (`js/app-meta-cards.js:8–22`) | Brücke `data/archetype_aliases.json` | **4** Paare in `turnier_zu_ladder`, **3** ausdrücklich nicht verbundene; `data/archetype_icons.json` führt **542** Archetypen |
 
 ---
 
-<a id="6-tech-cut"></a>
-## 6. Kennzahl **Tech-Cut-Empfehlungen**
+## 4. Wo dieselbe Zahl zweimal vorkommt
 
-**Antwort auf die Kernfrage: Es gibt drei getrennte Bausteine, und keiner davon
-ist eine eigene „Cut"-Rechnung.** Zwei leiten aus Kartenhäufigkeit ab, einer
-aus Kartentext. Eine Empfehlung, eine Karte zu *streichen*, gibt es als eigene
-Rechnung nicht — der Trimmschritt in Phase 5 des Bauers
-(`js/deck-builder-consistency.js:1235`) wirft schlicht den niedrigsten
-`weightedShare` heraus.
-
-### 6.1 Baustein A — Bedrohungslage (`active_threats.json`)
-
-| Feld | Inhalt |
-|---|---|
-| Originalquelle | keine eigene: abgeleitet aus `pokemon_card_effects.json` (Kartentext von `limitlesstcg.com`) + `current_meta_card_data.csv` + `limitless_online_decks.csv` |
-| Erzeuger | `backend/tools/build_threat_intel.py:341 build()`; Klassifizierer `backend/core/threat_classifier.py:219 classify_card` |
-| Ablauf | `weekly-full-update.yml:274` (`tools/build_threat_intel.py`, Arbeitsverzeichnis `backend`) |
-| Ablage | `data/active_threats.json` — `tuning`, `threats.<kategorie>.weighted_meta_share`, `threats.<kategorie>.cards[]`, `counters.<kategorie>[]` |
-| Schwellen | `META_SHARE_FLOOR = 0,005` (`:114`), `INCLUSION_FLOOR = 0,25` (`:119`), `CATEGORY_FLOOR = 0,02` (`:123`) |
-
-**Die Formel** (`backend/tools/build_threat_intel.py:472–496`):
-
-```
-  share_in_archetype = deck_inclusion_count / total_decks_in_archetype   (:394)
-      verworfen, wenn < INCLUSION_FLOOR = 0,25
-      verworfen, wenn Archetyp-Metaanteil ms < META_SHARE_FLOOR = 0,005
-
-  je Archetyp nur das MAXIMUM über alle Karten der Kategorie (:410–413)
-      — damit ein Deck mit zwei Retreat-Lock-Angreifern nicht doppelt zählt
-
-  weighted_meta_share(kat) = Σ_Archetyp  max(share_in_archetype) · ms     (:492–494)
-      Kategorie fällt weg, wenn < CATEGORY_FLOOR = 0,02 und kein Konter bekannt
-```
-
-Zusätzlich ein Legalitätstor gegen `sets.json` (`:376–379`) und eine
-Stapel-Sperrliste `COUNTER_BLOCKLIST_BY_NAME` (`:434–439`).
-Heute: `hand_disruption` mit `weighted_meta_share = 0,2678`.
-
-### 6.2 Baustein B — Tech-Audit im Bauer (die eigentliche Empfehlung)
-
-`js/app-deck-builder.js:9024–9118`. **Datenbasis ist Kartenhäufigkeit im
-Archetyp**, nicht der Kartentext:
-
-```
-  Zahl der Konter je Kategorie  (js/app-deck-builder.js:9040–9044)
-      weighted_meta_share < 0,30  →  1 Konter
-                          < 0,60  →  2 Konter
-                          sonst   →  3 Konter
-  + Aggressionszuschlag (js/app-deck-builder.js:9051–9054)
-      "heavy" +2, "standard" +1, "mild" +0     — gedeckelt auf 4  (:9057)
-
-  Archetyp-Anteilsboden  (js/app-deck-builder.js:9070)
-      TECH_AUDIT_MIN_ARCHETYPE_SHARE = 15,0 %   (5,0 % bei "heavy")
-      Ist der beste Kandidat darunter, fällt die ganze Kategorie aus.
-
-  Auswahl: nach percentage_in_archetype absteigend, ACE-SPEC nachrangig (:9077–9088)
-  Menge je Karte: max(1, round(avgCountWhenUsed)), gedeckelt aufs Restbudget (:9100)
-
-  Wirkung auf den Score (js/app-deck-builder.js:9212 / :9220)
-      gewählter Konter    consistencyScore + 18   (auf 120 gedeckelt)
-      redundanter Konter  consistencyScore − 20   (auf 0 gebodet)
-```
-
-### 6.3 Baustein C — Tech-Ideen (Ableitung aus Kartentext, ohne Beleg)
-
-`js/tech-ideen.js`. Ausdrücklich **getrennt** vom Beleg-Block gehalten
-(`js/tech-ideen.js:16–36`): kein Anteil, keine Platzierung, keine Siegquote
-daneben, „weil es keine gibt".
-
-| Feld | Inhalt |
-|---|---|
-| Datenbasis | `current_meta_card_data.csv` (Formatpool, `:175`), `limitless_online_decks_matchups.csv` (schlechte Matchups, `:176`), `card_capability_patterns.json` + `card_capability_interactions.json` über `js/card-capability-engine.js`, `pokemon_card_effects.json` |
-| Schwellen | `SCHLECHT_AB = 47,0 %` Siegquote (`:76`), `MIN_PARTIEN = 30` (`:82`), `PRO_GEGNER = 3` (`:71`), `MAX_GEGNER = 3` (`:148`) |
-| Verbindung der Namen | `window.normalizeArchetypeForMatch` (`js/app-meta-cards.js:8–15`); ohne sie Rückfall auf Rohnamen-Vergleich (`js/tech-ideen.js:120–128`) |
-| **Grenze** | `data/card_capability_interactions.json` trägt **Version 0.1 vom 15.05.2026 und genau 5 Paarungen** (gemessen). „Keine Idee gefunden" heißt: keine, die diese fünf Regeln kennen (`js/tech-ideen.js:44–52`). |
-
-### 6.4 Anti-Tech-Dialog („Build vs …")
-
-`js/app-anti-tech.js`. Wählt Zieldecks und schreibt die gewählten Konter in
-`techSlots[source]` (Deckel `TECH_SLOTS_HARD_CAP = 10`, `:44`), dann läuft
-`autoCompleteConsistency`. Farbschwellen der Matchup-Pillen: ≥ 60 / ≥ 53 /
-≥ 47 / ≥ 40 (`js/app-anti-tech.js:83–89`). Quelle der Quoten:
-`window.currentMetaMatchupData` = `limitless_online_decks_matchups.csv`.
-
----
-
-<a id="7-archetyp-erkennung"></a>
-## 7. **Archetyp-Erkennung**
-
-### 7.1 Die Zuordnung passiert nicht bei uns
-
-**Es gibt keinen Klassifikator, der eine Deckliste liest und einen Archetyp
-bestimmt.** Der Name kommt in jeder Quelle fertig von der Quelle:
-
-| Quelle | Wo der Name herkommt | Beleg |
-|---|---|---|
-| Online-Decks | Linktext `<a href="/decks/…">` der Limitless-Tabelle | `limitless_online_scraper.py:165` |
-| Präsenzturniere (Labs) | Spalte `deck_name` der Labs-Standings | `labs_tournament_scraper.py:1981` |
-| Einzel-Decklisten | Element **`.decklist-title`** der Listenseite | `per_decklist_scraper.py:266–269`; Rückfall auf den Zellentext der Standings-Tabelle (`:614–619`), der meist „View" ist |
-| City League (JP) | HTML-Icons `<img class="pokemon">` → Slugs | `city_league_archetype_scraper.py` |
-
-Der einzige Ort, an dem tatsächlich *erkannt* wird, ist die City League: dort
-liegt kein Name vor, nur Pokémon-Symbole.
-
-### 7.2 Die Zuordnungstabelle: `data/archetype_icons.json`
-
-* **542 Archetypen**, jeder auf eine Liste von Pokémon-Slugs abgebildet.
-  `_meta.urlPrefix = https://r2.limitlesstcg.net/pokemon/gen9/`,
-  `lastScrapedAt = 2026-09-06T16:33:30`, `lastScrapedCount = 138`.
-* Geschrieben von `backend/scrapers/archetype_icons_scraper.py:58`,
-  nachgeprüft von `scripts/pruefe_archetyp_icons.py` (`weekly-full-update.yml:358`).
-* **Achtung Auslieferung:** `js/archetype-icons.js` holt die Datei mit dem
-  eigenen Versionsstempel als Parameter — ohne `./bump-version.sh` erreicht
-  eine Datenänderung niemanden (`CLAUDE.md`, Abschnitt „Shipping frontend changes", Punkt 4).
-
-**Der Abgleich über Symbole** (`backend/core/archetype_matcher.py`):
-
-```
-  normalize_slug(s) = s.strip().lower().replace(" ", "-")          (:53–54)
-  signature(slugs)  = tuple(sorted(normalize_slug(s)))             (:57–60)
-  canonicalize_by_slugs(slugs) → Name mit gleicher Signatur        (:106–112)
-  canonicalize_by_name(name)   → über normalize_name():
-        lowercase + Streichen von Leerzeichen, Bindestrichen und
-        ALLEN Apostroph-Varianten                                  (:41–46)
-  Bei Signaturkollision gewinnt der zuerst gelesene Eintrag        (:94)
-```
-
-### 7.3 Der Abgleich im Frontend
-
-`js/app-meta-cards.js:8–15` — `normalizeArchetypeForMatch()`:
-
-```
-  lowercase
-  → "'s" und alle Apostrophe streichen        (Rocket's → Rocket)
-  → Possessiv ohne Apostroph für 17 Namen     (Rockets → Rocket)
-  → freistehendes "ex" streichen
-  → 30 Set-Kürzel streichen (asc|blk|cri|dri|m3|…|pbl|pfl|por|…)
-  → Mehrfach-Leerzeichen zusammenziehen
-```
-
-Darauf setzt `buildFuzzyArchetypeMap` (`js/app-meta-cards.js:35–63`) auf:
-exakte Normalform gewinnt (Score 100); sonst müssen **alle** Wörter der
-kürzeren Seite in der längeren als Präfix wiederkehren, Score
-`kurz/lang · 100`.
-
-**Die gepflegte Brücke** `data/archetype_aliases.json` steht darüber:
-4 Paare in `turnier_zu_ladder`, 3 ausdrücklich **nicht** verbundene in
-`bewusst_nicht_verbunden`. Gelesen von `js/app-tier-meta.js:1782` und
-`js/app-meta-call.js:1679`. Regel im `_meta` der Datei: *„Niemals über
-Namensähnlichkeit automatisieren"* — ein naives Streichen von „Mega"
-verschmelzt Mega Greninja mit Greninja, Mega Gengar mit Gengar und
-Mega Feraligatr mit Feraligatr.
-
-**Varianten-Rollup** im Meta Call: `data/deck_families.json` überschreibt die
-Erst-Wort-Heuristik `extractMainPokemon` (`js/app-meta-call.js:8668–8672`).
-
-### 7.4 Speziell **Mega Excadrill**
-
-| Quelle | Schreibweise | gemessen |
-|---|---|---|
-| `data/archetype_icons.json` | `"Mega Excadrill": ["excadrill-mega"]` | ein einziger Slug |
-| `limitless_online_decks.csv` | `Mega Excadrill` | 1 Zeile |
-| `labs_tournament_decks.csv` | `Mega Excadrill` | 1 Zeile |
-| `online_tournament_top8_decks.csv` | `Mega Excadrill` | 1 Zeile |
-| `tournament_decklists_per_player.csv` | `Mega Excadrill` | 163 Kartenzeilen = **8 Listen** |
-| `current_meta_card_data.csv` | `Mega Excadrill` | vorhanden |
-
-**Ergebnis: Mega Excadrill wird über den Namen erkannt, weil alle sechs
-Quellen ihn identisch schreiben.** Es gibt weder einen Alias-Eintrag noch
-eine Sonderregel. Normalisiert ergibt der Name `mega excadrill` — das
-Set-Kürzel-Streichen greift nicht, „Mega" bleibt stehen (und muss es, s. o.).
-Die City-League-Erkennung würde die Signatur `("excadrill-mega",)` verwenden.
-
-Die 8 Listen liegen **alle** in Worlds 2026, Plätze 37–122
-(`js/deck-builder-consistency.js:86–90`). Vor der feldrelativen Skala trugen
-alle acht dasselbe Gewicht 0,1, `weightedShare` war exakt `n/8`, und die
-Regel „Erfolg zählt mehr" trug null bei.
-
----
-
-<a id="8-weitere"></a>
-## 8. Weitere Kennzahlen
-
-### 8.1 Platzierungen / Top-8-Konversion
-
-| Feld | Inhalt |
-|---|---|
-| Name in der Oberfläche | „Top-8 vs. Erwartung" (`js/app-tier-meta.js:1667–1672` — bewusst nicht „Conversion Performance") |
-| Quelle → Ablage | `play.limitlesstcg.com` → `online_tournament_scraper.py:461–463` → `online_tournament_top8_decks.csv` |
-| Berechnung | `js/app-utils.js:1551–1578`: <br>`expected = Σ top8_count_weighted / Σ total_brought_weighted`<br>`smoothed = (top8 + CONV_PRIOR·expected) / (brought + CONV_PRIOR)`<br>`rawPct = ((top8/brought)/expected − 1)·100` |
-| Konstanten | `CONV_PRIOR = 50`, `CONV_THIN_N = 50`, `CONV_MIN_N = 20` (`js/app-utils.js:1493–1495`) |
-| Mindest-Stichprobe | unter `CONV_MIN_N = 20` Antritten fliegt ein Deck aus der **Liste**, nicht aus dem Feldmittel (`js/app-tier-meta.js:1673–1679`) |
-| Anzeige | `js/app-tier-meta.js:1667 ff.`, Archetyp-Karte `js/app-archetype-card.js` (rechnet **nicht** neu, `:12–15`) |
-| Feldwert heute | gezählt `754/12.287 = 6,14 %`; gewichtet `464,5/7.501,5 = 6,19 %` |
-
-### 8.2 Deckempfehlung („Was bringe ich mit?")
-
-`scripts/build_deckempfehlung.py:178–187`:
-
-```
-  Score(d) = ( D2(d) + k · p0 ) / ( D1(d) + k ) · 100
-      D1(d) = Σ day1_players des Decks über die Ankerturniere
-      D2(d) = Σ day1_players · day1_to_day2_conv
-      p0    = Feldkonversion des gesamten Ankers
-      k     = 30 (Betriebsart A: Format hat Präsenzturniere)
-              60 (Betriebsart B: Kaltstart, Anker = 2 Vorepochen)
-```
-
-Schwellen: `MIN_ZIELSPIELER = 8` (`:103`), `MIN_ANZEIGE = 30` Ankerspieler,
-Top 10 (`:106`, `:357`). Gemessener Vorsprung gegen den Feldschnitt:
-A **+9,9 pp** (44 Turniere), B **+7,1 pp** (22 Turniere).
-Ablage `data/deckempfehlung.json`, Anzeige `js/app-deckempfehlung.js`.
-
-### 8.3 Preise
-
-| Feld | Inhalt |
-|---|---|
-| Name in der Oberfläche | „€"-Angabe auf der Kartenkachel, Kartendatenbank |
-| Originalquelle | `downloads.s3.cardmarket.com/productCatalog/priceGuide/price_guide_6.json` + `productList/products_singles_6.json` |
-| Scraper | `daily-price-refresh.yml:124–126` (curl) → `cardmarket_id_mapper.py:581` (Zuordnung `(set,number) → idProduct`) → `cardmarket_price_merger.py` |
-| Ablauf | `daily-price-refresh.yml`, täglich **08:00 UTC** |
-| Ablage | `price_data.csv`: `name, set, number, eur_price, eur_low, cardmarket_url, last_updated, price_status, mapping_status` |
-| Berechnung im Merger | `eur_price = trend` roh übernommen; `price_status` (`:213–216`): `no_trend`, wenn `trend ∈ {None,'',0}`; `trend_below_low`, wenn `low > trend`; sonst `unverified_mapping`, wenn `match_method` mit `priced-by` beginnt; sonst `ok`. `mapping_status` (`:148–159`) unabhängig davon: `unmapped` / `collision` / `unverified` / `ok`. |
-| Ersetzung für die **Anzeige** | `backend/core/prepare_card_data.py:499–502`: ist `eur_low` da **und** (`status ∈ {no_trend, trend_below_low}` **oder** `eur_price == 0` **oder** `eur_low > eur_price`), wird `eur_price := eur_low`. Die CSV behält Cardmarkets echte Zahlen. |
-| Anzeige | über `all_cards_merged.json` / `cards_chunk_*.json` in `js/app-cards-db.js` (Reiter `cards`) und `js/app-meta-cards.js:896–912` |
-| Stichprobe heute | 20.419 Zeilen. `price_status`: ok 16.141 · stale 3.026 · unverified_mapping 1.161 · trend_below_low 60 · no_trend 24 · no_data 7. `mapping_status`: ok 16.010 · unmapped 3.033 · unverified 1.188 · **collision 188** |
-
-`js/app-price.js` ist ein **Live-Preis-Proxy gegen `localhost:8001`** und in der
-ausgelieferten Seite ohne Wirkung (`checkProxyServer` schlägt fehl, `:14–26`).
-
-### 8.4 Kartentrends (▲/▼ auf der Kartenkachel)
-
-`js/app-tier-meta.js:296–321 getTrendIndicator()`:
-
-```
-  Vergleicht STRIKT die letzten zwei Zeitpunkte der Historie.
-  diff = share(letzter) − share(vorletzter)
-  Staple-Schutz: current > 95 % und diff > −10  →  kein Pfeil       (:317)
-  diff >  2  →  ▲ +x %      (:319)
-  diff < −2  →  ▼  x %      (:320)
-```
-
-Die Historie kommt aus `getCityLeagueCardShareHistory`
-(`js/app-tier-meta.js:326–…`), gruppiert `window.cityLeagueAnalysisData` nach
-ISO-Wochen (`:342–358`). Aufgerufen **nur für `source === 'cityLeague'`**
-(`js/app-meta-cards.js:881–882`) → im Reiter `current-analysis` gibt es keine
-Pfeile, und im City-League-Reiter „aktuell" auch nicht (§10).
-
-### 8.5 Stichprobengrößen („Gemeldete Listen / Turniere / Spieler")
-
-| Feld | Inhalt |
-|---|---|
-| Name in der Oberfläche | Block „Quellen & Methodik" im Reiter `meta-analysis-hub` |
-| Berechnung | **Bewusst nur an einer Stelle:** `js/app-tier-meta.js:2184–2201` rechnet, `js/ds-datenumfang.js` nimmt entgegen, `js/app-quellen.js` liest ab. `totalEntries = Σ new_count`; die wahre Feldgröße über `feldGroesseAusAnteilen` (`:2199`) |
-| Haltbarkeit | `HOECHSTALTER_MS = 24 h` (`js/ds-datenumfang.js:41`), gespeichert in `sessionStorage` unter `ds_datenumfang_v1` |
-| Herkunftszeile | `limitless_meta_stats.json` — wird ausgeblendet, wenn `generated_at` fehlt oder älter als 14 Tage ist (`limitless_online_scraper.py:133–140`) |
-
-### 8.6 Datenstand („Daten: …")
-
-| Feld | Inhalt |
-|---|---|
-| Erzeuger | `scripts/build_data_stand.py` — liest den **Git-Verlauf**, nicht `Last-Modified` (Begründung `js/ds-datenstand.js:20–29`: GitHub Pages liefert dort die Deploy-Zeit) |
-| Ablauf | `weekly-full-update.yml:720` |
-| Ablage | `data/data_stand.json` mit `dateien`, `inhalt_bis`, **`leer`** |
-| Anzeige | `js/ds-datenstand.js` — je Reiter der Stand **seiner** Ansicht; unbekannt heißt „unbekannt", nie das heutige Datum (`:39–42`) |
-
-### 8.7 Pocket-Tierliste
-
-Quelle `game8.co/games/Pokemon-TCG-Pocket/archives/477754`
-(`scripts/scrape_pocket_tierlist.py:87`) → `data/pocket_tierlist.json` →
-`js/ds-pocket.js:52`. Keine eigene Rechnung: die Stufen werden von Game8
-übernommen; unbekannte Stufen werden ausgewiesen statt einsortiert
-(`js/ds-pocket.js:213–243`). **Ohne Zeitplan** — `pocket-tierlist.yml` hat nur
-`workflow_dispatch`.
-
----
-
-<a id="9-verwaiste-daten"></a>
-## 9. Verwaiste Daten
-
-Methode: für jede der 232 Dateien unter `data/` (ohne `_archive/`) wurde der
-Dateiname in `js/`, `index.html`, `service-worker.js`, `prerender/`, `posts/`,
-`bot/`, `scripts/`, `backend/`, `tools/`, `tests/`, `docs/`, `.github/`
-gesucht. Dynamisch adressierte Familien (`labs_tournament_*_<META>.csv`,
-`tournament_cards_data_cards_<META>.csv`, `online_share_history/*.csv`) wurden
-gegen ihre Verzeichnis-Dateien geprüft und sind **erreichbar**.
-
-### 9.1 Von gar nichts gelesen
-
-| Datei | Größe | Befund |
-|---|---|---|
-| `data/labs_tournament_scraper.log` | 0 B | Protokoll, versehentlich unter `data/` |
-| `data/online_tournament_scraper.log` | 0 B | dito |
-| `data/per_decklist_scraper.log` | 0 B | dito |
-| `data/tournament_scraper.log` | 139 B | dito |
-| `data/city_league_archetypes_comparison.html` | 21 KB | fertiges HTML aus dem Scraper; einziger Treffer ist `docs/audit/infrastructure/01-feature-inventory.md` |
-
-### 9.2 Kein einziges Feature liest sie — nur Erzeuger, Prüfskripte oder Tests
-
-| Datei | wird nur berührt von |
-|---|---|
-| `data/datenluecken.json` | `js/app-admin.js:49` liest sie — **aber kein Ablauf erzeugt sie.** `scripts/datenluecken.py` steht in **keinem** Workflow. Stand `2026-08-31T13:00:53Z`, `anzahl: 0`, `luecken: []` |
-| `data/pokepricelab_worklist.csv` (83 KB) | nur `scripts/triage_pokepricelab_report.py` |
-| `data/pokepricelab_verification.csv` (103 KB) | nur `verify_via_pokepricelab.py` + `triage_…`; Ablauf nur `workflow_dispatch` |
-| `data/pokepricelab_catalog_index.csv` (4,7 MB) | nur `build_pokepricelab_index.py` + `verify_via_pokepricelab.py`; Ablauf nur `workflow_dispatch`, Dateistand **2026-08-17** |
-| `data/calibration/indy_2026_actuals.json` | nur `tools/calibrate_meta_call_indy.py` — das Skript steht in keinem Workflow |
-| `data/_archetype_mapping_gaps.json` | nur `backend/scrapers/archetype_mapping_audit.py` — dieser Scraper steht in **keiner** Workflow-Liste (`weekly-full-update.yml:267–275` führt ihn nicht) |
-| `data/all_cards_database.json` (16 MB) | nur `all_cards_scraper.py` + `prepare_card_data.py` — das Frontend liest `all_cards_merged`/`cards_chunk_*` |
-| `data/all_cards_merged.csv` (7 MB) | nur Erzeuger + Wächter; das Frontend liest die `.json`-Fassung |
-| `data/city_league_archetypes_comparison_M3.csv`, `data/city_league_analysis_M3.csv` (31 MB) | `scripts/generate-bot-deck-index.py:1142`, `scripts/repariere_set_nummern.py` — im Frontend nur als **Kommentar** (`js/app-city-league.js:268`, `js/app-tier-meta.js:702`, `:811`) |
-| `data/meta_play_decks_cache.json` (534 KB) | nur Scraper-Zwischenspeicher |
-| `data/price_guide_6.json` (15 MB), `products_singles_6.json` (13 MB), `products_nonsingles_6.json` | Zwischenstufen der Preiskette; die Seite liest nur `price_data.csv` (über `cards_chunk_*`) |
-| `data/testing_group_bootstrap.json` | nur über `index.html` erreichbar — Frontend-Referenz vorhanden, aber kein Ablauf pflegt sie (Stand 2026-08-17) |
-| `data/offline-images-manifest.json` (377 KB), `data/offline-manifest.json` | `scripts/generate-offline-manifest.py` + `js/offline-prefetch.js`; Dateistand **2026-08-17**, während der Kartenbestand täglich neu gebaut wird |
-
-### 9.3 Erreichbar, aber praktisch tot
-
-* `data/labs_tournament_decks_TEF-PBL.csv` und `…_matchups_TEF-PBL.csv` sind
-  im Verzeichnis gelistet und werden geladen — sie tragen aber **ein einziges
-  Turnier**.
-* `data/city_league_images.json` (38 KB) steht seit **2026-08-17** und gehört
-  zum leeren City-League-Zweig (§10).
-
----
-
-<a id="10-leere-rechnungen"></a>
-## 10. Leere Rechnungen
-
-### 10.1 City League „aktuell" — vier Dateien nur mit Kopfzeile
-
-`data/data_stand.json` benennt sie selbst unter `leer`:
-
-| Datei | Zeilen | wird gelesen von |
-|---|---|---|
-| `city_league_analysis.csv` | **0** (nur 22-Spalten-Kopf) | `js/app-city-league.js:574`, `:1574`, `:1606` |
-| `city_league_archetypes.csv` | **0** | `js/app-city-league.js:575`, `:1607` |
-| `city_league_archetypes_comparison.csv` | **0** | `js/app-city-league.js:576`, `:1608` |
-| `city_league_archetypes_deck_stats.csv` | **0** | `prepare_card_data.py`, `build_data_stand.py` |
-
-Stand laut `data_stand.json`: **2026-07-31**. Betroffen sind damit:
-
-* Reiter `city-league` und `city-league-analysis` im „aktuell"-Modus,
-* die **Kartentrend-Pfeile** (§8.4) — `getCityLeagueCardShareHistory` bekommt
-  eine leere `cityLeagueAnalysisData` und liefert `[]`, `getTrendIndicator`
-  gibt bei `< 2` Punkten `''` zurück (`js/app-tier-meta.js:297`),
-* die City-League-Zweige des Deck-Builders (`getCityLeagueDeckCountFallback`,
-  `js/app-deck-builder.js:4934`).
-
-Der „Vergangenes"-Zweig läuft, ist aber ebenfalls dünn:
-`city_league_analysis_past.csv` = **315 Zeilen aus einem Turnier (568,
-06.06.2026)**, `city_league_archetypes_past.csv` = 26 Zeilen.
-
-### 10.2 Drei Konversionsspalten sind in **allen** 4.713 Zeilen 0
-
-Gemessen an `data/labs_tournament_decks.csv`:
-
-| Spalte | leer | `= 0` |
-|---|---|---|
-| `top8_conv_rate` | 0 | **4.713** |
-| `top16_conv_rate` | 0 | **4.713** |
-| `top32_conv_rate` | 0 | **4.713** |
-| `top1_count` | **4.072** (86 %) | 631 |
-| `top4_count` | **4.072** | 605 |
-| `top8_count` | **4.072** | 579 |
-
-Der Meta Call hält das an drei Stellen ausdrücklich fest
-(`js/app-meta-call.js:3519`, `:4064`, `:6947`) und schaltet auf einen
-Day-2-Ersatz um (`js/app-meta-call.js:4052–4068`, `:9247`). Der
-`labsT8Boost`-Term `clip(top8_conv_rate/0,25 ; 0,5 ; 2,0)`
-(`js/app-meta-call.js:7271`) rechnet damit strukturell auf **0**, wo der
-Ersatz nicht greift.
-
-### 10.3 Fünf Regeln als „Formatabdeckung"
-
-`data/card_capability_interactions.json`: `version 0.1`,
-`generated_at 2026-05-15`, **5 Paarungen**. Darauf ruht der ganze
-Tech-Ideen-Baustein (§6.3). Der Kandidatenkreis ist zusätzlich auf die im
-Format gespielten Karten aus `current_meta_card_data.csv` beschränkt
-(`js/tech-ideen.js:55–61`).
-
-### 10.4 Weitere
-
-* `data/datenluecken.json` — `anzahl: 0`, aber kein Ablauf erzeugt sie (§9.2).
-  Der Admin-Bereich zeigt „keine Lücken", weil niemand nachgeschaut hat.
-* `data/ace_specs.json` — `timestamp` = 2026-02-18, 39 Namen. Gelesen von
-  `js/deck-builder-consistency.js:291` (Phase-1-ACE-SPEC-Wahl) und
-  `backend/core/ace_spec_regel.py:39`. Ohne die Datei baut der Bauer
-  **jedes** Deck ohne ACE SPEC (`js/deck-builder-consistency.js:694–700`).
-* **Max Consistency im laufenden Format**: 15 von 27 Archetypen fallen unter
-  `MIN_WEIGHTED_LISTS = 3` und liefern ein leeres Deck; die Oberfläche fällt
-  still auf den Alt-Pfad zurück (§5.3).
-* `data/prizepack_official_images.csv` — Dateistand **2026-08-17**, obwohl der
-  Ablauf sonntags läuft; die `.json`-Fassung daneben ist von 2026-09-07.
-
----
-
-<a id="11-zwei-wege"></a>
-## 11. Zwei Wege zur selben Zahl
-
-| # | Kennzahl | Weg A | Weg B | Warum das zählt |
+| # | Größe | Weg A | Weg B | Auseinander? |
 |---|---|---|---|---|
-| 1 | **Win Rate desselben Decks am Major** | `js/app-past-meta.js:1901` liest `win_pct` = **Matchpunkte** `(3S+U)/(3n)` | `js/app-archetype-card.js:56–66` rechnet aus **denselben** `wins/losses/ties` **`S/(S+N+U)`** und liest `win_pct` ausdrücklich nicht | Eine Datei, eine Zeile, zwei Zahlen. Bei 10,98 % Unentschieden am Major liegen sie rund **5 Punkte** auseinander. Beide Stellen sagen, welche sie sind — aber sie sagen es in verschiedenen Reitern. |
-| 2 | **Meta-Anteil** | `share_numeric` aus `limitless_online_decks.csv`, Nenner = Limitless-Feld **inkl. „Other"** (Summe 96,19 %) | Donut über `feldGroesseAusAnteilen` (`js/app-utils.js:1629`), Nenner = rekonstruierte Feldgröße ≈ 41.266 | Ohne den zweiten Weg zeigte der Donut für Mega Excadrill 8,1 %, die Tabelle 7,75 % (`js/app-current-meta-analysis.js:602–605`). Der zweite Weg ist die Reparatur — es bleiben **zwei** Rechenwege nebeneinander. |
-| 3 | **Meta-Anteil, dritte Fassung** | `share_kumulativ` in `limitless_online_fenster.csv` = `count/Σcount(heute)` (`build_online_fenster.py:395`) | `share_numeric` derselben Decks | Der Kopf der Fenster-Datei nennt den Unterschied selbst: „Kumulativ … mit einem anderen Nenner — 38.398 statt 39.826" (`scripts/build_online_fenster.py:18–20`). |
-| 4 | **Top-8-Quote** | gewichtete Spalten `top8_count_weighted / total_brought_weighted` → 6,19 % | gezählte Spalten `top8_count / total_brought` → 6,14 % | Vier Ansichten nahmen bis zum 02.09.2026 verschiedene (`js/app-utils.js:1504–1528`). Heute regelt `gezaehlteZeilen()` das zentral — **aber** `js/app-meta-call.js:6133` liest weiter `top8_conv_rate` aus der Labs-Datei, die in allen Zeilen 0 ist (§10.2). |
-| 5 | **`consistency_score` im Warum-Dialog** | Neuer Bauer: `Math.round(weightedShare · 100)` — Anteil der erfolgsgewichteten Listen, Skala 0–100 (`js/app-deck-builder.js:7610`, `:7686`) | Alt-Pfad: `clamp(scoreShare · (1 + metaBoost), 0, 120)` mit Tech-Boni ±18/−20 — Skala 0–**120** (`js/app-deck-builder.js:9186–9222`) | **Gleiches Feld, gleicher Dialog, zwei Definitionen und zwei Skalen.** Welche gilt, entscheidet allein, ob der Archetyp ≥ 3 Listen im Formatfenster hat. Für 15 von 27 Archetypen ist das heute der Alt-Pfad. |
-| 6 | **Max-Consistency-Bau selbst** | `MostConsistencyBuilder` (`js/deck-builder-consistency.js`), 6 Phasen, Core-Schwelle 90/85/80 % | Alt-Pfad Stufen 0/0c/1/2/LRM (`js/app-deck-builder.js:8380 ff.`), Core `score ≥ 75`, Extended `≥ 40` | Zwei vollständige Bau-Algorithmen für einen Knopf. Der Umschaltpunkt (`js/app-deck-builder.js:8314–8367`) ist für den Nutzer unsichtbar; nur die Konsole schreibt „Phase Y.2 declined". |
-| 7 | **Win-Rate-Glättung** | Deck-Ebene: `k = 50` Pseudo-Partien auf 50 % (`js/app-tier-meta.js:71–75`) | Matchup-Ebene: `k = 20` (`js/matchup-glaettung.js:59`) | Zwei Prioren, beide begründet (`js/matchup-glaettung.js:52–57`). Auf einem Bildschirm stehen sie nebeneinander, ohne dass die Kachel den Unterschied nennt. |
-| 8 | **Zähler der Deck-Glättung** | `computeTierScore` behandelt `deck.new_count` als **`games`** und rechnet `wins = games · rawWR/100` (`js/app-tier-meta.js:69–70`) | `new_count` kommt aus `limitless_online_decks_comparison.csv` und zählt **Decklisten**, nicht Partien (`js/app-tier-meta.js:1257`); `win_rate_numeric` ist dagegen über **Matches** gebildet | Für Dragapult: 3.138 Listen gegen 14.861 Partien. Die Glättung wirkt damit rund 4,7-mal stärker als der Variablenname behauptet. Der Tooltip schreibt korrekt „aus N **Listen**" (`js/app-tier-meta.js:2399`) — die Formel darunter heißt weiter `games`. |
-| 9 | **Archetyp-Zuordnung** | Python: Icon-Signatur `sorted(slugs)` (`backend/core/archetype_matcher.py:57`) | JavaScript: Regex-Normalisierung + Wort-Präfix-Score (`js/app-meta-cards.js:8–63`) | Zwei unabhängige Normalisierungen; nur die JS-Fassung streicht Set-Kürzel und „ex", nur die Python-Fassung kennt Symbole. Die gepflegte Brücke `archetype_aliases.json` steht über beiden — mit heute **4** Paaren. |
-| 10 | **Formattor für Decklisten** | `currentMeta` und `cityLeague`: `minDate = in_person_legal_date` (`js/app-deck-builder.js:7422–7427`) | `past-meta`: **kein** Tor | Absichtlich (`js/app-deck-builder.js:7404–7421`), aber es heißt: dieselbe Schaltfläche baut in zwei Reitern aus verschiedenen Grundmengen. Gemessen 05.09.2026: Alakazam Dudunsparce im Past Meta zog 61 von 75 Listen (81 %) aus dem Vorformat. |
+| 4.1 | **„Meta-Anteil" Dragapult** | `share_numeric` aus `limitless_online_decks.csv` → **7,62 %** (`js/app-archetype-card.js:394`) | `total_brought / Σ total_brought` aus `online_tournament_top8_decks.csv` → **9,77 %** (`js/meta-analysis-hub.js:164`) | **Ja, 2,15 pp.** Zwei Grundgesamtheiten (39.694 Listen gegen 12.287 Antritte), fast derselbe Name. Auf der Startseite steht ausdrücklich „Meta-Anteil" (`js/meta-analysis-hub.js:522`). |
+| 4.2 | **Top-8-Quote** | gezählt `top8_count / total_brought` in vier Anzeigen (`js/meta-analysis-hub.js:178`, `js/app-tier-meta.js:1763`, `js/app-archetype-card.js:805`, `js/app-meta-call.js:6246`) | gewichtete Spalte `top8_conv_rate` im **Prognosemotor** (`js/app-meta-call.js:6244`) | **Ja, bewusst.** Dragapult 9,24 % (gezählt) gegen 8,9 % (Spalte). Die Trennung ist an Ort und Stelle begründet (`js/app-meta-call.js:6228–6231`), aber es bleiben zwei Zahlen für eine Größe im selben Reiter. |
+| 4.3 | **Day-2-Quote** | selbst aggregiert `Σday2/Σday1` — zweimal unabhängig: `js/app-archetype-card.js:364` und `js/app-tier-meta.js:370` | fertige Spalte `day1_to_day2_conv`, gewichtet gemittelt: `js/app-meta-call.js:7145`, `js/app-meta-call.js:6778`, `scripts/build_deckempfehlung.py:196` | **Zwei Schreiber, drei Leser.** Die Spalte existiert in der Datei (`labs_tournament_decks.csv` Feld 32) und wird von zwei Anzeigen ignoriert; die Motorwege legen zusätzlich `day1_players >= 10` an, die Kacheln `>= 5`. |
+| 4.4 | **Major-Win-Rate aus derselben Datei** | `S/(S+N+U)`, neu gerechnet: `js/app-archetype-card.js:361` | MATCHPUNKTE `(3S+U)/3n` aus Spalte `win_pct`: `js/app-past-meta.js:2028` (Kachel „Cumulative Win %") | **Ja.** Dieselbe Quelldatei, zwei Skalen, in zwei Reitern, beide beschriftet mit „Win %". Differenz systematisch, bei 11 % Remis rund 1,8 pp. |
+| 4.5 | **Paarungsquote** | roh gewichtet in der Kachel „Matchup gegen Top 20": `js/app-current-meta-analysis.js:1794/1806` | geglättet (`K=20`) in den Zellen direkt darunter: `js/matchup-glaettung.js:87` via `js/app-meta-cards.js:1354` | **Ja.** Der Kachelschnitt ist ein rohes, partiengewichtetes Mittel; die Einzelwerte darunter sind geglättet. Bei dünnen Paarungen laufen Kachel und Zellen sichtbar auseinander. |
+| 4.6 | **Feldgröße Worlds SF** | `total_players` aus `labs_tournaments.json` / `labs_tournament_decks.csv` = **797** | `players` aus `tournament_cards_data_overview.csv` = **797** (heute gleich), aber die Spalte „zählt anders" — ausdrücklich vermerkt in `js/deck-builder-consistency.js:104–107` | Heute gleich, Regel aber verschieden. Der Kommentar in `js/deck-builder-consistency.js:108–121` nennt **797**, `tests/unit/test-platzgewicht-feldrelativ.js:76` rechnet weiter mit **774** (als gesetzter Wert deklariert, `:14–22`). |
+| 4.7 | **Tier-Einteilung** | Punktwert + Deckel + Qualitätstor: `js/app-tier-meta.js:1617–1676` | Reine Anteilsschwellen 8 / 4 / 1,5 %: `getDeckTier()`, `js/app-tier-meta.js:382–405` | **`getDeckTier` ist toter Code** — repoweit keine Aufrufstelle (`grep getDeckTier js/ index.html` findet nur die Definition). Zwei Regeln im selben Modul, eine davon nicht angeschlossen. |
+| 4.8 | **Konvention hinter „Win %"** | `js/win-rate-konvention.js:113–114`: „Win %" = `(3S+U)/(3·Partien)` | `js/app-current-meta-analysis.js:1740`: „Win % = Siege ÷ alle Matches" (= `S/(S+N+U)`) · `js/app-current-meta-analysis.js:4345`: „Win % = Siege ÷ entschiedene Partien" (= `S/(S+N)`) | **Ja.** Drei Formeln, ein angezeigter Name — genau der Zustand, gegen den `win-rate-konvention.js` geschrieben wurde. Die Kachelbeschriftung selbst lautet „Total Win Rate Limitless Online Tournaments" (`index.html:1225`), die Fußnote darunter „Win %". |
+| 4.9 | **Usage Share / Playrate** | Global: hart verdrahtet `"Usage Share:"` in beiden Sprachen (`js/app-current-meta-analysis.js:5245`) | Japan: i18n-Schlüssel `cl.usageShare` — EN „Usage Share:", **DE „Playrate:"** (`js/i18n.js:612` / `:3223`) | **Ja.** Gleiche Formel, drei Beschriftungen; im deutschen Global-Reiter steht ein hart verdrahteter englischer Begriff. |
+| 4.10 | **Feldschnitt der Top-8-Quote** | `conv.expected` aus `computeConversionPerformance` (`js/app-utils.js:1558`) | Kachelvergleich rechnet `d.convPct / (conv.expected*100)` (`js/meta-analysis-hub.js:509–511`) — geglätteter Wert `perfPct` bleibt der Tabelle vorbehalten | Konsistent, aber **zwei Vielfache** derselben Größe im Umlauf (roh auf der Kachel, geglättet in der Rangliste); die Kachel sagt es dazu (`:503–508`). |
+| 4.11 | **`consistency_score` im „Warum?"-Kasten** | Neuer Bauer: `consistency_score: Math.round((c.weightedShare \|\| 0) * 100)` — Skala 0–100 (`js/app-deck-builder.js:8228`, ebenso `:8145`) | Alt-Pfad: `card.consistencyScore = scoreShare * (1 + metaBoost);` dann `Math.min(120, …)`, plus `+18` für gewählte und `−20` für redundante Konter (`js/app-deck-builder.js:9762–9763`, `:9788`, `:9796`) | **Ja, gleiches Feld, gleicher Kasten, zwei Skalen (0–100 gegen 0–120).** Welche gilt, entscheidet allein, ob der Archetyp nach `minDate` ≥ 3 Listen hat; der Umschaltpunkt ist nur in der Konsole sichtbar (`js/app-deck-builder.js:8943`). Heute betrifft das **15 von 27** Archetypen. |
+| 4.12 | **Der Deckbau selbst** | `MostConsistencyBuilder` (`js/deck-builder-consistency.js`), gewichtete Häufigkeit über Einzellisten | Alt-Pfad-Stufen in `js/app-deck-builder.js:8894 ff.`, gespeist aus aggregierten Archetypstatistiken | **Zwei vollständige Algorithmen hinter einem Knopf.** Der Rückfall ist begründet (`js/app-deck-builder.js:7955–7960`), aber für den Leser nicht unterscheidbar. |
+| 4.13 | **Glättungsstärke** | Deck-Ebene `PRIOR_GAMES = 50` (`js/app-tier-meta.js:89`) und `CONV_PRIOR = 50` (`js/app-utils.js:1498`) | Paarungs-Ebene `K = 20` (`js/matchup-glaettung.js:57`) | Zwei Prioren, beide begründet (`js/matchup-glaettung.js:52–57`), auf einem Bildschirm nebeneinander — die Kacheln nennen den Unterschied nicht. |
+| 4.14 | **Nenner der Deck-Glättung** | `computeTierScore` nimmt `deck.new_count` als `games` und rechnet `wins = games · rawWR/100` (`js/app-tier-meta.js:105–109`) | `new_count` kommt aus `limitless_online_decks_comparison.csv` (`js/app-tier-meta.js:1373`, übernommen `:1416`) und zählt **Decklisten**, `win_rate_numeric` ist über **Partien** gebildet | **Widerspruch, nachgezählt.** Dragapult führt `count` = **3.138** Listen und **14.861** Partien (7.943-6.642-276). Der Prior von 50 wirkt damit gegen 3.138 statt gegen 14.861 — rund **4,7-mal stärker**, als der Variablenname `games` behauptet. Der Tooltip schreibt korrekt „aus N **Listen**" (`js/app-tier-meta.js:2592`) — die Formel darüber heißt weiter `games`. |
+| 4.15 | **Formattor des Deckbaus** | `currentMeta` und `cityLeague`: `minDate = in_person_legal_date` (`js/app-deck-builder.js:7936–7941`) | `past-meta`: **kein Tor** — absichtlich (`js/app-deck-builder.js:7912–7934`) | Dieselbe Schaltfläche baut in zwei Reitern aus verschiedenen Grundmengen. Der dortige Kommentar beziffert es: Alakazam Dudunsparce im Past Meta zog 61 von 75 Listen (81 %) aus dem Vorformat. |
 
 ---
 
-## Anhang — was nicht auffindbar war
+## 5. Blinde Stellen
 
-* **Eine eigene Rechnung für „Tech-Cut"** (eine Empfehlung, eine Karte zu
-  streichen): *nicht gefunden* — geprüft `js/tech-ideen.js`,
-  `js/app-anti-tech.js`, `js/app-deck-builder.js:8990–9250` und `:10101–10230`,
-  `js/deck-builder-consistency.js:1200–1260`. Was es gibt, ist der
-  Trimmschritt in Phase 5 und die −20-Strafe für redundante Konter.
-* **Ein Klassifikator, der eine Deckliste einem Archetyp zuordnet**:
-  *nicht gefunden* — geprüft `backend/scrapers/per_decklist_scraper.py:245–269`
-  und `:600–640`, `backend/core/archetype_matcher.py`,
-  `backend/scrapers/city_league_archetype_scraper.py`. Der Name kommt in allen
-  EN-Quellen fertig von Limitless; nur die City League leitet ihn aus
-  Pokémon-Symbolen ab.
-* **`data/tournament_cards_data_overview.csv` · Spalte `players`**: sie zählt
-  anders als `total_players` in `labs_tournament_decks.csv` und wird von
-  `_loadTournamentSizes` ausdrücklich **nicht** gelesen
-  (`js/deck-builder-consistency.js:83–85`). Woher der Unterschied kommt:
-  *nicht gefunden* — geprüft `backend/scrapers/tournament_scraper_JH.py:1114–1115`.
+### 5.1 Gezogen, aber nirgends angezeigt
+
+| Datei / Feld | Erzeuger | Status |
+|---|---|---|
+| `labs_tournament_decks.csv` Spalten `day1_win_pct`, `day2_win_pct` | Labs-Scraper | **Kein Leser in `js/`** — nur in Kommentaren erwähnt (`js/app-meta-call.js:1249`). `day1_share_pct`/`day2_share_pct` gehen dagegen in den Prognosemotor ein (`js/app-meta-call.js:376`, `:7031`), erscheinen aber in keiner Anzeige. |
+| `labs_tournament_decks.csv` Spalten `top8_conv_rate`, `top16_conv_rate`, `top32_conv_rate` | Labs-Scraper | **Strukturell null.** Nachgezählt: in **allen 4.713 Zeilen = 0**, keine leer. `js/app-meta-call.js:4180–4187` fängt das ab (`t8ConvAvg > 0`) und weicht auf `d2/d1` aus; der Term `_clip(t8ConvAvg / 0.25, 0.5, 2.0)` (`:4184`) läuft damit nie. |
+| `labs_tournament_decks.csv` Spalten `top1_count`, `top4_count`, `top8_count` | Labs-Scraper | **4.072 von 4.713 Zeilen leer (86 %).** Werte > 0 gibt es in 10 / 36 / 62 Zeilen. Gelesen wird nur `top1_count` (`js/app-meta-call.js:7049/7116`) für die 🏆-Marke. |
+| `labs_tournament_decks.csv` Spalte `day1_to_day2_conv` | Labs-Scraper | Von den **Anzeigen** ignoriert (die rechnen `Σday2/Σday1` selbst, §4.3); gelesen nur vom Prognosemotor (`js/app-meta-call.js:7145`) und `scripts/build_deckempfehlung.py:196`. In **2.704 von 4.713 Zeilen = 0** (genau so viele wie `day2_players = 0`); der Motor filtert zusätzlich auf `day1_players >= 10` (`js/app-meta-call.js:7146–7147`). |
+| `data/ace_specs.json` | `scripts/repariere_ace_spec.py` | `timestamp` = **2026-02-18**, 39 Namen — **fast sieben Monate alt**, obwohl der Wochenlauf `repariere_ace_spec.py --melden` fährt (`weekly-full-update.yml:753`): der Lauf **meldet nur**, er schreibt nicht. Ohne die Datei baut der Bauer jedes Deck ohne ACE SPEC. |
+| `data/datenluecken.json` | `scripts/datenluecken.py` | **Kein Arbeitsablauf ruft das Skript auf** (`grep datenluecken .github/`: 0 Treffer). Die Datei steht auf `anzahl: 0`, `erzeugt` 2026-08-31 — der Admin-Bereich (`js/app-admin.js:49`) zeigt „keine Lücken", weil seither niemand nachgesehen hat. |
+| `labs_tournament_matchups*.csv` Spalten `ist_spiegel`, `tagesfilter_quelle` | `labs_tournament_scraper.py:1652–1653` | **Kein Leser in `js/`.** Die Datei markiert selbst, dass in `labs_tournament_matchups_TEF-PBL.csv` **811 von 1.866 Zeilen** `tagesfilter_quelle = kopie_overall` tragen — die „Tag 1"-Sicht ist dort eine Kopie der Gesamtsicht. Die Oberfläche prüft das nicht; sie filtert nur `day_filter === 'overall'` (`js/app-current-meta.js:83`, `js/app-past-meta.js:2098`). |
+| `online_tournament_top8_decks.csv` Spalten `top16_count_weighted`, `top16_conv_rate`, `avg_winrate_in_top8`, `source_format` | Onlineturnier-Scraper | Werden in `js/app-meta-call.js:6256–6261` in `_tournamentStats` gelegt; **keine Anzeige** liest `top16Conv` oder `avgWrTop8`. |
+| `tournament_cards_data_overview.csv` | JH-Scraper | Wird ausschließlich als **Brücke** `tournament_id → labs_tournament_id` gelesen (`js/deck-builder-consistency.js:440`). Die 111 Zeilen mit Turniernamen, Spielerzahlen und Formaten erscheinen nirgends. |
+| `player_continuity.csv` (21.299 Zeilen, 18 Spalten) | Kontinuitäts-Scraper | Nur `player_name`, `deck_archetype`, `tournament_id`, `meta` werden gelesen (`js/app-meta-call.js:6384–6389`). `place`, `points`, `day2`, `topcut`, `dropped`, `drop_round`, `dqed`, `country`, `wins/losses/ties`: **kein Leser**. |
+| `cardmarket_card_images.csv`, `cm_expansions.csv`, `cardmarket_id_mapping.csv`, `cardmarket_mapping_verified.csv`, `pokepricelab_*.csv`, `price_guide_6.json`, `products_*_6.json` | Preis-Kette | Zwischenstufen; erreichen die Seite nur über `all_cards_merged.json` / `cards_chunk_*.json` (`backend/core/prepare_card_data.py:628/801`). Kein direkter Leser in `js/` — korrekt so. |
+| `city_league_archetypes_deck_stats.csv`, `city_league_archetypes_past_deck_stats.csv` | CL-Scraper | **Kein Leser in `js/`.** Beide 0 bzw. 11 Zeilen. |
+| `city_league_analysis_M3.csv` (133.437 Zeilen), `city_league_archetypes_comparison_M3.csv` | Altbestand | **Kein Leser in `js/`.** Der größte Datenblock des Repos hängt an nichts. |
+| `labs_tournament_decks__unsorted.csv` | `schreibe_labs_verzeichnis.py` | Auffangdatei ohne Meta-Schlüssel; nicht im Verzeichnis, also nie geladen. |
+| `testing_group_bootstrap.json` | einmalig 2026-04-22 | Wird geladen (`js/app-testing-groups.js:192`), Inhalt ist aber seit **fünf Monaten** unverändert und stammt aus einem Tabellenblatt. |
+
+### 5.2 Anzeigen, die auf leeren oder fast leeren Dateien rechnen
+
+`data/data_stand.json` führt die vier leeren Dateien selbst auf
+(`"leer": [city_league_analysis.csv, city_league_archetypes.csv,
+city_league_archetypes_comparison.csv, city_league_archetypes_deck_stats.csv]`),
+und `js/ds-datenstand.js:133–172` schreibt an den betroffenen Chips „leer" statt
+eines Datums. Die rechnenden Ansichten darüber bleiben trotzdem stehen:
+
+| Anzeige | Rechnet auf | Zeilen | Folge |
+|---|---|---|---|
+| Reiter **City League Meta** (Tier-Liste, Climbers/Fallers, Gruppierung) | `city_league_archetypes.csv` + `_comparison.csv` | **0 / 0** | Tier-Einteilung nach Rangplatz (`js/app-tier-meta.js:962–967`) über eine leere Liste; `clGesamtListen` = 0. |
+| Reiter **Deck Analysis (Japan)**, Karten-Usage-Share | `city_league_analysis.csv` | **0** | `js/app-city-league.js:3763` rechnet auf einer leeren Menge. |
+| **Kartendatenbank**, Abdeckungsplakette | u. a. `city_league_analysis.csv` als eine von drei Erhebungen (`js/app-cards-db.js:749`) | **0** | Die Erhebung „City League" liefert nie einen Kandidaten (`rechne()` gibt bei `nenner <= 0` null zurück, `js/app-cards-db.js:3917`). Kein Fehler, aber eine der drei beworbenen Quellen ist tot. |
+| Meta Call, Schalter **„Current City League einbeziehen"** | `city_league_archetypes_comparison.csv` (`js/app-meta-call.js:7296`) | **0** | Der Schalter ist bedienbar und bewirkt nichts. |
+| **Past Meta / Japan-Vergangenheit** | `city_league_archetypes_past.csv` **26**, `_past_comparison.csv` **11**, `city_league_analysis_past.csv` **315** | fast leer | Eine Tier-Liste aus 11 verglichenen Archetypen; `js/app-city-league.js:14–15` beziffert es selbst als „ein einziges Turnier, 23 Listen". |
+| **Tech-Ideen** | `card_capability_interactions.json` | **5 Paarungen**, Version 0.1 vom 15.05.2026 | Wird in der Oberfläche angeschrieben (`js/i18n.js:2794`), rechnet aber effektiv auf einer Regelbasis, die 0,02 % des Formats abdeckt. |
+| **Max Consistency** | `tournament_decklists_per_player.csv` nach `minDate` 2026-07-31 | **143 Listen** von 1.201 | 27 Archetypen; **21 davon unter 10 Listen, 15 unter 3**. Unter 3 Listen verweigert der Bau (`MIN_WEIGHTED_LISTS = 3`, `js/deck-builder-consistency.js:227`) — für 15 der 27 Archetypen gibt es im laufenden Format also gar keinen Bau. |
+| **Archetyp-Karte, Major-Seite** | `labs_tournament_decks_TEF-PBL.csv` | **46 Zeilen, 1 Turnier** | Anteil, Win Rate und Day-2-Quote der ganzen Präsenzspalte hängen an einem Turnier vom 28.08.2026. |
+| **Präsenz-Matchups** | `labs_tournament_matchups_TEF-PBL.csv` | 1.866, davon 811 `overall` | 40 der 1.866 Zeilen sind Spiegelpaarungen; die day1-Sicht ist zu 100 % Kopie (§5.1). |
+
+### 5.3 Ganze Quellen, die derzeit nichts liefern
+
+* **Japanische City League.** `data/city_league_analysis_scraped.json` steht auf
+  `last_updated: 2026-07-07`; das Scrape-Fenster ist auf `start_date: 31.07.2026`
+  gesetzt (`config/scraper_settings.json`, `city_league_analysis` und
+  `city_league_archetype`), synchron zum JP-Rotationsdatum
+  `jp_release_date: 2026-07-31` in `data/format_window.json`. Seit der Rotation
+  ist **keine einzige Zeile** dazugekommen, obwohl der Wochenlauf zweimal pro
+  Woche läuft. Der Waechter meldet die Dateien als „leer", nicht als „veraltet".
+* **TCG Pocket.** `pocket-tierlist.yml` hat **keinen Zeitplan** (Begründung
+  `:24–48`); `data/pocket_tierlist.json` wird nur aus einer Arbeitssitzung heraus
+  aktualisiert.
+* **Online-Einzellisten.** `online-decklists.yml` hat keinen Zeitplan
+  (`:30–44`), Ziel `data/tournament_decklists_per_player.csv` wird faktisch nur
+  über `per-decklist-scrape.yml` (Di 12:00) und den Wochenlauf gefüllt.
+
+---
+
+## 6. Was das Datenfenster „Daten ab" erreicht — und was nicht
+
+Bedienelement: `#currentMetaDateFrom` (Reiter *Deck Analysis (Global)*).
+Zustand: `currentMetaDateFrom` / `window.currentMetaDateFrom`
+(`js/app-current-meta-analysis.js:19–20`, gesetzt `:1400–1401`).
+Filter:
+
+```
+function filterRowsByDateFrom(rows, cutoffISO) { … return rows.filter(r => { const raw = r && (r.tournament_date || r.date || ''); if (!raw) return false; … }); }
+```
+`js/app-current-meta-analysis.js:1504–1521`. **Zeilen ohne Datum fallen heraus**
+(`return false`), nicht durch.
+
+| Anzeige | Wirkt? | Beleg (Datei:Zeile) |
+|---|---|---|
+| Kartenübersicht, Filter **„Major"** | **ja** — `filterRowsByDateFrom` auf den Turnier-Chunk | `js/app-current-meta-analysis.js:1926–1931` |
+| Kartenübersicht, Filter **„All" / „Limitless"** | **ja, aber über eine andere Datei**: bei gesetztem Fenster wird auf das Laufzeit-Aggregat aus `online_tournament_dated_cards.csv` umgeschaltet, weil `current_meta_card_data.csv` kein Datum führt | `js/app-current-meta-analysis.js:1941–1953`, Aggregat `:1630–1657` |
+| Kartenübersicht, Filter „All/Limitless" **ohne** verfügbares Aggregat | **nein** — stiller Rückfall auf den ungefilterten Aggregatstand | `js/app-current-meta-analysis.js:1949–1951` |
+| Kachel **„Total Win Rate …"** | **nein** — die Fußnote sagt es ausdrücklich | `js/app-current-meta-analysis.js:1741–1742` |
+| Kachel **„Matchup gegen Top 20"** | **nein** — „nicht nach Datum eingegrenzt" | `js/app-current-meta-analysis.js:1861` |
+| Kachel **„Karten"** (`currentMetaStatCards`) | folgt der Kartenübersicht, also wie oben | `js/app-current-meta-analysis.js:2239` |
+| Liste **„Used in Top 256"** | **nein** — ausdrücklich vermerkt | `js/app-current-meta-analysis.js:2390`, `:2415` |
+| **Archetyp-Karte**, alle vier Kacheln (Anteil, Win %, Top-8, Day 2) | **nein** — `grep currentMetaDateFrom js/app-archetype-card.js`: 0 Treffer; Begründung je Datei im Quelltext, Satz erscheint in der eingebetteten Fassung | `js/app-archetype-card.js:901–935`, Text `:962–966` |
+| **Deck Builder**, Consistency-Bau | **ja**, aber zusätzlich zum harten Formattor `minDate` | `js/app-deck-builder.js:9170–9172`, `:7940` |
+| **Kartendatenbank**, Abdeckungsplakette | **nein** — eigener Filtersatz (Meta / Archetyp / Haupt-Pokémon) | `js/app-cards-db.js:3792–3844` |
+| **Tier-Liste (Current Meta)** | **nein** — kein Bezug auf `currentMetaDateFrom` in `js/app-tier-meta.js` | — |
+| **Meta Call** | **nein** — eigenes 14-Tage-Fenster über `limitless_online_fenster.csv` | `js/app-meta-call.js:6051`, `:192–201` |
+| **City League** | **eigener** Datumsfilter `cityLeagueDateFrom` / `cityLeagueDateTo`, unabhängig | `js/app-city-league.js:2544–2551`, `:3088–3132` |
+| **Startseite (Meta-Hub)** | **nein** — lädt `online_tournament_top8_decks.csv` ohne Datumsbezug | `js/meta-analysis-hub.js:93` |
+
+**Merksatz für Prüfagenten:** Das Fenster wirkt auf **Kartenzeilen**, nie auf
+**Deckbilanzen**. Jede Datei mit `tournament_date` je Zeile ist erreichbar
+(`online_tournament_dated_cards.csv`, `tournament_cards_data_cards_*.csv`,
+`tournament_decklists_per_player.csv`); jede aufsummierte Datei ohne Datum ist es
+nicht (`limitless_online_decks.csv`, `limitless_online_decks_matchups.csv`,
+`current_meta_card_data.csv`, `online_tournament_top8_decks.csv` — dort steht nur
+`last_seen_date`).
+
+---
+
+## 7. Anhang — nachgezählte Kennzahlen des Bestands (07.09.2026)
+
+| Größe | Wert | Woraus |
+|---|---|---|
+| Gelistete Onlinedecks | 136 Zeilen, Σ `count` = **39.694** Listen | `limitless_online_decks.csv` |
+| Σ `share_numeric` | **96,19 %** (Rest „Other", vom Scraper verworfen) | dto. |
+| Σ Partien online | **180.414**, davon **2.322** unentschieden (1,29 %) | dto. |
+| Onlineturnier-Antritte | Σ `total_brought` = **12.287**, Σ `top8_count` = **754** (6,14 %) | `online_tournament_top8_decks.csv` |
+| dto. gewichtet | **7.501,5** / **464,5** (6,19 %) | dto. |
+| Präsenzpartien im laufenden Format | **6.192** (2.754-2.754-684), Remis **11,05 %** | `labs_tournament_matchups_TEF-PBL.csv`, `day_filter='overall'` |
+| Präsenzlisten im laufenden Format | **143** aus 1 Turnier (Worlds SF, 797 Spieler, 28.08.2026) | `tournament_decklists_per_player.csv`, `labs_tournaments.json` |
+| Kartenzeilen laufendes Format | Turnier **879** · Meta Live **3.330** · Meta Play! **1.154** | `tournament_cards_data_cards_TEF-PBL.csv`, `current_meta_card_data.csv` |
+| Deckzahlen je Erhebung | 143 · 1.187 · 253 | dto. |
+| Japan, laufendes Format | **0** Zeilen in allen vier Current-Dateien | `city_league_*` |
+| Online-Fenster | 2026-08-22 – 2026-09-06, 15 Tage, **10.330** Decks, 67 Stände vorhanden | `limitless_online_fenster_meta.json` |
+| Kartendatenbank | **20.419** Karten, **20.419** Preiszeilen | `all_cards_database.csv`, `price_data.csv` |

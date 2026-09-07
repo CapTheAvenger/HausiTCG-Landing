@@ -1,1346 +1,769 @@
-# Feature-Inventar der Oberfläche
+# Inventar der Oberfläche — thedipidis.app
 
-**Stand:** `main` = 5ec1e742 · erstellt 2026-09-07 · rein aus dem Quelltext gelesen, nichts ausgeführt.
+Stand: 07.09.2026 · Git `5d9ab9a8` · ausgeliefert `202609071722-bc9a494` · `window.APP_VERSION = '202609071700'`
+Neu aufgebaut aus `index.html` (4.000 Zeilen) und den zugehörigen `js/`-Dateien. Nichts aus dem Vorlauf übernommen.
 
-**Zweck:** Grundlage für die vollständige Live-Prüfung. Was hier nicht steht, wird nicht geprüft;
-was hier steht, bleibt nicht ungeprüft.
+**Lesart der Spalten**
+- *Kennung* — feste Adresse für Prüfberichte. Gruppe = Reiter, laufende Nummer innerhalb der Gruppe.
+- *Bezeichnung* — was auf dem Bildschirm steht (deutsche Fassung). `data-i18n`-Schlüssel liefern zur Laufzeit den Text; im Markup steht als Rückfall Englisch.
+- *Ort* — `index.html:Zeile` für statisches Markup, `Datei:Zeile` für zur Laufzeit erzeugtes, Container-ID in Klammern.
+- *Soll* — was das Element tun soll.
+- *Nachweis* — nachprüfbares Kriterium.
 
-**Lesehilfe:**
+**Reiter (`.tab-content`), 16 Stück** — `current-meta` und `past-meta` tragen zusätzlich `fs-scale`; eine Suche nach `class="tab-content"` mit Anführungszeichen findet sie nicht.
 
-* `zu prüfen: …` heißt: der Code legt das nahe, aber das Verhalten ist erst am laufenden System zu klären.
-* Datei:Zeile bezieht sich auf den oben genannten Stand.
-* Reiter = `<div class="tab-content">` in `index.html`. Es sind **16** Stück, nicht 14: `current-meta`
-  (index.html:1107) und `past-meta` (index.html:1791) tragen zusätzlich `fs-scale` und fehlen deshalb in
-  einer naiven Suche nach `class="tab-content"`.
+| # | ID | Zeile | Gruppe |
+|---|---|---|---|
+| 1 | `meta-analysis-hub` | 647 | F1 |
+| 2 | `city-league` | 688 | F2 |
+| 3 | `city-league-analysis` | 715 | F3 |
+| 4 | `current-meta` (`active` beim Start) | 1114 | F4 |
+| 5 | `current-analysis` | 1143 | F5 |
+| 6 | `past-meta` | 1798 | F6 |
+| 7 | `meta-call` | 2075 | F7 |
+| 8 | `cards` | 2085 | F8 |
+| 9 | `proxy` | 2169 | F9 |
+| 10 | `tutorial` | 2233 | F10 |
+| 11 | `quellen` | 2271 | F11 |
+| 12 | `admin` | 2287 | F12 |
+| 13 | `side-quest` | 2304 | F13 |
+| 14 | `pocket` | 2339 | F14 |
+| 15 | `calculator` | 2350 | F15 |
+| 16 | `profile` | 2407 | F16 |
+
+**Profil-Untertabs (`.profile-tab-content`), 11 Stück** — F16: `profile-collection` (2564), `profile-decks` (2638), `profile-wishlist` (2679), `profile-tradelist` (2733), `profile-metabinder` (2773), `profile-custombinder` (2804), `profile-journal` (2869), `profile-deckcompare` (2908), `profile-deckbuilder` (2926, leer, JS füllt), `profile-testinggroups` (2933, leer, JS füllt), `profile-settings` (2938).
 
 ---
 
-## F0 · Rahmen: Kopfzeile, Pokéball-Menü, Navigationsleiste, Tieflinks
+## F0 — Seitenübergreifend (Kopfzeile, Menü, Navigation, Fuß, globale Dialoge)
 
-**Zweck:** Wie man überhaupt irgendwohin kommt und wo man gerade ist.
-
-### F0.1 – F0.9 Kopfzeile (`index.html:452–637`)
-
-| Nr. | Element | id / Aufruf | Tut |
-|---|---|---|---|
-| F0.1 | Pokéball-Knopf | `mainMenuTrigger`, `toggleMainMenu()` | öffnet/schließt das Hauptmenü; `aria-expanded` |
-| F0.2 | Reiter-Abzeichen | `current-tab-title` | zeigt den Namen des offenen Reiters; auf `meta-analysis-hub` ausgeblendet (app-core.js:1659) |
-| F0.3 | Dunkelmodus | `themeToggleBtn`, `toggleTheme()` | Mond-/Sonnensymbol, `aria-pressed` |
-| F0.4 | Sprache | `langToggleBtn`, `switchLanguage(...)` | DE ⇄ EN, beschriftet mit der Zielsprache |
-| F0.5 | Battle Journal | `battleJournalFab`, `openBattleJournalSheet()` | öffnet die Journal-Schublade; Plakette `battleJournalFabBadge` (Anzahl offener Einträge) |
-| F0.6 | My Decks | `openProfileSection('decks')` | Profil → Untertab „My Decks" |
-| F0.7 | Wishlist | `openProfileSection('wishlist')` | Profil → Untertab „Wishlist" |
-| F0.8 | Database | `switchTab('cards')` | Kartendatenbank |
-| F0.9 | Sign In / Profil | `signin-btn` → `showAuthModal('signin')`, danach `user-info` → `switchTabAndUpdateMenu('profile')` | zwei Zustände, umgeschaltet über die Klasse `is-signed-out` am `<html>` (inline-init.js:417) |
-
-### F0.10 – F0.28 Pokéball-Menü (`index.html:474–563`)
-
-Zwei aufklappbare Gruppen (`toggleMenuCluster`), Rest flach.
-
-| Nr. | id | Beschriftung | Ziel |
-|---|---|---|---|
-| F0.10 | `menu-btn-meta-analysis-hub` | Overview / Startseite | **`current-meta`** (nicht `meta-analysis-hub`) |
-| F0.11 | `menu-group-meta` | Meta & Tier Lists | klappt `menu-submenu-meta`, startet offen |
-| F0.12 | `menu-btn-city-league` | City League Meta | `city-league` |
-| F0.13 | `menu-btn-city-league-analysis` | Deck Analysis (Japan) | `city-league-analysis` |
-| F0.14 | `menu-btn-current-meta` | Current Meta (Global) | `current-meta` |
-| F0.15 | `menu-btn-current-analysis` | Deck Analysis (Global) | `current-analysis` |
-| F0.16 | `menu-btn-past-meta` | Past Meta | `past-meta` |
-| F0.17 | `menu-btn-cards` | Card Database | `cards` |
-| F0.18 | `menu-btn-deckbuilder` | Deck Builder | `openProfileSection('deckbuilder')` → Profil-Untertab |
-| F0.19 | `menu-group-tools` | Tools | klappt `menu-submenu-tools`, startet zu |
-| F0.20 | `menu-btn-proxy` | Proxy Printer | `proxy` |
-| F0.21 | `menu-btn-showdown` | Playtester (TCG Showdown ↗) | `openShowdownExternal()` — externer Reiter, kein Tab |
-| F0.22 | `menu-btn-calculator` | Probability Calculator | `calculator` |
-| F0.23 | `menu-btn-meta-call` | Meta Call | `meta-call` |
-| F0.24 | `menu-btn-profile` | My Profile | `profile` |
-| F0.25 | `menu-btn-side-quest` | Side Quest: Champions | `side-quest` |
-| F0.26 | `menu-btn-pocket` | Side Quest: TCG Pocket | `pocket` |
-| F0.27 | `menu-btn-tutorial` | How to Use | `tutorial` |
-| F0.28 | `menu-btn-quellen` | Sources & Method | `quellen` |
-
-Nicht im Menü: `meta-analysis-hub`, `admin`. Beide nur über Tieflink.
-
-### F0.29 – F0.33 Untere Navigationsleiste (`js/ds-nav.js:51–79`, Host `#dsNavHost`)
-
-Fünf Gruppen, mobil fünf Spalten:
-
-| Nr. | Gruppe | Beschriftung DE/EN | Ziel | leuchtet bei |
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
 |---|---|---|---|---|
-| F0.29 | `meta` | Meta / Meta | `current-meta` | current-meta, city-league, past-meta, meta-analysis-hub |
-| F0.30 | `decks` | Decks / Decks | `current-analysis` | current-analysis, city-league-analysis |
-| F0.31 | `turnier` | Turnier / Event | `meta-call` | meta-call |
-| F0.32 | `karten` | Karten / Cards | `cards` | cards, proxy, calculator |
-| F0.33 | `champions` | Champions | `side-quest` | side-quest |
+| F0.1 | „Skip to content" (Sprungmarke) | index.html:456 | Erster Tabstopp; springt auf `#main-content` | Tab bei frisch geladener Seite fokussiert den Link; Enter setzt Fokus in den Inhalt |
+| F0.2 | Pokéball-Knopf (Menü öffnen) | index.html:466 (`#mainMenuTrigger`) | `toggleMainMenu()`; `aria-expanded` wechselt | Klick öffnet `#mainMenuDropdown` (`.show`); zweiter Klick schließt; `aria-expanded` folgt |
+| F0.3 | Menü-Überschrift „Hauptmenü" | index.html:472 | reine Beschriftung | Text vorhanden, kein Klickziel |
+| F0.4 | Menüpunkt „Übersicht" | index.html:478 (`#menu-btn-meta-analysis-hub`) | `switchTabAndUpdateMenu('current-meta')` | Reiter wird `current-meta`, Adresszeile `#current-meta`, Menüpunkt bekommt `.active` |
+| F0.5 | Menügruppe „Meta & Tier-Listen" (auf/zu) | index.html:482 (`#menu-group-meta`) | `toggleMenuCluster('meta')`, Standard offen | `#menu-submenu-meta` wechselt `.open`; `aria-expanded` folgt |
+| F0.6 | Menüpunkt „City League Meta" | index.html:489 | → Reiter `city-league` | Reiter aktiv + Hash + Kopfabzeichen |
+| F0.7 | Menüpunkt „Deck-Analyse (Japan)" | index.html:492 | → `city-league-analysis` | wie F0.6 |
+| F0.8 | Menüpunkt „Current Meta (Global)" | index.html:495 | → `current-meta` | wie F0.6 |
+| F0.9 | Menüpunkt „Deck-Analyse (Global)" | index.html:498 | → `current-analysis` | wie F0.6 |
+| F0.10 | Menüpunkt „Past Meta" | index.html:501 | → `past-meta` | wie F0.6 |
+| F0.11 | Menüpunkt „Kartendatenbank" | index.html:506 | → `cards` | wie F0.6 |
+| F0.12 | Menüpunkt „Deck Builder" | index.html:514 (`#menu-btn-deckbuilder`) | `openProfileSection('deckbuilder')` — Profil + Untertab | nach Klick ist `#profile` aktiv UND `#profile-deckbuilder` sichtbar; Hash nennt den Untertab (`inline-init.js:345`, `__dsSchreibeProfilHash`) |
+| F0.13 | Menügruppe „Werkzeuge" (auf/zu) | index.html:525 (`#menu-group-tools`) | `toggleMenuCluster('tools')`, Standard zu | `#menu-submenu-tools` wechselt `.open` |
+| F0.14 | Menüpunkt „Proxy Printer" | index.html:532 | → `proxy` | wie F0.6 |
+| F0.15 | Menüpunkt „Playtester (TCG Showdown ↗)" | index.html:538 (`#menu-btn-showdown`) | `openShowdownExternal()` — externer Tab | neuer Browser-Tab auf TCG Showdown; eigener Reiter wechselt NICHT (`js/tcg-showdown-link.js`) |
+| F0.16 | Menüpunkt „Wahrscheinlichkeitsrechner" | index.html:541 | → `calculator` | wie F0.6 |
+| F0.17 | Menüpunkt „Meta Call" | index.html:545 | → `meta-call` | wie F0.6 |
+| F0.18 | Menüpunkt „Mein Profil" | index.html:548 | → `profile` | wie F0.6 |
+| F0.19 | Menüpunkt „Side Quest: Champions" | index.html:551 | → `side-quest` | wie F0.6 |
+| F0.20 | Menüpunkt „Side Quest: TCG Pocket" | index.html:554 | → `pocket` | wie F0.6 |
+| F0.21 | Menüpunkt „Anleitung" | index.html:557 | → `tutorial` | wie F0.6 |
+| F0.22 | Menüpunkt „Quellen & Methodik" | index.html:560 | → `quellen` | wie F0.6 |
+| F0.23 | Seitentitel „Pokémon TCG Hub" + Untertitel | index.html:567/571 | fest | Text steht, wechselt mit der Sprache |
+| F0.24 | Reiter-Abzeichen im Kopf | index.html:569 (`#current-tab-title`) | zeigt Beschriftung des aktiven Menüpunkts; auf `meta-analysis-hub` ausgeblendet | nach jedem Reiterwechsel steht dort der Menütext; auf dem Hub `display:none` (`inline-init.js:302`) |
+| F0.25 | Dunkelmodus-Umschalter | index.html:576 (`#themeToggleBtn`) | `toggleTheme()`; Wahl in `localStorage['theme']` | `<html data-theme="dark">` wechselt, `aria-pressed` folgt, Wahl übersteht Neuladen (`inline-init.js:30`) |
+| F0.26 | Sprachumschalter „EN/DE" | index.html:585 (`#langToggleBtn`) | `switchLanguage()` DE↔EN | alle `data-i18n`-Texte wechseln; `languageChanged` löst Navigation, Ausweis und Abschnittsköpfe neu aus (`i18n.js:5368`) |
+| F0.27 | Kopfknopf „Journal" + Zähler | index.html:586 (`#battleJournalFab`, `#battleJournalFabBadge`) | öffnet Battle-Journal-Blatt; Abzeichen = ungesyncte Einträge | Klick zeigt `#battleJournalOverlay`; Zahl = Länge des Outbox-Puffers |
+| F0.28 | Kopfknopf „Meine Decks" | index.html:595 | `openProfileSection('decks')` | `#profile` aktiv, `#profile-decks` sichtbar, Hash nennt Untertab |
+| F0.29 | Kopfknopf „Wunschliste" | index.html:602 | `openProfileSection('wishlist')` | wie F0.28 mit `#profile-wishlist` |
+| F0.30 | Kopfknopf „Datenbank" | index.html:615 | `switchTabAndUpdateMenu('cards')` | Reiter `cards` UND Hash `#cards` (Befund vom 07.09.2026 behoben) |
+| F0.31 | Kopfknopf „Anmelden" | index.html:620 (`#signin-btn`) | `showAuthModal('signin')` | `#auth-modal` verliert `.d-none` |
+| F0.32 | Kopfknopf „Profil" (angemeldet) | index.html:625 (in `#user-info`) | → `profile` | nur sichtbar, wenn angemeldet; `#user-info` verliert `.user-info-hidden` |
+| F0.33 | Hauptnavigation (5 Gruppen) | index.html:643 (`#dsNavHost`), gefüllt von `ds-nav.js:163` | Meta · Decks · Turnier · Karten · Champions; Klick ruft `switchTabAndUpdateMenu(g.go)` | 5 Knöpfe vorhanden; der zum aktiven Reiter gehörende trägt `aria-current="page"` |
+| F0.34 | Mobile Navigationsleiste (unten) | index.html:3005 (`#dsTabbarHost`), `ds-nav.js:173` | dieselben 5 Ziele mit Glyphen | auf ≤768 px sichtbar, 5 Knöpfe, `aria-current` synchron zu F0.33 |
+| F0.35 | Datenraum-Ausweis | index.html:644 (`#dsSpaceHost`), `ds-nav.js:252` | Region · Quelle · Stichprobe · Zeitfenster · Stand · Verweis „Quellen & Methodik →" | nur auf `city-league`, `city-league-analysis`, `current-meta`, `current-analysis`, `past-meta` sichtbar (`SPACES`, ds-nav.js:92); sonst `hidden`. Fehlende Angaben werden weggelassen, nicht erfunden |
+| F0.36 | Ausweis-Zustandssatz „Saisonpause" / „Schnappschuss fehlt" | `ds-nav.js:296-298` | zwei verschiedene Sätze für zwei verschiedene Zustände | bei `facts.pause` steht Saisonpause, bei `facts.luecke` „Schnappschuss fehlt — nicht erhoben"; nie beides |
+| F0.37 | Datenraum-Filterzeile „DATENRAUM / FORMAT" | `ds-filter.js:156` (über den drei Meta-Ansichten) | Raum wechselt den Reiter; Formatspalte bedient das vorhandene `<select>` | 3 Raum-Knöpfe, genau einer `is-on`/`aria-pressed=true`; Formatwechsel setzt `#cityLeagueFormatSelect` bzw. `#pastMetaFormatFilter` und feuert `change` |
+| F0.38 | Format-Schild (Global) | `ds-filter.js:201` (`.ds-filter-fixed`) | zeigt laufendes Fenster, kein Schalter | im Raum „Global" steht ein Schild mit dem Formatkürzel, kein anklickbares Element |
+| F0.39 | Gesperrte Format-Option | `ds-filter.js:245/262` | sichtbar, nicht wählbar, mit Grund im `title` | gesperrte Option ist `disabled`/`aria-disabled` und trägt `title` mit Begründung — im Auswahlfeld **und** in der Knopfleiste |
+| F0.40 | Frische-Chips „Daten: …" | index.html:693, 719, 1118, 1801, 2087 + `meta-analysis-hub.js:551` | `ds-datenstand.js:158` füllt je Chip aus `data-quelle` | jeder Chip zeigt das Datum SEINER Datei; leere Datei ⇒ „keine Daten" + `is-unbekannt`; > 14 Tage ⇒ `is-alt` |
+| F0.41 | Fußzeile „Letzte Aktualisierung" | index.html:3007 (`#last-update`) | Stand von `limitless_online_decks.csv`, sonst „unbekannt" | zeigt nie das Datum des Besuchs (`app-init.js:32`) |
+| F0.42 | Hilfe-Knopf je Ansicht (`.tab-help-btn`) | 13× in index.html (650, 693, 719, 1118, 1146, 1716, 1801, 2087, 2175, 2239, 2356, 2412, 2469, 2775, 2806) | `openTabHelp(id)` öffnet `#helpModal` | Modal öffnet, Titel und Text passen zur übergebenen Kennung (`app-core.js:351`) |
+| F0.43 | Hilfe-Dialog | index.html:3902 (`#helpModal`) | Titel, Text, Schließen | `×` und Klick auf Hintergrund schließen |
+| F0.44 | Toast-Bereich | index.html:3899 (`#toast-container`) | `showToast()` legt Meldungen ab, `aria-live=polite` | Meldung erscheint und verschwindet nach Ablauf (`app-core.js:134`) |
+| F0.45 | „← Startseite" (Zurück-Leiste der Werkzeug-Reiter) | index.html:2078, 2172, 2236, 2274, 2290, 2307, 2342, 2353 (8×) | → `current-meta` | in jedem der 8 Reiter genau einer, führt auf die Startseite |
+| F0.46 | Anmelde-/Registrierdialog | index.html:3013 (`#auth-modal`) | Anmelden, Registrieren, Google, Passwort vergessen | Felder `#signin-email/-password`, `#signup-email/-password/-password-confirm`; Umschalten zwischen den beiden Formularen; `#google-signin-btn`; `#password-reset-btn` |
+| F0.47 | Reiter-Adresse (Deep-Link) | `inline-init.js:259/735/971` | jeder Reiterwechsel schreibt per `pushState` einen Hash; Aufruf mit Hash öffnet den Reiter | `history.length` steigt je Wechsel um 1; Zurück-Knopf wechselt Ansicht statt die Seite zu verlassen |
+| F0.48 | Versions-Prüfung + Neuladen | index.html:82 | vergleicht `version.json` mit `APP_VERSION`, räumt Caches, lädt hart neu | bei neuerer Serverversion Hard-Reload mit `?_v=` |
+| F0.49 | Service-Worker-Meldung „Neue Version wird geladen…" | index.html:3979 | Hinweis-Toast bei neuem SW | erscheint bei `updatefound`, verschwindet nach 3 s |
+| F0.50 | Tieflink-Tabelle (Reiter) | `inline-init.js:548` (`HASH_ALIASES`) | jeder Reiter und jeder Quellen-Abschnitt hat mindestens eine Kurzform; unbekannte Hashes steigen wortlos aus | `tests/unit/test-tieflinks.js` verbietet doppelte Schlüssel; `#overview`, `#hub`, `#uebersicht` → `meta-analysis-hub`; `#quellen-umfang` → `quellen`; `#playtester`/`#sandbox` → `meta-analysis-hub` statt auf eine leere Seite |
+| F0.51 | Tieflink-Tabelle (Profil-Untertabs) | `inline-init.js:690` (`PROFILE_SUBTAB_FOR_HASH`) | jede `id="profile-X"` braucht einen Eintrag HIER **und** in `HASH_ALIASES` | `tests/unit/test-profil-untertabs-tieflink.js` prüft die Regel; 11 von 11 Untertabs auflösbar, `#deckcompare` und `#settings` seit 07.09.2026 dabei |
+| F0.52 | Karten-Legende (aufklappbar) | index.html:1345-1409 (`details.ds-legend`) | erklärt A–K der Kartenkacheln | eingeklappt ~44 px; aufgeklappt Musterkarte + 11 Legendenzeilen (A Max-Anzahl, B im Deck, C Wunschliste, D andere Prints, E Name, F Set+Rate, G Ø-Anzahl, H Verbreitung, I −/+/★, J L/P/Preis, K Pin/Exclude) |
 
-Ohne Leuchten: `tutorial`, `quellen`, `profile`, `pocket`, `admin` (bewusst, ds-nav.js:60–75).
+## F1 — Meta & Deck Analysis Hub (`#meta-analysis-hub`)
 
-### F0.34 Datenraum-Filterzeile (`js/ds-filter.js`)
-
-Über City League, Current Meta und Past Meta wird dieselbe Zeile gesetzt:
-`DATENRAUM [🇯🇵 Japan] [🌐 Global] [📦 …]` + zweite Spalte (`Zeitraum` bei Japan, `Format` bei Global/Past).
-Der Datenraum-Knopf **wechselt den Reiter**; die Format-Spalte spiegelt `#cityLeagueFormatSelect` bzw.
-`#pastMetaFormatFilter` und setzt deren Wert. Global hat keine Wahl, dort steht ein Schild
-(`.ds-filter-fixed`). Gesperrte Optionen werden als `disabled` mit `title`-Grund übernommen (ds-filter.js:100–113).
-Ab >4 Optionen wird aus der Knopfleiste ein `<select>`.
-
-### F0.35 Tieflinks (`js/inline-init.js:423–512`, `HASH_ALIASES`)
-
-| Hash | Zielreiter |
-|---|---|
-| `#meta-call`, `#metacall`, `#metacall-tab` | meta-call |
-| `#tutorial`, `#how-to-use`, `#howto`, `#help`, `#hilfe`, `#anleitung` | tutorial |
-| `#quellen`, `#sources`, `#methodik`, `#method`, `#impressum` | quellen |
-| `#quellen-quellen`, `#quellen-begriffe`, `#quellen-zuverlaessig`, `#quellen-trennung`, `#quellen-stand`, `#quellen-rechtliches` | quellen + Abschnitt aufklappen (inline-init.js:644–651) |
-| `#city-league` | city-league |
-| `#city-league-analysis` | city-league-analysis |
-| `#current-meta` | current-meta |
-| `#current-analysis`, `#deck-analysis` | current-analysis |
-| `#past-meta` | past-meta |
-| `#cards` | cards |
-| `#proxy` | proxy |
-| `#pocket`, `#tcg-pocket`, `#pocket-decks` | pocket |
-| `#playtester`, `#sandbox` | meta-analysis-hub + Hinweis-Meldung „Playtester läuft jetzt extern" (600 ms verzögert) |
-| `#calculator`, `#probability`, `#wahrscheinlichkeit` | calculator |
-| `#profile` | profile |
-| `#journal` | profile → Untertab `journal` |
-| `#side-quest`, `#sidequest`, `#champions` | side-quest |
-| `#meta-analysis-hub`, `#hub`, `#uebersicht` | meta-analysis-hub |
-| `#admin`, `#datenluecken` | admin |
-| `#metabinder`, `#meta-binder` | profile → `metabinder` |
-| `#custombinder`, `#custom-binder` | profile → `custombinder` |
-| `#testinggroups`, `#testing-groups` | profile → `testinggroups` |
-| `#wishlist` | profile → `wishlist` |
-| `#tradelist`, `#trade-list` | profile → `tradelist` |
-| `#collection` | profile → `collection` |
-
-**Parameter am Hash:** `?deck=<Name>` (current-meta/current-analysis/city-league/city-league-analysis/past-meta),
-`?format=<Key>` (past-meta), `?focusCard=<SET>|<Nr>` (wishlist/tradelist, scrollt und blinkt 3 s amber).
-
-**Kanonischer Hash:** nur Schlüssel, die auf sich selbst zeigen, werden zurückgeschrieben (inline-init.js:711).
-
-**Zustände:** Zeigt ein Alias auf eine Reiter-id ohne DOM-Element, wird der Hash ignoriert und
-`console.warn('[deep-link] no tab element for …')` geschrieben (inline-init.js:566–570).
-
-*Zählung F0: 35 Elemente.*
-
----
-
-## F1 · `meta-analysis-hub` — Meta & Deck Analysis (Kachelseite)
-
-**Zweck:** Einstiegsseite, die ohne Klick sagt, welche Decks gerade das Feld bestimmen, und von dort in
-die sechs Meta-/Deck-Ansichten verzweigt.
-
-**Erreichbar:** nur über `#hub`, `#uebersicht`, `#meta-analysis-hub`. Kein Menüeintrag, kein Nav-Knopf.
-
-| Nr. | Element | Datei | Anmerkung |
-|---|---|---|---|
-| F1.1 | Überschrift „Meta & Deck Analysis" + Untertitel | index.html:642–645 | |
-| F1.2 | Hilfeknopf `openTabHelp('meta-analysis-hub')` | index.html:643 | öffnet `#helpModal` |
-| F1.3 | Antwortblock „Was gerade läuft" (`#metaHubAnswer`) | meta-analysis-hub.js:73, 448–560 | |
-| F1.4 | Kachelgitter (`#metaHubTileGrid`), 6 Kacheln | meta-analysis-hub.js:592–620 | jede Kachel = `<button class="meta-hub-tile" data-sub-tab="…">` |
-
-**F1.5 – F1.10 Kacheln** (`SUB_TABS`, meta-analysis-hub.js:14–26), je Titel + Stichpunkt:
-
-| Nr. | Kachel | Ziel |
-|---|---|---|
-| F1.5 | City League Meta | `city-league` |
-| F1.6 | Deck Analysis (Japan) | `city-league-analysis` |
-| F1.7 | Current Meta (Global) | `current-meta` |
-| F1.8 | Deck Analysis (Global) | `current-analysis` |
-| F1.9 | Past Meta | `past-meta` |
-| F1.10 | Meta Call | `meta-call` (`topTab`) |
-
-**F1.11 – F1.16 Kennzahlen im Antwortblock** (`answerHtml`, meta-analysis-hub.js:457–560),
-drei Kacheln (`.ds-stat`):
-
-| Nr. | Anzeigename | Berechnet von | Definition daneben? |
-|---|---|---|---|
-| F1.11 | Rolle: „Erfolgreichstes Deck" / „Meistgespielt · Rang n" | meta-analysis-hub.js:466–487 | Rang = `fieldRank` aus der anteilssortierten Liste |
-| F1.12 | Große Zahl = Feldanteil (`d.sharePct`) | `computeConversionPerformance` | Kontextzeile „Meta-Anteil" bzw. „des Metas" |
-| F1.13 | „aus N Antritten" (`d.brought`) | ebd. | gerundet, `toLocaleString` |
-| F1.14 | „Top-8-Quote X %" (`d.convPct`) | ebd. | |
-| F1.15 | „N,N-mal so oft wie der Schnitt" | `d.convPct / (model.conv.expected*100)` | **roh**, nicht geglättet (Kommentar meta-analysis-hub.js:512–520) |
-| F1.16 | Nenner-Satz „Aus N gewichteten Antritten · Deck: X von Y in die Top 8." + Verweis „Wie das gerechnet ist →" (`#quellen`) | `answerSentence`/`answerNenner` | Erklärung ausgelagert nach Quellen & Methodik |
-
-**F1.17 Datenstand-Chip** `js-data-freshness` mit `data-quelle="online_tournament_top8_decks.csv"`
-(gefüllt von `js/ds-datenstand.js`).
-
-**Zustände:**
-* Laden: kein eigener Ladezustand; `#metaHubAnswer` bleibt leer, bis die CSV da ist.
-* Fehler: `loadAnswerRows()` setzt `_answerRows = null` und **zeichnet den Block gar nicht** —
-  „kein Platzhalter" (meta-analysis-hub.js:95).
-* Kachelgitter: immer vorhanden, unabhängig von Daten.
-
-*Zählung F1: 17 Elemente.*
-
----
-
-## F2 · `city-league` — City League Meta (Japan)
-
-**Zweck:** Was in Japan gerade gespielt wird — Tier-Bänder, Auf-/Absteiger, Vergleichstabellen.
-
-**Host:** `#cityLeagueContent`, gezeichnet von `js/app-city-league.js` (Info-Blöcke) und
-`js/app-tier-meta.js:1164` (Tier-Abschnitte in `#cityLeagueTierSections`).
-
-### Bedienelemente
-
-| Nr. | Element | id / Aufruf | Werte |
-|---|---|---|---|
-| F2.1 | Hilfeknopf | `openTabHelp('city-league')` | |
-| F2.2 | Datenstand-Chip | `data-quelle="city_league_archetypes.csv"` | |
-| F2.3 | Format-Auswahl | `cityLeagueFormatSelect` → `switchCityLeagueFormat(v)` | `current` (Current Meta) / `past` (Past Meta) |
-| F2.4 | Datenraum-Filterzeile | ds-filter.js | s. F0.34 |
-| F2.5 | Suchfeld Vergleichstabelle | `cityLeagueSearchFilter` | filtert `#cityLeagueFullTable`, Trefferanzeige in `#cityLeagueSearchResults` |
-
-### Abschnitte / Tabellen
-
-| Nr. | Abschnitt | Spalten | sortierbar | Voreinstellung |
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
 |---|---|---|---|---|
-| F2.6 | Tier-Held-Kacheln (`section.tier-hero-section`) | Rangplakette, Name, „n Varianten", Plakette Deckzahl, Plakette „Ø-Rang" | nein | nach Anzahl |
-| F2.7 | Tier-Abschnitte `tier-1` / `tier-2` / `tier-3` / `tier-trending` | Deckkacheln | nein | Tier 1 = Plätze 1–3, Tier 2 = 4–10, Tier 3 = 11–20, Rogue/Trending = Rest (app-tier-meta.js:826–838); Rogue-Block ist ein `<details>` |
-| F2.8 | Karte „Archetype Overview" | Gesamtzahl, Top-3 nach Anzahl, Top-3 nach Ø-Platzierung | nein | |
-| F2.9 | Karte „Top-10 Changes" | Ein-/Aussteiger der Top 10 | nein | Leerfall: `cl.noBaseline` bzw. `cl.noTop10Changes` |
-| F2.10 | Karte „Data Source" | Zeitraum, Anzahl Turniere | nein | |
-| F2.11 | Tabelle „Popularity Decreases" / „Seltener gespielt" | Archetype · Old Count · New Count · Change · Ø-Platzierung | nein | Top 10 der Rückgänge |
-| F2.12 | Tabelle „Performance Improvers" | Archetype · Count · Ø-Platzierung | nein | |
-| F2.13 | Tabelle „Performance Decliners" | Archetype · Count · Ø-Platzierung | nein | |
-| F2.14 | Tabelle „Full Comparison Table (Top 30)" (`#cityLeagueFullTable`) | Deck · Count · Ø-Platzierung | nein | Top 30 |
-| F2.15 | Tabelle „Archetype Combined" (`#cityLeagueCombinedTable`) | Main Pokémon · Varianten · Count · Ø-Platzierung | nein | |
-| F2.16 | Fußzeile | „Generated <Datum>", „Total tracked <n>" | | |
+| F1.1 | Überschrift „Meta & Deck-Analyse" + Hilfe | index.html:650 | Titel, Hilfeknopf | siehe F0.42 |
+| F1.2 | Untertitel „Wähle eine Kategorie" | index.html:651 | fest | Text steht |
+| F1.3 | Block „Was gerade läuft" | `#metaHubAnswer`, `meta-analysis-hub.js:538` | Aussagesatz + 3 Kacheln + Nenner + Verweis | Satz nennt Deck, Top-8-Quote, Schnitt, Vielfaches |
+| F1.4 | Aussagesatz mit Gewichtungs-Chip | `meta-analysis-hub.js:383` (`span.mah-quote`) | die Quote trägt im `title` die Auskunft, ob gezählt oder nach Aktualität gewichtet | `title` enthält bei `hatRoh` „aus gezählten Starts", sonst „nach Aktualität gewichtet: … voll, ältere halb" |
+| F1.5 | Kachel „Erfolgreichstes Deck" | `meta-analysis-hub.js:460` | Rolle, Name, Meta-Anteil groß, Top-8-Quote + Vielfaches | Kachel 1 trägt Rolle „Erfolgreichstes Deck"; Anteilswort „Meta-Anteil" |
+| F1.6 | Kacheln „Meistgespielt · Rang n" | `meta-analysis-hub.js:481` | echter Feldrang, nicht laufender Zähler | Rang = `fieldRank`; bei Headline auf Rang 1 trägt die nächste Kachel „Rang 2" |
+| F1.7 | Mindeststichprobe der Überschrift | `meta-analysis-hub.js:220` (`HEADLINE_MIN_BROUGHT = 100`) | nur Decks mit ≥100 gezählten Antritten dürfen Headline werden | Deck mit 53 Antritten erscheint nie als „stärkstes Deck" |
+| F1.8 | Nennerzeile unter dem Satz | `meta-analysis-hub.js:399` | „Aus n Antritten · Deck: x von y in die Top 8" | Zahlen ganzzahlig, wenn gezählt; nur ohne gezählte Spalten halbe Werte + Wort „gewichtet" |
+| F1.9 | Verweis „Wie das gerechnet ist →" | `meta-analysis-hub.js:556` | Anker `#quellen` | Klick öffnet Reiter Quellen & Methodik |
+| F1.10 | Frische-Chip des Blocks | `meta-analysis-hub.js:551` | `data-quelle="online_tournament_top8_decks.csv"` | Datum = Stand genau dieser Datei |
+| F1.11 | Kachelraster (6 Kacheln) | `#metaHubTileGrid`, `meta-analysis-hub.js:596` | City League, Deck-Analyse JP, Current Meta, Deck-Analyse Global, Past Meta, Meta Call — je Titel + Stichpunkte | 6 `.meta-hub-tile`; jede führt auf ihren Reiter, Meta Call auf `meta-call` (nicht ins Profil) |
+| F1.12 | Unternavigation im Hub + „Zurück" | `meta-analysis-hub.js:648/655` (`#metaHubSubNavHost`) | Wechsel zwischen den 6 Unteransichten, Rückweg zum Kachelraster | Leiste erscheint nach Betreten einer Unteransicht; `#metaHubBackBtn` bringt das Raster zurück |
 
-### Klickpfade
+## F2 — City League Meta (`#city-league`)
 
-* **F2.17** Tier-Held-Kachel → `analyzeCombinedArchetype(main, variants)` (app-tier-meta.js:911) →
-  wechselt nach **`city-league-analysis`** und setzt dort `GROUP:<v1>|<v2>…` im Deck-Dropdown
-  (app-core.js:1737–1760). Zurück: Pokéball / Nav-Leiste / Browser-Zurück.
-* **F2.18** Archetyp-Zelle in F2.11–F2.15 → `jumpToCardAnalysis(name, 'cityLeague')` (app-core.js:1665)
-  → `city-league-analysis`, Dropdown vorbelegt, Seite scrollt nach oben. Zurück: keine eigene Zurück-Taste.
-
-### Kennzahlen
-
-| Nr. | Name in der Oberfläche | Quelle |
-|---|---|---|
-| F2.19 | Count / New Count / Old Count | `city_league_archetypes.csv` |
-| F2.20 | Change (`count_change`) | ebd. |
-| F2.21 | Ø-Platzierung (`new_avg_placement`, gezeichnet von `_rang()`) | ebd. |
-| F2.22 | Varianten-Anzahl je Held | app-tier-meta.js |
-
-**Zustände:**
-* Laden: `<div class="loading">Loading...</div>` (index.html:702), zusätzlich
-  `showTableSkeleton(content, {rows:8, cols:5})` beim Formatwechsel (app-city-league.js:310).
-* Saisonhinweis: `role="status"`-Block „📅 Season pause: …" (index.html:693–699). Per CSS
-  (`css/city-league.css`, `.cl-season-notice`) standardmäßig `display:none`; eingeblendet nur über
-  `setCitySeasonNotice(true)` (app-city-league.js:535–553), wenn die **aktuelle** Rotation keine
-  City-League-Daten führt. Derselbe Block steht ein zweites Mal in `city-league-analysis`
-  (index.html:721–727); beide werden gemeinsam geschaltet.
-* Leerzustand ohne Vorzeitraum: `keinVorzeitraum` unterdrückt Ein-/Aussteigerlisten (app-city-league.js:1036).
-
-*Zählung F2: 22 Elemente.*
-
----
-
-## F3 · `city-league-analysis` — Deck Analysis (Japan)
-
-**Zweck:** Ein japanisches Deck von innen: welche Karten drin sind, wie oft, und daraus ein eigener Bau.
-
-### Kopf & Filter
-
-| Nr. | Element | id / Aufruf | Werte |
-|---|---|---|---|
-| F3.1 | Hilfeknopf | `openTabHelp('city-league-analysis')` | |
-| F3.2 | Datenstand-Chip | `data-quelle="city_league_analysis.csv"` | |
-| F3.3 | Format-Auswahl | `cityLeagueFormatSelectAnalysis` → `switchCityLeagueFormat` | current / past — **spiegelt F2.3** (app-city-league.js:297–300) |
-| F3.4 | Datum von | `cityLeagueDateFrom` → `applyCityLeagueDateFilter()` | `<input type=date>` |
-| F3.5 | Datum bis | `cityLeagueDateTo` → `applyCityLeagueDateFilter()` | `<input type=date>` |
-| F3.6 | Deck-Archetyp | `cityLeagueDeckSelect` | dynamisch befüllt; Voreinstellung „-- Please Select Deck --" |
-| F3.7 | Card Share Filter | `cityLeagueFilterSelect` (Handler per `onchange` in JS, app-city-league.js:4828) | `all` / `90` / `70` / `50` |
-
-### Deck-Statistik (`#cityLeagueStatsSection`)
-
-| Nr. | Kennzahl | id | Definition daneben? |
-|---|---|---|---|
-| F3.8 | „Cards in deck (unique / avg. list)" | `cityLeagueStatCards` | nein |
-| F3.9 | „Decks Used" | `cityLeagueStatDecksUsed` + Fußnote `cityLeagueStatDecksNote` (`hidden`) | Fußnote nur bedingt |
-| F3.10 | „Avg Placement" | `cityLeagueStatAvgPlacement` | nein |
-
-### Card Overview (`#cityLeagueCardsSection`)
-
-| Nr. | Element | id / Aufruf |
-|---|---|---|
-| F3.11 | Zähler „n Karten / n Gesamt" | `cityLeagueCardCount`, `cityLeagueCardCountSummary` |
-| F3.12 | Kartensuche | `cityLeagueOverviewSearch` → `filterOverviewCards()` |
-| F3.13–F3.21 | 9 Typfilter | `overviewTypeAll/Pokemon/Supporter/Item/Tool/Stadium/Energy/SpecialEnergy/AceSpec` → `setOverviewCardTypeFilter(...)`; Voreinstellung „All" |
-| F3.22–F3.24 | Seltenheit | `overviewRarityMin` (Voreinstellung, `btn-success`) / `overviewRarityMax` / `overviewRarityAll` → `setOverviewRarityMode(...)` |
-| F3.25 | Copy Decklist | `copyDeckOverview()` — PTCGL/Limitless-Format |
-| F3.26 | Grid/Table-Umschalter | `toggleDeckGridView()`, `data-view-toggle="grid"` — schaltet `#cityLeagueDeckTableView` ⇄ `#cityLeagueDeckVisual` |
-| F3.27 | Karten-Legende | in dieser Ansicht **nicht** vorhanden (liegt nur in `current-analysis`, index.html:1345) — *zu prüfen: ob das gewollt ist* |
-
-### Deck Builder (`#cityLeagueDeckBuilderSection`)
-
-| Nr. | Element | Aufruf |
-|---|---|---|
-| F3.28 | Consistency Generate | `autoCompleteConsistency('cityLeague','min')` |
-| F3.29 | ↑ Max Rarity | `toggleDeckRarity('cityLeague', this)` |
-| F3.30 | Kennzahl „# n /60" | `cityLeagueDeckCount` |
-| F3.31 | Kennzahl „♦ (n Unique)" | `cityLeagueDeckCountUnique` |
-| F3.32 | Kennzahl „€ Preis" | `cityLeagueDeckPrice` (js/app-price.js) |
-| F3.33 | Test Draw | `openDrawSimulator('cityLeague')` → Modal `#drawSimulatorModal` |
-| F3.34 | TCG Showdown ↗ | `openInShowdownFromBuilder('cityLeague')` |
-| F3.35 | Clear | `clearDeck('cityLeague')` |
-| F3.36 | „How the consistency builder works" | `<details>` mit Gewichtungsregeln (Top-4 voll, Day-2 ≈30 %, Day-1 ≈10 %) |
-| F3.37 | Handstatistik | `#cityLeagueHandStats` |
-
-### Your Deck (`#cityLeagueMyDeckVisual`)
-
-| Nr. | Element | Aufruf |
-|---|---|---|
-| F3.38 | Save | `saveCurrentDeckToProfile('cityLeague')` |
-| F3.39 | Why? (Build Info) | `showConsistencyBuildInfo('cityLeague')` |
-| F3.40 | Compare | `openDeckCompare('cityLeague')` → `#deckCompareModal` |
-| F3.41 | Copy | `copyDeck('cityLeague')` |
-| F3.42 | Deck → Proxy | `sendCurrentDeckToProxyPrinter('cityLeague')` — **Beschriftung im Markup „Deck ? Proxy"** |
-| F3.43 | Share | `shareDeck('cityLeague')` |
-| F3.44 | PTCGL Import | `importFromPTCGL('cityLeague')` |
-| F3.45 | PTCGL Export | `exportToPTCGL('cityLeague')` |
-| F3.46 | Grid | `generateDeckGrid('cityLeague')` |
-| F3.47 | Deck-Suche mit Autovervollständigung | `cityLeagueDeckGridSearch` + `#cityLeagueDeckAutocomplete` |
-| F3.48 | Bank | `#cityLeagueBenchSection` |
-
-### Meta Card Analysis (Top 10 Archetypes)
-
-| Nr. | Element | Aufruf |
-|---|---|---|
-| F3.49 | Zähler | `cityLeagueMetaCardCount` |
-| F3.50–F3.53 | Anteilsfilter All / >90 % / >70 % / >50 % | `setMetaShareFilter('cityLeague', …)`, Voreinstellung All |
-| F3.54–F3.57 | Typfilter All / Trainer / Pokémon / Energy | `setMetaCardTypeFilter('cityLeague', …)`, Voreinstellung All |
-| F3.58–F3.60 | Sortierung: by Type (aktiv) / by Share% / by Avg Count | `sortMetaCards('cityLeague', …)` |
-| F3.61 | Suche | `cityLeagueMetaSearch` → `filterMetaCards('cityLeague')` |
-| F3.62 | Load Meta Analysis | `cityLeagueMetaReloadBtn` → `loadMetaCardAnalysis('cityLeague')`; benennt sich nach dem Laden in „Reload" um (app-meta-cards.js:731–738) |
-| F3.63 | Leerzustand-Knopf | zweiter „Load Meta Analysis" im Leerzustand des Gitters |
-
-### Tech vs Normal
-
-| Nr. | Element | id |
-|---|---|---|
-| F3.64 | Abschnitt „Tech vs Normal" + Untertitel | `cityLeagueTechVsNormalSection` / `…Body` (app-deck-builder.js:484–520); zeigt Added / Cut / Count changes / Total consistency score / Δ vs Normal |
-
-### Karten-Kacheln im Gitter (je Karte, gilt auch für F5)
-
-| Nr. | Element | Bedeutung |
-|---|---|---|
-| F3.65 | Rote Plakette | Max-Anzahl in einer einzelnen Liste |
-| F3.66 | Grüne Plakette | Kopien in deinem Deck |
-| F3.67 | Wunschzettel-Herz | Karte auf die Wunschliste |
-| F3.68 | Bernstein-Plakette | andere Prints im Besitz |
-| F3.69 | Set + Inklusionsrate | „SET 123 · 100 %" |
-| F3.70 | Ø-Anzahl | „Ø 3,2x (2,8x)" — nur spielende Decks / alle Decks |
-| F3.71 | Deck-Verbreitung | „87/100 (87 %)" |
-| F3.72 | − / + / ★ | Kopie weg / dazu / Print & Seltenheit wechseln (`#raritySwitcherModal`) |
-| F3.73 | L / P / Preis | Limitless öffnen / Proxy / Cardmarket |
-| F3.74 | 📌 / 🚫 | nur im Cooking Mode: Pin / Exclude |
-
-**Zustände:**
-* Leerzustand „Wähle ein Deck": Statistik/Karten/Builder sind `d-none` und werden erst durch den
-  MutationObserver in index.html:947–958 eingeblendet, sobald `#cityLeagueStatsSection` sichtbar wird.
-* Leeres Deck: `.deck-builder-empty-state` „Your deck is empty" + zwei Knöpfe (Generate / Test Draw).
-* Meta-Gitter ungeladen: „Meta analysis not loaded yet" + Knopf.
-* Fehler: kein eigener Fehlerzustand sichtbar; Warnungen nur in der Konsole (app-city-league.js:4725).
-
-*Zählung F3: 74 Elemente.*
-
----
-
-## F4 · `current-analysis` — Deck Analysis (Global)
-
-**Zweck:** Ein globales Deck von innen — Karten, Anteile, Win Rate, Matchups, Bau, Tech-Suche.
-
-### Ansichtsmodus
-
-| Nr. | Element | id |
-|---|---|---|
-| F4.1 | „Quick overview" (Voreinstellung) | `cmViewModeVanillaBtn` → `setCurrentMetaViewMode('vanilla')` |
-| F4.2 | „Deep Dive" | `cmViewModeDeepDiveBtn` → `setCurrentMetaViewMode('deepDive')` |
-
-Der Modus setzt `data-cm-view` am Reiter; alles mit `.cm-deep-dive-only` ist nur im Deep Dive sichtbar
-(app-current-meta-analysis.js:1393–1420). **Session-flüchtig:** jeder Seitenneuladen startet in „vanilla".
-
-### Filter
-
-| Nr. | Element | id / Aufruf | Werte |
-|---|---|---|---|
-| F4.3–F4.5 | Turnierformat: All / Limitless Decks / Major Tournament Decks | `currentMetaFilterAll/Live/Play` → `setCurrentMetaFormatFilter(...)` | Voreinstellung „All" |
-| F4.6 | Statusanzeige zum Filter | `currentMetaFilterStatus` | |
-| F4.7 | Datenfenster ab | `currentMetaDateFrom` → `setCurrentMetaDateFrom(v)` | `<input type=date>`; **derselbe Zustand wie `#metacallDateFrom` in F5** |
-| F4.8 | Clear | `currentMetaDateClear` → `clearCurrentMetaDateFrom()` | |
-| F4.9 | Statusanzeige zum Datum | `currentMetaDateStatus` | |
-| F4.10 | Deck-Archetyp | `currentMetaDeckSelect` | |
-| F4.11 | „+ Fuse with archetype (Cooking)" | `currentMetaDeckSelectSecondary` — nur Deep Dive | Voreinstellung „-- None (single deck) --" |
-| F4.12 | Card Share Filter | `currentMetaFilterSelect` | all / 90 / 70 / 50 |
-
-### Kopfblöcke
-
-| Nr. | Element | id |
-|---|---|---|
-| F4.13 | Leerzustand „Wähle ein Deck-Archetype…" | `currentAnalysisEmptyState` |
-| F4.14 | Archetyp-Karte | `currentMetaArchetypeCard` (js/app-archetype-card.js) |
-
-**F4.15–F4.18 Kacheln der Archetyp-Karte** (`tilesHtml`, app-archetype-card.js:613–830), je zweigeteilt
-online | Major:
-
-| Nr. | Anzeigename | Rechnung | Erklärung |
-|---|---|---|---|
-| F4.15 | „Anteil" | `d.share` %, rechts `d.count` (Listen) bzw. Major-Antritte | Nenner im `title`-Hinweis, nicht auf der Fläche |
-| F4.16 | „Win Rate" | Siege / alle Partien, beide Seiten gleich | `title` erklärt Remisquote-Unterschied und ±KI |
-| F4.17 | „Top-8-Quote (online)" | `top8 / brought` roh, daneben „Schnitt aller Decks X %" | `title` |
-| F4.18 | „Day-2-Quote (Major)" | `m.day2Quote`, daneben Feldschnitt | `title` |
-
-Leerfall je Kachel: „–" mit „keine Daten" / „zu wenig Daten" / „kein Major".
-
-### Deck-Statistik (`#currentMetaStatsSection`)
-
-| Nr. | Kennzahl | id | Rechnung | Definition daneben? |
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
 |---|---|---|---|---|
-| F4.19 | „Cards in deck (unique / avg. list)" | `currentMetaStatCards` | app-current-meta-analysis.js:1996 | nein |
-| F4.20 | „Total Win Rate Limitless Online Tournaments" | `currentMetaStatWinrate` | `win_rate_numeric` aus `limitless_online_decks.csv` (a-c-m-a.js:1946–1952) | nein |
-| F4.21 | „Matchup vs Top 20" | `currentMetaStatMatchup` | gewichtetes Mittel der Matchups gegen Decks mit `rank ≤ 20`, Format „54,12 % (17 MU)" (a-c-m-a.js:1955–1993) | nein |
-| F4.22 | „Used in Top 256" | `currentMetaTop256Section` / `…List` | | |
-
-### Matchups (nur Deep Dive, `#currentMetaMatchupsSection`)
-
-| Nr. | Element | Spalten | sortierbar |
-|---|---|---|---|
-| F4.23 | Tabelle „Best Matchups" (`#currentMetaBestMatchups`) | Opponent · Win Rate · Record | nein |
-| F4.24 | Tabelle „Worst Matchups" (`#currentMetaWorstMatchups`) | Opponent · Win Rate · Record | nein |
-| F4.25 | Gegnersuche | `currentMetaOpponentSearch` → `filterCurrentMetaOpponents(this)`, Dropdown `#currentMetaOpponentDropdown`, Auswahl in `#currentMetaOpponentSelected` |
-| F4.26 | Matchup-Detail | `#currentMetaMatchupDetails` |
-
-Leerzustand beider Tabellen: eine Zeile „No data available" über `colspan=3`.
-
-### Matchups vs Meta Call (nur Deep Dive)
-
-| Nr. | Element | Spalten |
-|---|---|---|
-| F4.27 | Tabelle `#currentMetaVsMetaCallBody` | Opponent · Field % · Win Rate — nicht sortierbar |
-| F4.28 | Zusammenfassung | `#currentMetaVsMetaCallSummary` |
-| F4.29 | Legende der Farbstufen | ≥60 % stark gut · 53–60 gut · 47–53 neutral · 40–47 schlecht · <40 stark schlecht |
-
-### Your Build vs Vanilla (nur Deep Dive)
-
-| Nr. | Element | Spalten |
-|---|---|---|
-| F4.30 | Tabelle `#currentMetaUserVsVanillaOpponentBody` | Opponent · Field % · Vanilla · Your Build · Delta — nicht sortierbar |
-| F4.31 | Zusammenfassung / Detail | `#currentMetaUserVsVanillaSummary`, `…Detail` |
-| F4.32 | Erkannte Techs | `#currentMetaUserVsVanillaDetectedTech` |
-| F4.33 | Kartendiff | `#currentMetaUserVsVanillaCardDiff` |
-
-### Card Overview (`#currentMetaCardsSection`)
-
-| Nr. | Element | id / Aufruf |
-|---|---|---|
-| F4.34 | Zähler | `currentMetaCardCount` + `currentMetaCardCountSummary` |
-| F4.35 | Suche | `currentMetaOverviewSearch` → `filterCurrentMetaOverviewCards()` |
-| F4.36–F4.44 | 9 Typfilter | `currentMetaOverviewType…` → `setCurrentMetaOverviewCardTypeFilter(...)` |
-| F4.45–F4.47 | Seltenheit min/max/all | `setCurrentMetaOverviewRarityMode(...)` |
-| F4.48 | Copy | `copyCurrentMetaDeckOverview()` |
-| F4.49 | Grid | `toggleCurrentMetaDeckGridView()` |
-| F4.50 | Karten-Legende `<details>` „Was bedeuten die Symbole auf den Karten?" | index.html:1345–1425, erklärt A–K (identisch mit F3.65–F3.74) |
-
-### Deck Builder (`#currentMetaDeckBuilderSection`)
-
-| Nr. | Element | Aufruf |
-|---|---|---|
-| F4.51 | Consistency Generate | `autoCompleteConsistency('currentMeta','min')` |
-| F4.52 | „Build vs …" (Deep Dive) | `openAntiTechModal('currentMeta')` → `#antiTechModal` |
-| F4.53 | ↑ Max Rarity | `toggleDeckRarity('currentMeta', this)` |
-| F4.54–F4.56 | Kennzahlen #/60, ♦ Unique, € Preis | `currentMetaDeckCount`, `…Unique`, `…Price` |
-| F4.57 | Test Draw | `openDrawSimulator('currentMeta')` |
-| F4.58 | TCG Showdown ↗ | `openInShowdownFromBuilder('currentMeta')` |
-| F4.59 | Clear | `currentMetaClearDeckBtn` |
-| F4.60 | Algorithmus-Hinweis `<details>` | |
-| F4.61 | Tech-Slots-Zeile (Deep Dive) | Zähler `currentMetaTechSlotsCount` „0/10", Gitter `…Grid`, Picker `…Picker` + `…Input` (`techSlotSearch`) |
-| F4.62 | Tech-Slots leeren | `clearTechSlots('currentMeta')` |
-| F4.63 | Handstatistik | `#currentMetaHandStats` |
-| F4.64–F4.73 | Your Deck: Save · Why? · Compare · Copy · Deck→Proxy · Share · PTCGL Import · PTCGL Export · Grid · Suche+Autocomplete | analog F3.38–F3.47, Quelle `currentMeta` |
-| F4.74 | Bank | `#currentMetaBenchSection` |
-
-### Meta Card Analysis (`currentMeta`)
-
-| Nr. | Element |
-|---|---|
-| F4.75–F4.78 | Anteilsfilter All / >90 / >70 / >50 |
-| F4.79–F4.82 | Typfilter All / Trainer / Pokémon / Energy |
-| F4.83–F4.85 | Sortierung by Type (aktiv) / by Share% / by Avg Count |
-| F4.86 | Suche `currentMetaMetaSearch` |
-| F4.87 | Knopf „Load Meta Analysis" (index.html:1661, **ohne id**) |
-| F4.88 | Leerzustand „Meta analysis loading" + Knopf |
-
-### Tech vs Normal / Quick Reference
-
-| Nr. | Element | id |
-|---|---|---|
-| F4.89 | Tech vs Normal | `currentMetaTechVsNormalSection` |
-| F4.90 | Quick Reference Lists | `currentMetaQuickRefSection`, zwei Spalten: „Latest Major · Best Placement" (`…MajorBody`) und „Latest Online · Typical Build" (`…OnlineBody`) |
-| F4.91 | 3-way Compare | `openThreeWayCompare()` → Modal `#threeWayCompareModal` (Builder · Major · Online), schließen über `closeThreeWayCompare()` oder Klick auf den Hintergrund |
-
-### Tech Lab (`#techLabSection`, nur Deep Dive, immer sichtbar auch ohne Deck)
-
-| Nr. | Element | id |
-|---|---|---|
-| F4.92 | Hilfeknopf | `openTabHelp('tech-lab')` |
-| F4.93 | Zielkarten-Suche | `techLabTargetSearch` + Dropdown `techLabTargetDropdown` |
-| F4.94 | Vorschau + Name | `techLabTargetThumb`, `techLabTargetLabel` |
-| F4.95 | Reset overrides | `techLabResetBtn` (startet `disabled`) |
-| F4.96 | Starthinweis | `techLabStartHint` |
-| F4.97 | Abschnitt „Beaten by" | `techLabBeatenByList`, `…Summary`, `…NonEx` |
-| F4.98 | „+ Add missing" (Beaten by) | `techLabAddBeatenByBtn` (startet `disabled`) |
-| F4.99 | Abschnitt „Good against" | `techLabBeatsList`, `…Summary` |
-| F4.100 | „+ Add missing" (Beats) | `techLabAddBeatsBtn` |
-| F4.101 | Modal „Add a tech the engine missed" | `techLabAddOverlay` + `techLabAddSearch` |
-
-**Zustände:**
-* Ohne Auswahl: `#currentAnalysisEmptyState` sichtbar, alles andere `d-none`.
-* Sichtbarkeit von Karten/Builder folgt `#currentMetaStatsSection` per MutationObserver (index.html:977–988).
-* Kein sichtbarer Fehlerzustand für fehlende CSVs.
-
-*Zählung F4: 101 Elemente.*
-
----
-
-## F5 · `meta-call` — Meta Call
-
-**Zweck:** Sagt das Feld des nächsten Turniers voraus und leitet daraus eine Deck-Empfehlung ab.
-
-**Host:** `#metaCallHost`, gezeichnet von `js/app-meta-call.js` (`renderAll`, ab Zeile 10411).
-
-| Nr. | Element | id / Aufruf |
-|---|---|---|
-| F5.1 | Zurück-Knopf „← Startseite" | `switchTabAndUpdateMenu('current-meta')` (index.html:2071) |
-| F5.2 | Hilfeknopf | `openTabHelp('meta-call')` |
-| F5.3 | Szenarien-Auswahl | `.mc-scenarios-select` → `MetaCall._onScenarioSelect(v)` |
-| F5.4 | Szenario auffrischen | `MetaCall._refreshScenario()` |
-| F5.5 | Szenario speichern | `MetaCall._saveScenario()` |
-| F5.6 | Szenario löschen | `MetaCall._deleteScenario()` |
-| F5.7 | Datenfenster ab | `metacallDateFrom` → `setCurrentMetaDateFrom(v)` — **derselbe Zustand wie F4.7** |
-| F5.8 | Clear (Datum) | `clearCurrentMetaDateFrom()` |
-| F5.9 | Hinweistext zum Fenster | `mc.dateWindowActive/Auto/None` |
-| F5.10 | Meta-Quelle | `.mc-source-format-select` → `MetaCall._setMetaSource('past', v)` |
-| F5.11 | City-League-Quellen | zwei Checkboxen (`current` / `past`) |
-| F5.12 | Top-Cut-Größe | `mc-topcut` → `_onSetting('topCutSize', n)` |
-| F5.13 | Spielerzahl | `mc-players` (`number`, 2–9999) |
-| F5.14 | Runden | `mc-rounds` (`select` oder `number` 1–15) |
-| F5.15 | Day-2-Punkte | `mc-day2pts` (`number`, 1–45) |
-| F5.16 | Turniername | `mc-turniername` (Text, max 60) |
-| F5.17 | Turnierbild erzeugen | `MetaCall.generateTournamentImage()` |
-| F5.18 | Modus-Reiter (`.mc-tt-tab`) | mehrere Gruppen, app-meta-call.js:9570/9682/9723 — *zu prüfen: welche Reiter genau sichtbar sind* |
-
-### Feldtabelle (`renderFieldPanel`, app-meta-call.js:10086–10160)
-
-| Nr. | Element | Spalten / Werte |
-|---|---|---|
-| F5.19 | Tabellenkopf | Deck · **Online** · **Personal** (Schätzfeld) · **Final** · **Players** · **Ø-Begegnungen (n R.)** — jede Spalte mit `title`-Erklärung |
-| F5.20 | Schätzfeld je Zeile | `<input type=number min=0 max=100 step=0.1>` |
-| F5.21 | Zeile aufklappen | `.mc-row-toggle` |
-| F5.22 | „Alle Details" | `MetaCall._toggleAllDetails()` |
-| F5.23 | „Feld gruppieren" | `MetaCall._toggleGroupField()` |
-| F5.24 | Feld als Bild teilen | `MetaCall.exportFieldShareImage()` |
-
-### Eigene Decks / Mein Deck
-
-| Nr. | Element |
-|---|---|
-| F5.25 | Eigenes Deck hinzufügen | `.mc-custom-add-btn` → `MetaCall._addCustomDeck()` |
-| F5.26 | Name (mit `datalist` `mc-custom-datalist`) + Anteil (`number` 0–100) + Entfernen (`.mc-custom-remove-btn`) |
-| F5.27 | Mein Deck | `mc-my-deck` (Textfeld mit `datalist`) |
-| F5.28 | Overrides ein/aus | `mc-override-btn` → `MetaCall._toggleOverrides()` |
-| F5.29 | Brick-Filter | `.mc-brick-filter-select` → `_onBrickFilter(v)` |
-| F5.30 | Win-Rate-Override je Gegner | `<input type=number 0–100>` |
-
-### Ergebnisse & Empfehlungen
-
-| Nr. | Element |
-|---|---|
-| F5.31 | Day-2-Bild teilen | `MetaCall.exportDay2ShareImage()` |
-| F5.32 | Empfehlungstabelle mit Spalte „Why?" (`.mc-rec-toggle-th`) und Sprung zur Begründung (`.mc-rec-reason-jump`) |
-| F5.33 | Feld+Empfehlungen als Bild | `MetaCall.exportFieldAndRecsShareImage()` |
-| F5.34 | Mobile Detailschalter | `.mc-mobile-detail-toggle` |
-
-### Eingefrorenes vergangenes Meta (`_inFrozenPastMode`, app-meta-call.js:10508)
-
-| Nr. | Element |
-|---|---|
-| F5.35 | Frozen-Banner statt Konfiguration |
-| F5.36 | Frozen-Anteilstabelle |
-| F5.37 | Frozen-Empfehlungstabelle mit Spalten „Score" und „Win %" (je mit `title`) |
-
-**Zustände:** Der große Statusstreifen (`_renderPredictorStatusBanner`) ist bewusst abgeschaltet
-(app-meta-call.js:10473–10486); der kleine `renderPredictorBanner()` läuft. Bei eingefrorenem Past-Meta
-entfallen Custom Decks / My Deck / Results vollständig.
-
-*Zählung F5: 37 Elemente.*
-
----
-
-## F6 · `cards` — Card Database
-
-**Zweck:** Jede Karte suchen und filtern; Einstieg in Sammlung, Wunschliste und Proxy.
-
-| Nr. | Element | id / Aufruf | Werte |
-|---|---|---|---|
-| F6.1 | Hilfeknopf | `openTabHelp('cards')` | |
-| F6.2 | Datenstand-Chip | im `<h2>` | |
-| F6.3 | Kartensuche mit Autovervollständigung | `cardSearch` + `#cardSearchAutocomplete` | |
-| F6.4 | Filterpanel ein/aus | `cardsFiltersToggle` → `toggleCardsFilterPanel()`, `aria-expanded="true"` | |
-| F6.5 | Filter „Meta / Format" | `#filter-meta-format` → Radios `baseMetaFilter` | `total` (Voreinstellung) / `all_playables` / `city_league` |
-| F6.6 | Filter „Set" | `#setFilterOptions` | dynamisch |
-| F6.7 | Filter „Rarity" | `#rarityFilterOptions` | dynamisch |
-| F6.8 | Filter „Category" | `#categoryFilterOptions` | dynamisch |
-| F6.9 | Filter „Element Type" | `#elementTypeFilterOptions` | dynamisch |
-| F6.10 | Filter „Main Pokemon" | `#mainPokemonList` + Suchfeld `mainPokemonSearch` | dynamisch |
-| F6.11 | Filter „Archetype" | `#archetypeList` + Suchfeld `archetypeSearch` | dynamisch |
-| F6.12 | Filter „Deck Coverage" | `#deckCoverageFilterOptions` | dynamisch |
-| F6.13 | Reset Filters | `resetCardFilters()` | |
-| F6.14 | Sortierung | `cardSortOrder` → `filterAndRenderCards()` | `set` (Voreinstellung) / `deck` / `coverage` / `pokedex` |
-| F6.15 | Standard Print | `btnStandardPrint` → `setPrintView(true)` | aktiv beim Start |
-| F6.16 | All Prints | `btnAllPrints` → `setPrintView(false)` | |
-| F6.17 | Trefferanzeige | `cardResultsInfo` | Start: „Loading cards…" |
-| F6.18 | Kartengitter | `cardsContent` | |
-
-Alle acht Filtergruppen starten **eingeklappt** (`collapsed`, `aria-expanded="false"`) und öffnen per Klick
-oder Enter/Leertaste (app-cards-db.js:172–180).
-
-**Zustände:** Ladezustand = Skelettkacheln in `#cardsContent` (index.html:2154) + Text „Loading cards…".
-Leer-/Fehlerzustand: *zu prüfen: was `filterAndRenderCards()` bei 0 Treffern zeigt.*
-
-*Zählung F6: 18 Elemente.*
-
----
-
-## F7 · `proxy` — Proxy Printer
-
-**Zweck:** Karten zum Ausdrucken sammeln und die Warteschlange drucken.
-
-| Nr. | Element | id / Aufruf |
-|---|---|---|
-| F7.1 | Zurück „← Startseite" | `switchTabAndUpdateMenu('current-meta')` |
-| F7.2 | Hilfeknopf | `openTabHelp('proxy')` |
-| F7.3 | Decklisten-Eingabe | `proxyDecklistInput` (`textarea`) |
-| F7.4 | Add Decklist to Queue | `proxyImportDecklistBtn` → `importDecklistToProxy()` |
-| F7.5 | Kartenname | `proxyManualName` (+ `datalist` `proxyManualNameSuggestions`, app-core.js:382) |
-| F7.6 | Set | `proxyManualSet` |
-| F7.7 | Nummer | `proxyManualNumber` |
-| F7.8 | Anzahl | `proxyManualCount` (`number`, min 1, Vorgabe 1) |
-| F7.9 | Add Card | `proxyAddManualCardBtn` → `addManualProxyCard()` |
-| F7.10 | Aus Binder laden | `proxyLoadBinderBtn` → `cbLoadBinderIntoProxy()` |
-| F7.11 | Add City League Deck | `proxyAddCityLeagueDeckBtn` → `addCurrentDeckToProxy('cityLeague')` |
-| F7.12 | Add Current Meta Deck | `proxyAddCurrentMetaDeckBtn` → `addCurrentDeckToProxy('currentMeta')` |
-| F7.13 | Add Past Meta Deck | `proxyAddPastMetaDeckBtn` → `addCurrentDeckToProxy('pastMeta')` |
-| F7.14 | Print Queue | `proxyPrintQueueBtn` → `printProxyQueue()` |
-| F7.15 | Clear Queue | `proxyClearQueueBtn` → `clearProxyQueue()` |
-| F7.16 | Warteschlange | `proxyQueueList` |
-
-**Zustände:** Leerzustand „Proxy queue is empty" mit Knopf, der den Fokus in `#proxyDecklistInput` setzt.
-
-*Zählung F7: 16 Elemente.*
-
----
-
-## F8 · `tutorial` — How to Use
-
-**Zweck:** Anleitung.
-
-| Nr. | Element |
-|---|---|
-| F8.1 | Zurück „← Startseite" |
-| F8.2 | Hilfeknopf `openTabHelp('tutorial')` |
-| F8.3 | Link „Anleitung (deutsch)" → `tutorial/tutorial.de.html` |
-| F8.4 | Link „Guide (english)" → `tutorial/tutorial.en.html` |
-| F8.5 | Restlicher Inhalt aus `js/ds-tutorial.js` — *zu prüfen: was dieses Modul in den Reiter zeichnet* |
-
-*Zählung F8: 5 Elemente.*
-
----
-
-## F9 · `quellen` — Quellen & Methodik
-
-**Zweck:** Woher jede Zahl kommt, was jeder Begriff bedeutet, wie oft aktualisiert wird, Rechtliches.
-
-**Host:** `#quellenHost`, gezeichnet von `js/app-quellen.js:395`.
-
-| Nr. | Element | Abschnitts-id | Startzustand |
-|---|---|---|---|
-| F9.1 | Zurück „← Startseite" | `quellenZurueck` | |
-| F9.2 | Abschnitt „Quellen" | `quellen` | **offen** |
-| F9.3 | Abschnitt „Datenumfang" | `umfang` | zu |
-| F9.4 | Abschnitt „Begriffe" | `begriffe` | zu |
-| F9.5 | Abschnitt „Zuverlässigkeit" | `zuverlaessig` | zu |
-| F9.6 | Abschnitt „Trennung der Datenräume" | `trennung` | zu |
-| F9.7 | Abschnitt „Stand / Aktualisierung" | `stand` | zu |
-| F9.8 | Abschnitt „Rechtliches" | `rechtliches` | zu |
-
-**F9.9–F9.14 Begriffsdefinitionen** (app-quellen.js:96–170) — hier stehen die Definitionen, auf die die
-Verweise „Wie das gerechnet ist →" / „Nenner und Rechenweg →" aus F1 und F15 zeigen:
-Anteil · Antritt (gewichtet) · Top-8-Quote · ggü. Schnitt (geglättet vs. roh) · Win Rate (Remis im Nenner,
-nicht als halber Sieg) · Tier-Einordnung.
-
-**F9.15 Datenumfang zur Laufzeit** — `js/ds-datenumfang.js` ergänzt gezählte Zeilen der geladenen Dateien.
-
-**Zustände:** *zu prüfen: ob es einen Ladezustand gibt; `render()` zeichnet aus einer festen Textstruktur,
-`ds-datenumfang.js` liefert nach.*
-
-*Zählung F9: 15 Elemente.*
-
----
-
-## F10 · `admin` — Datenlücken
-
-**Zweck:** Zeigt alles, was die Seite über sich selbst nicht weiß, mit Vorschlag und Quelle;
-„Bestätigen" öffnet ein vorbefülltes GitHub-Issue.
-
-**Erreichbar:** nur über `#admin` / `#datenluecken`. Kein Zugangsschutz — die Seite sagt das selbst.
-
-| Nr. | Element | Datei |
-|---|---|---|
-| F10.1 | Zurück „← Startseite" | `adminZurueck` |
-| F10.2 | Titel „Datenlücken" | `adminTitel` |
-| F10.3 | Einleitung + Hinweis „nicht zugangsgeschützt" | app-admin.js:81, 102 |
-| F10.4 | Filterchip „Alle **n**" | app-admin.js:337 |
-| F10.5 | Filterchips je Klasse (aus `_meta.jeKlasse`) | app-admin.js:341 |
-| F10.6 | Lückenkarte: Titel, „Steht in <code>", Notiz | `karteHtml`, app-admin.js:259 |
-| F10.7 | Einstufungs-Plakette | `eindeutig belegt` / `Bestätigung nötig` / `ungeprüft` |
-| F10.8 | Vorschlag: Wert + Begründung + Fähigkeiten der Grundform | |
-| F10.9 | Knopf „Quelle ansehen ↗" | öffnet `v.quelle` in neuem Reiter |
-| F10.10 | Knopf „Bestätigen & senden ↗" | `issueUrl(l)` |
-| F10.11 | Sammelknopf „Alle n Vorschläge auf einmal bestätigen ↗" (bzw. „n von g") | `issueUrlSammel`, nur ab 2 Vorschlägen; Adresslänge auf 6000 Zeichen gedeckelt (`MAX_ADRESSE`) |
-| F10.12 | Fußblock „Wie es weitergeht" + „Inventar erzeugt <Zeit> UTC" | |
-
-**Zustände:**
-* Laden: „Lädt …" (app-admin.js:317).
-* Leer: „Keine offene Lücke." + „Das Inventar ist leer — jede geprüfte Stelle trägt einen belegten Wert."
-* Fehler: „Das Lücken-Inventar konnte nicht geladen werden." + „data/datenluecken.json fehlt oder ist
-  unlesbar. Erzeugen mit: python3 scripts/datenluecken.py"
-
-*Zählung F10: 12 Elemente.*
-
----
-
-## F11 · `side-quest` — Side Quest: Pokémon Champions
-
-**Zweck:** Top-Doubles-Teams aus Pokémon Champions mit Replica-Codes, Nutzungszahlen, Matchups,
-Pokédex und Team-Builder. Anderes Spiel, bewusst getrennt vom TCG.
-
-| Nr. | Element | id / Attribut |
-|---|---|---|
-| F11.1 | Zurück „← Startseite" | |
-| F11.2 | Statuszeile | `sideQuestStatus` (`aria-live="polite"`) |
-
-**F11.3–F11.9 Unterreiter** (`.side-quest-subtab`, `role="tab"`, index.html:2308–2321):
-
-| Nr. | Beschriftung | `data-sq-view` | Host | Modul |
+| F2.1 | Überschrift „City-League-Entwicklung" + Hilfe + Frische-Chip | index.html:693 | Titel; Chip aus `city_league_archetypes.csv` | Chip nennt Datum dieser Datei |
+| F2.2 | Format-Auswahl (Aktuelles/Vergangenes Meta) | index.html:696 (`#cityLeagueFormatSelect`) | `switchCityLeagueFormat()` | Wechsel lädt die Tier-Liste neu; Wahl bleibt über Sitzungen erhalten |
+| F2.3 | Saisonpause-Hinweis | index.html:702 (`.cl-season-notice`) | nur zeigen, wenn wirklich Saisonpause | von CSS versteckt, per Inline-`display` eingeblendet (`app-city-league.js:552`) — nicht dauerhaft sichtbar, und auf beiden Reitern gleich |
+| F2.4 | Ladeanzeige „Lädt…" | index.html:711 | verschwindet nach dem Laden | nach dem Rendern nicht mehr im DOM |
+| F2.5 | Held-Kacheln (Top-Archetypen) | `app-tier-meta.js:1038` (`section.tier-hero-section`) | je Kachel Rang, Name, Variantenzahl, Deckzahl, Ø-Rang | Kachel ist per Tastatur erreichbar (`role="button"`, `tabindex="0"`); Enter/Leertaste lösen aus |
+| F2.6 | Ø-Rang auf zwei Stellen | `app-tier-meta.js:1057` | dieselbe Genauigkeit wie die Tabelle darunter | Kachel und Tabelle zeigen denselben Wert mit 2 Nachkommastellen |
+| F2.7 | Grundlagenzeile der CL-Tier-Liste | `app-tier-meta.js:1093` (`p.tier-grundlage`) | nennt Listenzahl, Archetypenzahl, Einzelstücke | Absatz steht zwischen Kacheln und Tier-Blöcken und trägt die drei Zahlen |
+| F2.8 | Tier-Blöcke 1/2/3/Trending | `app-tier-meta.js:1101` | je Tier eine Deckliste, leere Tiers werden weggelassen | kein leerer Tier-Kasten sichtbar |
+| F2.9 | Deck-Zeile → Analyse | `app-tier-meta.js:1070` (`analyzeCombinedArchetype`) | Klick öffnet die Deck-Analyse mit diesem Archetyp | Reiter `city-league-analysis` mit vorgewähltem Deck |
+| F2.10 | Behälter `#cityLeagueTierSections` / `#cityLeagueContent` | index.html:709/710 | Aufnahmeort der gerenderten Liste | nach dem Laden nicht leer |
+| F2.11 | Infokarte „Archetyp-Übersicht" | `app-city-league.js:1193` | Gesamtzahl + Top 3 nach Anzahl + Top 3 nach Platzierung | drei Zahlen und zwei Dreierlisten |
+| F2.12 | Infokarte „Top-10-Veränderungen" | `app-city-league.js:1205` | Aufsteiger (+) und Absteiger (−); ohne Vorzeitraum ausdrücklich `cl.noBaseline` statt einer Behauptung | ohne Vorzeitraum sind `entries`/`exits` leer und der Hinweistext steht da (`app-city-league.js:1186`) |
+| F2.13 | Infokarte „Datenquelle" | `app-city-league.js:1214` | Zeitraum + Turnierzahl | beide Werte gefüllt oder „N/A" |
+| F2.14 | **Leerzustand der Vergleichstabellen** — „Warum hier keine Vergleichstabellen stehen" | `app-city-league.js:1034-1161` (`cityLeagueVergleichLeerHinweis`) | nennt jede fehlende Rubrik beim Namen und den Grund; nennt zusätzlich die drei Rubriken, die gerechnet, aber nie als Tabelle gezeigt werden, mit ihrer Zahl | Block erscheint nur, wenn etwas fehlt (`''` sonst); alle Zahlen werden hineingereicht (Archetypen, Zeitraum, Turniere, Mindestlisten, Mindestanteil) — keine im Text nachgerechnet (Befund B4) |
+| F2.15 | Tabelle „Seltener gespielt" | `app-city-league.js:1263` | Spalten Archetyp · alte Anzahl · neue Anzahl · Änderung | nur bei `decreased.length > 0` |
+| F2.16 | Tabelle „Performance verbessert" | `app-city-league.js:1301` | Spalten Archetyp · Anzahl · Ø-Platzierung | nur bei `improvers.length > 0` |
+| F2.17 | Tabelle „Performance verschlechtert" | `app-city-league.js:1330` | wie F2.16 | nur bei `decliners.length > 0` |
+| F2.18 | Archetyp-Verweis in den Tabellen | `app-city-league.js:1318/1347` (`a.archetype-jump-link`) | `jumpToCardAnalysis(name,'cityLeague')` | Klick öffnet die Deck-Analyse mit diesem Archetyp; Symbol vor dem Namen |
+| F2.19 | Tabelle „Vollständiger Vergleich" | `app-city-league.js:1365` | alle Archetypen | erscheint zusammen mit F2.16/F2.17 |
+| F2.20 | Suchfeld der Vergleichstabelle | `app-city-league.js:1367` (`#cityLeagueSearchFilter`) | `debouncedFilterCityLeagueTable()` | Zeilenzahl sinkt beim Tippen |
+| F2.21 | Block „Archetyp kombiniert" + Erklärung | `app-city-league.js:1374` | erklärt die Zusammenfassung von Varianten | Text `cl.combinedExplanation` |
+| F2.22 | Fußzeile „Erzeugt am …" + „Insgesamt erfasst n" | `app-city-league.js:1382` | Zeitstempel im Gebietsschema der Seite | englische Fassung zeigt `en-GB`, deutsche `de-DE` |
+| F2.23 | Nicht gezeichnete Rubriken | `app-city-league.js:974-976` (`newArchetypes`, `disappeared`, `increased`) | werden gerechnet, aber als Tabelle NICHT gezeigt — sie werden in F2.14 mit Zahl genannt | sind sie > 0, steht ihre Zahl im Leerzustandsblock; eine eigene Tabelle gibt es für sie nicht |
+
+## F3 — City League Deck-Analyse (`#city-league-analysis`)
+
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
 |---|---|---|---|---|
-| F11.3 | Teams (aktiv) | `teams` | `sideQuestTeamsHost` | app-side-quest.js |
-| F11.4 | Usage | `usage` | `sideQuestUsageHost` | app-side-quest-usage.js |
-| F11.5 | Matchups | `matchups` | `sideQuestMatchupsHost` | app-side-quest-matchups.js |
-| F11.6 | Pokémon | `pokedex` | `sideQuestPokedexHost` | app-side-quest-pokedex.js |
-| F11.7 | Team-Builder | `builder` | `sideQuestBuilderHost` | app-side-quest-builder.js |
-| F11.8 | Status | `status` | `sideQuestZustaendeHost` | app-side-quest-status.js |
-| F11.9 | Look up | `resources` | `sideQuestResourcesHost` | app-side-quest-resources.js |
-
-Alle Hosts außer Teams starten `hidden`.
-
-### Teams (F11.10–F11.20)
-
-| Nr. | Element | Klasse |
-|---|---|---|
-| F11.10 | Replica-Code kopieren | `.side-quest-copy-btn` |
-| F11.11 | Eigenen Code kopieren | `.side-quest-copyown-btn` |
-| F11.12 | Export-Auswahl: Copy / Limitless / Showdown | `.side-quest-export-choice` mit `sq-target-copy` / `-limitless` / `-showdown` |
-| F11.13 | Export öffnen | `.side-quest-export-btn` |
-| F11.14 | Team importieren | `.side-quest-import-open`, `-name`, `-do`, `-cancel` |
-| F11.15 | Aktives Team setzen | `.side-quest-active-btn` |
-| F11.16 | Markierung (mark) | `.side-quest-mark-btn` |
-| F11.17 | Filter setzen / entfernen / leeren | `.side-quest-filter-trigger`, `-remove`, `-clear` |
-| F11.18 | Info | `.side-quest-info-btn` |
-| F11.19 | Claude-Knopf | `.side-quest-claude-btn` — *zu prüfen: was er tut* |
-| F11.20 | Modal schließen | `.side-quest-modal-close` |
-
-### Usage (F11.21–F11.22)
-
-| Nr. | Element |
-|---|---|
-| F11.21 | Formatwahl `data-sq-format` — Voreinstellung `doubles` (app-side-quest-usage.js:31) |
-| F11.22 | Typfilter `data-sq-type` — Voreinstellung leer (alle) |
-
-### Matchups (F11.23–F11.28)
-
-| Nr. | Element |
-|---|---|
-| F11.23 | Formatwahl `data-sq-format` |
-| F11.24 | Sortierung (`_sort`) |
-| F11.25 | Suche `.sq-search` |
-| F11.26 | Team-Chips setzen/entfernen (`.sq-team-chip`, `.sq-team-chip-weg`) |
-| F11.27 | Kreuztabelle: Kopfspalte = Gegner-Pokémon (`<th scope=col>`), Zeilenkopf = eigenes Pokémon (`<th scope=row>`) — nicht sortierbar |
-| F11.28 | „Mehr" / „Zurück" | `.sq-more`, `.sq-back` |
-
-### Pokédex (F11.29–F11.35)
-
-| Nr. | Element |
-|---|---|
-| F11.29 | Formatumschalter Singles/Doubles (`data-tfmt`), Voreinstellung `doubles` |
-| F11.30 | Suche `sqpSearch` |
-| F11.31 | Typfilter `sqpType` |
-| F11.32 | Presets `data-sqp-preset` |
-| F11.33 | **Sortierbare Tabelle** (`data-sqp-sort`, `role="button"`): Mon · HP · Atk · Def · SpA · SpD · Spe · Total — Voreinstellung `total`, absteigend (app-side-quest-pokedex.js:34, 591–601) |
-| F11.34 | Detailansicht mit Tabelle Base True · Lv50 · Used · Range |
-| F11.35 | Detail schließen | `.sqp-d-close` |
-
-### Team-Builder (F11.36–F11.44)
-
-Slots je Pokémon: Name/Suche (`.sqb-search`, `.sqb-name`), Fähigkeit (`.sqb-ability`), Item (`.sqb-item`),
-Attacken (`.sqb-move`), Wesen (`.sqb-nature`); dazu Chips, Rechner (`.sqb-rechner`), Setzen (`.sqb-setzen`),
-Speichern (`.sqb-do-save`), Als aktiv (`.sqb-do-active`), Bearbeiten (`.sqb-edit`), Zurücksetzen
-(`.sqb-reset`), Leeren (`.sqb-clear`), Export (`.sqb-exp`), Zurück (`.sqb-back`), Modal schließen
-(`.sqb-modal-x`).
-
-### Status (F11.45) · Look up (F11.46–F11.48)
-
-| Nr. | Element |
-|---|---|
-| F11.45 | Statuszustände: Kopfzeile aufklappbar (`.sz-kopf`, `data-sz-id`), „Alle" (`.sz-alle`) |
-| F11.46 | Suche `sqResSearch` |
-| F11.47 | Filterchips `data-sq-res-filter` |
-| F11.48 | „Nur Champions" | `.sq-res-champ` |
-
-**Zustände:** `#sideQuestStatus` ist die gemeinsame Melderfläche. Einzelne Module melden Leerzustände
-selbst — *zu prüfen: je Unterreiter, was bei fehlender Datei erscheint.*
-
-*Zählung F11: 48 Elemente.*
-
----
-
-## F12 · `pocket` — Side Quest: TCG Pocket
-
-**Zweck:** Game8-Tier-Liste für TCG Pocket; ein Deck antippen zeigt ein 2D-Muster, das ein zweites Gerät scannt.
-
-**Host:** `#pocketListe` (`aria-live="polite"`), Overlay `#pocketOverlay`. Modul: `js/ds-pocket.js`.
-
-| Nr. | Element | Datei |
-|---|---|---|
-| F12.1 | Zurück „← Startseite" | index.html:2335 |
-| F12.2 | Kopf: Titel + Untertitel | ds-pocket.js:114–126 |
-| F12.3 | Quellenzeile „Einstufung von Game8, keine von uns gemessene Zahl" + Link game8.co + „Stand …" | ds-pocket.js:128–136 |
-| F12.4 | Alterswarnung ab `PLAUSIBEL_TAGE` Tagen ohne Auffrischung | ds-pocket.js:138–144 |
-| F12.5 | Filter „Alle" (Voreinstellung) | `data-pk-filter="alle"` |
-| F12.6 | Filter „Tier-Liste" | `data-pk-filter="tier"` |
-| F12.7 | Filter „Neues Set" | `data-pk-filter="set"` |
-| F12.8 | Deckzeile | `.pk-zeile`, `data-pk-deck="<i>"` → öffnet das Overlay |
-| F12.9 | Tier-Gruppierung nach `TIER_ORDNUNG`, innerhalb alphabetisch | ds-pocket.js:176–215 |
-| F12.10 | Abweichende Stufen (zusammengelegte Dubletten) werden markiert | ds-pocket.js:96–107 |
-| F12.11 | Rechnungsblock „n Einträge bei Game8 — n ohne lesbares Muster, n als Dublette zusammengelegt" + Liste der fehlenden Decks | ds-pocket.js:265–285 |
-| F12.12 | Overlay: Schließen `.pk-schliessen` (`data-pk-zu`) | ds-pocket.js:361 |
-| F12.13 | Overlay: Name (role=heading), „Stufe X · Game8 · Stand …" | |
-| F12.14 | Overlay: 2D-Muster (`window.qrSvg.svg`) | js/qr-svg.js |
-| F12.15 | Overlay: Hinweis „Bildschirm hell stellen und in Pocket abscannen." | |
-| F12.16 | Overlay: Kartenliste Pokémon / Trainer mit Stückzahl und SET-Nr. | `kartenliste()` |
-| F12.17 | Bildschirm-Wachhalten (`navigator.wakeLock`) während des Overlays | ds-pocket.js:288–300 |
-
-**Zustände:**
-* Laden: „Lädt…" / „Loading…"
-* Leer (Liste vorhanden, aber 0 Decks): „Die Tier-Liste ist leer."
-* Leer (Filter trifft nichts): „Für diese Auswahl steht kein Deck in der Liste."
-* Fehler beim Laden: „Die Tier-Liste konnte nicht geladen werden. Bist du gerade offline?" (`is-fehler`)
-* Muster nicht zeichenbar: Fehlerkasten + Code als markierbarer Text (ds-pocket.js:352–358)
-* Deck ohne Kartenliste: `karten_hinweis` als Grund, sonst nichts (ds-pocket.js:311–318)
-
-*Zählung F12: 17 Elemente.*
-
----
-
-## F13 · `calculator` — TCG Probability Calculator
-
-**Zweck:** Wahrscheinlichkeit, eine bestimmte Karte in Starthand, Preiskarten oder im Topdeck zu haben.
-
-| Nr. | Element | id | Werte |
-|---|---|---|---|
-| F13.1 | Zurück „← Startseite" | | |
-| F13.2 | Hilfeknopf | `openTabHelp('calculator')` | |
-| F13.3 | Cards in Deck | `calc-deck-size` | `number`, min 1, max 99, Vorgabe 60; JS klemmt auf 1–99 |
-| F13.4 | Copies in Deck | `calc-copies` | `number`, min 1, **max 60 im Markup**, JS klemmt auf 1–`deckSize` |
-| F13.5 | Cards Drawn | `calc-drawn` | `number`, min 1, max 60, Vorgabe 7; JS klemmt auf 1–`deckSize` |
-| F13.6 | Already in Hand | `calc-in-hand` | `number`, min 0, **max 4 im Markup**, JS klemmt auf 0–`copies` |
-| F13.7 | Ergebnis „Draw (at least 1)" | `res-draw` | Farbe: ≥70 % high, ≥40 % mid, sonst low |
-| F13.8 | Fußzeile Draw | `calc-fuss-draw` | „n von m Karten, k gezogen" |
-| F13.9 | Ergebnis „In Prize Cards" | `res-prize` | Note „(at least 1, after opening hand)" |
-| F13.10 | Fußzeile Prize | `calc-fuss-prize` | „n übrig in m ungesehenen Karten, 6 davon Preiskarten" |
-| F13.11 | Ergebnis „Topdeck Chance" | `res-topdeck` | Note „(next card drawn)" |
-| F13.12 | Fußzeile Topdeck | `calc-fuss-topdeck` | „n von m ungesehenen Karten" |
-| F13.13 | Klemm-Rückmeldung | `.calc-input-geklemmt` + `title` „Wert auf den gültigen Bereich a–b gesetzt — gerechnet wird mit c." (1600 ms) | app-calculator.js:60–72 |
-
-**Zustände:** Startanzeige „–" in allen drei Ergebnissen. Kein Lade- oder Fehlerzustand (reine Rechnung).
-
-*Zählung F13: 13 Elemente.*
-
----
-
-## F14 · `profile` — My Profile
-
-**Zweck:** Sammlung, Wunschliste, Tauschliste, Ordner, eigene Decks, Journal, Testgruppen, Einstellungen.
-
-### Rahmen
-
-| Nr. | Element | id |
-|---|---|---|
-| F14.1 | Hilfeknopf | `openTabHelp('profile')` |
-| F14.2 | Anmeldewand | `profile-auth-prompt` mit Knopf „Sign In / Sign Up" → `showAuthModal('signin')` |
-| F14.3 | Inhalt nach Anmeldung | `profile-content` (startet `d-none`) |
-| F14.4 | Cloud-Sync-Status | `cloud-sync-status` / `cloud-sync-detail` (Start: „Initialisiere…") |
-| F14.5 | „Jetzt synchronisieren" | `cloud-sync-refresh-btn` → `forceCloudSync()` |
-| F14.6–F14.9 | Vier Kopfkennzahlen: Name · Cards Owned · Collection Value · Saved Decks | |
-| F14.10 | Battle-Journal-Kasten mit „Log Match" + „Sync Now" | |
-
-### Unterreiter (`#profile-tab-nav`, vier Gruppen)
-
-| Nr. | Beschriftung | Aufruf | Gruppe |
-|---|---|---|---|
-| F14.11 | My Collection (aktiv) | `switchProfileTab('collection')` | Cards & Collection |
-| F14.12 | Wishlist | `switchProfileTab('wishlist')` | Cards & Collection |
-| F14.13 | Trade List | `switchProfileTab('tradelist')` | Cards & Collection |
-| F14.14 | Meta Binder | `switchProfileTab('metabinder')` | Cards & Collection |
-| F14.15 | Custom Binder | `switchProfileTab('custombinder')` | Cards & Collection |
-| F14.16 | My Decks | `switchProfileTab('decks')` | Decks |
-| F14.17 | Compare Decklists | `switchProfileTab('deckcompare')` | Decks |
-| F14.18 | Deck Builder | `switchProfileTab('deckbuilder')` | Decks |
-| F14.19 | Battle Journal | `switchProfileTab('journal')` | Play & Analysis |
-| F14.20 | Testing Groups | `switchProfileTab('testinggroups')` | Play & Analysis |
-| F14.21 | **Meta Call →** | `switchTabAndUpdateMenu('meta-call')` — verlässt das Profil | Play & Analysis |
-| F14.22 | Settings | `switchProfileTab('settings')` | Account |
-
-Zähler-Plaketten: `tab-count-collection`, `tab-count-wishlist`, `tab-count-tradelist`, `tab-count-decks`.
-
-### F14.23–F14.34 Collection
-
-Import CSV (`dexImportOpenFilePicker()` + `dexImportFileInput`) · Sortierung `collection-sort`
-(`set-newest` Voreinstellung / `element-set-newest` / `pokedex` / `price-desc`) · Filter
-`collection-filter` (All · Pokémon gesamt + 10 Energietypen · Supporter · Item · Tool · Special Energy ·
-Basic Energy) · `clearCollection()` · Ladehinweis `collection-type-loading` · Suche `collection-search`
-+ Trefferzeile `collection-search-results` · Gitter `collection-grid` · Leerzustand „Your collection is
-empty" + Knopf „Open Card Database".
-
-### F14.35–F14.44 Wishlist
-
-Bot-Import (`wishlistBotImportOpen()`) · Suche `wishlist-search` · Set-Filter `wishlist-set-filter`
-(„All Sets") · Gitterbild (`openWishlistGridModal()`) · Kopieren (`copyWishlistToClipboard()`) ·
-Cardmarket-Wants (`copyWishlistForCardmarket()` → `#wishlistCardmarketModal`) · Leeren
-(`clearWishlist()`) · Trefferzeile · Gitter `wishlist-grid` · Leerzustand „Your wishlist is empty" +
-„Find Cards" · Hilfeknopf `openTabHelp('wishlist')`.
-
-### F14.45–F14.52 Trade List
-
-Suche `tradelist-search` · Set-Filter `tradelist-set-filter` · Gitterbild
-(`openTradelistGridModal()`) · Kopieren · Leeren · Trefferzeile · Gitter `tradelist-grid` ·
-Leerzustand „Your trade list is empty".
-
-### F14.53–F14.60 Meta Binder
-
-Hilfeknopf `openTabHelp('meta-binder')` · „Generate Binder" (`buildMetaBinder()`) · „📂 Load Saved
-Binder" (`loadSavedMetaBinder()`, id `metaBinderLoadSaved`) · „Add Missing to Wishlist"
-(`metaBinderAddWishlist`, startet `disabled`) · „Proxy All Missing" (`metaBinderSendProxy`, `disabled`) ·
-„Proxy NEW Cards" (`metaBinderProxyNew`, `disabled`) · Blöcke `metaBinderStats` / `metaBinderFilters` /
-`metaBinderDelta` (alle `d-none`) · Gitter `metaBinderGrid` mit Leerzustand „Meta Binder not generated
-yet" + zwei Knöpfen · Modal `#metaBinderDroppedModal` „Dropped Cards".
-
-### F14.61–F14.75 Custom Binder
-
-Hilfeknopf `openTabHelp('custom-binder')` · Ordnerleiste `cbBinderBar` · Modus
-Sammlung/Druckliste (`cbModeCollection` aktiv / `cbModePrint`, `cbSetMode`) · Archetyp-Suche
-`cbArchetypeSearch` · „Suchen ▾" (`cbDropdownToggle`) · „Top 10 Meta" (`cbTopMetaBtn`) · Chips
-`cbSelectedChips` · Schwelle: „Alle Karten" (0) / „Kern + Tech (≥30 %)" (30) / „Nur Kern (>70 %)" (70,
-**Voreinstellung**) · „Generate Custom Binder" (`cbGenerateBtn`, `disabled`) · „Ordner speichern" /
-„Als neuen Ordner" / „Auf aktuellen Stand bringen" · „Fehlende auf Wunschliste" · „Alle Fehlenden an
-Proxy" · „Noch nicht Gedruckte → Druckliste" (`d-none`) · „Gefilterte als gedruckt ✓" (`d-none`) ·
-Blöcke `cbPresetBar` / `cbStats` / `cbFilters` / `cbAbgleich` / `cbDelta` · Gitter `cbGrid` mit
-Leerzustand „Select archetypes and generate your binder".
-
-### F14.76–F14.83 My Decks
-
-„Compare Built Decks" (`compareActiveDecks()`) · „New Folder" (`createDeckFolder()`) · Suche
-`decks-search` · Filterchip „IRL Built Only" (`decks-filter-built` → `toggleBuiltFilter()`) ·
-Ordner-Navigation `decks-folder-nav` (`d-none`) · Ordner-Zusammenfassung `decks-folder-summary` ·
-Gitter `decks-grid` · Leerzustand „No saved decks yet" + „Build a Deck" (→ `city-league`).
-
-### F14.84–F14.87 Compare Decklists
-
-`profileCompareListA` („Deck A (Old)") · `profileCompareListB` („Deck B (New)") · Knopf „Compare"
-(`profileCompareDecklists()`) · Ergebnis `profileCompareResult` (`d-none`).
-
-### F14.88–F14.96 Deck Builder (Profil)
-
-Host `#profile-deckbuilder`, gezeichnet von `js/app-profile-deck-builder.js:989`:
-Suche `pdb-search` · Filterzeile `pdb-filter-row` (Chips für Meta / Typ / Set / Energie / Seltenheit /
-JP) · Trefferzähler `pdb-result-count` · „Filter leeren" `pdb-clear-filters` · Ergebnisgitter
-`pdb-results` · Deckname `pdb-deck-name` · Deckzähler `pdb-deck-count` · „Deck leeren"
-`pdb-clear-deck` (mit `confirm()`) · Einfüge-Panel `<details>` mit `pdb-paste` + `pdb-paste-btn` ·
-Mulligan-Block `pdb-mulligan-body` · Toast `pdb-toast` · Zoom-Overlay (`.pdb-zoom-add`, `.pdb-zoom-close`).
-
-### F14.97–F14.104 Battle Journal
-
-„Log Match" · „Sync Now" · „Copy All" (`copyAllJournalEntries()`) · „Clear Journal"
-(`clearAllJournalEntries()`) · Statistik `journalHistoryStats` · Filter: `journalFilterMeta`
-(„All Formats"), `journalFilterType` (All Types / Worlds / Regional-SPE / International / Challenge /
-Cup / Online / Testing), `journalFilterTournament` („All Tournaments"), `journalFilterResult`
-(All / Win / Loss / Tie) · „Matchup Spreadsheet" (`toggleMatchupStats()` → `journalMatchupStats`) ·
-Liste `journalHistoryList` · Ausstehende Einträge `battleJournalPendingList`.
-
-### F14.105–F14.112 Testing Groups
-
-Host `#profile-testinggroups` (js/app-testing-groups.js): Hilfeknopf `openTabHelp('testing-groups')` ·
-Gruppe anlegen (`tg-new-name` + `_uiCreate()`) · Gruppe öffnen/schließen (`openGroup` / `closeGroup`) ·
-Gruppe löschen (`deleteGroup`) / verlassen (`leaveGroup`) · Mitglied einladen (`tg-new-member-email`,
-`tg-new-member-role`, `_uiAddMember()`, `_uiInvite()`, `removeMember`) · Deck hinzufügen
-(`tg-new-deck`, `_uiAddDeck()`), umbenennen (`_uiRenameDeck`), entfernen (`removeDeck`) ·
-Zeilenfilter (`selectAllRowFilter`, `clearRowFilter`) · „Load into Meta Call" (`loadIntoMetaCall()`) ·
-JSON-Export (`exportJson()`).
-
-### F14.113–F14.119 Settings
-
-Anzeigename `settings-display-name` (max 50) + „Save" (`saveDisplayName()`) · Telegram-Preisalarme
-`settings-price-alerts-enabled` (Checkbox) · Chat-ID `settings-price-alerts-chatid` ·
-Trade-List-Schwelle `settings-price-alerts-threshold` (0–100, Vorgabe 10) · „Speichern"
-(`savePriceAlerts()`) · „Sign Out" (`signOut()`).
-
-**Zustände:** Ohne Anmeldung ist nur F14.2 sichtbar; `profile-content` bleibt `d-none`. Jeder Unterreiter
-hat einen eigenen Leerzustand (oben je genannt).
-
-*Zählung F14: 119 Elemente.*
-
----
-
-## F15 · `current-meta` — Current Meta (Global) *(Menüziel, eigener Reiter)*
-
-**Zweck:** Die Startseite. Was online und auf Majors gerade gespielt wird, als aufklappbare Abschnitte.
-
-**Host:** `#currentMetaContent`. Der sichtbare Grundstock kommt aus der **gescrapten Datei**
-`data/limitless_online_decks_comparison.html` (app-meta-cards.js:1517–1531); eingebettete `<script>`-Blöcke
-werden bewusst nicht ausgeführt.
-
-### Abschnitte (`js/ds-sections.js:66–89`)
-
-| Nr. | Abschnitt | id | Startzustand | Quelle |
+| F3.1 | Überschrift + Hilfe + Frische-Chip (`city_league_analysis.csv`) | index.html:719 | Chip zeigt „keine Daten", wenn die Datei 0 Zeilen hat | leere Datei ⇒ kein Datum, sondern „keine Daten" (`ds-datenstand.js:169`) |
+| F3.2 | Format-Auswahl | index.html:722 (`#cityLeagueFormatSelectAnalysis`) | wie F2.2 | beide Auswahlfelder bleiben synchron |
+| F3.3 | Saisonpause-Hinweis | index.html:728 | wie F2.3 | — |
+| F3.4 | Datum „Von" | index.html:737 (`#cityLeagueDateFrom`) | `applyCityLeagueDateFilter()` | Filter wirkt auf die geladenen Listen |
+| F3.5 | Datum „Bis" | index.html:742 (`#cityLeagueDateTo`) | wie F3.4 | — |
+| F3.6 | Formathinweis „TT.MM.JJJJ" | index.html:738/743 | fest | steht unter beiden Feldern |
+| F3.7 | Deck-Auswahl | index.html:750 (`#cityLeagueDeckSelect`) | Archetyp wählen ⇒ lädt Statistik, Kartenübersicht, Deck Builder | nach Auswahl verliert `#cityLeagueStatsSection` `.d-none`, dadurch werden F3.11 und F3.20 sichtbar (Beobachter index.html:951) |
+| F3.8 | Karten-Anteilsfilter | index.html:757 (`#cityLeagueFilterSelect`) | Alle / >90 / >70 / >50 % | Kartenzahl in F3.12 ändert sich |
+| F3.9 | Kennzahl „Karten im Deck (einzig / Ø-Liste)" | index.html:769 (`#cityLeagueStatCards`) | zwei Zahlen | Wert ≠ „-" nach Deckwahl |
+| F3.10 | Kennzahl „genutzte Decks" + Fußnote | index.html:773/774 (`#cityLeagueStatDecksUsed`, `#cityLeagueStatDecksNote`) | Fußnote nur wenn nötig | `hidden` solange kein Zusatz (`app-city-league.js:3243`) |
+| F3.11 | Kennzahl „Ø Platzierung" | index.html:779 (`#cityLeagueStatAvgPlacement`) | Zahl | wie F3.9 |
+| F3.12 | Kartenzahl-Anzeige | index.html:787 (`#cityLeagueCardCount`, `#cityLeagueCardCountSummary`) | „n Karten / m Gesamt" | Zahlen folgen Filter und Suche |
+| F3.13 | Kartensuche | index.html:790 (`#cityLeagueOverviewSearch`) | `filterOverviewCards()`, entprellt 300 ms | Suche nach Name (DE/EN), Set+Nummer, Pokédex-Nr. filtert das Raster |
+| F3.14 | Typfilter (9 Knöpfe) | index.html:792-801 | Alle · Pokémon · Supporter · Item · Tool · Stadion · Energie · Spez.-Energie · Ace Spec | genau einer trägt `.active` |
+| F3.15 | Seltenheits-Umschalter (3 Knöpfe) | index.html:804-806 | Niedrig / Max / Alle Drucke | genau einer aktiv; Kartenbilder wechseln |
+| F3.16 | „Deckliste kopieren" | index.html:809 | `copyDeckOverview()` → Zwischenablage im PTCGL-Format | Toast bestätigt; Zwischenablage enthält Zeilen `n Name SET Nr` |
+| F3.17 | „Grid"-Umschalter | index.html:810 | `toggleDeckGridView()` | wechselt zwischen `#cityLeagueDeckTableView` und `#cityLeagueDeckVisual` |
+| F3.18 | Kartentabelle | index.html:813 (`#cityLeagueDeckTable`) | Tabellenansicht der Karten | nach Deckwahl gefüllt |
+| F3.19 | Kartenraster | index.html:817 (`#cityLeagueDeckGrid`) | Kachelansicht mit Plaketten und Aktionsknöpfen A–K (siehe F0.52) | jede Kachel trägt −/+/★ und L/P/Preis |
+| F3.20 | Abschnitt „Deck Builder" | index.html:820 (`#cityLeagueDeckBuilderSection`) | erscheint mit der Deckwahl | siehe F3.7 |
+| F3.21 | „Consistency Generate" | index.html:826 | `autoCompleteConsistency('cityLeague','min')` | Deckzähler springt auf ~60 |
+| F3.22 | „↑ Max Rarity" | index.html:827 | `toggleDeckRarity('cityLeague', …)` | jede Karte wechselt auf den höchsten Druck; erneuter Klick zurück |
+| F3.23 | Kennzahl „Karten /60" | index.html:834 (`#cityLeagueDeckCount`) | laufende Zahl | Änderung blendet F3.26 ein/aus (Beobachter index.html:970) |
+| F3.24 | Kennzahl „einzigartige Karten" | index.html:838 (`#cityLeagueDeckCountUnique`) | Zahl in Klammern | — |
+| F3.25 | Kennzahl „Preis" | index.html:842 (`#cityLeagueDeckPrice`) | Summe in € mit Komma | Format „0,00 €" |
+| F3.26 | „Test Draw" | index.html:848 | `openDrawSimulator('cityLeague')` | Dialog F17.14 öffnet |
+| F3.27 | „📋 TCG Showdown ↗" | index.html:849 | Deck kopieren + externen Tab öffnen | Zwischenablage gefüllt, neuer Tab |
+| F3.28 | „Leeren" (zweistufig) | index.html:850 (`.deck-builder-clear-btn`) | 1. Klick schärft und beschriftet „Wirklich leeren?", 2. Klick leert | siehe F17.1 |
+| F3.29 | Aufklapp-Hinweis „Wie der Consistency-Builder rechnet" | index.html:852 | Erklärtext, eingeklappt | `<details>` startet zu |
+| F3.30 | Handstatistik | index.html:860 (`#cityLeagueHandStats`) | Kennzahlen zur Starthand | nach „Generate" gefüllt (`app-features.js:1459`) |
+| F3.31 | Panel „Dein Deck" | index.html:861 (`#cityLeagueMyDeckVisual`) | erscheint ab 1 Karte | `.d-none` verschwindet bei Zähler > 0 |
+| F3.32 | „Speichern" | index.html:865 | `saveCurrentDeckToProfile('cityLeague')` | Deck erscheint unter Profil → Meine Decks |
+| F3.33 | „Warum?" (Bauauskunft) | index.html:866 | `showConsistencyBuildInfo()` | Dialog nennt je Karte die Herleitung; Zeile „Datenbasis: n Listen" |
+| F3.34 | „Vergleichen" | index.html:867 | `openDeckCompare('cityLeague')` | `#deckCompareModal` öffnet |
+| F3.35 | „Kopieren" | index.html:868 | `copyDeck('cityLeague')` | Zwischenablage gefüllt |
+| F3.36 | „Deck → Proxy" | index.html:869 | `sendCurrentDeckToProxyPrinter()` | Warteschlange gefüllt + Reiter `proxy` |
+| F3.37 | „Teilen" | index.html:870 | `shareDeck('cityLeague')` | Bildvorschau F17.15 |
+| F3.38 | „PTCGL"-Import | index.html:871 | `importFromPTCGL('cityLeague')` | Eingabefeld/Dialog; Liste landet im Deck |
+| F3.39 | „PTCGL"-Export | index.html:872 | `exportToPTCGL('cityLeague')` | Zwischenablage im PTCGL-Format |
+| F3.40 | „Grid" (Deckbild) | index.html:873 | `generateDeckGrid('cityLeague')` | `#deckGridPreviewModal` öffnet |
+| F3.41 | Deck-Suche mit Vorschlagsliste | index.html:876 (`#cityLeagueDeckGridSearch`, `#cityLeagueDeckAutocomplete`) | Suchen und Hinzufügen | Tippen zeigt Vorschläge; Klick fügt Karte hinzu |
+| F3.42 | Leerzustand „Dein Deck ist leer" | index.html:880 | Symbol, Titel, Text, 2 Knöpfe („Deck generieren", „Test Draw öffnen") | sichtbar solange 0 Karten, `role="status"` |
+| F3.43 | Bankreihe | index.html:887 (`#cityLeagueBenchSection`) | zeigt überzählige Kopien | gefüllt von `app-deck-builder.js:8640` |
+| F3.44 | Meta-Kartenanalyse: Kartenzahl | index.html:894 (`#cityLeagueMetaCardCount`) | „n Karten" | — |
+| F3.45 | Anteilsfilter (4 Knöpfe) | index.html:897-900 | Alle / >90 / >70 / >50 % | genau einer `.active` |
+| F3.46 | Typfilter (4 Knöpfe) | index.html:903-906 | Alle / Trainer / Pokémon / Energie | genau einer `.active` |
+| F3.47 | Sortierung (3 Knöpfe) | index.html:908-910 | nach Typ / Anteil / Ø-Anzahl | Reihenfolge im Raster ändert sich |
+| F3.48 | Meta-Kartensuche | index.html:912 (`#cityLeagueMetaSearch`) | `filterMetaCards('cityLeague')`, entprellt | — |
+| F3.49 | Leerzustand „Meta-Analyse noch nicht geladen" | index.html:914 | Text + Knopf „Meta-Analyse laden" | vor dem Laden sichtbar |
+| F3.50 | Knopf „Meta-Analyse laden" (Fußreihe) | index.html:932 (`#cityLeagueMetaReloadBtn`) | lädt bzw. lädt neu; Beschriftung wechselt nach dem Laden | nach dem Laden steht dort nicht mehr derselbe Text wie im Leerzustand |
+| F3.51 | Abschnitt „Tech vs Normal" | index.html:936 (`#cityLeagueTechVsNormalSection`) | vergleicht letzte Normal- und Tech-Liste | erscheint nur mit Daten |
+
+## F4 — Current Meta / Startseite (`#current-meta`)
+
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
 |---|---|---|---|---|
-| F15.1 | „Die meistgespielten Decks" | `top` | **offen** | `section.tier-hero-section` |
-| F15.2 | „Matchups" | `heatmap` | **offen** | `#matchupHeatmapContainer` |
-| F15.3 | „Meistgespielte Karten" | `cards` | **offen** | `div.top-cards-container` |
-| F15.4 | „Gegen welches Meta? — was dein Deck über ein ganzes Turnier holt" | `ev` | zu | `div.ds-ev-block` |
-| F15.5 | „Tier-Liste — alle Archetypen nach Stärke gruppiert" | `tiers` | zu | Tier-Blöcke |
-| F15.6 | „Meta-Performance — Listen, Win Rate und Top-8-Quote je Deck — sortierbar" | `rang` | zu | `div.cm-rangliste-block` |
-| F15.7 | Abschnittszustände in `localStorage['ds_sections_v1']`, unbekannte ids werden beim Lesen gefiltert (ds-sections.js:125) | | | |
-| F15.8 | „Ansicht zurücksetzen" (erscheint, wenn vom Standard abgewichen) | | | ds-sections.js |
+| F4.1 | Überschrift „Current meta" + Formatkürzel | index.html:1118 (`#cmFormatLabel`) | Kürzel aus `window._formatWindow` | `ds-nav.js:411` schreibt „ · TEF–PBL"; überlebt Rotation |
+| F4.2 | Hilfe-Knopf + Frische-Chip (`limitless_online_decks.csv`) | index.html:1118 | — | siehe F0.40/F0.42 |
+| F4.3 | Skelett-Vorschau beim Laden | index.html:1139 | 6 Platzhalterkarten | verschwinden nach dem Laden |
+| F4.4 | Abschnitt „Die meistgespielten Decks" | `ds-sections.js:67`, Inhalt `app-tier-meta.js:1483` | offen beim Start | Kopf klappt auf/zu, Zustand in `localStorage['ds_sections_v1']` |
+| F4.5 | Held-Kacheln Global | `app-tier-meta.js:1543` | Rang, Name, Variantenzahl, Anteil, „WR x % · n" | jede WR trägt ihren Nenner (Antritte); ohne Antritte bleibt der Zusatz weg |
+| F4.6 | Abschnitt „Matchups" (Heatmap) | `ds-sections.js:70`, `app-current-meta.js:688` (`#matchupHeatmapContainer`) | offen beim Start | Gitter mit WR/M je Paarung |
+| F4.7 | Heatmap-Suche Y-Achse | `app-current-meta.js:292` (`#heatmapSearchY`) | filtert Zeilen, entprellt | Zeilenzahl sinkt |
+| F4.8 | Heatmap-Suche X-Achse | `app-current-meta.js:296` (`#heatmapSearchX`) | filtert Spalten | Spaltenzahl sinkt |
+| F4.9 | Heatmap-Leerzustand mit Grund | `app-current-meta.js:377` (`p.heatmap-empty-reason`) | nennt, WELCHE Suche leer lief | Text nennt den gesuchten Begriff |
+| F4.10 | Heatmap-Legende (WR / M) | `app-current-meta.js:689` ff. | Wörter einmal oben, Kürzel in den Zellen | Legende vorhanden, Zellen tragen Kürzel |
+| F4.11 | Heatmap-Zelle → Toast | `app-current-meta.js:679` | Klick zeigt vollen Tooltip als Meldung | Toast enthält Bilanz + Präsenzangabe oder „Major fehlt" |
+| F4.12 | Abschnitt „Meistgespielte Karten" | `ds-sections.js:73`, `app-tier-meta.js:3058` | offen beim Start | Kartenraster |
+| F4.13 | Anzahl-Umschalter „Top n" | `app-tier-meta.js:3043` (`#staplesAnzahl-<n>`) | Umfang der Staple-Liste | genau einer `.active`/`aria-pressed=true` |
+| F4.14 | „Bild erzeugen" (Staples) | `app-tier-meta.js:3052` | `staplesBildErzeugen()` | Bildvorschau F17.15 öffnet |
+| F4.15 | Kartenknöpfe ♡ / ★ im Staple-Raster | `app-tier-meta.js:3086` ff. | Wunschliste / Druckwechsel | ♡ setzt Karte auf die Wunschliste, ★ öffnet den Druck-Wechsler |
+| F4.16 | Abschnitt „Gegen welches Meta?" (EV-Rechner) | `ds-sections.js:76`, `ds-ev-rechner.js:420` | eingeklappt beim Start | Kopf vorhanden |
+| F4.17 | EV: Deck-Auswahl | `ds-ev-rechner.js:433` (`.ds-ev-deck`) | eigenes Deck wählen | Ergebnis rechnet neu |
+| F4.18 | EV: Feld-Auswahl | `ds-ev-rechner.js:436` (`.ds-ev-feldwahl`) | gegen welches Feld | Feldnotiz darunter wechselt |
+| F4.19 | EV: Rundenzahl | `ds-ev-rechner.js:439` (`.ds-ev-runden`) | 1–20 | Ergebnis skaliert mit den Runden |
+| F4.20 | EV: Ergebnis + Fußnote | `ds-ev-rechner.js:443/444` | Tabelle + Herkunft | Ergebnis nicht leer nach Auswahl |
+| F4.21 | Abschnitt „Tier-Liste" | `ds-sections.js:79` | eingeklappt beim Start | Kopf + Unterzeile „alle Archetypen nach Stärke gruppiert" |
+| F4.22 | Grundlagenzeile der Tier-Liste (Global) | `app-tier-meta.js:173/2492` (`p.tier-grundlage`) | erklärt den zusammengesetzten Wert mit allen Gewichten, Deckeln, Schwellen; nennt ausdrücklich, wenn KEINE Turnierdatei vorliegt | alle Zahlen im Satz stammen zur Laufzeit aus denselben Konstanten wie die Rechnung (`test-cm-tier-grundlage.js`); Satz nennt „Listenzahl des größten Archetyps", nicht die des Rang-1-Decks |
+| F4.23 | Abschnitt „Meta-Performance" (Rangliste) | `ds-sections.js:82`, `app-tier-meta.js:2254` | eingeklappt; sortierbare Tabelle | Kopf + Tabelle |
+| F4.24 | Rangliste: Spalte „#" | `app-tier-meta.js:2308` | laufende Nummer | — |
+| F4.25 | Rangliste: Spalte „Deck" | `app-tier-meta.js:2070` | Name | sortierbar |
+| F4.26 | Rangliste: Spalte „Listen" | `app-tier-meta.js:2071` | Decklisten aus den Online-Turnieren | Sortierung erkennt Tausenderpunkt korrekt (`rangliste-sortieren.js:56`) |
+| F4.27 | Rangliste: Spalte „Anteil" | `app-tier-meta.js:2073` | % | Glossarhinweis `hilf:'share'` |
+| F4.28 | Rangliste: Spalte „Win Rate" | `app-tier-meta.js:2074` | Siege / alle Partien | Tooltip nennt Quelle und Rechnung |
+| F4.29 | Rangliste: Spalte „Turnier-Antritte" | `app-tier-meta.js:2103` | gezählte Starts | Spalte wird ausgeblendet, solange KEINE Zeile einen Wert hat (`SPALTEN_SICHTBAR`, 2155) |
+| F4.30 | Rangliste: Spalte „Top 8" | `app-tier-meta.js:2110` | Anzahl | wie F4.29 |
+| F4.31 | Rangliste: Spalte „Top-8-Quote" | `app-tier-meta.js:2114` | % | bleibt auch ohne gezählte Starts stehen |
+| F4.32 | Rangliste: Spalte „ggü. Schnitt" | `app-tier-meta.js:2125` | Vielfaches, geglättet; Zusatz nennt den Meta-Durchschnitt dieses Laufs | Tooltip enthält „Der Meta-Durchschnitt liegt bei x %" |
+| F4.33 | Rangliste: Sortierung je Spaltenkopf | `rangliste-sortieren.js:129` | Klick sortiert auf/ab | Pfeilrichtung wechselt; Handler hängt am `document`, überlebt Neuzeichnen |
+| F4.34 | Hinweis über der Rangliste | `app-tier-meta.js:2256` | beschreibt nur die Spalten, die auch dastehen | Text erwähnt „Turnier-Antritte" nur, wenn die Spalte sichtbar ist |
+| F4.35 | Hinweis auf nicht zugeordnete Turniernamen | `app-tier-meta.js:2237` | nennt die betroffenen Namen | Absatz nur bei tatsächlich offenen Zuordnungen |
+| F4.36 | „Ansicht zurücksetzen" + „n von 6 Abschnitten offen" | `ds-sections.js:246` (`#dsSecReset`) | nur sichtbar, wenn vom Standard abgewichen | Zähler nie größer als die Zahl der Abschnitte (unbekannte IDs werden verworfen, `ds-sections.js:255`) |
 
-### F15.9–F15.16 Tabelle „Meta-Performance" (app-tier-meta.js:1900–2145)
+## F5 — Deck-Analyse Global (`#current-analysis`)
 
-**Spalten:** `#` (Anzeige-Rang) · Deck · Listen · Anteil · Win Rate · Turnier-Antritte · Top 8 ·
-Top-8-Quote · ggü. Schnitt.
-
-* **Alle Spaltenköpfe außer `#` sind sortierbar** (`data-rang-spalte`, `role="button"`, `tabindex=0`).
-* **Voreinstellung:** `data-rang-sortiert="listen"`, `data-rang-richtung="ab"` (absteigend nach Listen).
-* Sortiert wird über den **angezeigten Zellentext** (`js/rangliste-sortieren.js:32–80`); Leerwerte („–")
-  landen immer am Ende.
-* Nach dem Sortieren wird `#` neu durchgezählt und die Sichtbarkeitsgrenze auf die ersten 25
-  Positionen neu gesetzt.
-* **F15.15** Knopf „Alle n Decks zeigen" / „Nur die Top 25 zeigen" (`.cm-rang-mehr-btn`).
-* **F15.16** Fußnote: nicht zugeordnete Turniernamen (`archetype_aliases.json`).
-
-Definitionen: jeder Spaltenkopf trägt einen Hilfstext (`hintTerm`), zusätzlich Verweis
-„Nenner und Rechenweg →" auf `#quellen`. Die Spalte „ggü. Schnitt" schweigt (`–`) unter `CONV_MIN_N`
-gewichteten Antritten und trägt den Feld-Durchschnitt als `zusatz`.
-
-### F15.17–F15.24 Tier-Held-Kacheln & Tier-Liste (app-tier-meta.js:1204–1430)
-
-| Nr. | Element |
-|---|---|
-| F15.17 | Held-Kachel: Rangplakette, Name, „n Varianten", Plakette Anteil (mit `title` zur Summierung über Varianten), Plakette „WR x % · n" |
-| F15.18 | Klick / Enter / Leertaste → `navigateToCMAnalysisWithCombinedDeck(main, variants)` → `current-analysis`. Zurück: Nav-Leiste / Pokéball / Browser-Zurück |
-| F15.19–F15.22 | Tier-Abschnitte `tier-1` (Anteil ≥ 8 %) · `tier-2` (4–8 %) · `tier-3` (1,5–4 %) · `tier-trending` / `tier-rogue` (WR > 52 % oder positive Veränderung) — Schwellen in app-tier-meta.js:245–266 |
-| F15.23 | Plakette „n Listen" mit Markierung „dünne Stichprobe" (`tier-listen-duenn`) |
-| F15.24 | Grundlagen-Zeile unter den Kacheln (`.tier-grundlage`) |
-
-### F15.25–F15.30 „Gegen welches Meta?" (`js/ds-ev-rechner.js`)
-
-| Nr. | Element |
-|---|---|
-| F15.25 | Deckauswahl `.ds-ev-deck` |
-| F15.26 | Feldauswahl `.ds-ev-feldwahl` |
-| F15.27 | Rundenzahl `.ds-ev-runden` (`number`, 1–20) |
-| F15.28 | Ergebnisblock `.ds-ev-ergebnis` |
-| F15.29 | Feldnotiz `.ds-ev-feldnote` und Fußnote `.ds-ev-fuss` |
-| F15.30 | Tabelle: Gegner-Deck · (2 Spalten mit `title`-Erklärung) · Matches · trägt bei · (Spalte mit `title`) — nicht sortierbar (ds-ev-rechner.js:367–393) |
-
-### F15.31–F15.36 Aus der gescrapten Datei
-
-| Nr. | Element |
-|---|---|
-| F15.31 | Statistikkarte „Archetype Overview" — Wert „n (m gruppiert)", Top-3 nach Count, Top-3 nach Win Rate (Schwelle: ≥10 % der Deckzahl des Spitzendecks) — `patchArchetypeOverview()` |
-| F15.32 | Statistikkarte Meta-Statistiken — `patchMetaStats()` |
-| F15.33 | Best/Worst-Matchup-Tabellen: Deck · Rank · Win Rate; „Win Rate" wird auf Mobil zu „WR" umbenannt (app-meta-cards.js:1770) — nicht sortierbar |
-| F15.34 | Vollständige Vergleichstabelle: Deck · **Rank** (Old Rank und „Rank Δ" werden entfernt und als „(↑n)/(↓n)/(-)" in Rank hineingeschrieben) · Count · Win Rate — nicht sortierbar |
-| F15.35 | Deckname in F15.34 ist Link → `jumpToCardAnalysis(name, 'currentMeta')` → `current-analysis` |
-| F15.36 | Top-100-Matchup-Block wird vor dem Einfügen entfernt (`_dropTop100MatchupSection`) |
-
-### F15.37 Matchup-Heatmap
-
-`renderMatchupHeatmap()` in `#matchupHeatmapContainer`.
-
-### F15.38 Meistgespielte Karten
-
-`renderCurrentMetaTopCards()` → `div.top-cards-container`.
-
-**Zustände:**
-* Laden: sechs Skelettkacheln in `#currentMetaContent` (index.html:1130).
-* Fehler ohne `.container` in der Scraper-Datei: „Error loading comparison data".
-* Fehler beim Laden: „**Error:** Could not load comparison HTML." + Meldungstext (app-meta-cards.js:1585).
-* Rangliste nicht baubar: nur `console.warn('Top-8-Block konnte nicht gerendert werden')` — auf dem
-  Bildschirm fehlt der Abschnitt dann ersatzlos (app-tier-meta.js:2153).
-
-*Zählung F15: 38 Elemente.*
-
----
-
-## F16 · `past-meta` — Past Meta *(Menüziel, eigener Reiter)*
-
-**Zweck:** Abgeschlossene Formate, eingefroren, zum Nachschlagen und Vergleichen.
-
-| Nr. | Element | id / Aufruf | Werte |
-|---|---|---|---|
-| F16.1 | Hilfeknopf | `openTabHelp('past-meta')` | |
-| F16.2 | Datenstand-Chip | | |
-| F16.3 | Formatfilter | `pastMetaFormatFilter` | „-- All Formats --" + abgeschlossene Fenster |
-| F16.4 | Turnierfilter | `pastMetaTournamentFilter` | „-- All Tournaments --" |
-| F16.5 | Deck-Archetyp | `pastMetaDeckSelect` | |
-| F16.6 | Card Share Filter | `pastMetaFilterSelect` (Handler app-past-meta.js:585) | all / 90 / 70 / 50 |
-| F16.7–F16.9 | Deck-Statistik: „Cards in deck" (`pastMetaStatCards`) · „Tournament" (`pastMetaStatTournament`) · „Format" (`pastMetaStatFormat`) | | keine Definitionen daneben |
-| F16.10 | Abschnitt „Tournament Performance" (`pastMetaPerformanceSection`) + Hinweistext + Kartenraster `pastMetaPerformanceCards` | | |
-| F16.11 | Abschnitt „Most Successful List" (`pastMetaMostSuccessfulSection` / `…Body`) | | |
-| F16.12 | Card Overview: Suche `pastMetaOverviewSearch` | | |
-| F16.13–F16.21 | 9 Typfilter `pastMetaOverviewType…` → `setPastMetaOverviewCardTypeFilter(...)` | | Voreinstellung All |
-| F16.22–F16.24 | Seltenheit min (Voreinstellung) / max / all → `setPastMetaRarityMode(...)` | | |
-| F16.25 | Copy | `copyPastMetaDeckOverview()` | |
-| F16.26 | Grid | `togglePastMetaDeckGridView()` | |
-| F16.27–F16.32 | Deck Builder: Consistency Generate · ↑ Max Rarity · Test Draw · TCG Showdown ↗ · Clear (`pastMetaClearDeckBtn`) · Algorithmus-`<details>` | | |
-| F16.33 | „Build vs …" | `openAntiTechModal('pastMeta')` | |
-| F16.34 | Tech-Slots leeren + Picker `pastMetaTechSlotInput` | | |
-| F16.35 | Handstatistik `pastMetaHandStats` | | |
-| F16.36–F16.45 | Your Deck: Save · Why? · Compare · Copy · Deck→Proxy · Share · PTCGL Import · PTCGL Export · Grid · Suche `pastMetaDeckGridSearch` + Autocomplete | | |
-| F16.46 | Bank `pastMetaBenchSection` | | |
-| F16.47 | Tech vs Normal (`pastMetaTechVsNormalSection`) | | |
-
-**Kein** Meta-Card-Analysis-Block in diesem Reiter (anders als F3/F4).
-
-**Zustände:** Statistik/Karten/Builder `d-none` bis ein Deck geladen ist (MutationObserver
-index.html:989–1000). Leeres Deck: „Your deck is empty" + zwei Knöpfe.
-
-**Tieflink:** `#past-meta?deck=X&format=Y` wird über `navigateToPastMetaWithDeck()` bedient
-(inline-init.js:590–594).
-
-*Zählung F16: 47 Elemente.*
-
----
-
-## F17 · `deckbuilder` *(Menüziel, kein eigener Reiter)*
-
-`menu-btn-deckbuilder` → `openProfileSection('deckbuilder')` → Reiter `profile`, Untertab
-`profile-deckbuilder`. Elemente sind F14.88–F14.96.
-
-| Nr. | Element |
-|---|---|
-| F17.1 | Der Menüeintrag hält die Hervorhebung auf „Deck Builder", nicht auf „My Profile" (index.html:509–513) — *zu prüfen: ob das auch das Kopf-Abzeichen betrifft* |
-| F17.2 | Bei nicht angemeldetem Nutzer landet man auf der Anmeldewand F14.2 — *zu prüfen* |
-
-*Zählung F17: 2 Elemente.*
-
----
-
-## F18 · `showdown` *(Menüziel, extern)*
-
-| Nr. | Element |
-|---|---|
-| F18.1 | `menu-btn-showdown` → `openShowdownExternal()` (js/tcg-showdown-link.js) — öffnet TCG Showdown in einem neuen Reiter, kein Tabwechsel |
-| F18.2 | Dieselbe Übergabe aus jedem Deck Builder: „📋 TCG Showdown ↗" → `openInShowdownFromBuilder(source)` (F3.34, F4.58, F16.30) |
-| F18.3 | Alte Tieflinks `#playtester` / `#sandbox` landen auf `meta-analysis-hub` und zeigen nach 600 ms die Meldung „Der Playtester läuft jetzt extern über TCG Showdown — im Menü unter ‚Werkzeuge'." |
-
-*Zählung F18: 3 Elemente.*
-
----
-
-## F19 · Modale und Overlays (reiterübergreifend)
-
-| Nr. | Modal | id | Geöffnet von | Geschlossen mit |
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
 |---|---|---|---|---|
-| F19.1 | Hilfe | `helpModal` | `openTabHelp(<18 Schlüssel>)` | `closeHelpModal()` / Klick auf Hintergrund |
-| F19.2 | Anmeldung | `auth-modal` | `showAuthModal('signin'\|'signup')` | `closeAuthModal()` / Hintergrund; enthält E-Mail, Passwort, Google-Anmeldung, Passwort-Zurücksetzen |
-| F19.3 | Starthand-Simulator | `drawSimulatorModal` / `drawSimModal` | `openDrawSimulator(source)` | `closeDrawSimulator()`; enthält `simulatorHandGrid` und „Combo Probability" mit `comboTargetBadges` |
-| F19.4 | Deck Compare | `deckCompareModal` | `openDeckCompare(source)` | `closeDeckCompare()`; Option 1 manuelle Liste, Option 2 eigenes gespeichertes Deck |
-| F19.5 | 3-way Compare | `threeWayCompareModal` | `openThreeWayCompare()` | `closeThreeWayCompare()` |
-| F19.6 | Anti-Tech / Build vs | `antiTechModal` | `openAntiTechModal(source)` | `closeAntiTechModal()`; zwei Schritte (Deckauswahl → Tech-Vorschläge) |
-| F19.7 | Rarity Switcher | `raritySwitcherModal` | ★-Knopf auf jeder Karte | `closeRaritySwitcher()` |
-| F19.8 | Matchup-Analyse | `matchupAnalysisModal` | `openMatchupAnalysisModal()` (battle-journal.js:1706) | Heatmap, Beste/Schlechteste/Alle Matchups, Chip-Filter `maFilterTypeChips` |
-| F19.9 | Deck-Gitter-Vorschau | `deckGridPreviewModal` | `generateDeckGrid(source)` | `closeDeckGridPreview()` |
-| F19.10 | Bildansicht | `imageViewModal` | Kartengitter | `closeImageView()` |
-| F19.11 | Vollbildkarte | `fullscreenCardModal` | Karte antippen | `closeFullscreenCard()` |
-| F19.12 | Einzelkarte | `singleCardModal` | | `closeSingleCard()` |
-| F19.13 | Deck-Bild teilen | `shareImageModal` | `shareDeck(source)` | `closeShareImageModal()` |
-| F19.14 | Wishlist-Gitter | `wishlistGridModal` | `openWishlistGridModal()` | |
-| F19.15 | Cardmarket-Wants-Helfer | `wishlistCardmarketModal` | `copyWishlistForCardmarket()` | |
-| F19.16 | Tradelist-Gitter | `tradelistGridModal` | `openTradelistGridModal()` | |
-| F19.17 | Battle-Journal-Schublade | `battleJournalOverlay` / `battleJournalSheet` | `openBattleJournalSheet()` | enthält Turniertyp-Chips, Deck-Autocomplete (eigenes + Gegner), Bo3-Details, Speicher-Animation |
-| F19.18 | Journal: Turnier bearbeiten | `bjEditTournamentModal` | | `closeEditTournamentModal()` |
-| F19.19 | Journal: Match bearbeiten | `bjEditEntryModal` | | `closeEditEntryModal()` |
-| F19.20 | Meta Binder: verworfene Karten | `metaBinderDroppedModal` | | `closeMetaBinderDroppedModal()` |
-| F19.21 | Tech Lab: fehlenden Tech ergänzen | `techLabAddOverlay` | `techLabAddBeatenByBtn` / `techLabAddBeatsBtn` | |
-| F19.22 | Pocket-Muster | `pocketOverlay` | Deckzeile antippen | `.pk-schliessen` |
-| F19.23 | Meldungen (Toast) | `toast-container` (`aria-live="polite"`) | `showNotification(...)` | automatisch |
+| F5.1 | Überschrift + Hilfe + Untertitel | index.html:1146/1148 | — | — |
+| F5.2 | Tiefenumschalter „Schnellüberblick / Deep Dive" | index.html:1151/1156 | `setCurrentMetaViewMode()`; im Schnellüberblick sind alle `.cm-deep-dive-only`-Blöcke aus | `aria-selected` wechselt; Zahl sichtbarer `.cm-deep-dive-only` geht auf 0 bzw. zurück |
+| F5.3 | Turnierformat-Filter (3 Knöpfe) | index.html:1167-1169 | Alle / Limitless-Decks / Major-Turnier-Decks | genau einer `.active`; `#currentMetaFilterStatus` sagt, was gefiltert ist |
+| F5.4 | Datenfenster „ab" | index.html:1175 (`#currentMetaDateFrom`) | `setCurrentMetaDateFrom()` | Tabellen rechnen neu; dasselbe Feld gibt es in Meta Call (F7.5) und beide zeigen denselben Wert |
+| F5.5 | „Leeren" (Datenfenster) | index.html:1177 (`#currentMetaDateClear`) | `clearCurrentMetaDateFrom()` | Feld leer, `#currentMetaDateStatus` aktualisiert |
+| F5.6 | Deck-Auswahl | index.html:1183 (`#currentMetaDeckSelect`) | lädt den Archetyp | `#currentAnalysisEmptyState` verschwindet, `#currentMetaArchetypeCard` erscheint |
+| F5.7 | Zweitdeck „+ Fusion (Cooking)" | index.html:1189 (`#currentMetaDeckSelectSecondary`) | nur im Deep Dive | in `.cm-deep-dive-only`; Standard „Keins (Einzeldeck)" |
+| F5.8 | Karten-Anteilsfilter | index.html:1195 (`#currentMetaFilterSelect`) | Alle / >90 / >70 / >50 % | Kartenzahl ändert sich |
+| F5.9 | Leerzustand „Wähle ein Deck-Archetype…" | index.html:1207 (`#currentAnalysisEmptyState`) | Pfeil, Titel, Hinweis | sichtbar bis zur ersten Deckwahl |
+| F5.10 | Archetyp-Karte (eingebettet) | index.html:1214 (`#currentMetaArchetypeCard`), `app-archetype-card.js:1343` | Kopf + Kachelblock, ohne Matchup-Tabelle (Variante `embed`) | Karte trägt Namen, Symbole und den Bild-Knopf |
+| F5.11 | Archetyp-Karte: Knopf „Bild" | `app-archetype-card.js:1308` (`.arc-share`) | Analyse als Bild 1200×675 | Bildvorschau öffnet |
+| F5.12 | Archetyp-Kacheln (4 Stück) | `app-archetype-card.js:897` | Vertretung, WR, Konversion, Tag 2 | jede Kachel trägt Wert + Beschriftung; Kacheln ohne Präsenzdaten sagen das im Klartext („Für dieses Format gibt es noch kein Präsenzturnier mit diesem Deck") |
+| F5.13 | Zeitraumzeile der Kacheln | `app-archetype-card.js:971` (`p.arc-zeitraum`) | Zeitraum der Präsenzzahlen | Absatz mit `title` |
+| F5.14 | Archetyp-Matchup-Tabelle | `app-archetype-card.js:1213` | Spalten: Gegner-Deck · WR · M · W · L · T · Major-WR · Major-Matches | Kopfzelle „T", nicht „U"; Major-Spalten fehlen ganz, wenn keine Präsenzdaten vorliegen |
+| F5.15 | Legende der Matchup-Tabelle | `app-archetype-card.js:1268` | erklärt WR/M/W/L/T und Major-Spalten; ohne Präsenzdaten ein eigener Satz | genau eine der beiden Fassungen steht da |
+| F5.16 | Mindeststichprobe bei Präsenz-Paarungen | `app-archetype-card.js:1197` (`p.arc-mu-note-praesenz`) | Prozentwert erst ab `MIN_PRAESENZ_PARTIEN`; darunter Bilanz + Partienzahl; Hinweis nennt Schwelle, Punktverschiebung und „k von g Zeilen" | Hinweis erscheint nur, wenn mindestens eine Zeile unter der Schwelle liegt; Zellen unter der Schwelle tragen `arc-mu-major-duenn` |
+| F5.17 | Kennzahl „Karten im Deck" | index.html:1222 (`#currentMetaStatCards`) | zwei Zahlen | ≠ „-" nach Deckwahl |
+| F5.18 | Kennzahl „Gesamt-Win-Rate Limitless Online" | index.html:1226 (`#currentMetaStatWinrate`) | % | — |
+| F5.19 | Kennzahl „Matchup ggü. Top 20" | index.html:1230 (`#currentMetaStatMatchup`) | % | — |
+| F5.20 | Block „In Top 256 verwendet" | index.html:1233 (`#currentMetaTop256Section/List`) | Liste, sonst versteckt | `.d-none` solange leer (`app-current-meta-analysis.js:2297`) |
+| F5.21 | Tabelle „Beste Matchups" | index.html:1261 | Spalten Gegner · Win Rate · Bilanz | Leerzustand: eine Zeile „Keine Daten verfügbar" über 3 Spalten |
+| F5.22 | Tabelle „Schlechteste Matchups" | index.html:1278 | wie F5.21 | wie F5.21 |
+| F5.23 | Gegnersuche | index.html:1298 (`#currentMetaOpponentSearch`, `#currentMetaOpponentDropdown`) | Tippen filtert die Gegnerliste; Auswahl schreibt in `#currentMetaOpponentSelected` und füllt `#currentMetaMatchupDetails` | Liste wird auf JEDEM Weg gefüllt (`app-current-meta-analysis.js:4067`), auch auf dem CSV-Ersatzweg |
+| F5.24 | Leerzustand der Gegnersuche mit Grund | `app-current-meta-analysis.js:4042` (`.cm-gegner-leer`) | drei unterscheidbare Sätze: „noch nicht geladen" / „Datei ohne Zeilen" / „für dieses Deck keine Paarungen" | der ausgegebene Satz nennt Deckname und Datei und benennt den zutreffenden der drei Zustände |
+| F5.25 | Abschnitt „Matchups vs Meta Call" | index.html:1458 (`#currentMetaVsMetaCallSection`) | nur Deep Dive | `.cm-deep-dive-only` |
+| F5.26 | Tabelle „vs vorhergesagtes Feld" | index.html:1464 | Spalten Gegner · Feld-% · Win Rate | Leerzustand: `td colspan=3` mit `.mc-vs-empty` (`app-current-meta-analysis.js:2665`) |
+| F5.27 | Legende der WR-Pillen | index.html:1478-1487 | Farbstufen mit Schwellen | 5 Legendeneinträge |
+| F5.28 | Abschnitt „Dein Build vs Vanilla" | index.html:1499 (`#currentMetaUserVsVanillaSection`) | nur Deep Dive | — |
+| F5.29 | Tabelle „Vanilla vs dein Build" | index.html:1508 | Spalten Gegner · Feld-% · Vanilla · Dein Build · Delta | Leerzustand: `td colspan=5` mit `.mc-vs-empty` (`app-current-meta-analysis.js:3343`) |
+| F5.30 | Erkannte Techs | index.html:1505 (`#currentMetaUserVsVanillaDetectedTech`) | Liste der Tech-Karten | gefüllt nach Build |
+| F5.31 | Kartenunterschied | index.html:1529 (`#currentMetaUserVsVanillaCardDiff`) | Karten-Diff zur Vanilla-Liste | — |
+| F5.32 | Deck Builder (Global) — Werkzeugleiste | index.html:1534 (`#currentMetaDeckBuilderSection`) | wie F3.20-F3.43 mit Quelle `currentMeta` | Beobachter index.html:998/1029 blendet Panels ein |
+| F5.33 | „Build vs …" | index.html:1540 | `openAntiTechModal('currentMeta')`, nur Deep Dive | `#antiTechModal` öffnet |
+| F5.34 | Tech-Slot-Reihe | index.html:1573 (`.tech-slots-row[data-source=currentMeta]`) | Zähler „n/10", Raster, „Leeren" | `#currentMetaTechSlotsCount` folgt der Belegung |
+| F5.35 | Tech-Slot-Suche | index.html:1583 (`#currentMetaTechSlotInput`, `#currentMetaTechSlotDropdown`) | `techSlotSearch()`; Esc schließt | Vorschläge erscheinen; Esc blendet den Wähler aus |
+| F5.36 | „Quick Reference Lists" | index.html:1689 (`#currentMetaQuickRefSection`) | zwei Spalten: letztes Major (beste Platzierung) und typischer Online-Build | beide `.current-meta-quickref-body` gefüllt |
+| F5.37 | „3-Wege-Vergleich" | index.html:1703 | `openThreeWayCompare()` | `#threeWayCompareModal` verliert `.d-none`, `#threeWayCompareBody` gefüllt |
+| F5.38 | Tech Lab: Zielkarten-Suche | index.html:1724 (`#techLabTargetSearch`, `#techLabTargetDropdown`) | Karte wählen | `#techLabTargetLabel` zeigt den Namen statt „keine" |
+| F5.39 | Tech Lab: Vorschaubild + Auswahlanzeige | index.html:1732/1735 | Bild + Name | — |
+| F5.40 | Tech Lab: „Overrides zurücksetzen" | index.html:1740 (`#techLabResetBtn`) | löscht lokale Korrekturen | erst nach einer Korrektur aktiv (`disabled` im Ausgangszustand) |
+| F5.41 | Tech Lab: Starthinweis | index.html:1744 (`#techLabStartHint`) | „Wähle eine Zielkarte…" | sichtbar bis zur ersten Auswahl |
+| F5.42 | Tech Lab: Abschnitt „Wird geschlagen von" | index.html:1749 | Zusammenfassung + Liste | `#techLabBeatenByList` gefüllt |
+| F5.43 | Tech Lab: „+ Fehlende ergänzen" (schlägt) | index.html:1753 (`#techLabAddBeatenByBtn`) | öffnet `#techLabAddOverlay` | erst nach Zielwahl aktiv |
+| F5.44 | Tech Lab: Abschnitt „Gut gegen" | index.html:1765 | Zusammenfassung + Liste | `#techLabBeatsList` gefüllt |
+| F5.45 | Tech Lab: „+ Fehlende ergänzen" (wird geschlagen) | index.html:1769 (`#techLabAddBeatsBtn`) | wie F5.43 | — |
+| F5.46 | Tech Lab: Datenhinweis | index.html:1777 | nennt Quelle und Speicherort der lokalen Korrekturen | Text nennt `data/card_capability_*.json` und den `localStorage`-Schlüssel |
+| F5.47 | Tech Lab: Dialog „Tech ergänzen" | index.html:1782 (`#techLabAddOverlay`) | Suche + Auswahl + Schließen | Auswahl erscheint sofort in der Liste und übersteht Neuladen |
+| F5.48 | Tech Lab: Alter der Datenbasis | `app-tech-lab.js:166` | Datum über der Liste | Datumsangabe vorhanden |
+| F5.49 | Kartenübersicht (Global) | index.html:1311-1343 | Suche, 9 Typfilter, 3 Seltenheitsknöpfe, „Kopieren", „Grid" | wie F3.12-F3.19 mit Präfix `currentMeta` |
+| F5.50 | Meta-Kartenanalyse (Global) | index.html:1633-1669 | 4 Anteils-, 4 Typ-, 3 Sortierknöpfe, Suche, Leerzustand, Knopfreihe zum Laden | wie F3.44-F3.50 mit Präfix `currentMeta`. **Offen:** dem Knopf in index.html:1668 fehlt `id="currentMetaMetaReloadBtn"`, nach dem `app-meta-cards.js:733` sucht — die Umbenennung greift dort nie |
+| F5.51 | „Tech vs Normal" (Global) | index.html:1672 (`#currentMetaTechVsNormalSection`) | wie F3.51 | — |
 
-*Zählung F19: 23 Elemente.*
+## F6 — Past Meta (`#past-meta`)
+
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
+|---|---|---|---|---|
+| F6.1 | Überschrift + Hilfe + Frische-Chip | index.html:1801 | — | — |
+| F6.2 | Meta/Format-Filter | index.html:1809 (`#pastMetaFormatFilter`) | abgeschlossene Formatfenster | Auswahl lädt die Turnierliste neu |
+| F6.3 | Turnier-Filter | index.html:1815 (`#pastMetaTournamentFilter`) | Turnier eingrenzen | — |
+| F6.4 | Ladeanzeige der Turnierliste | index.html:1834 (`#pastMetaLadestand`) | `role="status" aria-live="polite"`, `hidden` solange nichts lädt | während des Nachladens Fortschrittstext, danach wieder `hidden` (`app-past-meta.js:173`) |
+| F6.5 | Deck-Auswahl | index.html:1838 (`#pastMetaDeckSelect`) | Archetyp | blendet Statistik/Karten/Builder ein (Beobachter index.html:1010) |
+| F6.6 | Karten-Anteilsfilter | index.html:1844 (`#pastMetaFilterSelect`) | Alle / >90 / >70 / >50 % | — |
+| F6.7 | Sammelauswahl-Hinweis | index.html:1868 (`#pastMetaFamilieHinweis`) | erscheint nur bei gewählter Deck-FAMILIE und erklärt, dass die Prozentzahlen dann über alle Varianten laufen | `hidden` bei Einzelvariante (`app-past-meta.js:1141`) |
+| F6.8 | Kennzahl „Karten im Deck" | index.html:1874 (`#pastMetaStatCards`) | zwei Zahlen; `title` erklärt links/rechts | Tooltip vorhanden |
+| F6.9 | Kennzahl „Turnier" | index.html:1878 (`#pastMetaStatTournament`) | Name | — |
+| F6.10 | Kennzahl „Format" | index.html:1882 (`#pastMetaStatFormat`) | Kürzel | — |
+| F6.11 | Abschnitt „Turnier-Performance" | index.html:1889 (`#pastMetaPerformanceSection`) | nur bei EINEM gewählten Format | bei Filter „alle Formate" ausgeblendet |
+| F6.12 | Matchup-Block Past | index.html:1894 (`#pastMetaMatchupBlock`) | Paarungen des Archetyps | Mindeststichprobe greift (`app-past-meta.js:2151`) |
+| F6.13 | Abschnitt „Erfolgreichste Liste" | index.html:1902 (`#pastMetaMostSuccessfulSection/Body`) | bestplatzierte Einzelliste + „Vergleichen" | Block erscheint nach Deckwahl |
+| F6.14 | Kartenübersicht Past | index.html:1911-1935 | Zahl, Suche, 9 Typfilter, 3 Seltenheitsknöpfe, „Kopieren", „Grid" | wie F3.12-F3.19 mit Präfix `pastMeta` |
+| F6.15 | Deck Builder Past | index.html:1952-2043 | Generate, Max Rarity, Kennzahlen, Test Draw, Showdown, Leeren (zweistufig), Algo-Hinweis, Tech-Slots, „Dein Deck" mit 9 Knöpfen, Suche, Leerzustand, Bank | wie F3.20-F3.43 mit Präfix `pastMeta` |
+| F6.16 | „Build vs …" (Past) | index.html:1996 | `openAntiTechModal('pastMeta')` | Modal öffnet |
+| F6.17 | „Tech vs Normal" (Past) | index.html:2049 (`#pastMetaTechVsNormalSection`) | wie F3.51 | — |
+
+## F7 — Meta Call (`#meta-call`)
+
+Reiter enthält statisch nur die Zurück-Leiste und `#metaCallHost` (index.html:2081). Alles Weitere zeichnet `MetaCall.renderAll()` (`app-meta-call.js:10883`).
+
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
+|---|---|---|---|---|
+| F7.1 | Überschrift „Meta Call" + Hilfe | `app-meta-call.js:10936` | Untertitel nennt das ZIEL typabhängig (`_zielKurz()`) | bei Cup steht „Top 8", bei Challenge „1.-2.", sonst „Day 2" — nirgends hart „Day 2" |
+| F7.2 | Szenarien-Leiste | `app-meta-call.js:14166` (`renderScenariosBar`) | Szenarien speichern/laden/löschen (localStorage) | gespeichertes Szenario übersteht Neuladen |
+| F7.3 | Datenfenster-Kachel | `app-meta-call.js:10919` (`.metacall-date-window`) | Label, Datumsfeld, „Leeren", aktiver Fensterhinweis | Hinweis nennt das Datum in Seitensprache (TT.MM.JJJJ / TT/MM/JJJJ), nicht ISO |
+| F7.4 | Datumsfeld | `app-meta-call.js:10930` (`#metacallDateFrom`) | schreibt `setCurrentMetaDateFrom()` | Änderung wirkt auch in F5.4 |
+| F7.5 | „Leeren" (Datenfenster) | `app-meta-call.js:10933` | `clearCurrentMetaDateFrom()`, nur sichtbar wenn gesetzt | ohne Wert `display:none` |
+| F7.6 | Quellen-Umschalter „Current Meta / Vergangenes Meta" | `app-meta-call.js:10092` (`renderMetaSourcePanel`) | bleibt AUCH im eingefrorenen Past-Modus stehen | im eingefrorenen Modus sind die `.mc-tt-tab`-Pillen weiter vorhanden (Befund M1, 07.09.2026) |
+| F7.7 | Format-Auswahl im Past-Modus | `app-meta-call.js:10135` | Auswahl des abgeschlossenen Formats | `_setMetaSource('past', wert)` |
+| F7.8 | Quellenhinweis-Chip | `app-meta-call.js:10130` | „📌 eingefroren" bzw. „ⓘ Matchups = labs majors" | genau einer der beiden Chips |
+| F7.9 | Modus-Umschalter „standard / counter" | `app-meta-call.js:10069` | im eingefrorenen Modus ausgeblendet | — |
+| F7.10 | Datenquellen-Schalter (City League) | `app-meta-call.js:10164` (`renderSourcesPanel`) | zwei Kästchen mit Anzahlangabe | `.mc-source-meta` nennt die Zahl der Einträge je Quelle |
+| F7.11 | Turniertyp-Reiter (5) | `app-meta-call.js:9963` | Worlds · Regional · International · Challenge · Cup | genau einer `mc-tt-tab-active`; Beschriftungen der Felder darunter wechseln mit dem Typ |
+| F7.12 | Typbeschreibung | `app-meta-call.js:9966` | ein Satz je Typ | Text wechselt mit F7.11 |
+| F7.13 | Feld „Spielerzahl" | `app-meta-call.js:9970` (`#mc-players`) | 2–9999 | Wert erscheint in der Feldtabelle und auf den Bildern |
+| F7.14 | Feld „Runden" | `app-meta-call.js:9979/9983` (`#mc-rounds`) | bei Majors Auswahl 8/9, sonst Zahleneingabe 1–15 | Typwechsel wechselt das Bedienelement |
+| F7.15 | Rundenhinweis (Herkunft) | `app-meta-call.js:9857` (`p.mc-runden-herkunft`) | nur bei Major-Typen: „Runden sind hier eine Eingabe, keine Ableitung aus der Spielerzahl … x statt y Runden setzt das Punkteziel auf z" | Satz erscheint NUR bei Worlds/Regional/International; die genannte Zielpunktzahl stammt aus `MAJOR_DAY2_POINTS`, nicht aus Text |
+| F7.16 | Feld „Punkteziel" | `app-meta-call.js:9990` (`#mc-day2pts`) | 1–45; Beschriftung typabhängig | bei Cup „Ziel-Cut-Punkte", bei Challenge „Ziel-Top-Punkte", sonst „Day-2-Punkte" |
+| F7.17 | Feld „Top Cut" (nur Cup) | `app-meta-call.js:9951` (`#mc-topcut`) | 4 oder 8 | erscheint nur beim Typ Cup |
+| F7.18 | Feld „Turniername" | `app-meta-call.js:9997` (`#mc-turniername`) | max. 60 Zeichen; erscheint auf dem Bild | — |
+| F7.19 | Grenzen-Hinweis | `app-meta-call.js:10007` (`#mc-grenzen-hinweis`) | `role="status" aria-live="polite"`, `hidden` solange nichts zu melden ist | erscheint nur bei unplausiblen Eingaben |
+| F7.20 | Zielhinweis + Swiss-Calculator-Link | `app-meta-call.js:10009/9946` | Link nur bei lokalen Typen | bei Major-Typen kein Link |
+| F7.21 | „Bild erzeugen" (Turnierbild) | `app-meta-call.js:10011` | `generateTournamentImage()` | Bildvorschau öffnet |
+| F7.22 | Vorhersage-Banner | `app-meta-call.js:11537` (`renderPredictorBanner`) | nennt den Modus (A/B) samt Zeilenzahl | Banner ist verdrahtet und sichtbar; der große Diagnose-Streifen bleibt absichtlich aus |
+| F7.23 | Stichproben-Chip im Banner | `app-meta-call.js:11720` | sagt, wenn kein gültiges Tagesfenster gilt | Warnfarbe + Erklärung im `title` |
+| F7.24 | Gewichtungs-Chip im Banner | `app-meta-call.js:11738` (`span.mc-predictor-banner-gewichtung`) | „Gewichtung der Paarungen: x % Papier (y % Day 2 · z % Day 1) · w % Online" plus ggf. „Predictor 5.3 für <Deck>: ±n pp" | alle Prozente kommen zur Laufzeit aus `MATCHUP_BLEND_WEIGHT_*`; der `title` nennt die Konvention S/(S+N) aus `js/win-rate-konvention.js` und begründet sie |
+| F7.25 | Feld-Panel: Kopf „Top N" + „n Spieler" | `app-meta-call.js:10474-10476` | Abzeichen | Spielerzahl entspricht F7.13 |
+| F7.26 | „Alle auf-/zuklappen" | `app-meta-call.js:10477` | `_toggleAllDetails()` | alle Detailzeilen wechseln gemeinsam |
+| F7.27 | „Gruppieren" | `app-meta-call.js:10481` | `_toggleGroupField()` — Familien statt Varianten | Gruppenzeilen mit Variantenzahl erscheinen |
+| F7.28 | „Teilen" (Feldtabelle als Bild) | `app-meta-call.js:10485` | `exportFieldShareImage()` | Bildvorschau |
+| F7.29 | Feldtabelle: Spalten | `app-meta-call.js:10506-10519` | Deck · Online % · Persönlich · Final · Spieler · Ø Begegnungen (n R.) | Kopf der letzten Spalte nennt die aktuelle Rundenzahl |
+| F7.30 | Persönliche Anteilseingabe je Deck | `app-meta-call.js:10225` (`.mc-personal-input`) | überschreibt den Online-Anteil | Finalspalte wechselt auf `has-personal` |
+| F7.31 | Detailzeile je Deck | `app-meta-call.js:10232/10256` | Aufklappknopf + Intel-Block | Klick öffnet die Zeile darunter |
+| F7.32 | Eigene Decks (Custom) | `app-meta-call.js:10528` (`#mc-custom-decks-panel`) | bis `MAX_CUSTOM` Zeilen mit Name + Anteil + Entfernen; „Hinzufügen" bzw. Höchstzahl-Hinweis | Zähler „n/MAX" im Kopf stimmt mit der Zeilenzahl überein |
+| F7.33 | Panel „Mein Deck" | `app-meta-call.js:10613` | Deckwahl + Override-Tabelle (`renderOverrideTable`, 10656) | eigene Matchup-Werte übersteuern die Basis |
+| F7.34 | Ergebnis-Panel | `app-meta-call.js:10727` | Chance auf das Ziel + Erwartungswerte | ohne gewähltes Deck steht dort `mc.noDeckMsg` statt Zahlen |
+| F7.35 | Rechnungszeile | `app-meta-call.js:10717` (`_day2RechnungsZeile`) | „n Pkt. in m Rd." | Werte aus F7.14/F7.16 |
+| F7.36 | Turnierrahmen-Zeile | `app-meta-call.js:10721` (`_day2RahmenZeile`) | „Turnierrahmen: n Spieler — geht nicht in diese Chance ein. Sie folgt aus Runden, Punkteziel, Feldanteilen und Paarungen." | steht eine Zeile UNTER der Rechnung; Ändern der Spielerzahl ändert die Chance nicht |
+| F7.37 | Empfehlungs-Panel | `app-meta-call.js:10993` (`renderRecommendationsPanel`) | Decks nach Zielwahrscheinlichkeit + Geheimtipps; eigenes Deck markiert | Panel entfällt, wenn beide Listen leer sind |
+| F7.38 | Eingefrorenes Past-Meta: Banner | `app-meta-call.js:11275` | sagt, dass das Format abgeschlossen ist | erscheint nur in diesem Zustand |
+| F7.39 | Eingefrorenes Past-Meta: Anteils-Panel | `app-meta-call.js:11307/11351` | Endstand-Anteilstabelle | ersetzt Feld-/Custom-/MyDeck-/Ergebnis-Panels |
+| F7.40 | Eingefrorenes Past-Meta: Empfehlungen | `app-meta-call.js:11392` | Final-Kumulativ-Rangliste | — |
+| F7.41 | Brick-Filter-Stand | `app-meta-call.js:10582` (`.mc-brick-filter-stand`) | sagt, dass der Filter erst mit gewähltem Deck wirkt | Text „wirkt erst, wenn ein Deck gewählt ist" |
+
+## F8 — Kartendatenbank (`#cards`)
+
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
+|---|---|---|---|---|
+| F8.1 | Überschrift + Hilfe + Frische-Chip | index.html:2087 | — | — |
+| F8.2 | Kartensuche mit Vorschlägen | index.html:2096 (`#cardSearch`, `#cardSearchAutocomplete`) | Namenssuche | Vorschlagsliste erscheint beim Tippen |
+| F8.3 | „Filter ausblenden/einblenden" | index.html:2100 (`#cardsFiltersToggle`) | `toggleCardsFilterPanel()` | `aria-expanded` wechselt, Filterraster erscheint/verschwindet |
+| F8.4 | Filtergruppe „Meta / Format" | `#filter-meta-format`, `app-cards-db.js:74` | 3 Radios: Gesamt · Alle spielbaren · Nur City League | genau einer gewählt |
+| F8.5 | Filtergruppe „Set" | `#filter-set`, `app-cards-db.js:88` + `populateSetFilter` (1298) | Sets nach Erscheinungsdatum, neueste zuerst | Reihenfolge folgt `pokemon_sets_mapping.csv` |
+| F8.6 | Filtergruppe „Seltenheit" | `#filter-rarity`, `app-cards-db.js:102` | Mehrfachauswahl | — |
+| F8.7 | Filtergruppe „Kategorie" | `#filter-category`, `app-cards-db.js:113` | Mehrfachauswahl | — |
+| F8.8 | Filtergruppe „Energietyp" | `#filter-element-type`, `app-cards-db.js:1251` | 10 deutsche Typnamen (Pflanze … Farblos), Wert bleibt englisch | Beschriftungen deutsch, Filterlogik unverändert |
+| F8.9 | Filtergruppe „Haupt-Pokémon" + Suche | `#filter-main-pokemon`, `app-cards-db.js:134` | Liste + eigenes Suchfeld (`#mainPokemonSearch`), das nur im aufgeklappten Zustand sichtbar ist | Suchfeld `display:none` solange die Gruppe zu ist |
+| F8.10 | Filtergruppe „Archetyp" + Suche | `#filter-archetype`, `app-cards-db.js:146` (`#archetypeSearch`) | wie F8.9 | — |
+| F8.11 | Filtergruppe „Kartenabdeckung" | `#filter-deck-coverage`, `app-cards-db.js:158` + `populateDeckCoverageFilter` (1281) | genau zwei Schwellen: ≥50 %, ≥70 % | ≥90 % und 100 % gibt es nicht mehr (strukturell unerreichbar) |
+| F8.12 | Filterkopf mit Tastaturbedienung | `app-cards-db.js:178` | Enter/Leertaste klappen auf | jede `.cards-filter-header[role=button]` reagiert auf beide Tasten |
+| F8.13 | „Filter zurücksetzen" | index.html:2142 | `resetCardFilters()` | alle Kästchen/Radios leer, Trefferzahl = Gesamtzahl |
+| F8.14 | Sortierung | index.html:2147 (`#cardSortOrder`) | Nach Set / Wie Deck-Übersicht / Nach Abdeckung / Nach Pokédex-Nr. | Reihenfolge im Raster ändert sich |
+| F8.15 | Druck-Ansicht „Standard / Alle Drucke" | index.html:2155/2156 | `setPrintView()` | genau einer `.active` |
+| F8.16 | Trefferanzeige | index.html:2158 (`#cardResultsInfo`) | „n Karten" | Zahl folgt Filter und Suche |
+| F8.17 | Kartenraster | index.html:2164 (`#cardsContent`) | 63 Karten je Seite, Skelett beim Laden | Blätterung vorhanden (`app-cards-db.js:198`) |
+| F8.18 | Abdeckungs-Plakette mit Erhebungsangabe | `app-cards-db.js:3559` | Plakette zeigt Bruch + Name der Erhebung: „x/y · <Erhebung>" | jede Prozentzahl auf der Plakette ist aus GENAU dieser einen Erhebung gerechnet; kein Wert über 100 % |
+| F8.19 | Zusatz „Weitere Erhebungen: …" | `app-cards-db.js:3563` | nennt abweichende Erhebungen mit Bruch und Prozent | erscheint nur, wenn andere Erhebungen dieselbe Karte anders melden |
+| F8.20 | Wahl der gezeigten Erhebung | `app-cards-db.js:3776` (`calculateDynamicCoverage`) | immer die GRÖSSTE Erhebung unter den gefilterten Archetypen — für alle Karten der Seite dieselbe | zwei Karten derselben Seite nennen dieselbe Erhebung |
+| F8.21 | Kartenaktionen (je Karte) | `app-cards-db.js` (Raster) | Sammlung +/−, Wunschliste ♡, Tradelist, Druckwechsler ★, Proxy, Marktpreis | Klick ändert Zähler im Profil |
+
+## F9 — Proxy Printer (`#proxy`)
+
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
+|---|---|---|---|---|
+| F9.1 | Überschrift + Hilfe | index.html:2175 | — | — |
+| F9.2 | Decklisten-Eingabe | index.html:2185 (`#proxyDecklistInput`) | Freitext im PTCGL-Format | Beispielformat als Platzhalter |
+| F9.3 | „Deckliste zur Warteschlange" | index.html:2187 (`#proxyImportDecklistBtn`) | `importDecklistToProxy()` | Warteschlangenzahl steigt |
+| F9.4 | Einzelkarte: Name (mit Vorschlagsliste) | index.html:2194 (`#proxyManualName`, `list=proxyManualNameSuggestions`) | Datalist wird von `app-core.js:464` erzeugt | Vorschläge erscheinen beim Tippen |
+| F9.5 | Einzelkarte: Set | index.html:2195 (`#proxyManualSet`) | Set-Kürzel | — |
+| F9.6 | Einzelkarte: Nummer | index.html:2196 (`#proxyManualNumber`) | Kartennummer | — |
+| F9.7 | Einzelkarte: Anzahl | index.html:2197 (`#proxyManualCount`) | ≥ 1 | — |
+| F9.8 | „Karte hinzufügen" | index.html:2201 (`#proxyAddManualCardBtn`) | `addManualProxyCard()` | Karte erscheint in der Warteschlange |
+| F9.9 | „Aus Binder laden" | index.html:2208 (`#proxyLoadBinderBtn`) | `cbLoadBinderIntoProxy()` — noch nicht gedruckte Karten | Warteschlange gefüllt |
+| F9.10 | „City-League-Deck hinzufügen" | index.html:2209 | `addCurrentDeckToProxy('cityLeague')` | — |
+| F9.11 | „Current-Meta-Deck hinzufügen" | index.html:2210 | `addCurrentDeckToProxy('currentMeta')` | — |
+| F9.12 | „Past-Meta-Deck hinzufügen" | index.html:2211 | `addCurrentDeckToProxy('pastMeta')` | — |
+| F9.13 | „Warteschlange drucken" | index.html:2212 | `printProxyQueue()` | Druckansicht öffnet |
+| F9.14 | „Warteschlange leeren" | index.html:2213 | `clearProxyQueue()` | Leerzustand F9.15 erscheint |
+| F9.15 | Leerzustand „Proxy-Warteschlange ist leer" | index.html:2218 | Symbol, Titel, Text, Knopf „Deckliste hinzufügen" (setzt Fokus in F9.2) | Knopf fokussiert `#proxyDecklistInput` ohne zu scrollen |
+
+## F10 — Anleitung (`#tutorial`)
+
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
+|---|---|---|---|---|
+| F10.1 | Überschrift + Hilfe + Untertitel | index.html:2239/2240 | — | — |
+| F10.2 | Nachgeladene Anleitung | index.html:2252 (`#tutorialHost`, `data-state`), `js/ds-tutorial.js` | lädt `tutorial/tutorial.<sprache>.html` beim Öffnen und bei jedem Sprachwechsel | `data-state` wechselt von `idle`; nach Sprachwechsel steht der Text in der neuen Sprache |
+| F10.3 | Ladezeile „Anleitung wird geladen …" | index.html:2253 | Übergangszustand | verschwindet nach dem Laden |
+| F10.4 | `<noscript>`-Verweise | index.html:2254 | direkte Links auf beide Sprachfassungen | ohne JS zwei funktionierende Links |
+
+## F11 — Quellen & Methodik (`#quellen`)
+
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
+|---|---|---|---|---|
+| F11.1 | Überschrift | index.html:2277 (`#quellenTitel`) | von `app-quellen.js:404` sprachabhängig gesetzt | wechselt mit der Sprache |
+| F11.2 | Zurück-Knopf | index.html:2274 (`#quellenZurueck`) | Beschriftung von `app-quellen.js:406` gesetzt | wechselt mit der Sprache |
+| F11.3 | Abschnitt „Woher die Zahlen kommen" | `app-quellen.js:48` (`#qu-quellen`) | offen beim Start | `<details open>` |
+| F11.4 | Abschnitt „Worauf die Zahlen beruhen" | `app-quellen.js:73` (`#qu-umfang`) | Datenumfang aus `ds-datenumfang.js` | Zahlen zur Laufzeit gerechnet, nicht abgeschrieben |
+| F11.5 | Abschnitt „Was die Begriffe heißen" | `app-quellen.js:96` (`#qu-begriffe`) | Glossar inkl. der drei Win-Rate-Konventionen | Konventionstexte kommen aus `js/win-rate-konvention.js` |
+| F11.6 | Abschnitt „Wie zuverlässig das ist" | `app-quellen.js:170` (`#qu-zuverlaessig`) | — | — |
+| F11.7 | Abschnitt „Was getrennt bleibt" | `app-quellen.js:186` (`#qu-trennung`) | Trennung Japan / Global / Past — der Satz, der früher unter jedem Ausweis stand | genau einmal auf der Seite |
+| F11.8 | Abschnitt „Wie aktuell das ist" | `app-quellen.js:194` (`#qu-stand`) | — | — |
+| F11.9 | Abschnitt „Rechtliches" | `app-quellen.js:203` (`#qu-rechtliches`) | — | — |
+| F11.10 | Ankersprung aus dem Ausweis | `ds-nav.js:305` (`a.qu-verweis[href="#quellen"]`) | öffnet den Reiter, ggf. den passenden Abschnitt | Klick auf „Quellen & Methodik →" landet hier |
+
+## F12 — Datenlücken (`#admin`, nicht im Menü)
+
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
+|---|---|---|---|---|
+| F12.1 | Überschrift „Datenlücken" | index.html:2293 (`#adminTitel`) | von `app-admin.js:299` gesetzt | — |
+| F12.2 | Zurück-Knopf | index.html:2290 (`#adminZurueck`) | `app-admin.js:301` | — |
+| F12.3 | Leitsatz + Offen-Hinweis | `app-admin.js:325` | sagt ausdrücklich, dass das kein Zugangsschutz ist | zwei Absätze über der Liste |
+| F12.4 | Filter-Chips je Lückenklasse | `app-admin.js:337/341` (`.dl-chip`) | „Alle n" + je Klasse ein Chip mit Anzahl | genau einer `is-an`; Summe der Klassen = Gesamt |
+| F12.5 | Lückenkarten | `app-admin.js:263` (`.dl-karte`) | Titel + Beschreibung + ggf. Vorschlag | Liste folgt dem Filter |
+| F12.6 | Sammel-Knopf „Alle melden" | `app-admin.js:352` (`.dl-btn--haupt`) | GitHub-Issue-Link über alle Karten mit Vorschlag | nur bei > 1 Vorschlag; Beschriftung nennt n von g |
+| F12.7 | Leerzustand | `app-admin.js:305/329` | „keine Lücken" mit Erklärtext | statt leerer Liste |
+| F12.8 | Fußblock „Wie geht es weiter" + Stand | `app-admin.js:372` | Text + Erzeugungszeitpunkt der Datei | Zeitstempel aus `_daten._meta.erzeugt` |
+
+## F13 — Side Quest: Pokémon Champions (`#side-quest`)
+
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
+|---|---|---|---|---|
+| F13.1 | Überschrift + Untertitel | index.html:2310/2311 | — | — |
+| F13.2 | Statuszeile | index.html:2313 (`#sideQuestStatus`, `aria-live`) | Lade- und Fehlermeldungen | Meldung erscheint beim Laden |
+| F13.3 | Unterreiter „Teams" | index.html:2315 | `#sideQuestTeamsHost` sichtbar, alle anderen `hidden` | genau ein Host ohne `hidden`; `aria-selected` folgt |
+| F13.4 | Unterreiter „Usage" | index.html:2316 | `#sideQuestUsageHost` | — |
+| F13.5 | Unterreiter „Matchups" | index.html:2317 | `#sideQuestMatchupsHost` | — |
+| F13.6 | Unterreiter „Pokémon" | index.html:2318 | `#sideQuestPokedexHost` | — |
+| F13.7 | Unterreiter „Team-Builder" | index.html:2319 | `#sideQuestBuilderHost` | — |
+| F13.8 | Unterreiter „Status" | index.html:2320 | `#sideQuestZustaendeHost` | — |
+| F13.9 | Unterreiter „Look up" | index.html:2321 | `#sideQuestResourcesHost` | — |
+| F13.10 | Team-Karte: Kopie-Knopf für Replica-Code | `app-side-quest.js:534` | ein Tippen kopiert den Code | Toast bestätigt; Zwischenablage enthält den Code |
+| F13.11 | Team-Karte: Marker (getestet/…) | `app-side-quest.js:308` | Status je Team, gemerkt | Marker übersteht Neuladen |
+| F13.12 | Team-Karte: Info / Claude / Play / Export / Aktiv / Eigenes kopieren | `app-side-quest.js:469-523` | je eine Aktion | jeder Knopf löst genau seine Aktion aus |
+| F13.13 | Team-Detail-Dialog | `app-side-quest.js:623` | Titel + Schließen | `×` schließt |
+| F13.14 | Export-Dialog | `app-side-quest.js:867` | Titel + Schließen | — |
+| F13.15 | Usage: Typfilter | `app-side-quest-usage.js:394` | Knopfleiste, einer `on` | — |
+| F13.16 | Usage: Formatfilter | `app-side-quest-usage.js:488` | Knopfleiste, einer `on` | — |
+| F13.17 | Matchups: Suche | `app-side-quest-matchups.js:711` (`.sq-search`) | filtert Paarungen | — |
+| F13.18 | Matchups: Sortierknöpfe | `app-side-quest-matchups.js:770` | einer `on` | — |
+| F13.19 | Matchups: Gegnertyp-Auswahl | `app-side-quest-matchups.js:791` | Auswahlfeld | — |
+| F13.20 | Matchups: Team-Chips + Entfernen | `app-side-quest-matchups.js:1020/1028` | Chips als eigenständige Knöpfe (kein Knopf im Knopf) | gültiges HTML, beide Knöpfe einzeln bedienbar |
+| F13.21 | Matchups: Rechner (Attacke/Fähigkeit/Item/Wesen/EVs) | `app-side-quest-matchups.js:615-683` | Auswahlfelder + Schieberegler + „Zurücksetzen" | Schadensausgabe ändert sich |
+| F13.22 | Pokédex: Suche | `app-side-quest-pokedex.js:1362` (`#sqpSearch`) | Namenssuche | — |
+| F13.23 | Pokédex: Typ- und Formfilter | `app-side-quest-pokedex.js:706/707` | `#sqpType`, `#sqpForm` | — |
+| F13.24 | Pokédex: Format-Umschalter Doubles/Singles | `app-side-quest-pokedex.js:710/711` | einer `is-active` | — |
+| F13.25 | Pokédex: Voreinstellungen (Presets) | `app-side-quest-pokedex.js:683` | Sortier-Vorlagen mit Richtung | — |
+| F13.26 | Pokédex: Detailblatt mit Suche | `app-side-quest-pokedex.js:1244-1321` | Schließen, Suchfeld, Trefferliste | — |
+| F13.27 | Team-Builder: Vorschläge | `app-side-quest-builder.js:315` | Pokémon hinzufügen | Team wächst |
+| F13.28 | Team-Builder: Bearbeiten-Dialog | `app-side-quest-builder.js:620` | Fähigkeit, Item, Attacken, EVs | Werte werden übernommen |
+| F13.29 | Team-Builder: Speichern / Aktiv setzen / Export / Rechner | `app-side-quest-builder.js:582-589` | vier Aktionen | — |
+| F13.30 | Statuszustände: Zustandsköpfe | `app-side-quest-status.js:204` | auf/zu je Zustand | — |
+| F13.31 | Statuszustände: „Alle" | `app-side-quest-status.js:301` | alle auf/zu | — |
+| F13.32 | Look up: Filter-Chips mit Anzahl | `app-side-quest-resources.js:476` | einer `is-active`, Anzahl je Chip | — |
+| F13.33 | Look up: „nur Champions" | `app-side-quest-resources.js:491` | Umschalter | — |
+| F13.34 | Look up: Suche | `app-side-quest-resources.js:521` (`#sqResSearch`) | filtert Einträge | — |
+| F13.35 | Look up: aufklappbare Einträge | `app-side-quest-resources.js:455` | `aria-expanded` folgt | — |
+
+## F14 — Side Quest: TCG Pocket (`#pocket`)
+
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
+|---|---|---|---|---|
+| F14.1 | Kopf „Side Quest · Pokémon TCG Pocket" + Untertitel | `ds-pocket.js:119/122` | erklärt die Bedienung in einem Satz | — |
+| F14.2 | Quellenzeile | `ds-pocket.js:128` | „Einstufung von Game8, keine von uns gemessene Zahl" + Link + Stand | Zeile nennt die Fremdquelle ausdrücklich |
+| F14.3 | Alterswarnung | `ds-pocket.js:139` | ab `PLAUSIBEL_TAGE` Tagen ohne Auffrischung | Satz nennt die Tageszahl |
+| F14.4 | Filterleiste „Alle / Tier-Liste / Neues Set" | `ds-pocket.js:153` | einer `is-active`/`aria-pressed=true` | Liste kürzt sich entsprechend |
+| F14.5 | Stufen-Abschnitte mit Anzahl | `ds-pocket.js:183` | je Stufe Überschrift + Zähler | Zähler = Zeilen im Abschnitt |
+| F14.6 | Deck-Zeile | `ds-pocket.js:188` | Marke, Name, Fußnote, Pfeil; öffnet das Muster | Klick öffnet `#pocketOverlay` |
+| F14.7 | Abschnitt „Ohne bekannte Stufe" | `ds-pocket.js:236` | eigene Gruppe + Erklärsatz | erscheint nur bei unbekannten Stufen |
+| F14.8 | Rechnungsblock | `ds-pocket.js:265` | „x von y Einträgen … n ohne lesbares Muster" | Zahlen stimmen mit der Liste überein |
+| F14.9 | Muster-Overlay (2D-Code) | index.html:2347 (`#pocketOverlay`), `ds-pocket.js:348` | QR aus `js/qr-svg.js`, Deckname, Kartenliste, Schließen | Overlay `hidden` bis zum Klick; `×` schließt |
+| F14.10 | Fehlerfall ohne Muster | `ds-pocket.js:317/354` | Klartext statt leerem Kasten | Meldung „Keine Kartenliste: …" |
+| F14.11 | Listen-Host | index.html:2345 (`#pocketListe`, `aria-live="polite"`) | Ladezustand, Leerzustand, Liste | „Lädt…" / „Die Tier-Liste ist leer." / Liste |
+
+## F15 — Wahrscheinlichkeitsrechner (`#calculator`)
+
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
+|---|---|---|---|---|
+| F15.1 | Überschrift + Hilfe + Untertitel | index.html:2356/2358 | — | — |
+| F15.2 | Feld „Karten im Deck" | index.html:2365 (`#calc-deck-size`) | 1–99, Vorgabe 60 | Ergebnis rechnet neu |
+| F15.3 | Feld „Kopien im Deck" | index.html:2369 (`#calc-copies`) | 1–60, Vorgabe 1 | — |
+| F15.4 | Feld „gezogene Karten" | index.html:2373 (`#calc-drawn`) | 1–60, Vorgabe 7 | — |
+| F15.5 | Feld „bereits auf der Hand" | index.html:2377 (`#calc-in-hand`) | 0–4, Vorgabe 0 | — |
+| F15.6 | Ergebnis „Ziehen (mind. 1)" | index.html:2385 (`#res-draw`) | Prozentwert, Farbe nach Höhe | ≠ „–" nach Eingabe |
+| F15.7 | Fußnote zum Ziehen | index.html:2386 (`#calc-fuss-draw`) | Randbedingung, wenn nötig | leer, wenn nichts zu sagen ist |
+| F15.8 | Ergebnis „In den Preiskarten" | index.html:2391 (`#res-prize`) + Fußnote 2393 | Prozentwert | — |
+| F15.9 | Ergebnis „Topdeck-Chance" | index.html:2397 (`#res-topdeck`) + Fußnote 2399 | Prozentwert | — |
+
+## F16 — Profil (`#profile`) und Untertabs
+
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
+|---|---|---|---|---|
+| F16.1 | Überschrift + Hilfe + Untertitel | index.html:2410-2414 | — | — |
+| F16.2 | Anmeldeaufforderung (ausgeloggt) | index.html:2418 (`#profile-auth-prompt`) | Bild, Titel, Text, Knopf „Anmelden / Registrieren" | ausgeloggt sichtbar, `#profile-content` `.d-none` |
+| F16.3 | Cloud-Sync-Anzeige | index.html:2436 (`#cloud-sync-status`, `#cloud-sync-detail`) | Zustand des Firestore-Caches | Text ≠ „Initialisiere…" nach dem Laden |
+| F16.4 | „Jetzt synchronisieren" | index.html:2442 (`#cloud-sync-refresh-btn`) | `forceCloudSync()` | frischer Serverabruf, Detailtext aktualisiert |
+| F16.5 | Kennzahl „Name" | index.html:2450 (`#profile-user-name`) | Anzeigename | — |
+| F16.6 | Kennzahl „Karten im Besitz" | index.html:2454 (`#profile-cards-count`) | Zahl | folgt der Sammlung |
+| F16.7 | Kennzahl „Sammlungswert" | index.html:2458 (`#profile-collection-value`) | Betrag in € | Format mit Komma |
+| F16.8 | Fußnote zum Sammlungswert | index.html:2462 (`#profile-collection-value-note`) | erklärt, woraus die Summe besteht; `hidden`, solange nichts zu sagen ist | `firebase-collection.js:959` |
+| F16.9 | Kennzahl „gespeicherte Decks" | index.html:2466 (`#profile-decks-count`) | Zahl | — |
+| F16.10 | Battle-Journal-Kachel: Titel + Hilfe | index.html:2469 | — | — |
+| F16.11 | Battle-Journal-Kachel: „Ausstehende Syncs" | index.html:2477 (`#battleJournalProfilePending`) | Zahl | = Länge der Outbox |
+| F16.12 | Battle-Journal-Kachel: „Sync-Status" | index.html:2481 (`#battleJournalProfileState`) | Zustandstext | — |
+| F16.13 | „Match eintragen" | index.html:2485 | `openBattleJournalSheet()` | Blatt öffnet |
+| F16.14 | „Jetzt synchronisieren" (Journal) | index.html:2486 | `flushBattleJournalOutbox()` | Zähler sinkt |
+| F16.15 | Untertab-Gruppe „Karten & Sammlung" | index.html:2495 | Beschriftung + 5 Knöpfe | Gruppenlabel sichtbar |
+| F16.16 | Untertab „Meine Sammlung" (+ Zähler) | index.html:2498 (`#tab-count-collection`) | `switchProfileTab('collection')` | `#profile-collection` `.active` |
+| F16.17 | Untertab „Wunschliste" (+ Zähler) | index.html:2501 | — | — |
+| F16.18 | Untertab „Tauschliste" (+ Zähler) | index.html:2504 | — | — |
+| F16.19 | Untertab „Meta Binder" | index.html:2507 | — | — |
+| F16.20 | Untertab „Custom Binder" | index.html:2510 | — | — |
+| F16.21 | Untertab-Gruppe „Decks" | index.html:2516 | 3 Knöpfe | — |
+| F16.22 | Untertab „Meine Decks" (+ Zähler) | index.html:2519 | — | — |
+| F16.23 | Untertab „Decklisten vergleichen" | index.html:2522 | — | — |
+| F16.24 | Untertab „Deck Builder" | index.html:2525 | ruft `ProfileDeckBuilder.activate()` beim ersten Öffnen | `#profile-deckbuilder` wird gefüllt |
+| F16.25 | Untertab-Gruppe „Spiel & Analyse" | index.html:2531 | 3 Knöpfe | — |
+| F16.26 | Untertab „Battle Journal" | index.html:2534 | — | — |
+| F16.27 | Untertab „Testing Groups" | index.html:2537 | `TestingGroups.init()` | `#profile-testinggroups` gefüllt |
+| F16.28 | Knopf „Meta Call →" | index.html:2547 | `switchTabAndUpdateMenu('meta-call')` — verlässt das Profil | landet im eigenen Reiter, nicht hinter der Anmeldewand |
+| F16.29 | Untertab-Gruppe „Konto" + „Einstellungen" | index.html:2553/2557 | — | — |
+| **Sammlung** | | | | |
+| F16.30 | „Dex-Import" | index.html:2570 | `dexImportOpenFilePicker()` + verstecktes `#dexImportFileInput` (.csv) | Dateiwahl öffnet, CSV wird eingelesen |
+| F16.31 | Sortierung der Sammlung | index.html:2580 (`#collection-sort`) | 4 Optionen (neueste Sets, Element, Pokédex, Preis absteigend) | Reihenfolge ändert sich |
+| F16.32 | Filter der Sammlung | index.html:2586 (`#collection-filter`) | 17 Optionen (alle, 10 Pokémon-Typen, Supporter, Item, Tool, Spez.-Energie, Basis-Energie) | Trefferzahl ändert sich |
+| F16.33 | „Sammlung leeren" | index.html:2606 | `clearCollection()` | Leerzustand F16.36 erscheint |
+| F16.34 | Ladehinweis „Elementtypen werden geladen" | index.html:2610 (`#collection-type-loading`) | nur während des Ladens | `.d-none` danach |
+| F16.35 | Sammlungssuche | index.html:2616 (`#collection-search`) + Trefferzeile 2619 | entprellt | Trefferzeile nennt die Zahl |
+| F16.36 | Leerzustand „Deine Sammlung ist leer" | index.html:2623 | Symbol, Titel, Text, Knopf „Kartendatenbank öffnen" | `role="status"` |
+| **Meine Decks** | | | | |
+| F16.37 | „Gebaute Decks vergleichen" | index.html:2643 | `compareActiveDecks()` | Vergleichsdialog |
+| F16.38 | „Neuer Ordner" | index.html:2644 | `createDeckFolder()` | Ordner erscheint in F16.41 |
+| F16.39 | Decksuche | index.html:2652 (`#decks-search`) | Name oder Archetyp | — |
+| F16.40 | Filter „Nur IRL gebaut" | index.html:2655 (`#decks-filter-built`) | `toggleBuiltFilter()`; `title` erklärt IRL | Chip wechselt Zustand |
+| F16.41 | Ordner-Navigation | index.html:2659 (`#decks-folder-nav`) | Pfad + Wechsel | `.d-none` ohne Ordner |
+| F16.42 | Ordner-Zusammenfassung (Kern/Tech) | index.html:2663 (`#decks-folder-summary`) | Auswertung je Ordner | `.d-none` ohne Ordner |
+| F16.43 | Leerzustand „Noch keine gespeicherten Decks" | index.html:2666 | + Knopf „Deck bauen" → `city-league` | — |
+| **Wunschliste** | | | | |
+| F16.44 | „📋 Liste einfügen" (Telegram-Bot) | index.html:2686 | `wishlistBotImportOpen()` | Einfügedialog, ganze Bot-Nachricht wird akzeptiert |
+| F16.45 | Wunschlisten-Suche | index.html:2694 (`#wishlist-search`) + Trefferzeile 2716 | entprellt | — |
+| F16.46 | Set-Filter der Wunschliste | index.html:2698 (`#wishlist-set-filter`) | Auswahlfeld | — |
+| F16.47 | „Grid" | index.html:2703 | `openWishlistGridModal()` | F17.9 öffnet |
+| F16.48 | „Kopieren" | index.html:2706 | `copyWishlistToClipboard()` | — |
+| F16.49 | „🛒 Cardmarket" | index.html:2709 | `copyWishlistForCardmarket()` | F17.10 öffnet |
+| F16.50 | „Wunschliste leeren" | index.html:2712 | `clearWishlist()` | Leerzustand erscheint |
+| F16.51 | Leerzustand „Deine Wunschliste ist leer" | index.html:2719 | + Knopf „Karten finden" | — |
+| **Tauschliste** | | | | |
+| F16.52 | Tauschlisten-Suche + Set-Filter | index.html:2740/2744 | — | — |
+| F16.53 | „Grid" / „Kopieren" / „Tauschliste leeren" | index.html:2749/2752/2755 | drei Aktionen | — |
+| F16.54 | Leerzustand „Deine Tauschliste ist leer" | index.html:2760 | + Knopf „Karten finden" | — |
+| **Meta Binder** | | | | |
+| F16.55 | Überschrift + Hilfe + Untertitel | index.html:2775/2776 | — | — |
+| F16.56 | „Binder erzeugen" | index.html:2779 | `buildMetaBinder()` | `#metaBinderStats` verliert `.d-none` |
+| F16.57 | „📂 Gespeicherten Binder laden" | index.html:2780 (`#metaBinderLoadSaved`) | letzte Fassung | — |
+| F16.58 | „Fehlende auf Wunschliste" | index.html:2781 (`#metaBinderAddWishlist`) | `disabled` bis der Binder steht | — |
+| F16.59 | „Alle Fehlenden an Proxy" | index.html:2782 (`#metaBinderSendProxy`) | wie F16.58 | — |
+| F16.60 | „NEUE Karten an Proxy" | index.html:2783 (`#metaBinderProxyNew`) | wie F16.58 | — |
+| F16.61 | Statistik / Filter / Delta | index.html:2785-2787 | erscheinen mit dem Binder | alle drei `.d-none` im Ausgangszustand |
+| F16.62 | Leerzustand „Meta Binder noch nicht erzeugt" | index.html:2789 | + 2 Knöpfe | — |
+| F16.63 | Dialog „Weggefallene Karten" | index.html:3742 (`#metaBinderDroppedModal`, `#metaBinderDroppedCount`) | Liste der aus dem Umfang gefallenen Karten | Zahl im Kopf = Länge der Liste |
+| **Custom Binder** | | | | |
+| F16.64 | Überschrift + Hilfe + Untertitel | index.html:2806/2807 | — | — |
+| F16.65 | Ordnerleiste | index.html:2812 (`#cbBinderBar`) | gespeicherte Ordner als Einstieg | von `cbRenderBinderBar()` gefüllt |
+| F16.66 | Modus „Sammlung / Druckliste" | index.html:2816/2817 | `cbSetMode()` | einer `.active`; F16.73/F16.74 erscheinen nur im Druckmodus |
+| F16.67 | Archetyp-Suche | index.html:2823 (`#cbArchetypeSearch`) | `cbFilterArchetypeList()` | — |
+| F16.68 | „Suchen ▾" | index.html:2824 (`#cbDropdownToggle`) | öffnet `#cbArchetypeDropdown` | — |
+| F16.69 | „Top 10 Meta" | index.html:2825 (`#cbTopMetaBtn`) | wählt die Top 10 auf einmal | 10 Chips in `#cbSelectedChips` |
+| F16.70 | Schwelle „Alle / Kern + Tech (≥30 %) / Nur Kern (>70 %)" | index.html:2834-2836 | `cbSetThreshold()`; Vorgabe 70 | einer `.active` |
+| F16.71 | „Custom Binder erzeugen" | index.html:2840 (`#cbGenerateBtn`) | `disabled` ohne Auswahl | wird aktiv, sobald ein Archetyp gewählt ist |
+| F16.72 | „Ordner speichern" / „Als neuen Ordner" / „Auf aktuellen Stand bringen" | index.html:2841-2843 | drei Aktionen | Ordner erscheint in F16.65 |
+| F16.73 | „Fehlende auf Wunschliste" / „Alle Fehlenden an Proxy" | index.html:2844/2845 | `disabled` bis der Binder steht | — |
+| F16.74 | „Noch nicht Gedruckte → Druckliste" / „Gefilterte als gedruckt ✓" | index.html:2846/2847 | nur im Druckmodus (`.d-none` sonst) | — |
+| F16.75 | Voreinstellungsleiste / Statistik / Filter / Abgleich / Delta | index.html:2850-2854 | erscheinen mit dem Binder | alle `.d-none` im Ausgangszustand |
+| F16.76 | Leerzustand „Archetypen wählen und Binder erzeugen" | index.html:2856 | Titel + Hinweis | — |
+| **Battle Journal (Verlauf)** | | | | |
+| F16.77 | „Match eintragen" / „Jetzt synchronisieren" / „Alles kopieren" / „Journal leeren" | index.html:2872-2875 | vier Aktionen | — |
+| F16.78 | Verlaufsstatistik | index.html:2876 (`#journalHistoryStats`) | Kennzahlen | — |
+| F16.79 | Filter „Format" | index.html:2878 (`#journalFilterMeta`) | Auswahlfeld | Liste kürzt sich |
+| F16.80 | Filter „Turniertyp" | index.html:2881 (`#journalFilterType`) | 7 Typen + „Alle" | — |
+| F16.81 | Filter „Turnier" | index.html:2891 (`#journalFilterTournament`) | Auswahlfeld | — |
+| F16.82 | Filter „Ergebnis" | index.html:2894 (`#journalFilterResult`) | Sieg / Niederlage / Unentschieden | — |
+| F16.83 | „Matchup-Tabelle" | index.html:2900 | `toggleMatchupStats()` | `#journalMatchupStats` erscheint |
+| F16.84 | Verlaufsliste | index.html:2903 (`#journalHistoryList`) | Einträge, je mit Bearbeiten | Klick öffnet F17.5/F17.6 |
+| **Decklisten vergleichen** | | | | |
+| F16.85 | Feld „Deck A (alt)" | index.html:2915 (`#profileCompareListA`) | Freitext | — |
+| F16.86 | Feld „Deck B (neu)" | index.html:2919 (`#profileCompareListB`) | Freitext | — |
+| F16.87 | „Vergleichen" | index.html:2923 | `profileCompareDecklists()` | `#profileCompareResult` verliert `.d-none` |
+| **Deck Builder (Profil)** | | | | |
+| F16.88 | Kartensuche | `app-profile-deck-builder.js:998` (`#pdb-search`) | Namenssuche | Trefferliste |
+| F16.89 | „Filter zurücksetzen" | `app-profile-deck-builder.js:1004` (`#pdb-clear-filters`) | — | — |
+| F16.90 | Deckname | `app-profile-deck-builder.js:1012` (`#pdb-deck-name`) | Freitext | wird beim Speichern übernommen |
+| F16.91 | Kartenzähler | `app-profile-deck-builder.js:1011` (`#pdb-deck-count`) | „n Karten" | — |
+| F16.92 | „Deck leeren" | `app-profile-deck-builder.js:1018` (`#pdb-clear-deck`) | leert die Liste | — |
+| F16.93 | „Einfügen" (Liste) | `app-profile-deck-builder.js:1028` (`#pdb-paste-btn`) | PTCGL-Liste einlesen | Karten erscheinen |
+| F16.94 | Mulligan-Rechner | `app-profile-deck-builder.js:1032` | Wahrscheinlichkeit der Fehlhand | Wert ändert sich mit der Liste |
+| F16.95 | Set-Suche | `app-profile-deck-builder.js:1135` (`#pdb-set-search`) | — | — |
+| F16.96 | Kartenlupe (Zoom-Dialog) mit „＋ Hinzufügen" | `app-profile-deck-builder.js:929/940` | Bild + Hinzufügen + Schließen | — |
+| **Testing Groups** | | | | |
+| F16.97 | Überschrift + Hilfe | `app-testing-groups.js:1211` | — | — |
+| F16.98 | Neue Gruppe: Name + „Erstellen" | `app-testing-groups.js:1215/1216` (`#tg-new-name`) | max. 60 Zeichen | Gruppe erscheint unter „Meine Gruppen" |
+| F16.99 | Gruppenliste + „Öffnen" | `app-testing-groups.js:1200/1218` | — | — |
+| F16.100 | Gruppendetail: Titel (Umbenennen per Doppelklick) | `app-testing-groups.js:1394` | nur für Eigentümer | — |
+| F16.101 | Matrix-Eingabe je Paarung | `app-testing-groups.js:1282/1336` | Zahleneingaben 0–100 | Werte werden gespeichert |
+| F16.102 | Deck umbenennen / entfernen | `app-testing-groups.js:1291/1292` | zwei Aktionen je Zeile | — |
+| F16.103 | Deck hinzufügen | `app-testing-groups.js:1362/1366` (`#tg-new-deck`) | — | — |
+| F16.104 | Zeilenfilter-Chips + „Alle" / „Keine" | `app-testing-groups.js:1374/1382/1383` | — | — |
+| F16.105 | „🔗 Einladungslink" | `app-testing-groups.js:1398` | erzeugt Link `#tg-join=…` | Aufruf des Links tritt der Gruppe bei (`app-testing-groups.js:1745`) |
+| F16.106 | „💾 JSON exportieren" | `app-testing-groups.js:1409` | Datei | — |
+| F16.107 | „→ In Meta Call laden" | `app-testing-groups.js:1410` | überträgt die Gruppe in den Predictor | Meta Call zeigt die Gruppendaten |
+| F16.108 | „Löschen" / „Verlassen" | `app-testing-groups.js:1412/1413` | je nach Rolle genau einer | — |
+| F16.109 | Aktivitätsprotokoll | `app-testing-groups.js:1391` (`#tg-activity-log`) | letzte Änderungen | — |
+| F16.110 | „← Zurück" | `app-testing-groups.js:1404` | schließt das Detail | — |
+| **Einstellungen** | | | | |
+| F16.111 | „Anzeigename" + „Speichern" | index.html:2944/2946 (`#settings-display-name`) | max. 50 Zeichen | Name erscheint in F16.5 |
+| F16.112 | Preisalarme: Ein/Aus | index.html:2972 (`#settings-price-alerts-enabled`) | Kästchen | — |
+| F16.113 | Preisalarme: Telegram-Chat-ID | index.html:2977 (`#settings-price-alerts-chatid`) | numerisch | Hilfetext erklärt `/myid` |
+| F16.114 | Preisalarme: Tauschlisten-Schwelle | index.html:2983 (`#settings-price-alerts-threshold`) | 0–100 %, Vorgabe 10 | — |
+| F16.115 | „Speichern" (Preisalarme) | index.html:2989 | `savePriceAlerts()` | Toast bestätigt |
+| F16.116 | „Abmelden" | index.html:2994 | `signOut()` | `#profile-auth-prompt` erscheint wieder |
+
+## F17 — Dialoge, Blätter und Overlays (seitenweit)
+
+| Kennung | Bezeichnung | Ort | Soll | Nachweis |
+|---|---|---|---|---|
+| F17.1 | Zwei-Schritt-Bestätigung „Leeren → Wirklich leeren?" | `app-deck-builder.js:1290-1483` | 1. Klick schärft (Beschriftung „Wirklich leeren?"), 2. Klick nach Mindestwartezeit leert; Entprellung verwirft Doppelklicks; Frist läuft ab | Doppelklick leert NICHT (Toast „Zu schnell — lies bitte kurz…"); Sprachwechsel während der Frist lässt die Warnung stehen, weil dem Knopf sein `data-i18n` entzogen wird; nach dem Entschärfen trägt er wieder die übersetzte Beschriftung |
+| F17.2 | Anmeldedialog | index.html:3013 (`#auth-modal`) | siehe F0.46 | — |
+| F17.3 | Bild-Teilen-Dialog | index.html:3099 (`#shareImageModal`) | „Speichern", ggf. „Teilen", „Schließen" | Teilen-Knopf nur, wenn das Gerät es kann |
+| F17.4 | Turnier bearbeiten | index.html:3124 (`#bjEditTournamentModal`) | Name, Format, Typ-Chips (7), Deck (Datalist), eingefrorene Liste, Platzierung (Datalist mit 8 Vorschlägen) | Änderungen wirken auf ALLE Einträge des Turniers; die gespielte Liste wird als Kopie eingefroren |
+| F17.5 | Einzelmatch bearbeiten | index.html:3226 (`#bjEditEntryModal`) | eigenes Deck, Gegner, Ergebnis, Anzugsreihenfolge, Brick, Mulligan, Notizen (max. 200), BO3-Spielfelder | BO3-Block ersetzt die BO1-Felder |
+| F17.6 | Matchup-Analyse | index.html:3268 (`#matchupAnalysisModal`) | Filter: eigenes Deck, Meta, Turniertyp-Chips (8), Turnier, Bricks (inkl./exkl./nur); Zusammenfassung, Heatmap, beste/schlechteste, alle Paarungen | Filteränderung zeichnet neu (`renderMatchupAnalysis()`) |
+| F17.7 | Deck-Grid-Vorschau | index.html:3352 (`#deckGridPreviewModal`) | Titel, Kartenraster, Anzahl, „💾 Als Bild speichern" | — |
+| F17.8 | Kartenbild-Übersicht | index.html:3369 (`#imageViewModal`) | „Teilen", „Schließen" | — |
+| F17.9 | Wunschlisten-Raster | index.html:3385 (`#wishlistGridModal`) | „Speichern", „Schließen" | — |
+| F17.10 | Cardmarket-Helfer | index.html:3407 (`#wishlistCardmarketModal`) | Abschnitt 1 Direktlinks (exakter Druck), Abschnitt 2 Einfügetext (beliebige Version) + „Kopieren" + Link zur Wants-Liste | Einleitung erklärt den Unterschied; 🔍 markiert Karten ohne Direktlink |
+| F17.11 | Tauschlisten-Raster | index.html:3441 (`#tradelistGridModal`) | „Speichern", „Schließen" | — |
+| F17.12 | Vollbild-Karte | index.html:3458 (`#fullscreenCardModal`) | Bild + Schließen | Klick auf den Hintergrund schließt |
+| F17.13 | Einzelkarten-Ansicht | index.html:3464 (`#singleCardModal`) | Bild, Titel, Limitless-Knopf (dynamisch) | — |
+| F17.14 | Seltenheits-/Druckwechsler | index.html:3474 (`#raritySwitcherModal`) | Liste aller Drucke | Auswahl tauscht den Druck im Deck |
+| F17.15 | Anti-Tech „Build vs …" | index.html:3484 (`#antiTechModal`) | Schritt 1: Ziel-Decks (Chips, Schnellauswahl aus dem Meta-Call-Feld mit Feld-% und WR-Pille, Freitextsuche, Aggression mild/standard/heavy); Schritt 2: Tech-Karten-Auswahl mit Zähler im Knopf | „Weiter" bleibt `disabled` ohne Ziel; „Bauen mit n Karten" nennt die gewählte Zahl; „← Zurück" führt auf Schritt 1 |
+| F17.16 | Deck-Vergleich | index.html:3572 (`#deckCompareModal`) | Option 1 Freitextliste + „Vergleichen"/„Leeren"; Option 2 gespeichertes Deck + „Mit ausgewähltem Deck vergleichen" | `#deckCompareResult` verliert `.d-none` |
+| F17.17 | Battle-Journal-Blatt | index.html:3610 (`#battleJournalOverlay`) | Dunkelmodus-Umschalter, Schließen, Statuszeile, Formular, Fußbereich mit ausstehenden Einträgen | Formular speichert offline und synchronisiert später |
+| F17.18 | Journal: „Turnier fortsetzen" | index.html:3627 (`#battleJournalLastTournamentBtn`) | übernimmt das zuletzt benutzte Turnier | `.d-none` beim ersten Eintrag |
+| F17.19 | Journal: Turniername | index.html:3634 (`#battleJournalTournamentName`) | Freitext | — |
+| F17.20 | Journal: Meta-Format | index.html:3642 (`#battleJournalMeta`) | Auswahlfeld (`data-meta-format-options`) | Optionen zur Laufzeit gefüllt |
+| F17.21 | Journal: Turniertyp-Chips (7) | index.html:3648-3654 | genau einer aktiv, schreibt in `#battleJournalType` | — |
+| F17.22 | Journal: eigenes Deck (Vorschläge) | index.html:3661 (`#battleJournalOwnDeckValue`) | Autovervollständigung | — |
+| F17.23 | Journal: Gegner (Vorschläge) | index.html:3675 (`#battleJournalOpponentValue`) | Autovervollständigung | — |
+| F17.24 | Journal: BO1/BO3 | index.html:3690/3691 | Umschalter, schreibt in `#battleJournalBestOf` | BO3 blendet `#battleJournalGameDetails` ein |
+| F17.25 | Journal: Brick / Mulligan / Notizen | index.html:3706/3712/3719 | zwei Kästchen mit Erklärung + Textfeld (max. 200) | — |
+| F17.26 | Journal: „Leeren" / „Match speichern" | index.html:3723/3724 | Entwurf verwerfen / speichern | Speicheranimation `#battleJournalSaveFx` |
+| F17.27 | Journal: ausstehende Einträge + „Jetzt synchronisieren" | index.html:3734/3736 | Liste + Aktion | Zähler sinkt nach dem Sync |
+| F17.28 | Starthand-Simulator | index.html:3866 (`#drawSimulatorModal`) | „Neue Hand", „Karte ziehen", Reststapel, Handraster | Restzahl sinkt beim Ziehen |
+| F17.29 | Kombinations-Rechner | index.html:3878-3892 | 4 Auswahlfelder, „Chance berechnen", „Auswahl leeren", Ergebnis | Monte-Carlo über 10.000 Läufe; Ergebnis erscheint in `#comboResultDisplay` |
+| F17.30 | Bildvorschau (gemeinsam) | `ds-bildvorschau.js:134` (`.ds-bildvorschau-modal`) | Titel, Bild, „📋 Kopieren", „💾 Speichern", „Schließen" | Fokus kehrt nach dem Schließen auf den auslösenden Knopf zurück; Esc schließt |
 
 ---
 
-## Zusammenfassung der Zählung
+## Seit dem letzten Lauf hinzugekommen oder geändert
 
-| Gruppe | Reiter | Elemente |
+Abgeglichen mit der Vorfassung von `audit/inventar-oberflaeche.md` (Stand 07.09.2026, 09:33 Uhr) — der jetzige Code ist neuer (Git `5d9ab9a8`, ausgeliefert `202609071722-bc9a494`).
+
+| Kennung | Was neu oder geändert ist |
+|---|---|
+| F17.1 | **Zwei-Schritt-Bestätigung beim Deck-Leeren.** Erster Klick schärft und beschriftet den Knopf „Wirklich leeren?", zweiter Klick nach Mindestwartezeit leert. Entprellung (`DECK_LEEREN_PRELL_MS`) verwirft Doppelklicks; ein Sprachwechsel innerhalb der Frist kann die Warnung nicht mehr überschreiben, weil dem Knopf sein `data-i18n` entzogen wird (Befunde B1–B3). Betrifft F3.28, F5.32, F6.15. |
+| F8.18, F8.19, F8.20 | **Erhebungsangabe an der Kartenabdeckung.** Die Plakette zeigt Bruch und Namen der Erhebung; abweichende Erhebungen werden mit Bruch und Prozent genannt. Gerechnet wird in genau EINER Erhebung (der größten unter den gefilterten Archetypen) — vorher wurde über drei Erhebungen summiert, mit Werten bis 270 %. |
+| F4.22 | **Grundlagenzeile der Tier-Liste (Global).** Neuer Absatz `p.tier-grundlage` über den Tier-Blöcken; alle 17 Zahlen zur Laufzeit aus den Rechenkonstanten. Befund B6 korrigiert: der Satz nennt jetzt „Listenzahl des größten Archetyps" statt „des Rang-1-Decks". |
+| F2.7 | Grundlagenzeile auch in der City-League-Tier-Liste (`tier.clBasis` mit Listen-, Archetypen- und Einzelstückzahl). |
+| F2.14, F2.23 | **Leerzustand der Vergleichstabellen** (City League). Der Block „Warum hier keine Vergleichstabellen stehen“ nennt jede fehlende Rubrik beim Namen und ihren Grund — vorher stand zwischen Infokarten und Vergleichstabelle nichts (Befunde A-F2.11–F2.13 / H1, 07.09.2026). Zusätzlich werden die drei gerechneten, aber nie gezeichneten Rubriken (Häufiger gespielt, neue, verschwundene Archetypen) mit ihrer Zahl genannt, statt zu schweigen. Die Schwelle kommt aus `CL_MINDEST_ANTEIL_GROESSTER` statt als Literal aus dem Text (Befund B4). |
+| F5.26, F5.29 | Leerzustand auch in den beiden Meta-Call-Vergleichstabellen: statt leerer `tbody` eine Zeile `.mc-vs-empty` über die volle Spaltenbreite (3 bzw. 5 Spalten). |
+| F2.12 | **Top-10-Veränderungen ohne Vorzeitraum** behaupten nichts mehr: `entries`/`exits` bleiben leer und der Hinweis `cl.noBaseline` steht da, statt jeden Archetyp zum Aufsteiger zu erklären. |
+| F2.22 | Zeitstempel der City-League-Fußzeile folgt der Seitensprache (`en-GB` / `de-DE`) statt fest `de-DE`. |
+| F0.50, F0.51 | **Tieflinks widerspruchsfrei:** `#overview` löst auf (stand vorher nur in der falschen Tabelle), `#quellen-umfang` hat Alias und Weißlisteneintrag, `#deckcompare` und `#settings` sind ergänzt, `#playtester`/`#sandbox` führen auf die Übersicht statt auf eine leere Seite. Zwei Unit-Tests nageln die Regeln fest. |
+| F4.29, F4.30, F4.34 | **Tag-2-/Zählungs-Beschriftung der Datenbasis in der Rangliste.** Spalten „Turnier-Antritte" und „Top 8" werden ausgeblendet, solange keine Zeile eine gezählte Zahl trägt; der Hinweistext über der Tabelle beschreibt nur die tatsächlich sichtbaren Spalten. |
+| F4.22 | Die Grundlagenzeile nennt die Tag-2-Quote als dritten Anteil ausdrücklich — und sagt im Klartext, wenn für dieses Meta keine Turnierdatei vorliegt und der Anteil deshalb fehlt. |
+| F7.36 | **Turnierrahmen-Zeile im Meta Call.** `_day2RahmenZeile()` steht eine Zeile unter der Rechnung: „Turnierrahmen: n Spieler — geht nicht in diese Chance ein. Sie folgt aus Runden, Punkteziel, Feldanteilen und Paarungen." |
+| F7.15 | **Rundenhinweis im Meta Call.** `_rundenHerkunftHinweis()` erscheint nur bei den drei Major-Typen und sagt, dass die Rundenzahl eine Eingabe ist; die Alternativ-Zielpunktzahl kommt aus `MAJOR_DAY2_POINTS` (Befund B3). |
+| F7.24 | **Gewichtungs-Chip im Vorhersage-Banner.** Nennt das Mischungsverhältnis der Paarungen (Papier/Day 2/Day 1/Online) und die Predictor-5.3-Verschiebung des gewählten Decks; alle Zahlen zur Laufzeit gelesen, der `title` nennt die Konvention S/(S+N) (Befund B4). |
+| F5.23, F5.24 | **Gegnersuche.** Die Auswahlliste wird auf JEDEM Weg durch `renderCurrentMetaMatchups()` gefüllt, auch auf dem CSV-Ersatzweg. Der Leerzustand unterscheidet drei Gründe („noch nicht geladen" / „Datei ohne Zeilen" / „für dieses Deck keine Paarungen") statt eines Einheitssatzes (Befund B2). Namen werden zweifach maskiert. |
+| F5.14, F5.15, F4.5 | **Win-%-Konventions-Chips.** `js/win-rate-konvention.js` liefert Formel und Wortlaut; die WR-Spalte der Archetyp-Matchups trägt den Hinweis „ohneUnentschieden" im `title`, die Tier-Karten und `ds-share.js` den Kurzhinweis „mitUnentschieden". Belegstand 07.09.2026, gegen die Dateien nachgerechnet. |
+| F5.16 | **Mindeststichprobe bei Präsenz-Paarungen.** Die Major-WR erscheint erst ab `MIN_PRAESENZ_PARTIEN` als Prozentwert; darunter Bilanz + Partienzahl. Der Hinweis nennt Schwelle, Punktverschiebung je Partie und „k von g Zeilen" und erscheint nur, wenn wirklich Zeilen betroffen sind. |
+| F7.6 | **Quellen-Umschalter bleibt im eingefrorenen Past-Meta stehen** (`_renderFrozenSourceOnlyPanel`, Befund M1 der Live-Prüfung vom 07.09.2026) — vorher war das eingefrorene Format ohne Neuladen eine Sackgasse. |
+| F0.30 | **Kopfknopf „Datenbank"** ruft `switchTabAndUpdateMenu()` statt `switchTab()`; die Adresszeile folgt jetzt mit (Nachabnahme 07.09.2026). |
+| F0.12, F0.28, F0.29 | **`openProfileSection()` schreibt den Untertab in die Adresse** und wiederholt den Umschaltversuch bis zu einer Sekunde lang; „Meine Decks", „Wunschliste" und der Menüpunkt „Deck Builder" landen nicht mehr auf „Meine Sammlung". Es entsteht nur noch EIN Verlaufseintrag statt zwei. |
+| F0.39 | **Gesperrte Format-Optionen** werden jetzt auch im Auswahlfeld-Zweig von `ds-filter.js` als `disabled` übertragen (vorher nur in der Knopfleiste). |
+| F4.36 | **Abschnitts-Zähler** verwirft gespeicherte, nicht mehr vorhandene Abschnitts-IDs — „7 von 6 Abschnitten offen" kann nicht mehr auftreten. |
+| F6.4 | **Ladeanzeige im Turnier-Filter** (`#pastMetaLadestand`, `role="status"`) — vorher sah die Liste während des Nachladens fertig aus. |
+| F6.7 | **Sammelauswahl-Hinweis** (`#pastMetaFamilieHinweis`) erklärt, dass die Prozentzahlen bei gewählter Deck-Familie über alle Varianten laufen. |
+| F1.4, F1.7, F1.8 | **Hub:** Gewichtungshinweis sitzt an der Quote statt am Nenner; Mindeststichprobe der Überschrift auf 100 GEZÄHLTE Antritte; die Nennerzeile nennt das Wort „gewichtet" nur noch, wenn wirklich gewichtet wird. |
+| F5.2 | **Tiefenumschalter „Schnellüberblick / Deep Dive"** steuert alle `.cm-deep-dive-only`-Blöcke (Fusion, Build vs …, Tech-Slots, Matchups vs Meta Call, Build vs Vanilla, Tech Lab). |
+| F7.1 | **Ein Schalter, eine Wahrheit:** `_zielKurz()` ersetzt das an vier Stellen hart geschriebene „Day 2" durch das typgerechte Ziel („Top 8", „1.-2."). |
+| F3.50 | **Beschriftung des Neulade-Knopfes** der Meta-Kartenanalyse ändert sich nach dem Laden, statt weiter „Meta-Analyse laden" über zwölf geladenen Kacheln zu stehen. |
+| F5.14 | Kopfzelle der Bilanz heißt **„T" statt „U"** (Win-Loss-Tie); Präsenzspalte heißt **„Major-WR"** und rechnet dieselbe Formel wie die WR-Spalte links (vorher „Major-P" mit Matchpunkten). |
+| F13.20 | Team-Chips der Champions-Matchups sind **eigenständige Knöpfe** statt Knopf-im-Knopf (gültiges HTML). |
+| F0.15 | Menüpunkt **„Playtester (TCG Showdown ↗)"** ersetzt den zurückgebauten Sandbox-Playtester. |
+| F16.28 | **Meta Call ist kein Profil-Untertab mehr** — der Knopf im Profil führt in den eigenen Reiter; die Hub-Kachel ebenso (`topTab: 'meta-call'`). |
+
+---
+
+## Auffälligkeiten aus dem Quelltext (für die Prüfung, keine Befunde)
+
+| # | Beobachtung | Ort |
 |---|---|---|
-| F0 | Rahmen / Navigation / Tieflinks | 35 |
-| F1 | meta-analysis-hub | 17 |
-| F2 | city-league | 22 |
-| F3 | city-league-analysis | 74 |
-| F4 | current-analysis | 101 |
-| F5 | meta-call | 37 |
-| F6 | cards | 18 |
-| F7 | proxy | 16 |
-| F8 | tutorial | 5 |
-| F9 | quellen | 15 |
-| F10 | admin | 12 |
-| F11 | side-quest | 48 |
-| F12 | pocket | 17 |
-| F13 | calculator | 13 |
-| F14 | profile | 119 |
-| F15 | current-meta | 38 |
-| F16 | past-meta | 47 |
-| F17 | deckbuilder (Menüziel) | 2 |
-| F18 | showdown (Menüziel) | 3 |
-| F19 | Modale / Overlays | 23 |
-| **Summe** | | **662** |
+| A1 | Der Neulade-Knopf der Meta-Kartenanalyse in **Deck-Analyse (Global)** trägt keine `id`. `app-meta-cards.js:733` sucht `currentMetaMetaReloadBtn` und findet nichts — die Umbenennung auf „Meta-Analyse neu laden“ greift nur in City League. Der Knopf steht also nach dem Laden weiter mit „Meta-Analyse laden“ über gefüllten Kacheln. | index.html:1668 gegen js/app-meta-cards.js:733 |
+| A2 | Sichtbarer Rückfalltext **„Deck ? Proxy“** an drei Knöpfen (verlorenes „→“). Zur Laufzeit überschreibt `data-i18n` den Text; sichtbar wäre er nur vor dem ersten i18n-Durchlauf. | index.html:858, 1603, 2022 |
+| A3 | **Karten-Legende nur an einer von drei gleichen Ansichten.** `details.ds-legend` kommt genau einmal vor, in `current-analysis`. Die Kartengitter von `city-league-analysis` und `past-meta` zeichnen dieselben Plaketten A–K ohne Legende. | index.html:1345 (einziges Vorkommen) |
+| A4 | **Drei gerechnete Rubriken der City League haben keine Tabelle** (`newArchetypes`, `disappeared`, `increased`). Sie werden seit 07.09.2026 wenigstens im Leerzustandsblock mit ihrer Zahl genannt — gezeigt werden sie nicht. | js/app-city-league.js:974-976, 1082-1084 |
+| A5 | **Past Meta hat keinen Meta-Kartenanalyse-Block**, obwohl `city-league-analysis` und `current-analysis` je einen haben. Asymmetrie zwischen drei sonst gleich gebauten Ansichten. | index.html:1798-2054 |
+| A6 | **Der Menüpunkt mit der id `menu-btn-meta-analysis-hub` öffnet `current-meta`**, nicht `meta-analysis-hub`. id und Ziel widersprechen sich; die Kachelseite ist nur über `#hub` / `#uebersicht` / `#overview` erreichbar. | index.html:478 |
+| A7 | **Der Saisonpause-Hinweis hängt an einem Inline-`display`** gegen eine CSS-Vorgabe `display:none`. Jede Stelle, die das `style`-Attribut zurücksetzt oder den Block neu zeichnet, macht ihn wieder unsichtbar. Der Block steht zweimal im Markup. | index.html:702, 728 gegen js/app-city-league.js:552 |
+| A8 | **Grenzen des Rechners:** Markup deckelt „Kopien im Deck“ bei 60 und „bereits auf der Hand“ bei 4, `js/app-calculator.js` klemmt dagegen auf `1..deckSize` bzw. `0..copies`. Bei Decksize 99 blockt der Zähler, obwohl die Rechnung mehr zuließe. | index.html:2369, 2377 gegen js/app-calculator.js |
+| A9 | **Zwei Datumsfelder auf einen Zustand.** `#currentMetaDateFrom` und `#metacallDateFrom` schreiben beide über `setCurrentMetaDateFrom()` in `window.currentMetaDateFrom`. Absicht — muss aber in beide Richtungen synchron bleiben. | index.html:1175, js/app-meta-call.js:10930 |
+| A10 | **Stille Ausfälle:** drei Stellen brechen mit `console.warn` ab, wo der Nutzer nur eine leere Fläche sieht — Meta-Performance-Block, Kartenübersicht der City League, Antwortblock des Hubs. | js/app-tier-meta.js, js/app-city-league.js:4725, js/meta-analysis-hub.js |
+| A11 | **Kennzahlen ohne Definition daneben:** „Matchup ggü. Top 20“ nennt weder Nenner noch Rang-Schwelle; „Gesamt-Win-Rate“ sagt nicht, ob Unentschieden im Nenner zählen; „Ø Platzierung“ sagt nicht, worüber gemittelt wird. Die Definitionen stehen nur unter Quellen & Methodik. | index.html:1222, 1226, 769 |
+| A12 | **`stopPropagation`** ist der einzige Bezeichner in einem `on…`-Attribut von `index.html`, der keiner globalen Funktion entspricht — Methodenaufruf, kein toter Knopf. Sonst: **kein einziger `onclick` in index.html zeigt ins Leere**, und **keine doppelte `id`** unter 585 statischen IDs. | geprüft über alle `onclick`/`onchange`/`oninput`/`onfocus`/`onblur`/`onsubmit`/`onkeydown`-Attribute |
 
 ---
 
-## Was mir aufgefallen ist
+## Zählung
 
-Hypothesen aus dem Quelltext für die Live-Prüfung — **keine Befunde**.
+| Gruppe | Bereich | Einträge |
+|---|---|---|
+| F0 | Seitenübergreifend | 52 |
+| F1 | Meta & Deck Analysis Hub | 12 |
+| F2 | City League Meta | 23 |
+| F3 | City League Deck-Analyse | 51 |
+| F4 | Current Meta / Startseite | 36 |
+| F5 | Deck-Analyse Global | 51 |
+| F6 | Past Meta | 17 |
+| F7 | Meta Call | 41 |
+| F8 | Kartendatenbank | 21 |
+| F9 | Proxy Printer | 15 |
+| F10 | Anleitung | 4 |
+| F11 | Quellen & Methodik | 10 |
+| F12 | Datenlücken | 8 |
+| F13 | Side Quest: Champions | 35 |
+| F14 | Side Quest: TCG Pocket | 11 |
+| F15 | Wahrscheinlichkeitsrechner | 9 |
+| F16 | Profil (inkl. 11 Untertabs) | 116 |
+| F17 | Dialoge, Blätter, Overlays | 30 |
+| **Gesamt** | | **542** |
 
-### 1. Drei berechnete Listen der City League werden nie gezeichnet
-`js/app-city-league.js:963` berechnet `increased`, `js/app-city-league.js:998` gibt `newArchetypes`,
-`disappeared`, `increased` zurück, `:1016` destrukturiert sie — und danach kommt **kein einziger
-Verwendungsort mehr** (geprüft: 0 Treffer nach Zeile 1016). Gezeichnet wird nur `decreased`
-(`:1071`, Tabelle „Seltener gespielt"). Vermutung: der Reiter zeigt Absteiger, aber weder Aufsteiger
-noch neue noch verschwundene Archetypen — obwohl die Daten dafür fertig danebenliegen. Der Nutzer
-sieht damit eine einseitige Bewegungsdarstellung.
-
-### 2. Der Knopf „Meta-Analyse laden" in Deck Analysis (Global) benennt sich nie um
-`js/app-meta-cards.js:733` sucht `currentMetaMetaReloadBtn`, um den Knopf nach dem Laden auf
-„Erneut laden" umzuschreiben. Diese id existiert in `index.html` **nicht** — der Knopf dort
-(`index.html:1661`) hat keine id, nur `cityLeagueMetaReloadBtn` (`index.html:928`) hat eine.
-Vermutung: genau der Befund, der für City League am 02.09. behoben wurde, steht in Deck Analysis
-(Global) unverändert — nach dem Laden steht „Load Meta Analysis" über zwölf geladenen Kacheln.
-
-### 3. Sortierung der Spalte „Deck" liest Ziffern als Zahl
-`js/rangliste-sortieren.js:57` entfernt aus dem Zellentext alles außer Ziffern und Trennzeichen und
-gibt für „Charizard ex" `null` zurück (Textvergleich, richtig). Enthält ein Deckname aber eine Ziffer
-(z. B. eine Set-/Versionsangabe), liefert `zahl()` eine Zahl, und dann sortiert dieselbe Spalte
-gemischt: Zeilen mit Ziffer numerisch, Zeilen ohne Ziffer als Text ans Ende (`:112–116`).
-Zusätzlich entscheidet `:98–100` die Startrichtung anhand **einer einzigen Probezelle** — ist die erste
-Zeile ein Name mit Ziffer, startet die Spalte absteigend statt bei A. *Zu prüfen: ob im aktuellen
-Datensatz überhaupt ein Deckname eine Ziffer trägt.*
-
-### 4. Tote Einträge in `PROFILE_SUBTAB_FOR_HASH`
-`js/inline-init.js:530–532` bildet `hub`, `uebersicht` und `overview` auf `meta-analysis-hub` ab.
-Der Aufruf ist aber durch `if (tabId === 'profile' && …)` (`:626`) abgesichert, und `hub`/`uebersicht`
-zeigen in `HASH_ALIASES` auf den Reiter `meta-analysis-hub`, nicht auf `profile`. Die drei Einträge
-können nie feuern. `overview` steht darüber hinaus **gar nicht** in `HASH_ALIASES` — `#overview`
-führt nirgendwohin und meldet auch nichts. Vermutung: harmloser toter Code, aber `#overview` ist ein
-stiller Tieflink ins Leere, genau der Fehlertyp, den `applyHash()` sonst abfängt.
-
-### 5. Abschnitt „Datenumfang" hat keinen Tieflink
-`js/app-quellen.js:73` führt den Abschnitt `umfang`. In `HASH_ALIASES` fehlt `quellen-umfang`, und die
-Weißliste `ABSCHNITTE` in `js/inline-init.js:645–646` kennt ihn ebenfalls nicht — sie listet
-`quellen, begriffe, zuverlaessig, trennung, stand, rechtliches`. Vermutung: ein Verweis
-`#quellen-umfang` öffnet die Seite, klappt den Abschnitt aber nicht auf, sondern fällt auf
-`Quellen.open('')` zurück.
-
-### 6. Kennzahlen ohne Definition daneben
-* „Matchup vs Top 20" (`index.html:1222`, gerechnet in `js/app-current-meta-analysis.js:1955–1993`):
-  gewichtetes Mittel über Gegner mit `rank ≤ 20`, angezeigt als „54,12 % (17 MU)". Weder „(17 MU)"
-  noch der Nenner noch die Rang-Schwelle stehen irgendwo in der Oberfläche.
-* „Total Win Rate Limitless Online Tournaments" (`index.html:1218`): keine Angabe, ob Remis im Nenner
-  zählen — die Definition existiert, steht aber nur unter Quellen & Methodik (`js/app-quellen.js:96 ff.`).
-* „Avg Placement" in City League (`index.html:769`) und „Ø-Platzierung" in vier Tabellen
-  (`js/app-city-league.js:1092 ff.`): keine Erklärung, worüber gemittelt wird.
-* „Decks Used" (`index.html:764`): Fußnote `cityLeagueStatDecksNote` existiert, startet aber `hidden`.
-  *Zu prüfen: unter welcher Bedingung sie erscheint.*
-
-### 7. Zwei Datumsfelder auf denselben Zustand
-`#currentMetaDateFrom` (`index.html:1166`) und `#metacallDateFrom` (`js/app-meta-call.js:10450`)
-schreiben beide über `setCurrentMetaDateFrom(v)` in `window.currentMetaDateFrom`. Der Kommentar sagt,
-das sei Absicht. Vermutung für die Prüfung: ändert man das Datum in Meta Call und wechselt danach nach
-Deck Analysis (Global), muss das Feld dort denselben Wert und denselben Statustext tragen — und
-umgekehrt. Ein Auseinanderlaufen wäre zwei Wahrheiten für ein Fenster.
-
-### 8. Grenzen im Rechner: Markup und JS widersprechen sich
-`index.html:2363` setzt `max="60"` für „Copies in Deck", `index.html:2367` `max="4"` für
-„Already in Hand". `js/app-calculator.js:93–96` klemmt dagegen auf `1..deckSize` bzw. `0..copies`.
-Vermutung: bei Decksize 99 blockt der Browser-Zähler bei 60 Kopien, obwohl die Rechnung mehr zuließe;
-und „Already in Hand" ist per Zähler auf 4 gedeckelt, obwohl bei 5+ Kopien mehr auf der Hand liegen
-könnten. Das ist keine falsche Zahl, aber eine Grenze, die nicht sagt, dass sie eine ist.
-
-### 9. Der Menüpunkt „Startseite" führt nicht auf die Kachelseite
-`index.html:478`: `menu-btn-meta-analysis-hub` trägt `data-tab-id="current-meta"` und öffnet
-`current-meta`. Die Kachelseite `meta-analysis-hub` hat damit **keinen** Weg über Menü oder
-Navigationsleiste — nur `#hub`. Die Kommentare sagen, das sei so gewollt. Vermutung für die Prüfung:
-die id des Knopfes und sein Ziel widersprechen sich; wer den Knopf über die id sucht (Tests,
-Tastaturnavigation, künftige Änderungen) landet auf der falschen Annahme.
-
-### 10. „Season pause"-Hinweis hängt an einer Inline-Angabe gegen eine CSS-Vorgabe
-`js/app-city-league.js:535–553` schaltet `.cl-season-notice` ausdrücklich auf `display:'block'` bzw.
-`'none'`, weil die CSS-Vorgabe `display:none` ist und ein Leerstring den Hinweis nie sichtbar werden
-ließ (dokumentierter Befund vom 30.08.2026). Der Block steht zweimal im Markup (`index.html:693` und
-`:721`). Vermutung für die Prüfung: sobald **irgendeine** andere Stelle das `style`-Attribut zurücksetzt
-oder die Blöcke neu zeichnet, ist der Hinweis wieder unsichtbar — die Anzeige hängt an genau einem
-Inline-Wert. Zu prüfen: erscheint der Hinweis, wenn „Current Meta" leer ist, und verschwindet er,
-sobald ein Turnier im aktuellen Fenster landet — und zwar auf **beiden** Reitern gleich.
-
-### 11. Karten-Legende nur an einer von drei gleichen Ansichten
-Der `<details>`-Block „Was bedeuten die Symbole auf den Karten?" (`index.html:1345`) steht nur in
-`current-analysis`. Die Kartengitter in `city-league-analysis` (`#cityLeagueDeckGrid`) und `past-meta`
-(`#pastMetaDeckGrid`) zeichnen dieselben Plaketten und Knöpfe (A–K) ohne Legende. Vermutung: die
-Erklärung fehlt genau dort, wo ein Nutzer aus Japan-Sicht zuerst hinkommt.
-
-### 12. Fehler bleiben in der Konsole statt auf dem Bildschirm
-Drei Stellen brechen still ab, wo der Nutzer eine leere Fläche sieht:
-* `js/app-tier-meta.js:2151–2154` — „Top-8-Block konnte nicht gerendert werden", nur `console.warn`;
-  auf dem Bildschirm fehlt der Abschnitt „Meta-Performance" ersatzlos.
-* `js/app-city-league.js:4725` — „cityLeagueFilterSelect not found - card overview cannot be rendered",
-  nur `console.warn`.
-* `js/meta-analysis-hub.js:94–96` — schlägt die CSV fehl, wird der Antwortblock „Was gerade läuft"
-  ohne Meldung weggelassen; die Startseite sieht dann aus, als gäbe es diesen Block nicht.
-Vermutung: alle drei sind derselbe Fehlertyp — eine fehlende Zahl ist von einer nicht existierenden
-Zahl nicht zu unterscheiden.
-
-### 13. Kein Meta-Card-Analysis-Block in Past Meta
-`city-league-analysis` (F3.49–F3.63) und `current-analysis` (F4.75–F4.88) haben je einen Block
-„Meta Card Analysis (Top 10 Archetypes)". In `past-meta` (`index.html:1791–2067`) fehlt er. Vermutung:
-gewollt (eingefrorenes Format), aber es ist eine Asymmetrie zwischen drei sonst gleich gebauten
-Ansichten — *zu prüfen, ob der Nutzer sie als Lücke erlebt.*
-
-### 14. Beschriftung „Deck ? Proxy"
-`index.html:856`, `index.html:1596` und `index.html:2015` tragen als sichtbaren Text
-`Deck ? Proxy`. Vermutung: ein verlorengegangenes „→" (Zeichensatzproblem beim Speichern). Der
-`data-i18n`-Schlüssel (`btn.deckToProxy` / `cl.btnProxy`) überschreibt den Text vermutlich beim ersten
-i18n-Durchlauf — *zu prüfen, ob das Fragezeichen jemals sichtbar wird, etwa vor dem Laden von
-`js/i18n.js`.*
+Im Abschnitt „Seit dem letzten Lauf hinzugekommen oder geändert“: 32 Zeilen, die zusammen 44 verschiedene Kennungen benennen.
