@@ -138,14 +138,19 @@ das Listenabfragen überflüssig. **NICHT GEPRÜFT** – er verlangt einen
 
 ### 6. Datenbasis für die spätere Deck-Optimierung
 
-Vier neue Dateien, drei Ebenen:
+Vier Ebenen, aufgeteilt je Formatfenster:
 
 | Datei | Ebene | Schlüssel |
 | --- | --- | --- |
 | `online_api_tournaments.csv` | Gedächtnis | `tournament_id` |
 | `online_api_archetypes.csv` | Archetyp | + `archetype_id` |
-| `online_api_cards.csv` | **Karte** | + `group`, `set`, `number` |
-| `online_api_matchups.csv` | **Matchup** | + `opponent_id` |
+| `online_api_cards_<FORMAT>.csv` | **Karte** | + `group`, `set`, `number` |
+| `online_api_matchups_<FORMAT>.csv` | **Matchup** | + `opponent_id` |
+
+Jede Zeile trägt eine Spalte `meta` mit ihrem Formatfenster
+(`TEF-PBL`, `TEF-CRI`, …). Ohne sie sind eine Kartenzahl aus dem Mai und
+eine aus dem September dieselbe Zahl — obwohl dazwischen ein Set dazukam
+und davor eine Rotation lag.
 
 Zwei Entscheidungen darin, die den Unterschied machen:
 
@@ -247,3 +252,82 @@ cron. Dieselbe Regel wie bei `online-decklists.yml`.
 CORS nicht lesbar. Der Scraper wertet `x-ratelimit-remaining` und
 `Retry-After` serverseitig aus und bremst von selbst, statt in ein 429 zu
 laufen – ob die Header wirklich so heißen, zeigt der erste CI-Lauf.
+
+---
+
+## Nachtrag 08.09.2026: wie tief zurück?
+
+Der Betreiber hat gefragt, ob wirklich sechs Monate nötig sind oder ob
+das laufende Meta plus sauberes Weiterlaufen reicht. **Ich hatte sechs
+Monate empfohlen und revidiere das.** Drei Messungen haben es gedreht.
+
+### Der Kartenpool wechselt zweimal, und zwar unterschiedlich schwer
+
+Online wechselt das Format am **Set-Release**, nicht am
+in-person-legal-Datum (Release + 14 Tage Lag). Gemessen am 08.09.2026 an
+3.000 Turnieren über die API:
+
+| Fenster | ab | Turniere | davon ≥ 100 Spieler |
+| --- | --- | ---: | ---: |
+| TEF-PBL | 17.07.2026 | 684 | **186** |
+| TEF-CRI | 22.05.2026 | 659 | 101 |
+| TEF-POR | 27.03.2026 | 574 | 110 |
+| SVI-ASC | 30.01.2026 | 451 | 89 |
+
+Zwischen TEF-POR → TEF-CRI → TEF-PBL wurde nur **hinzugefügt**
+(`set_addition_only: true`); der Pool wuchs, nichts fiel raus. Zwischen
+SVI-ASC und TEF-POR liegt eine **echte Rotation**. Das ist die Grenze,
+an der Anteilsvergleiche aufhören zu bedeuten, was sie zu bedeuten
+scheinen.
+
+### Auf Kartenebene ist selbst die 17.07.-Grenze tödlich
+
+Mega Excadrill ex ist `PBL-65`. Vor dem 17.07.2026 gibt es die Karte
+nicht — eine „Entwicklung" von 0 auf 2 Kopien wäre kein Trend, sondern
+ein Releasedatum.
+
+### Das Volumen entscheidet mit
+
+Gemessen: **146 KB Kartenzeilen je Turnier.** Das laufende Format allein
+sind 186 Turniere ≈ 27 MB. Sechs Monate in voller Tiefe wären 443
+Turniere ≈ **65 MB in einer Datei**, wachsend — GitHub warnt ab 50 MB und
+nimmt ab 100 MB nichts mehr an. Deshalb liegt die Kartenebene je
+Formatfenster in eigenen Dateien, nach dem Muster, das
+`labs_tournament_matchups_TEF-PBL.csv` im Projekt längst vorgibt: eine
+Datei hört auf zu wachsen, sobald ihr Fenster vorbei ist.
+
+### Die Entscheidung, in drei Tiefen
+
+1. **Volle Tiefe nur für TEF-PBL** — 186 Turniere, ~37 MB, ~560
+   Anfragen. Die einzige Datenbasis, aus der die Frankfurt-Prognose
+   rechnen darf.
+2. **Nur Archetypebene für TEF-CRI und TEF-POR** (27.03.–16.07.) — 211
+   Turniere, aber 6 KB statt 200 KB je Turnier, also **~1,3 MB** und
+   **eine** Anfrage je Turnier. Hier lebt das Transition-Lernen: Turin
+   (06.06., 2.032 Sp.) und New Orleans (12.06., 3.743 Sp.) sind zwei
+   echte Präsenz-Anker mit Wochen Online danach, im selben TEF-Boden.
+3. **Nicht über die SVI→TEF-Rotation zurück.** Für 89 Turniere und einen
+   weiteren Anker aus einem anderen Kartenpool ist der Preis zu hoch:
+   sobald jemand die Zahlen einmal ohne den Formatschlüssel liest, sind
+   sie schlicht falsch.
+
+Die dünne Tiefe ist nur zulässig, weil die Bilanz **ohne** zusätzliche
+Anfrage aus den `record`-Feldern der Standings kommt — live gegengerechnet
+an Mega Excadrill: aus `/pairings` 32-40-0, aus den `record`-Feldern
+32-40-0. Welcher Weg eine Zeile erzeugt hat, steht in der Spalte
+`record_source`; was der dünne Weg **nicht** kann, ist die
+Matchup-Matrix.
+
+### Ein Befund, der den Rückbau blockiert hätte
+
+Das Feld `format` der API sagt bei **allen** vier Fenstern schlicht
+`STANDARD`. Es unterscheidet TEF-PBL nicht von SVI-ASC. Ein Rückbau, der
+nur darauf filtert, hätte vier Kartenpools stillschweigend in eine Datei
+gemischt. Der obere Rand jedes Fensters kommt jetzt aus
+`data/sets_metadata.json` und ist damit nachprüfbar; der untere Rand
+(welches Set gerade der Boden ist) steht in keiner Datei — Rotationen
+sind eine Herstelleransage — und ist deshalb eine gepflegte Liste
+(`ROTATIONEN`), genau wie `previous_format_key` in `format_window.json`.
+`pruefe_fenster()` bricht den Lauf ab, wenn ein Set darin nicht mehr zu
+`sets_metadata.json` passt: dann ist die Liste veraltet, nicht die Daten
+falsch.
