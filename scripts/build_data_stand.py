@@ -109,6 +109,10 @@ DATEIEN = [
     # aufgenommen statt hier einzeln gefuehrt.
     "online_api_tournaments.csv",
     "online_api_archetypes.csv",
+    # Die gerechnete Prognose. Sie traegt kein Turnierdatum je Zeile,
+    # sondern ein Fenster in `_meta` — deshalb steht sie unten in
+    # INHALT_AUS_NEBENDATEI und nicht in INHALT_BIS.
+    "meta_prognose.json",
 ]
 
 # Dateien, die je Formatfenster aufgeteilt sind: mit jeder Rotation kommt
@@ -189,6 +193,32 @@ INHALT_AUS_NEBENDATEI = {
     "limitless_online_fenster.csv": ("limitless_online_fenster_meta.json",
                                      "fenster_bis"),
 }
+
+# Dateien, deren Inhaltsdatum in einem VERSCHACHTELTEN Feld der Datei
+# selbst steht: {Datei: (Schluesselkette,)}.
+#
+# meta_prognose.json hat kein Datum je Zeile — die Prognose gilt fuer ein
+# Fenster, und dessen Ende steht in `_meta.online_bis`. Ohne diesen
+# Eintrag traegt ausgerechnet die gerechnete Zahl kein Inhaltsdatum, und
+# ein Leser koennte eine drei Wochen alte Prognose fuer aktuell halten.
+INHALT_AUS_FELD = {
+    "meta_prognose.json": ("_meta", "online_bis"),
+}
+
+
+def inhalt_aus_feld(datei, kette):
+    """Liest ein verschachteltes Feld aus einer JSON-Datei."""
+    pfad = os.path.join(WURZEL, "data", datei)
+    try:
+        with open(pfad, encoding="utf-8") as fh:
+            wert = json.load(fh)
+    except (OSError, ValueError):
+        return ""
+    for schluessel in kette:
+        if not isinstance(wert, dict):
+            return ""
+        wert = wert.get(schluessel)
+    return str(wert)[:10] if wert else ""
 
 
 def inhalt_aus_nebendatei(nebendatei, feld):
@@ -333,6 +363,13 @@ def main():
     # Zweite Ebene: wie weit reicht der INHALT? Nur fuer die Dateien, die
     # ein eigenes Datum fuehren, und nur wenn es sich lesen laesst.
     inhalt = {}
+    for f, kette in INHALT_AUS_FELD.items():
+        if f not in stand:
+            continue
+        bis = inhalt_aus_feld(f, kette)
+        if bis:
+            inhalt[f] = bis
+
     for f, spalte in inhalt_bis_tabelle().items():
         if f not in stand:
             continue
