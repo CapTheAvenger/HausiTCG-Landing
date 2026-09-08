@@ -159,6 +159,72 @@ card" without also reading `all_cards_merged.csv`. Currently 11 rows.
   (~0.3–0.6 s apart), back off on 403 rather than treating it as "missing", and
   never re-fetch data you already have.
 
+### `online_api_tournaments.csv`
+`tournament_id, name, date, meta, format, players, organizer_id, is_online, has_decklists, swiss_rounds, phases, standings_rows, pairings_rows, depth, scraped_at`
+
+The memory of the Limitless-API run, and its incremental key. One row per
+tournament already fetched. `meta` is the format window (`TEF-PBL`,
+`TEF-CRI`, …) derived from the date, **not** from the API's `format` field —
+that field says `STANDARD` for every card pool since 2024 and cannot tell them
+apart. `depth` is `voll` (all four levels) or `archetypen` (share and record
+only); `voll` supersedes `archetypen`, which is how a thinly fetched window can
+later be deepened.
+
+> A completed Limitless tournament never changes. A row in this file means
+> "already fetched, do not fetch again". Delete a row and the next run
+> re-fetches that tournament — and appends its rows a second time.
+
+### `online_api_archetypes.csv`
+`tournament_id, date, meta, players, archetype_id, archetype_name, lists, lists_total, share, wins, losses, ties, matches, win_rate, win_rate_convention, record_source`
+
+One row per tournament × archetype, across **all** format windows. Covers the
+whole field, not just successful lists.
+
+> **`share` never travels without its denominator.** `lists` and `lists_total`
+> sit beside it in every row, and `lists_total` counts only players with a deck
+> assignment. A share quoted without them is not reproducible.
+
+`win_rate_convention` is always `mitUnentschieden` — S / (S + N + U), the
+convention named in `js/win-rate-konvention.js`. `record_source` says which
+route produced the record: `pairings` (computed from every match) or `records`
+(summed from the standings' own `record` fields). Both were cross-checked live
+on 2026-09-08 and agreed exactly (32-40-0 either way); `records` costs one
+request instead of three and is what the thin depth uses.
+
+`archetype_name` comes from the API's own `deck.name`. **Do not derive it from
+`archetype_id`**: measured against 62 archetypes, the slug route gets 26 right,
+the delivered name 61 (the 62nd is the `other` bucket).
+
+### `online_api_cards_<FORMAT>.csv`
+`tournament_id, date, meta, archetype_id, group, set, number, card, copies_total, lists_with_card, lists_total, avg_count, inclusion_rate`
+
+One file **per format window** (`online_api_cards_TEF-PBL.csv`). Card counts
+across the whole field of an archetype, joinable on `(set, number)`.
+
+> **`avg_count` and `inclusion_rate` mean different things and both are needed.**
+> `avg_count` divides by *all* lists of the archetype — the number Limitless
+> shows on its own cards page. `inclusion_rate` divides by the lists that play
+> the card at all. Two copies in half the lists is `avg_count` 1.0 and
+> `inclusion_rate` 0.5; dividing by `lists_with_card` alone would report 2.0
+> and claim a staple that isn't one.
+
+Split per window because the card pool changes at every set release, and
+because it is 146 KB per tournament: one flat file over six months reaches
+65 MB and keeps growing. A window's file stops growing once the window closes.
+
+The `other` bucket contributes **no** card rows — it is not one deck but twenty.
+
+### `online_api_matchups_<FORMAT>.csv`
+`tournament_id, date, meta, archetype_id, opponent_id, wins, losses, ties, matches, win_rate, win_rate_convention`
+
+One file per format window. Archetype vs archetype from the **whole** field,
+computed from every pairing.
+
+> The matrix is **not** mirror-symmetric. `winner: -1` is a double loss and
+> counts as a loss for both sides, so A-vs-B and B-vs-A can both show a loss
+> for the same match. Byes and tardiness losses (`player2` empty) count in
+> `online_api_archetypes.csv` but not here — they have no opponent archetype.
+
 ## Contract check
 
 `scripts/data_guardian.py` verifies daily that every file above exists and still
