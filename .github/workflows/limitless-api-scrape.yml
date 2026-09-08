@@ -1,0 +1,203 @@
+name: Limitless-API-Lauf
+
+# Holt Online-Turnierdaten ueber die OFFIZIELLE Limitless-API
+# (https://docs.limitlesstcg.com/developer) statt aus gerendertem HTML.
+#
+# WARUM ES DIESEN LAUF GIBT
+# -------------------------
+# Der bisherige Weg zog nur die erfolgreichen Listen (`max_lists_per_deck: 20`,
+# Median 3 Archetypen je Turnier). Damit waren Kartenschnitte ueber das
+# ganze Feld, Matchup-Matrizen und Anteile mit belastbarem Nenner nicht
+# baubar. Die API liefert pro Turnier JEDEN Spieler mit vollstaendiger
+# Deckliste und JEDES Match mit Sieger — geprueft am 08.09.2026 an
+# "Pumpkaweekly": 342 von 342 Spielern mit Liste, 876 Matches.
+#
+# WARUM ER IN CI SEIN MUSS
+# ------------------------
+# play.limitlesstcg.com ist aus dem Bausandkasten nicht erreichbar
+# (Egress-Proxy, 403) und auch nicht vom Rechner des Betreibers aus.
+# Der Rechenteil des Scrapers ist netzfrei und wird von
+# tests/python/test_limitless_api_scraper.py geprueft (14 Zusicherungen,
+# 10 von 10 Mutationen gefangen). Ob die API dieselbe Semantik behaelt,
+# kann nur dieser Lauf beantworten — dafuer ist `gegenprobe` da.
+#
+# TEMPO
+# -----
+# Zwei bis drei Anfragen JE TURNIER, nicht je Archetyp. Gemessen am
+# 08.09.2026: 86 Turniere in sieben Tagen, davon 26 mit >= 100 Spielern
+# (4.457 von 5.622 Spielern, 79 %). Ein Wochenlauf sind damit rund
+# 54 Anfragen. Der HTML-Weg haette 806 bis 3.250 gekostet.
+#
+# KEIN ZEITPLAN, SOLANGE ER NICHT EINMAL VON HAND GRUEN WAR
+# ---------------------------------------------------------
+# Dieselbe Regel wie bei online-decklists.yml: ob der GitHub-Laeufer bei
+# play.limitlesstcg.com ueberhaupt durchkommt, ist unbekannt. Ein
+# Zeitplan, der jede Nacht eine Warnung erzeugt und nie eine Zeile Daten,
+# ist schlimmer als kein Zeitplan.
+#
+# Anstoss: GitHub -> Actions -> Limitless-API-Lauf -> Run workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      gegenprobe:
+        description: 'Nur die Live-Gegenprobe fahren (nichts schreiben)'
+        type: boolean
+        default: true
+      mindest_spieler:
+        description: 'Turniere mit weniger Teilnehmern ueberspringen'
+        type: string
+        default: '100'
+      tage:
+        description: 'Wie weit zurueck die Turnierliste gelesen wird'
+        type: string
+        default: '14'
+      turniere:
+        description: 'Hoechstens N Turniere holen (0 = alle offenen)'
+        type: string
+        default: '5'
+      trocken:
+        description: 'Nur berichten, welche Turniere offen sind'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions:  write   # for the deploy-pages dispatch
+
+concurrency:
+  group: limitless-api-scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      # Der Scraper braucht nur die Standardbibliothek (urllib, csv, json).
+      # requirements.txt wird trotzdem installiert, damit ein spaeterer
+      # Ausbau nicht an einer fehlenden Abhaengigkeit scheitert.
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ZUERST die Gegenprobe, IMMER — auch vor einem Schreiblauf.
+      # Wenn die API ihre Semantik aendert (etwa Doppelniederlagen anders
+      # zaehlt), schreibt der Lauf sonst stillschweigend falsche Bilanzen
+      # in vier Dateien. Dieser Schritt darf hart umfallen.
+      - name: Gegenprobe gegen live abgelesene Werte
+        run: |
+          python backend/scrapers/limitless_api_scraper.py --verify 2>&1 | tee /tmp/verify.log
+          rc=${PIPESTATUS[0]}
+          {
+            echo "### Gegenprobe"
+            echo ""
+            echo '```'
+            cat /tmp/verify.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ $rc -ne 0 ]; then
+            echo "::error::Die Limitless-API liefert nicht mehr, was am 08.09.2026 gemessen wurde. Es wird nichts geschrieben."
+            exit $rc
+          fi
+
+      - name: Turnierdaten holen
+        if: ${{ inputs.gegenprobe != true }}
+        env:
+          MINDEST_SPIELER: ${{ inputs.mindest_spieler }}
+          TAGE: ${{ inputs.tage }}
+          TURNIERE: ${{ inputs.turniere }}
+          TROCKEN: ${{ inputs.trocken }}
+        run: |
+          set +e
+          args="--min-players $MINDEST_SPIELER --days $TAGE --max-tournaments $TURNIERE"
+          if [ "$TROCKEN" = "true" ]; then args="$args --dry-run"; fi
+
+          vorher=0
+          if [ -f data/online_api_tournaments.csv ]; then
+            vorher=$(( $(wc -l < data/online_api_tournaments.csv) - 1 ))
+          fi
+
+          python backend/scrapers/limitless_api_scraper.py $args 2>&1 | tee /tmp/api.log
+          rc=${PIPESTATUS[0]}
+
+          zeilen() { if [ -f "$1" ]; then echo $(( $(wc -l < "$1") - 1 )); else echo 0; fi; }
+          {
+            echo "### Limitless-API-Lauf"
+            echo ""
+            echo "| Datei | Zeilen |"
+            echo "| --- | ---: |"
+            echo "| online_api_tournaments.csv | $(zeilen data/online_api_tournaments.csv) (vorher $vorher) |"
+            echo "| online_api_archetypes.csv | $(zeilen data/online_api_archetypes.csv) |"
+            echo "| online_api_cards.csv | $(zeilen data/online_api_cards.csv) |"
+            echo "| online_api_matchups.csv | $(zeilen data/online_api_matchups.csv) |"
+            echo ""
+            echo "Rueckgabewert: \`$rc\` · Argumente: \`$args\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Wie bei online-decklists.yml: dieser Lauf startet auf
+          # Knopfdruck, also sieht genau ein Mensch hin. Ein gruener Haken
+          # ueber einem Abbruch belaegt ihn.
+          if [ $rc -ne 0 ]; then
+            echo "::error::Limitless-API-Lauf abgebrochen (Code $rc) — siehe Protokoll oben"
+            exit $rc
+          fi
+
+      - name: Commit + push
+        id: commit
+        if: ${{ success() && inputs.gegenprobe != true && inputs.trocken != true }}
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name  "github-actions[bot]"
+          echo "pushed=false" >> "$GITHUB_OUTPUT"
+          git add data/online_api_tournaments.csv \
+                  data/online_api_archetypes.csv \
+                  data/online_api_cards.csv \
+                  data/online_api_matchups.csv
+          if git diff --cached --quiet; then
+            echo "unveraendert — kein Push."
+            exit 0
+          fi
+          ts="$(date -u +'%Y-%m-%d %H:%M UTC')"
+          git commit -m "Auto: Limitless-API — ${ts}
+
+          Quelle: play.limitlesstcg.com/api (offizielle API, ganzes Feld)
+          Triggered by .github/workflows/limitless-api-scrape.yml
+          Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          for i in 1 2 3; do
+            git pull --rebase --autostash origin main && break
+            sleep $((i * 5))
+          done
+          for i in 1 2 3; do
+            if git push origin HEAD:main; then
+              echo "pushed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Push $i fehlgeschlagen — neu aufsetzen und erneut"
+            git pull --rebase --autostash origin main || true
+            sleep $((i * 5))
+          done
+          echo "::error::Push nach drei Versuchen fehlgeschlagen"
+          exit 1
+
+      # Ein Push mit dem GITHUB_TOKEN loest `on: push` NICHT aus
+      # (Rekursionsschutz von GitHub Actions); ohne diese Zeile veraltet
+      # die Seite still. tests/python/test_deploy_dispatch.py haelt das fest.
+      - name: Deploy anstossen (GITHUB_TOKEN-Push triggert ihn nicht)
+        if: ${{ success() && steps.commit.outputs.pushed == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy-pages.yml --ref main
