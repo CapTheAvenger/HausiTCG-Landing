@@ -8796,6 +8796,16 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                         number: (c.best_variant && c.best_variant.set_number) || '',
                         usagePct: (c.weightedShare || 0) * 100,
                         avgCount: c.weightedAvgCount || 0,
+                        // Die zwei Zahlen der Bank stehen auf VERSCHIEDENEN
+                        // Nennern: usagePct/weightedShare teilt durch ALLE
+                        // Listen des Archetyps, avgCount/weightedAvgCount nur
+                        // durch die Listen MIT der Karte. Bis zum 08.09.2026
+                        // standen sie unbeschriftet nebeneinander ("38 % ·
+                        // Ø 2,8"), und ein Leser nahm beide auf demselben
+                        // Nenner. Die Rohzahlen liegen hier bereit — sie
+                        // wurden nur nicht mitgenommen.
+                        nListsWith: c.n_lists_with || 0,
+                        nListsTotal: c.n_lists_total || 0,
                         isAceSpec: !!c.is_ace_spec,
                         type: c.type || '',
                     }));
@@ -9000,8 +9010,8 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                         <span class="deck-bench-bar"><span style="width:${Math.min(100, pct)}%"></span></span>
                     </div>
                     <div class="deck-bench-nums">
-                        <span class="deck-bench-pct">${pct}%</span>
-                        <span class="deck-bench-count">Ø ${(r.avgCount || 0).toFixed(1).replace('.', ',')} → ${r.packCount}×</span>
+                        <span class="deck-bench-pct" title="${r.nListsTotal ? `in ${r.nListsWith} von ${r.nListsTotal} Listen (erfolgsgewichtet)` : ''}">${pct}%</span>
+                        <span class="deck-bench-count">${r.nListsTotal ? `dort ` : ''}Ø ${(r.avgCount || 0).toFixed(1).replace('.', ',')} → ${r.packCount}×</span>
                     </div>
                 </div>`;
             };
