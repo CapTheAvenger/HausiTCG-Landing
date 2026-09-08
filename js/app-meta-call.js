@@ -9914,22 +9914,81 @@ window.MetaCall = (function () {
   // table the Limitless Swiss Calculator uses
   // (limitlesstcg.com/tools/swisscalc). Pure heuristic, the user can
   // always override; we just save them the menial step.
-  function _suggestSwissRounds(players) {
+  /* DIE RUNDENLEITERN STAMMEN JETZT AUS DEM HANDBUCH (08.09.2026).
+
+     Belegstelle: docs/turnierregeln-handbuch.md, Abschnitt 2 — aus dem
+     Play! Pokémon Turnierregel-Handbuch, deutschsprachige Version,
+     Stand 1. September 2026, Abschnitt 5.5.6.1 „Eintägige
+     Turnierstrukturen".
+
+     Bis heute stand hier EINE Leiter für beide lokalen Turniertypen.
+     Das Handbuch führt aber ZWEI, und sie sind verschieden:
+
+       Variante 2 „nur Schweizer Runden" = Liga-Herausforderung
+       Variante 3 „eintägig" (mit Cut)   = Liga-Cup
+
+     Die alte Leiter (≤8→3, ≤16→4, ≤32→5, ≤64→6, ≤128→7, ≤226→8,
+     sonst 9) mischte beide und lag dadurch an vier Stellen falsch:
+
+       13–20 Spieler im Cup      → 5 Runden, die Leiter sagte 4
+       21–32 Spieler im Cup      → 5 Runden (zufällig richtig)
+       227–256 in der Challenge  → 8 Runden, die Leiter sagte 9
+       410+ im Cup / 513+ in der Challenge → 10 Runden, die Leiter sagte 9
+
+     Die Spielerzahl ist im Handbuch die PRO ALTERSKLASSE. Für den
+     Einsatz hier — ein Spieler schätzt sein eigenes Feld — ist das die
+     Zahl, die er ohnehin einträgt.
+
+     Grosse Turniere laufen NICHT über diese Funktion: dort ist die
+     Rundenzahl eine Eingabe mit der Vorgabe STANDARD_RUNDEN = 8, so
+     angeordnet und vom Handbuch gedeckt (Variante 5: Phase 1 ist 8
+     Runden von 129 bis 4096 Spielern je Altersklasse). */
+  function _suggestSwissRounds(players, typ) {
     const n = Math.max(0, +players || 0);
+    if (typ === 'cup') {
+      // Handbuch Variante 3 — Sammelkartenspiel, eintägig
+      if (n <= 8)   return 3;
+      if (n <= 12)  return 4;
+      if (n <= 32)  return 5;   // 13–20 und 21–32 laufen beide über 5
+      if (n <= 64)  return 6;
+      if (n <= 128) return 7;
+      if (n <= 226) return 8;
+      if (n <= 409) return 9;
+      return 10;
+    }
+    // Handbuch Variante 2 — Sammelkartenspiel nur Schweizer Runden
     if (n <= 8)   return 3;
     if (n <= 16)  return 4;
     if (n <= 32)  return 5;
     if (n <= 64)  return 6;
     if (n <= 128) return 7;
-    if (n <= 226) return 8;
-    return 9;
+    if (n <= 256) return 8;
+    if (n <= 512) return 9;
+    return 10;
   }
 
-  // Suggested Top-Cut size by attendance for Local Cup events:
-  // <=16 players run Top 4, 17+ players run Top 8. Matches the
-  // typical organiser practice in Pokémon TCG Local Cups.
+  /* TOP-CUT-GRÖSSE AUS DEM HANDBUCH (08.09.2026).
+
+     Belegstelle: docs/turnierregeln-handbuch.md, Abschnitt 2,
+     Variante 3. Die Spalte „Einzelausscheidungsrunden" sagt es direkt:
+     zwei Runden sind Top 4, drei sind Top 8.
+
+       4–8   → 0 Runden → kein Cut
+       9–20  → 2 Runden → Top 4
+       21+   → 3 Runden → Top 8
+
+     Hier stand „<= 16 → Top 4, 17+ → Top 8" mit der Begründung
+     „typical organiser practice". Das war eine Annahme, keine Quelle,
+     und sie lag bei 17–20 Spielern daneben: dort ist der Cut Top 4.
+
+     Der Rückfall auf Top 8 unter 4 Spielern ist folgenlos — mit
+     weniger als vier Spielern ist das Turnier laut Handbuch 5.2
+     ohnehin ungültig. */
   function _suggestTopCutSize(players) {
-    return (+players || 0) <= 16 ? 4 : 8;
+    const n = Math.max(0, +players || 0);
+    if (n <= 8)  return 0;
+    if (n <= 20) return 4;
+    return 8;
   }
 
   // Sensible default points-target per tournament type — what the
@@ -9956,7 +10015,12 @@ window.MetaCall = (function () {
       return Math.max(3, r * 3 - 2);
     }
     if (type === 'cup') {
-      const tc = +topCutSize || 8;
+      const tc = Number(topCutSize);
+      /* Ohne Cut gibt es keine Cut-Schwelle. Dann ist das sinnvolle
+         Ziel der Turniersieg, und der verlangt in einem reinen
+         Schweizer Feld praktisch ein sauberes Ergebnis: 3*r - 2
+         laesst genau ein Unentschieden zu. */
+      if (tc === 0) return Math.max(3, r * 3 - 2);
       const slack = tc <= 4 ? 2 : 3;
       return Math.max(3, r * 3 - slack);
     }
@@ -10109,7 +10173,13 @@ window.MetaCall = (function () {
    * Ein Schalter, eine Wahrheit. */
   function _zielKurz() {
     const type = _settings.tournamentType;
-    if (type === 'cup')       return `Top ${_settings.topCutSize || 8}`;
+    if (type === 'cup') {
+      /* `|| 8` haette aus einem echten „kein Cut" (0) ein „Top 8"
+         gemacht - der haeufigste Weg, wie eine 0 zur falschen Zahl
+         wird. */
+      const tc = _settings.topCutSize;
+      return tc === 0 ? t('mc.topCutNone') : `Top ${tc || 8}`;
+    }
     if (type === 'challenge') return '1.-2.';
     return t('mc.recDay2');
   }
@@ -10143,6 +10213,14 @@ window.MetaCall = (function () {
       ? `<div class="metacall-field-group">
            <label for="mc-topcut">${t('mc.labelTopCut')}</label>
            <select id="mc-topcut" onchange="MetaCall._onSetting('topCutSize', +this.value)">
+             <!-- „kein Cut" ist kein Sonderfall, sondern Handbuchlage:
+                  ein Liga-Cup mit 4-8 Spielern je Altersklasse hat null
+                  Einzelausscheidungsrunden (Variante 3, siehe
+                  docs/turnierregeln-handbuch.md). Ohne diese Auswahl
+                  haette das Feld dort „Top 4" gezeigt, waehrend der
+                  Zustand 0 fuehrt - zwei verschiedene Aussagen auf
+                  einem Bildschirm. -->
+             <option value="0"${s.topCutSize === 0 ? ' selected' : ''}>${t('mc.topCutNone')}</option>
              <option value="4"${s.topCutSize === 4 ? ' selected' : ''}>${t('mc.topCut4')}</option>
              <option value="8"${s.topCutSize === 8 ? ' selected' : ''}>${t('mc.topCut8')}</option>
            </select>
@@ -13514,7 +13592,9 @@ ${_zweiKonv ? `<p class="mc-wr-konventionen" style="font-size:0.75rem;color:#888
     // Header subtitle adapts to active tournament type — Day 2,
     // Top Cut, or 1./2. Platz.
     const baseTitleLine = _settings.tournamentType === 'cup'
-      ? `${zahlLokal(_settings.totalPlayers)} ${t('mc.labelPlayers')} · ${_settings.rounds} ${t('mc.roundsAbbr')} · Top ${_settings.topCutSize}: ${_settings.day2Points} ${t('mc.ptsAbbr')}`
+      ? `${zahlLokal(_settings.totalPlayers)} ${t('mc.labelPlayers')} · ${_settings.rounds} ${t('mc.roundsAbbr')} · ${
+            _settings.topCutSize === 0 ? t('mc.topCutNone') : 'Top ' + _settings.topCutSize
+          }: ${_settings.day2Points} ${t('mc.ptsAbbr')}`
       : (_settings.tournamentType === 'challenge'
           ? `${zahlLokal(_settings.totalPlayers)} ${t('mc.labelPlayers')} · ${_settings.rounds} ${t('mc.roundsAbbr')} · 1.-2.: ${_settings.day2Points} ${t('mc.ptsAbbr')}`
           : `${zahlLokal(_settings.totalPlayers)} ${t('mc.labelPlayers')} · ${_settings.rounds} ${t('mc.roundsAbbr')} · Day 2: ${_settings.day2Points} ${t('mc.ptsAbbr')}`);
@@ -14045,7 +14125,7 @@ ${_zweiKonv ? `<p class="mc-wr-konventionen" style="font-size:0.75rem;color:#888
       // davon wie voll die Halle ist — dort wird nichts nachgezogen.
       // Nur die lokalen Typen leiten Runden und Cut aus dem Feld ab.
       if (!MAJOR_TYPES.includes(_settings.tournamentType)) {
-        _settings.rounds = _suggestSwissRounds(val);
+        _settings.rounds = _suggestSwissRounds(val, _settings.tournamentType);
         if (_settings.tournamentType === 'cup') {
           _settings.topCutSize = _suggestTopCutSize(val);
         }
