@@ -37,6 +37,7 @@ Der Erstbestand wurde einmal aus dem vollen lokalen Verlauf erzeugt
 """
 
 import argparse
+import glob
 import json
 import os
 import subprocess
@@ -102,11 +103,37 @@ DATEIEN = [
     #
     # Alle vier fuehren ihr Turnierdatum je Zeile, also steht auch ihr
     # Inhaltsdatum unten in INHALT_BIS.
+    # Karten und Matchups liegen je Formatfenster in eigenen Dateien
+    # (online_api_cards_TEF-PBL.csv …). Ein Frischechip zeigt immer auf
+    # ein Format, nie auf "alle" — deshalb werden sie unten per Glob
+    # aufgenommen statt hier einzeln gefuehrt.
     "online_api_tournaments.csv",
     "online_api_archetypes.csv",
-    "online_api_cards.csv",
-    "online_api_matchups.csv",
 ]
+
+# Dateien, die je Formatfenster aufgeteilt sind: mit jeder Rotation kommt
+# eine dazu. Sie einzeln zu fuehren waere eine Pflegeaufgabe, die niemand
+# macht — also werden sie beim Lauf eingesammelt.
+DATEIEN_GLOB = (
+    "online_api_cards_*.csv",
+    "online_api_matchups_*.csv",
+)
+
+
+def gefuehrte_dateien():
+    """DATEIEN plus die aktuell vorhandenen Chunkdateien.
+
+    Wird bei JEDEM Aufruf neu ausgewertet: nach einer Rotation gibt es
+    eine Datei mehr, und niemand soll sie von Hand nachtragen muessen.
+    """
+    heraus = list(DATEIEN)
+    daten = os.path.join(WURZEL, "data")
+    for muster in DATEIEN_GLOB:
+        for treffer in sorted(glob.glob(os.path.join(daten, muster))):
+            name = os.path.basename(treffer)
+            if name not in heraus:
+                heraus.append(name)
+    return heraus
 
 WURZEL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ZIEL = os.path.join(WURZEL, "data", "data_stand.json")
@@ -138,9 +165,16 @@ INHALT_BIS = {
     # gehoeren hin.
     "online_api_tournaments.csv": "date",
     "online_api_archetypes.csv": "date",
-    "online_api_cards.csv": "date",
-    "online_api_matchups.csv": "date",
 }
+
+
+def inhalt_bis_tabelle():
+    """INHALT_BIS plus die Chunkdateien — die fuehren dieselbe Spalte."""
+    heraus = dict(INHALT_BIS)
+    for name in gefuehrte_dateien():
+        if name.startswith(("online_api_cards_", "online_api_matchups_")):
+            heraus[name] = "date"
+    return heraus
 
 # Dateien, deren Inhaltsdatum in einer NEBENDATEI steht statt in einer Spalte:
 # {Datei: (Nebendatei, Feld)}.
@@ -249,7 +283,7 @@ def geaendert():
         if " -> " in pfad:
             pfad = pfad.split(" -> ", 1)[1]
         name = os.path.basename(pfad)
-        if name in DATEIEN:
+        if name in gefuehrte_dateien():
             treffer.add(name)
     return treffer
 
@@ -257,7 +291,7 @@ def geaendert():
 def aus_git():
     """Erstbestand aus dem vollen Verlauf. Braucht einen tiefen Clone."""
     stand = {}
-    for f in DATEIEN:
+    for f in gefuehrte_dateien():
         out = _git("log", "-1", "--format=%cI", "--", "data/" + f)
         if out and out.strip():
             stand[f] = out.strip()
@@ -293,12 +327,13 @@ def main():
     # Eintraege fuer Dateien, die es nicht mehr gibt, fallen weg — ein Stand
     # ohne Datei waere eine Angabe ueber nichts.
     stand = {f: d for f, d in stand.items()
-             if f in DATEIEN and os.path.exists(os.path.join(WURZEL, "data", f))}
+             if f in gefuehrte_dateien()
+             and os.path.exists(os.path.join(WURZEL, "data", f))}
 
     # Zweite Ebene: wie weit reicht der INHALT? Nur fuer die Dateien, die
     # ein eigenes Datum fuehren, und nur wenn es sich lesen laesst.
     inhalt = {}
-    for f, spalte in INHALT_BIS.items():
+    for f, spalte in inhalt_bis_tabelle().items():
         if f not in stand:
             continue
         bis = inhalt_bis(f, spalte)
@@ -335,7 +370,7 @@ def main():
     # aus; das ist genau die Art stiller Luecke, gegen die diese Datei
     # geschrieben wurde. scripts/data_guardian.py (check_datenstand) meldet
     # daraus einen Befund, wenn die Datei bei jedem Lauf neu geschrieben wird.
-    ohne_stand = sorted(f for f in DATEIEN
+    ohne_stand = sorted(f for f in gefuehrte_dateien()
                         if f not in stand
                         and os.path.exists(os.path.join(WURZEL, "data", f)))
 
