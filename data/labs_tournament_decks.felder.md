@@ -142,8 +142,18 @@ stille Handkorrektur in der CSV. Bisher ein Fall: Turnier 518 / 0070.
   **Matchpunkte-Quote** `(3·S + U) / (3 · Partien)` in Prozent — also das,
   was ueber die Platzierung entscheidet, mit einem Unentschieden als einem
   Punkt statt dreien. Nachgemessen ueber alle 4.713 Zeilen: maximale
-  Abweichung 0,005 Punkte. Die Siegquote `S / (S + N + U)` liegt bis zu
-  **4,1 Punkte darunter** (Dragapult bei Worlds: 46,12 gegen 42,02).
+  Abweichung 0,005 Punkte. Die Siegquote `S / (S + N + U)` liegt immer
+  **darunter**, und zwar um so mehr, je mehr Unentschieden im Spiel sind:
+
+  | Bestand | max. Abstand | wo |
+  | --- | ---: | --- |
+  | alle 4.713 Zeilen | **25,00 pp** | Tyranitar, 0-1-3 |
+  | ab 100 Partien | **9,44 pp** | Ancient Box, 51-73-49 |
+  | TEF-PBL, ab 100 Partien | **5,13 pp** | Alakazam Dudunsparce, 220-165-70 |
+
+  Zum Einordnen ein Fall mit grossem Nenner: Dragapult bei Worlds
+  (553-601-162) steht mit 46,12 in der Spalte, seine Siegquote ist 42,02 —
+  **4,1 Punkte** Unterschied. Das ist ein Beispiel, keine Obergrenze.
 
   Wer beide Zahlen nebeneinanderstellt, misst eine Differenz, die reine
   Einheitenumrechnung ist. Genau das ist am 08.09.2026 passiert: ein
@@ -152,6 +162,10 @@ stille Handkorrektur in der CSV. Bisher ein Fall: Turnier 518 / 0070.
   `win_rate`, Konvention `mitUnentschieden`) und meldete eine Verzerrung
   von +1,94 Punkten. Nach Umrechnung auf dieselbe Konvention dreht sie
   sich auf **−1,62** — Vorzeichen und Betrag falsch.
+
+  **Gilt auch fuer die Format-Ausschnitte.** `labs_tournament_decks_<FENSTER>.csv`
+  (TEF-PBL, TEF-POR, …) sind Auszuege derselben Quelle mit denselben Spalten und
+  haben kein eigenes Feldblatt — dieses hier gilt fuer sie mit.
 
   **Die Regel:** aus `wins`/`losses`/`ties` selbst rechnen und die
   Konvention hinschreiben. `js/win-rate-konvention.js` fuehrt alle drei
