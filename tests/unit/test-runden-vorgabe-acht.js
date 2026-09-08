@@ -107,7 +107,12 @@ test('grosse Turniere ziehen die Runden NICHT aus der Spielerzahl nach', () => {
     /* Die Stelle, die es fuer die lokalen Typen tut, muss weiterhin da
        sein — sonst haelt der Test nur, weil das Nachziehen ueberhaupt
        verschwunden ist. */
-    assert.match(MC, /if \(!MAJOR_TYPES\.includes\(_settings\.tournamentType\)\) \{[\s\S]{0,200}_settings\.rounds = _suggestSwissRounds\(val\);/,
+    /* Der Aufruf traegt seit dem 08.09.2026 einen zweiten Parameter
+       (den Turniertyp), weil das Handbuch fuer Liga-Herausforderung und
+       Liga-Cup ZWEI verschiedene Rundenleitern fuehrt. Das Muster laesst
+       ihn zu, verlangt aber weiter die Abfrage davor — bewacht wird die
+       Begrenzung auf die lokalen Typen, nicht die Signatur. */
+    assert.match(MC, /if \(!MAJOR_TYPES\.includes\(_settings\.tournamentType\)\) \{[\s\S]{0,260}_settings\.rounds = _suggestSwissRounds\(val[^)]*\);/,
         'das Nachziehen fuer Challenge/Cup ist weg oder nicht mehr auf die '
         + 'lokalen Typen begrenzt');
     /* Und es darf keine zweite, unbedingte Zuweisung geben. */

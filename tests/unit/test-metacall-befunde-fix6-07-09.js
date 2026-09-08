@@ -344,14 +344,30 @@ describe('B3 — bei Major-Typen steht angeschrieben, dass die Runden eine Einga
     });
 
     it('es wird KEINE Rundenregel erfunden — Majors ziehen die Runden weiterhin nicht nach', () => {
-        /* Die Rundenzahl grosser Turniere steht in keiner Datei des
-           Arbeitsbaums: data/labs_tournament_decks*.csv fuehrt
-           total_players, aber keine Runden. Wer hier
-           _suggestSwissRounds fuer Majors freischaltet, behauptet eine
-           Turnierregel, die niemand belegen kann. */
+        /* DIE BEGRUENDUNG HAT SICH AM 08.09.2026 GEAENDERT, DIE ZUSAGE
+           NICHT.
+
+           Bis dahin stand hier: die Rundenzahl grosser Turniere stehe
+           in keiner Datei des Arbeitsbaums, also duerfe man sie nicht
+           behaupten. Inzwischen liegt die Quelle vor — das Play!
+           Pokémon Turnierregel-Handbuch (Stand 01.09.2026), abgelegt in
+           docs/turnierregeln-handbuch.md. Sie sagt fuer Regionals und
+           Internationals: Phase 1 sind ACHT Runden, durchgehend von 129
+           bis 4096 Spielern je Altersklasse.
+
+           Damit waere eine Ableitung aus der Spielerzahl nicht mehr
+           unbelegt — sie waere ueber die gesamte Spanne bloss dieselbe
+           Zahl. Und der Betreiber hat ausdruecklich angeordnet:
+           „Standard ist immer 8", aenderbar von Hand. Die Zusage bleibt
+           also, mit besserem Grund.
+
+           Der Aufruf traegt seit dem 08.09.2026 den Turniertyp als
+           zweiten Parameter, weil das Handbuch fuer Liga-Herausforderung
+           (Variante 2) und Liga-Cup (Variante 3) zwei verschiedene
+           Leitern fuehrt. */
         const zweig = schnittOhne('if (!MAJOR_TYPES.includes(_settings.tournamentType)) {',
             "if (key === 'topCutSize'");
-        assert.ok(zweig.includes('_settings.rounds = _suggestSwissRounds(val);'),
+        assert.match(zweig, /_settings\.rounds = _suggestSwissRounds\(val[^)]*\);/,
             'die Ableitung fuer Challenge/Cup ist weg');
         const kopf = SRC.slice(SRC.indexOf('function _onSetting(key, val) {'),
             SRC.indexOf('if (!MAJOR_TYPES.includes(_settings.tournamentType)) {'));
