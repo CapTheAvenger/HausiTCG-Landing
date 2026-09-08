@@ -4041,7 +4041,8 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
 
             // Alternative-count suggestions (Phase 4.5 / 2nd Prüfstand).
             // Non-blocking: the builder kept its naive Math.round but
-            // the field plurality plays a different count AND places
+            // the plurality of the evaluated day-2 lists plays a different
+            // count AND places
             // clearly better. Surfaces here so the user can decide
             // whether to tweak the deck manually.
             const altSuggestions = Array.isArray(report.alt_suggestions)
@@ -4061,7 +4062,14 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                 const _altI = t('buildInfo.altSuggestionsIntro');
                 altIntro.textContent = (_altI && _altI !== 'buildInfo.altSuggestionsIntro')
                     ? _altI
-                    : 'Bei diesen Karten spielt die Mehrheit des Metas eine andere Anzahl als die naive Math.round-Rundung — UND diese Mehrheit platziert sich deutlich besser. Der Builder hat NICHT automatisch angepasst, du kannst manuell überlegen ob du den Vorschlag übernimmst.';
+                    // Wortlaut am 08.09.2026 nachgezogen. Der i18n-Schluessel
+                    // sagte bis dahin "Mehrheit des Metas"; gerechnet wird die
+                    // Mehrheit der ausgewerteten Tag-2-Listen (bei Mega Excadrill
+                    // acht Stueck), nicht die von 32 Piloten. Der Schluessel wurde
+                    // korrigiert, dieser Ersatztext blieb stehen — er greift nur,
+                    // wenn der Schluessel fehlt, traegt dann aber die alte
+                    // Falschaussage weiter.
+                    : 'Bei diesen Karten spielt die Mehrheit der ausgewerteten Tag-2-Listen eine andere Anzahl als die naive Math.round-Rundung — UND diese Mehrheit platziert sich deutlich besser. Das ist eine Aussage über die veröffentlichten Listen, nicht über das Feld. Der Builder hat NICHT automatisch angepasst, du kannst manuell überlegen ob du den Vorschlag übernimmst.';
                 altWrap.appendChild(altIntro);
 
                 altSuggestions
@@ -8710,7 +8718,7 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
 
                 // Phase 4.5 alternative-count suggestions — non-blocking
                 // diagnostic. Each event tells the user "the builder
-                // kept N copies but the field plurality plays M and
+                // kept N copies but the day-2 list plurality plays M and
                 // places clearly better; consider M". Rendered as a
                 // standalone section in the Why? modal so the user
                 // can decide whether to manually adjust the count.

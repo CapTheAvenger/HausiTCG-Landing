@@ -106,7 +106,9 @@ def test_beschreibung_warnt_vor_der_verwechslung():
         text = f.read()
     abschnitt = text.split("`win_pct`", 1)
     assert len(abschnitt) > 1, "Die Feldbeschreibung erwaehnt win_pct nicht mehr"
-    umfeld = abschnitt[1][:1800]
+    # Das Umfeld muss die Belegtabelle mit einschliessen, sonst faellt
+    # der Hinweis auf die fehlende Konventionsspalte hinten heraus.
+    umfeld = abschnitt[1][:2600]
     # Nicht nur das Wort: die Formel. Ein Leser, der wissen will, WAS die
     # Spalte rechnet, braucht sie — und ein Umformulierer kann sie nicht
     # versehentlich stehenlassen, waehrend er die Aussage dreht.
@@ -125,4 +127,78 @@ def test_beschreibung_warnt_vor_der_verwechslung():
     assert "win_rate_convention" in umfeld, (
         "Der Hinweis fehlt, dass diese Datei — anders als "
         "online_api_archetypes.csv — keine Konventionsspalte fuehrt"
+    )
+
+    # Bis hierher ist das eine Stichwortpruefung, und die reicht nicht.
+    # Ein Pruefagent hat sie am 08.09.2026 ausgehebelt: eine Beschreibung,
+    # die das GEGENTEIL behauptet ("win_pct ist die Siegquote und NICHT die
+    # Matchpunkte-Quote"), enthaelt alle vier Stichworte und liess den Test
+    # gruen. Die Aussage muss geprueft werden, nicht ihr Wortmaterial.
+    #
+    # Beides zusammen traegt: die Zuordnung Spalte -> Matchpunkte muss in
+    # EINEM Satz stehen, und die umgekehrte Zuordnung darf nirgends stehen.
+    # Die beiden Aussagen muessen DIREKT beieinander stehen, gleich hinter
+    # dem Spaltennamen — nicht irgendwo im Abschnitt verstreut. Genau das
+    # trennt die richtige Beschreibung von der umgedrehten: letztere sagt
+    # vorne "ist die Siegquote" und bringt "KEINE Siegquote" erst spaeter
+    # als Zitat der angeblich falschen alten Fassung.
+    # Der Abstand ist der Test. Die richtige Beschreibung setzt die
+    # Verneinung als ERSTES hinter den Spaltennamen; die umgedrehte muss
+    # dort ihre Behauptung unterbringen und kann "KEINE Siegquote" nur
+    # spaeter nachschieben (als Zitat der angeblich falschen Fassung).
+    # 60 Zeichen trennen die beiden sauber: richtig ~25, umgedreht ~130.
+    anfang = " ".join(umfeld[:60].split())
+    assert "KEINE Siegquote" in anfang, (
+        "Direkt hinter `win_pct` muss die Verneinung stehen, nicht erst "
+        f"irgendwo spaeter im Absatz. Gefunden wurde: {anfang!r}"
+    )
+    kopf = " ".join(umfeld[:400].split())
+    assert "Matchpunkte-Quote" in kopf, (
+        "Was die Spalte STATTDESSEN fuehrt, steht nicht gleich daneben"
+    )
+
+    flach = " ".join(umfeld.split())
+    umgedreht = [
+        m for m in (
+            "win_pct` — ist die Siegquote",
+            "win_pct ist die Siegquote",
+            "NICHT die Matchpunkte",
+            "nicht die Matchpunkte",
+        ) if m in flach
+    ]
+    assert not umgedreht, (
+        "Die Beschreibung behauptet die Zuordnung UMGEKEHRT: " + ", ".join(umgedreht)
+        + " — win_pct ist die Matchpunkte-Quote, nicht die Siegquote."
+    )
+
+
+def test_beschreibung_nennt_keine_falsche_obergrenze():
+    """Der Abstand der beiden Konventionen ist NICHT auf ~4 Punkte gedeckelt.
+
+    Stand 08.09.2026 stand hier "liegt bis zu 4,1 Punkte darunter" — das ist
+    der Dragapult-Fall, nicht das Maximum. Gemessen sind es 25,0 Punkte ueber
+    alle Zeilen und 9,4 auch noch bei mindestens 100 Partien. Wer aus dem Satz
+    "der Fehler ist hoechstens 4 Punkte gross" ableitet, liegt um das
+    Sechsfache daneben.
+    """
+    with open(BESCHREIBUNG, encoding="utf-8") as f:
+        text = f.read()
+    hoechster = 0.0
+    for z in _zeilen("labs_tournament_decks.csv"):
+        b = _bilanz(z)
+        if not b:
+            continue
+        s_, n_, u_ = b
+        g = s_ + n_ + u_
+        hoechster = max(hoechster, abs((3 * s_ + u_) / (3 * g) - s_ / g) * 100)
+    assert hoechster > 20, (
+        f"Der gemessene Hoechstabstand ist nur {hoechster:.2f} pp — dann ist "
+        "die Zahl unten in der Beschreibung neu zu belegen."
+    )
+    assert "bis zu\n  **4,1 Punkte darunter**" not in text and "bis zu **4,1" not in text, (
+        "Die Beschreibung nennt 4,1 Punkte wieder als Obergrenze. Gemessen "
+        f"sind es {hoechster:.1f} pp — 4,1 ist ein Beispiel, kein Maximum."
+    )
+    assert "keine Obergrenze" in text, (
+        "Der Satz fehlt, der den Beispielwert als Beispiel kennzeichnet"
     )
