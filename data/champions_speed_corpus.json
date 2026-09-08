@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "last_updated": "2026-09-07",
+    "last_updated": "2026-09-08",
     "window_days": 14,
-    "window_start": "2026-08-24",
-    "window_end": "2026-09-07",
-    "team_count": 110,
-    "sample_count": 656,
-    "species_count": 85,
+    "window_start": "2026-08-25",
+    "window_end": "2026-09-08",
+    "team_count": 108,
+    "sample_count": 644,
+    "species_count": 83,
     "source": "VGCPastes Champions M-A spreadsheet (gid=791705272)"
   },
   "samples": [
@@ -4517,90 +4517,6 @@
       "nature": "Jolly",
       "date": "26 Aug 2026",
       "replica": "44KL4FYB0Y"
-    },
-    {
-      "species": "Tyranitar",
-      "evs": "16 HP / 26 Atk / 24 Spe",
-      "nature": "Adamant",
-      "date": "24 Aug 2026",
-      "replica": "7527Q6A7FK"
-    },
-    {
-      "species": "Tinkaton",
-      "evs": "23 HP / 15 Atk / 28 Spe",
-      "nature": "Jolly",
-      "date": "24 Aug 2026",
-      "replica": "7527Q6A7FK"
-    },
-    {
-      "species": "Excadrill",
-      "evs": "32 Atk / 1 Def / 1 SpD / 32 Spe",
-      "nature": "Adamant",
-      "date": "24 Aug 2026",
-      "replica": "7527Q6A7FK"
-    },
-    {
-      "species": "Sinistcha",
-      "evs": "32 HP / 14 Def / 20 SpD",
-      "nature": "Relaxed",
-      "date": "24 Aug 2026",
-      "replica": "7527Q6A7FK"
-    },
-    {
-      "species": "Milotic",
-      "evs": "30 HP / 14 Def / 20 SpA / 2 Spe",
-      "nature": "Modest",
-      "date": "24 Aug 2026",
-      "replica": "7527Q6A7FK"
-    },
-    {
-      "species": "Hydreigon",
-      "evs": "2 HP / 32 SpA / 32 Spe",
-      "nature": "Timid",
-      "date": "24 Aug 2026",
-      "replica": "7527Q6A7FK"
-    },
-    {
-      "species": "Meganium-Mega",
-      "evs": "31 HP / 27 SpA / 8 Spe",
-      "nature": "Modest",
-      "date": "24 Aug 2026",
-      "replica": "Y1PNKVEBEU"
-    },
-    {
-      "species": "Garchomp",
-      "evs": "2 HP / 32 Atk / 32 Spe",
-      "nature": "Adamant",
-      "date": "24 Aug 2026",
-      "replica": "Y1PNKVEBEU"
-    },
-    {
-      "species": "Aerodactyl",
-      "evs": "2 HP / 32 Atk / 32 Spe",
-      "nature": "Jolly",
-      "date": "24 Aug 2026",
-      "replica": "Y1PNKVEBEU"
-    },
-    {
-      "species": "Basculegion",
-      "evs": "2 HP / 32 Atk / 32 Spe",
-      "nature": "Jolly",
-      "date": "24 Aug 2026",
-      "replica": "Y1PNKVEBEU"
-    },
-    {
-      "species": "Farigiraf",
-      "evs": "32 HP / 20 Def / 14 SpD",
-      "nature": "Bold",
-      "date": "24 Aug 2026",
-      "replica": "Y1PNKVEBEU"
-    },
-    {
-      "species": "Incineroar",
-      "evs": "32 HP / 10 Atk / 10 Def / 10 SpD / 4 Spe",
-      "nature": "Careful",
-      "date": "24 Aug 2026",
-      "replica": "Y1PNKVEBEU"
     }
   ]
 }
