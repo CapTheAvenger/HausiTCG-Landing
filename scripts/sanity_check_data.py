@@ -85,8 +85,11 @@ THRESHOLDS: Dict[str, int] = {
     # Hochsetzen, sobald der Rueckbau steht.
     'online_api_tournaments.csv':            1,       # 5 beobachtet 08.09.2026
     'online_api_archetypes.csv':             50,      # 229 beobachtet
-    'online_api_cards.csv':                  1_000,   # 7.363 beobachtet
-    'online_api_matchups.csv':               300,     # 2.378 beobachtet
+    #
+    # Karten und Matchups liegen je Formatfenster in eigenen Dateien
+    # (online_api_cards_TEF-PBL.csv …) und stehen deshalb nicht hier,
+    # sondern in GLOB_RULES weiter unten: eine feste Schwelle je Chunk
+    # waere eine Pflegeaufgabe, die bei jeder Rotation neu anfiele.
 
     # ── Labs (major tournaments): Meta Call's empirical predictor.
     'labs_tournament_decks.csv':             2_000,   # 4 585 observed
@@ -176,6 +179,13 @@ GLOB_RULES: tuple = (
     'tournament_cards_data_cards_*.csv',
     'labs_tournament_decks_*.csv',
     'labs_tournament_matchups_*.csv',
+    # Die vier Ebenen des Limitless-API-Laufs, aufgeteilt je Formatfenster.
+    # Gemessen am 08.09.2026: 146 KB Kartenzeilen JE TURNIER — das laufende
+    # Format allein sind 186 Turniere. Eine flache Datei ueber mehrere
+    # Formate haette die 100-MB-Grenze von GitHub gerissen; je Fenster
+    # hoert sie auf zu wachsen, sobald das Fenster vorbei ist.
+    'online_api_cards_*.csv',
+    'online_api_matchups_*.csv',
 )
 GLOB_MAX_LOSS = 0.10   # mehr als 10 % weniger Zeilen als in HEAD = Revert
 

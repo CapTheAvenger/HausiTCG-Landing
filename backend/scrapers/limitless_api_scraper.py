@@ -102,6 +102,126 @@ STANDARD_SPIEL = "PTCG"
 
 GRUPPEN = ("pokemon", "trainer", "energy")
 
+# ---------------------------------------------------------------------------
+# Tiefen
+# ---------------------------------------------------------------------------
+#
+# VOLL       details + standings + pairings -> alle vier Ebenen.
+#            Drei Anfragen je Turnier, rund 200 KB Zeilen.
+# ARCHETYPEN nur standings, Bilanz aus den record-Feldern -> Turnier- und
+#            Archetypzeilen. EINE Anfrage je Turnier, rund 6 KB.
+#
+# Die duenne Tiefe gibt es, weil die Kartenebene ueber eine Formatgrenze
+# hinweg nicht bedeutet, was sie zu bedeuten scheint: Mega Excadrill ex
+# ist PBL-65, vor dem 17.07.2026 gibt es die Karte nicht. Eine
+# "Entwicklung" von 0 auf 2 Kopien waere dort ein Releasedatum, keine
+# Entwicklung. Was ueber die Grenze hinweg TRAEGT, ist der Anteil eines
+# Archetyps und wie er sich nach einem Praesenzturnier bewegt — und
+# genau das kostet ein Dreissigstel des Platzes.
+TIEFE_VOLL = "voll"
+TIEFE_ARCHETYPEN = "archetypen"
+TIEFEN = (TIEFE_VOLL, TIEFE_ARCHETYPEN)
+
+
+# ---------------------------------------------------------------------------
+# Formatfenster
+# ---------------------------------------------------------------------------
+#
+# WARUM DAS SEIN MUSS
+# -------------------
+# Das Feld `format` der API sagt bei JEDEM Standardturnier schlicht
+# "STANDARD" — bei einem von gestern genauso wie bei einem vom Januar.
+# Gemessen am 08.09.2026 an 3.000 Turnieren: vier verschiedene
+# Kartenpools, ein einziger Feldwert. Ein Rueckbau, der nur darauf
+# filtert, mischt sie stillschweigend in eine Datei.
+#
+# Online wechselt das Format am SET-RELEASE, nicht am in-person-legal-Datum
+# (Release + 14 Tage Lag, siehe data/format_window.json). Ein
+# Online-Turnier vom 20.07.2026 spielt PBL, ein Praesenzturnier vom
+# selben Tag nicht.
+#
+# Der obere Rand kommt aus data/sets_metadata.json und ist damit
+# nachpruefbar. Der untere Rand — welches Set gerade der Boden ist —
+# steht in keiner Datei: Rotationen sind eine jaehrliche Ansage des
+# Herstellers. Deshalb ist ROTATIONEN eine gepflegte Liste, genau wie
+# `previous_format_key` in format_window.json eine gepflegte Zeile ist.
+# `_pruefe_fenster()` schlaegt an, wenn ein Release-Datum darin nicht
+# mehr zu sets_metadata.json passt — dann ist die Liste veraltet und
+# nicht die Daten falsch.
+#
+# Quelle der Boeden: die Chunkdateien, die das Projekt seit Langem
+# fuehrt (labs_tournament_decks_SVI-ASC.csv, ..._TEF-POR.csv, ...).
+ROTATIONEN = (
+    # (Formatschluessel, oberstes Set, dessen Release = Fensterbeginn)
+    ("TEF-PBL", "PBL"),
+    ("TEF-CRI", "CRI"),
+    ("TEF-POR", "POR"),
+    ("SVI-ASC", "ASC"),
+    ("SVI-PFL", "PFL"),
+    ("SVI-MEG", "MEG"),
+    ("SVI-BLK", "BLK"),
+    ("SVI-DRI", "DRI"),
+    ("SVI-JTG", "JTG"),
+    ("BRS-PRE", "PRE"),
+    ("BRS-SSP", "SSP"),
+    ("BRS-SCR", "SCR"),
+    ("BRS-SFA", "SFA"),
+)
+
+VOR_DEM_AELTESTEN = "vor-bekanntem-fenster"
+
+_fenster_zwischenspeicher: Optional[List[Tuple[str, str]]] = None
+
+
+def _sets_metadata(datenverzeichnis: str = "data") -> Dict[str, dict]:
+    pfad = os.path.join(datenverzeichnis, "sets_metadata.json")
+    with open(pfad, encoding="utf-8") as datei:
+        return json.load(datei)
+
+
+def formatfenster(datenverzeichnis: str = "data") -> List[Tuple[str, str]]:
+    """[(Formatschluessel, Startdatum)], neuestes zuerst.
+
+    Startdatum ist das Release des obersten Sets — der Tag, an dem
+    Online darauf umschaltet.
+    """
+    global _fenster_zwischenspeicher
+    if _fenster_zwischenspeicher is not None:
+        return _fenster_zwischenspeicher
+    meta = _sets_metadata(datenverzeichnis)
+    heraus = []
+    for schluessel, set_code in ROTATIONEN:
+        eintrag = meta.get(set_code) or {}
+        datum = eintrag.get("release_date")
+        if datum:
+            heraus.append((schluessel, datum))
+    heraus.sort(key=lambda x: x[1], reverse=True)
+    _fenster_zwischenspeicher = heraus
+    return heraus
+
+
+def formatschluessel(datum: Optional[str], datenverzeichnis: str = "data") -> str:
+    """Welches Format galt online an diesem Tag? Datum als YYYY-MM-DD."""
+    if not datum:
+        return VOR_DEM_AELTESTEN
+    tag = str(datum)[:10]
+    for schluessel, start in formatfenster(datenverzeichnis):
+        if tag >= start:
+            return schluessel
+    return VOR_DEM_AELTESTEN
+
+
+def pruefe_fenster(datenverzeichnis: str = "data") -> List[str]:
+    """Meldet Sets aus ROTATIONEN, die sets_metadata.json nicht kennt.
+
+    Eine Liste, die niemand nachzieht, ist schlimmer als keine: sie
+    ordnet Turniere ins falsche Fenster und sieht dabei richtig aus.
+    """
+    meta = _sets_metadata(datenverzeichnis)
+    fehlt = [f"{k} (Set {s})" for k, s in ROTATIONEN
+             if not (meta.get(s) or {}).get("release_date")]
+    return fehlt
+
 
 # ---------------------------------------------------------------------------
 # Netzschicht
@@ -246,6 +366,29 @@ def _partien(pairings: Sequence[dict]) -> Iterable[Tuple[str, Optional[str], str
             yield ich, (gegner or None), ergebnis
 
 
+def bilanz_aus_records(standings: Sequence[dict]) -> Dict[str, List[int]]:
+    """Bilanz je Archetyp aus den `record`-Feldern der Standings.
+
+    Der zweite, unabhaengige Weg zur selben Zahl — am 08.09.2026 an
+    Mega Excadrill gegengerechnet: aus /pairings 32-40-0, aus den
+    record-Feldern 32-40-0, auf der Limitless-Seite 32-40-0.
+
+    Er kostet KEINE zusaetzliche Anfrage und ist deshalb der Weg fuer
+    die duenne Tiefe. Was er nicht kann: die Matchup-Matrix. Wer wissen
+    will, GEGEN WEN gewonnen wurde, braucht /pairings.
+    """
+    heraus: Dict[str, List[int]] = defaultdict(lambda: [0, 0, 0])
+    for eintrag in standings:
+        deck = (eintrag.get("deck") or {}).get("id")
+        if not deck:
+            continue
+        r = eintrag.get("record") or {}
+        heraus[deck][0] += int(r.get("wins") or 0)
+        heraus[deck][1] += int(r.get("losses") or 0)
+        heraus[deck][2] += int(r.get("ties") or 0)
+    return heraus
+
+
 def archetyp_bilanz(standings: Sequence[dict],
                     pairings: Sequence[dict]) -> Dict[str, dict]:
     """Je Archetyp: Listenzahl, Anteil und Bilanz aus den Partien.
@@ -261,12 +404,20 @@ def archetyp_bilanz(standings: Sequence[dict],
         listen[deck] += 1
     gesamt = sum(listen.values())
 
-    bilanz: Dict[str, List[int]] = defaultdict(lambda: [0, 0, 0])
-    for ich, _gegner, ergebnis in _partien(pairings):
-        deck = zu.get(ich)
-        if not deck:
-            continue
-        bilanz[deck]["SNU".index(ergebnis)] += 1
+    # Ohne Pairings (duenne Tiefe) kommt die Bilanz aus den record-Feldern.
+    # Beide Wege liefern dieselben Zahlen; welcher es war, steht in der
+    # Ausgabe, damit niemand spaeter raten muss.
+    if pairings:
+        quelle = "pairings"
+        bilanz: Dict[str, List[int]] = defaultdict(lambda: [0, 0, 0])
+        for ich, _gegner, ergebnis in _partien(pairings):
+            deck = zu.get(ich)
+            if not deck:
+                continue
+            bilanz[deck]["SNU".index(ergebnis)] += 1
+    else:
+        quelle = "records"
+        bilanz = bilanz_aus_records(standings)
 
     heraus: Dict[str, dict] = {}
     for deck, anzahl in listen.items():
@@ -285,6 +436,7 @@ def archetyp_bilanz(standings: Sequence[dict],
             # damit die Frontend-Seite nicht raten muss.
             "quote": (s / partien) if partien else 0.0,
             "quoten_konvention": "mitUnentschieden",
+            "bilanz_quelle": quelle,
         }
     return heraus
 
@@ -380,29 +532,56 @@ def matchup_matrix(standings: Sequence[dict],
     return heraus
 
 
-def neue_turniere(api_liste: Sequence[dict], bekannte_ids: Iterable[str],
+def neue_turniere(api_liste: Sequence[dict],
+                  bekannt: Any = (),
                   min_spieler: int = STANDARD_MIN_SPIELER,
                   format_id: Optional[str] = STANDARD_FORMAT,
-                  ab_datum: Optional[datetime] = None) -> List[dict]:
+                  ab_datum: Optional[datetime] = None,
+                  bis_datum: Optional[datetime] = None,
+                  tiefe: str = TIEFE_VOLL,
+                  metas: Optional[Iterable[str]] = None,
+                  datenverzeichnis: str = "data") -> List[dict]:
     """Die inkrementelle Regel: bekanntes Turnier -> ueberspringen.
 
     Ein abgeschlossenes Limitless-Turnier aendert sich nicht mehr, ein
-    erneuter Abruf waere also reine Last. Gefiltert wird zusaetzlich auf
-    Format, Mindestspielerzahl und optional ein Startdatum.
+    erneuter Abruf waere also reine Last.
+
+    EINE Ausnahme: wurde es nur duenn geholt und jetzt wird die volle
+    Tiefe verlangt, kommt es wieder mit. `voll` schliesst `archetypen`
+    ein, umgekehrt nicht.
+
+    Gefiltert wird ausserdem auf Format (das API-Feld), Zeitraum,
+    Mindestspielerzahl und optional auf bestimmte Formatfenster —
+    letzteres ist der Filter, der beim Rueckbau die Kartenpools
+    auseinanderhaelt.
     """
-    bekannt = set(bekannte_ids)
+    if isinstance(bekannt, dict):
+        bekannt_tiefe = bekannt
+    else:
+        bekannt_tiefe = {t: TIEFE_VOLL for t in bekannt}
+    erlaubt = set(metas) if metas else None
+
     heraus = []
     for turnier in api_liste:
         tid = turnier.get("id")
-        if not tid or tid in bekannt:
+        if not tid:
+            continue
+        schon = bekannt_tiefe.get(tid)
+        if schon == TIEFE_VOLL or (schon is not None and schon == tiefe):
             continue
         if format_id and turnier.get("format") != format_id:
             continue
         if int(turnier.get("players") or 0) < min_spieler:
             continue
-        if ab_datum is not None:
-            wann = parse_api_datum(turnier.get("date"))
-            if wann is None or wann < ab_datum:
+        wann = parse_api_datum(turnier.get("date"))
+        if ab_datum is not None and (wann is None or wann < ab_datum):
+            continue
+        if bis_datum is not None and (wann is None or wann > bis_datum):
+            continue
+        if erlaubt is not None:
+            meta = formatschluessel((turnier.get("date") or "")[:10],
+                                    datenverzeichnis)
+            if meta not in erlaubt:
                 continue
         heraus.append(turnier)
     return heraus
@@ -422,23 +601,40 @@ def parse_api_datum(roh: Optional[str]) -> Optional[datetime]:
 # Ausgabe
 # ---------------------------------------------------------------------------
 
-SPALTEN_TURNIERE = ["tournament_id", "name", "date", "format", "players",
-                    "organizer_id", "is_online", "has_decklists",
+# `meta` traegt in jeder Zeile das Formatfenster. Ohne diese Spalte ist
+# eine Kartenzahl aus dem Mai und eine aus dem September dieselbe Zahl —
+# obwohl dazwischen ein Set dazukam und davor eine Rotation lag.
+SPALTEN_TURNIERE = ["tournament_id", "name", "date", "meta", "format",
+                    "players", "organizer_id", "is_online", "has_decklists",
                     "swiss_rounds", "phases", "standings_rows",
-                    "pairings_rows", "scraped_at"]
+                    "pairings_rows", "depth", "scraped_at"]
 
-SPALTEN_ARCHETYPEN = ["tournament_id", "date", "players", "archetype_id",
-                      "archetype_name", "lists", "lists_total", "share",
-                      "wins", "losses", "ties", "matches", "win_rate",
-                      "win_rate_convention"]
+SPALTEN_ARCHETYPEN = ["tournament_id", "date", "meta", "players",
+                      "archetype_id", "archetype_name", "lists",
+                      "lists_total", "share", "wins", "losses", "ties",
+                      "matches", "win_rate", "win_rate_convention",
+                      "record_source"]
 
-SPALTEN_KARTEN = ["tournament_id", "date", "archetype_id", "group", "set",
-                  "number", "card", "copies_total", "lists_with_card",
+SPALTEN_KARTEN = ["tournament_id", "date", "meta", "archetype_id", "group",
+                  "set", "number", "card", "copies_total", "lists_with_card",
                   "lists_total", "avg_count", "inclusion_rate"]
 
-SPALTEN_MATCHUPS = ["tournament_id", "date", "archetype_id", "opponent_id",
-                    "wins", "losses", "ties", "matches", "win_rate",
-                    "win_rate_convention"]
+SPALTEN_MATCHUPS = ["tournament_id", "date", "meta", "archetype_id",
+                    "opponent_id", "wins", "losses", "ties", "matches",
+                    "win_rate", "win_rate_convention"]
+
+def _chunkname(basis: str, meta: str) -> str:
+    """online_api_cards_TEF-PBL.csv — dasselbe Muster wie
+    labs_tournament_matchups_TEF-PBL.csv, das dieses Projekt seit Langem
+    fuehrt.
+
+    Warum aufgeteilt: gemessen am 08.09.2026 sind es 146 KB Kartenzeilen
+    JE TURNIER. Das laufende Format allein sind 186 Turniere = 27 MB;
+    sechs Monate waeren 65 MB in einer Datei, wachsend. GitHub warnt ab
+    50 MB und nimmt ab 100 MB gar nichts mehr an. Eine Datei je Format
+    hoert auf zu wachsen, sobald das Format vorbei ist.
+    """
+    return f"{basis}_{meta}.csv"
 
 
 def _schreibe_csv(pfad: str, spalten: Sequence[str], zeilen: Sequence[dict]) -> None:
@@ -453,25 +649,43 @@ def _schreibe_csv(pfad: str, spalten: Sequence[str], zeilen: Sequence[dict]) -> 
             schreiber.writerow(zeile)
 
 
-def bekannte_turnier_ids(pfad: str) -> List[str]:
+def bekannte_turniere(pfad: str) -> Dict[str, str]:
+    """turnier-id -> bereits geholte Tiefe.
+
+    Das Gedaechtnis merkt sich nicht nur DASS ein Turnier geholt wurde,
+    sondern WIE TIEF. Sonst koennte ein Fenster, das erst duenn geholt
+    wurde, spaeter nie auf die volle Tiefe nachgezogen werden — der Lauf
+    saehe die id und uebersprnge sie.
+    """
     if not os.path.exists(pfad):
-        return []
+        return {}
+    heraus: Dict[str, str] = {}
     with open(pfad, encoding="utf-8", newline="") as datei:
-        return [z.get("tournament_id", "") for z in csv.DictReader(datei, delimiter=";")
-                if z.get("tournament_id")]
+        for zeile in csv.DictReader(datei, delimiter=";"):
+            tid = zeile.get("tournament_id")
+            if tid:
+                # Zeilen aus der Zeit vor der Tiefenschaltung tragen keine
+                # Spalte; sie stammen aus vollen Laeufen.
+                heraus[tid] = zeile.get("depth") or TIEFE_VOLL
+    return heraus
+
+
+def bekannte_turnier_ids(pfad: str) -> List[str]:
+    """Nur die ids — fuer das Aufraeumen verwaister Zeilen."""
+    return list(bekannte_turniere(pfad))
 
 
 def verwaiste_zeilen(zeilen: Sequence[dict], bekannte_ids: Iterable[str]) -> List[dict]:
     """Behaelt nur Zeilen, deren Turnier im Index steht.
 
     WARUM DAS NOETIG IST
-    Je Turnier werden vier Dateien geschrieben, der Index zuletzt. Bricht
-    der Lauf zwischen der ersten und der vierten Schreiboperation ab, dann
-    stehen Archetyp-, Karten- oder Matchupzeilen da, ohne dass das Turnier
-    als geholt gilt. Der naechste Lauf holt es erneut und haengt dieselben
-    Zeilen ein zweites Mal an — ein Kartenschnitt von 3,77 wuerde dadurch
-    nicht auffaellig falsch, sondern unauffaellig doppelt gewichtet. Diese
-    Funktion raeumt die Halbfertigen weg, bevor etwas Neues geschrieben wird.
+    Je Turnier werden mehrere Dateien geschrieben, der Index zuletzt.
+    Bricht der Lauf dazwischen ab, dann stehen Archetyp-, Karten- oder
+    Matchupzeilen da, ohne dass das Turnier als geholt gilt. Der naechste
+    Lauf holt es erneut und haengt dieselben Zeilen ein zweites Mal an —
+    ein Kartenschnitt von 3,77 wuerde dadurch nicht auffaellig falsch,
+    sondern unauffaellig doppelt gewichtet. Diese Funktion raeumt die
+    Halbfertigen weg, bevor etwas Neues geschrieben wird.
     """
     bekannt = set(bekannte_ids)
     return [z for z in zeilen if z.get("tournament_id") in bekannt]
@@ -495,12 +709,32 @@ def _raeume_auf(pfad: str, spalten: Sequence[str], bekannte_ids: Iterable[str]) 
     return entfernt
 
 
+def _raeume_chunks_auf(datenverzeichnis: str, basis: str,
+                       spalten: Sequence[str],
+                       bekannte_ids: Iterable[str]) -> int:
+    """Dasselbe ueber alle Chunkdateien eines Basisnamens."""
+    entfernt = 0
+    for name in sorted(os.listdir(datenverzeichnis)):
+        if name.startswith(basis + "_") and name.endswith(".csv"):
+            entfernt += _raeume_auf(os.path.join(datenverzeichnis, name),
+                                    spalten, bekannte_ids)
+    return entfernt
+
+
 def zeilen_fuer_turnier(turnier: dict, details: dict,
                         standings: Sequence[dict],
-                        pairings: Sequence[dict]) -> Dict[str, List[dict]]:
-    """Bindet die reinen Rechenfunktionen zu den vier Ausgabetabellen."""
+                        pairings: Sequence[dict],
+                        tiefe: str = TIEFE_VOLL,
+                        datenverzeichnis: str = "data") -> Dict[str, List[dict]]:
+    """Bindet die reinen Rechenfunktionen zu den Ausgabetabellen.
+
+    Bei `tiefe == archetypen` bleiben Karten- und Matchupzeilen leer:
+    dort wurden gar keine Pairings geholt, und die Kartenebene traegt
+    ueber eine Formatgrenze hinweg ohnehin nicht.
+    """
     tid = turnier.get("id", "")
     datum = (turnier.get("date") or "")[:10]
+    meta = formatschluessel(datum, datenverzeichnis)
     spieler = int(turnier.get("players") or 0)
 
     phasen = details.get("phases") or []
@@ -508,49 +742,58 @@ def zeilen_fuer_turnier(turnier: dict, details: dict,
                   if str(p.get("type", "")).upper() == "SWISS"), 0)
 
     bilanz = archetyp_bilanz(standings, pairings)
-    karten = karten_schnitt(standings)
-    matchups = matchup_matrix(standings, pairings)
 
     zeilen_arch = [{
-        "tournament_id": tid, "date": datum, "players": spieler,
+        "tournament_id": tid, "date": datum, "meta": meta, "players": spieler,
         "archetype_id": w["archetyp_id"], "archetype_name": w["archetyp_name"],
         "lists": w["listen"], "lists_total": w["listen_gesamt"],
         "share": round(w["anteil"], 6),
         "wins": w["siege"], "losses": w["niederlagen"], "ties": w["unentschieden"],
         "matches": w["partien"], "win_rate": round(w["quote"], 6),
         "win_rate_convention": w["quoten_konvention"],
+        "record_source": w["bilanz_quelle"],
     } for w in sorted(bilanz.values(), key=lambda x: -x["listen"])]
 
-    zeilen_karten = [{
-        "tournament_id": tid, "date": datum,
-        "archetype_id": w["archetyp_id"], "group": w["gruppe"],
-        "set": w["set"], "number": w["nummer"], "card": w["karte"],
-        "copies_total": w["kopien_gesamt"], "lists_with_card": w["listen_mit_karte"],
-        "lists_total": w["listen_gesamt"], "avg_count": round(w["schnitt"], 4),
-        "inclusion_rate": round(w["aufnahmequote"], 4),
-    } for w in karten.values() if w["archetyp_id"] != SAMMELEIMER]
+    zeilen_karten: List[dict] = []
+    zeilen_matchups: List[dict] = []
+    if tiefe == TIEFE_VOLL:
+        zeilen_karten = [{
+            "tournament_id": tid, "date": datum, "meta": meta,
+            "archetype_id": w["archetyp_id"], "group": w["gruppe"],
+            "set": w["set"], "number": w["nummer"], "card": w["karte"],
+            "copies_total": w["kopien_gesamt"],
+            "lists_with_card": w["listen_mit_karte"],
+            "lists_total": w["listen_gesamt"],
+            "avg_count": round(w["schnitt"], 4),
+            "inclusion_rate": round(w["aufnahmequote"], 4),
+        } for w in karten_schnitt(standings).values()
+            if w["archetyp_id"] != SAMMELEIMER]
 
-    zeilen_matchups = [{
-        "tournament_id": tid, "date": datum,
-        "archetype_id": w["archetyp_id"], "opponent_id": w["gegner_id"],
-        "wins": w["siege"], "losses": w["niederlagen"], "ties": w["unentschieden"],
-        "matches": w["partien"], "win_rate": round(w["quote"], 6),
-        "win_rate_convention": w["quoten_konvention"],
-    } for w in matchups.values()]
+        zeilen_matchups = [{
+            "tournament_id": tid, "date": datum, "meta": meta,
+            "archetype_id": w["archetyp_id"], "opponent_id": w["gegner_id"],
+            "wins": w["siege"], "losses": w["niederlagen"],
+            "ties": w["unentschieden"], "matches": w["partien"],
+            "win_rate": round(w["quote"], 6),
+            "win_rate_convention": w["quoten_konvention"],
+        } for w in matchup_matrix(standings, pairings).values()]
 
     zeile_turnier = {
         "tournament_id": tid, "name": turnier.get("name", ""),
-        "date": turnier.get("date", ""), "format": turnier.get("format", ""),
+        "date": turnier.get("date", ""), "meta": meta,
+        "format": turnier.get("format", ""),
         "players": spieler, "organizer_id": turnier.get("organizerId", ""),
         "is_online": details.get("isOnline", ""),
         "has_decklists": details.get("decklists", ""),
         "swiss_rounds": swiss, "phases": len(phasen),
         "standings_rows": len(standings), "pairings_rows": len(pairings),
+        "depth": tiefe,
         "scraped_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
     return {"turniere": [zeile_turnier], "archetypen": zeilen_arch,
-            "karten": zeilen_karten, "matchups": zeilen_matchups}
+            "karten": zeilen_karten, "matchups": zeilen_matchups,
+            "meta": meta}
 
 
 # ---------------------------------------------------------------------------
@@ -640,6 +883,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     p.add_argument("--game", default=STANDARD_SPIEL)
     p.add_argument("--days", type=int, default=14,
                    help="Wie weit zurueck die Turnierliste gelesen wird.")
+    p.add_argument("--meta", default="",
+                   help="Nur diese Formatfenster holen, komma-getrennt "
+                        "(z. B. TEF-CRI,TEF-POR). Leer = alle im Zeitraum.")
+    p.add_argument("--tiefe", choices=TIEFEN, default=TIEFE_VOLL,
+                   help="voll = alle vier Ebenen (3 Anfragen/Turnier); "
+                        "archetypen = nur Turnier- und Archetypzeilen "
+                        "(1 Anfrage/Turnier).")
     p.add_argument("--max-tournaments", type=int, default=0,
                    help="0 = kein Deckel.")
     p.add_argument("--pause", type=float, default=0.35)
@@ -664,8 +914,25 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
               f"stimmen mit den am 08.09.2026 abgelesenen Werten ueberein.")
         return 0
 
+    # Eine veraltete Fensterliste ordnet Turniere ins falsche Format und
+    # sieht dabei richtig aus. Lieber hier abbrechen.
+    luecken = pruefe_fenster(a.data_dir)
+    if luecken:
+        print("::error::ROTATIONEN kennt Sets, die sets_metadata.json nicht "
+              "hat: " + ", ".join(luecken), file=sys.stderr)
+        return 1
+
+    metas = [m.strip() for m in a.meta.split(",") if m.strip()] or None
+    if metas:
+        bekannte_fenster = {k for k, _ in formatfenster(a.data_dir)}
+        unbekannt = [m for m in metas if m not in bekannte_fenster]
+        if unbekannt:
+            print(f"::error::unbekanntes Formatfenster: {', '.join(unbekannt)}",
+                  file=sys.stderr)
+            return 1
+
     liste: List[dict] = []
-    for seite in range(1, 21):
+    for seite in range(1, 41):
         teil = api.turniere(spiel=a.game, limit=100, seite=seite)
         if not teil:
             break
@@ -674,24 +941,32 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if letztes and letztes < ab:
             break
 
-    bekannt = bekannte_turnier_ids(pfad("online_api_tournaments.csv"))
+    bekannt = bekannte_turniere(pfad("online_api_tournaments.csv"))
 
     # Halbfertige Turniere eines abgebrochenen Vorlaufs wegraeumen, BEVOR
     # etwas Neues dazukommt — sonst zaehlen ihre Zeilen doppelt.
-    aufgeraeumt = sum((
-        _raeume_auf(pfad("online_api_archetypes.csv"), SPALTEN_ARCHETYPEN, bekannt),
-        _raeume_auf(pfad("online_api_cards.csv"), SPALTEN_KARTEN, bekannt),
-        _raeume_auf(pfad("online_api_matchups.csv"), SPALTEN_MATCHUPS, bekannt),
-    ))
+    aufgeraeumt = (
+        _raeume_auf(pfad("online_api_archetypes.csv"), SPALTEN_ARCHETYPEN, bekannt)
+        + _raeume_chunks_auf(a.data_dir, "online_api_cards", SPALTEN_KARTEN, bekannt)
+        + _raeume_chunks_auf(a.data_dir, "online_api_matchups", SPALTEN_MATCHUPS, bekannt)
+    )
     if aufgeraeumt:
         print(f"{aufgeraeumt} verwaiste Zeilen aus einem abgebrochenen Lauf entfernt.")
 
     offen = neue_turniere(liste, bekannt, min_spieler=a.min_players,
-                          format_id=a.format, ab_datum=ab)
+                          format_id=a.format, ab_datum=ab, tiefe=a.tiefe,
+                          metas=metas, datenverzeichnis=a.data_dir)
     if a.max_tournaments:
         offen = offen[:a.max_tournaments]
 
-    print(f"Turnierliste: {len(liste)} · bekannt: {len(bekannt)} · offen: {len(offen)}")
+    verteilung: Dict[str, int] = defaultdict(int)
+    for t in offen:
+        verteilung[formatschluessel((t.get("date") or "")[:10], a.data_dir)] += 1
+    print(f"Turnierliste: {len(liste)} · bekannt: {len(bekannt)} · "
+          f"offen: {len(offen)} · Tiefe: {a.tiefe}")
+    if verteilung:
+        print("  je Fenster: " + " · ".join(f"{k} {v}" for k, v
+                                            in sorted(verteilung.items())))
     if a.dry_run:
         for t in offen[:20]:
             print(f"  {t.get('date','')[:10]}  {t.get('players'):>4}  {t.get('name','')[:60]}")
@@ -700,23 +975,42 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     for i, turnier in enumerate(offen, 1):
         tid = turnier["id"]
         try:
-            details = api.details(tid)
-            standings = api.standings(tid)
-            pairings = api.pairings(tid)
+            if a.tiefe == TIEFE_VOLL:
+                details = api.details(tid)
+                standings = api.standings(tid)
+                pairings = api.pairings(tid)
+            else:
+                # Eine Anfrage. Die Bilanz kommt aus den record-Feldern,
+                # nachgerechnet gegen /pairings am 08.09.2026: 32-40-0 auf
+                # beiden Wegen.
+                details = {}
+                standings = api.standings(tid)
+                pairings = []
         except Exception as fehler:                      # noqa: BLE001
             print(f"  [{i}/{len(offen)}] {tid} NICHT GEHOLT: {fehler}", file=sys.stderr)
             continue
         if not standings:
             print(f"  [{i}/{len(offen)}] {tid} ohne Standings — uebersprungen")
             continue
-        teile = zeilen_fuer_turnier(turnier, details, standings, pairings)
-        _schreibe_csv(pfad("online_api_archetypes.csv"), SPALTEN_ARCHETYPEN, teile["archetypen"])
-        _schreibe_csv(pfad("online_api_cards.csv"), SPALTEN_KARTEN, teile["karten"])
-        _schreibe_csv(pfad("online_api_matchups.csv"), SPALTEN_MATCHUPS, teile["matchups"])
-        _schreibe_csv(pfad("online_api_tournaments.csv"), SPALTEN_TURNIERE, teile["turniere"])
-        print(f"  [{i}/{len(offen)}] {turnier.get('name','')[:50]} · "
-              f"{len(standings)} Listen · {len(teile['archetypen'])} Archetypen · "
-              f"{len(teile['karten'])} Kartenzeilen · {len(teile['matchups'])} Matchups")
+
+        teile = zeilen_fuer_turnier(turnier, details, standings, pairings,
+                                    tiefe=a.tiefe, datenverzeichnis=a.data_dir)
+        meta = teile["meta"]
+        _schreibe_csv(pfad("online_api_archetypes.csv"), SPALTEN_ARCHETYPEN,
+                      teile["archetypen"])
+        if teile["karten"]:
+            _schreibe_csv(pfad(_chunkname("online_api_cards", meta)),
+                          SPALTEN_KARTEN, teile["karten"])
+        if teile["matchups"]:
+            _schreibe_csv(pfad(_chunkname("online_api_matchups", meta)),
+                          SPALTEN_MATCHUPS, teile["matchups"])
+        # Der Index ZULETZT — er ist das Gedaechtnis, und ein Turnier soll
+        # erst als geholt gelten, wenn seine Zeilen stehen.
+        _schreibe_csv(pfad("online_api_tournaments.csv"), SPALTEN_TURNIERE,
+                      teile["turniere"])
+        print(f"  [{i}/{len(offen)}] {meta} · {turnier.get('name','')[:44]} · "
+              f"{len(standings)} Listen · {len(teile['archetypen'])} Arch. · "
+              f"{len(teile['karten'])} Karten · {len(teile['matchups'])} Matchups")
 
     print(f"Fertig. {api.anfragen} API-Anfragen.")
     return 0
