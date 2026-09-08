@@ -71,6 +71,23 @@ THRESHOLDS: Dict[str, int] = {
     'online_tournament_top8_decks.csv':      50,      # 108 observed
     'online_tournament_winners.csv':         20,      # 50 observed
 
+    # ── Limitless-API-Lauf (.github/workflows/limitless-api-scrape.yml).
+    # Die erste VOLLSTAENDIGE Online-Datenbasis: jeder Spieler jedes
+    # erfassten Turniers, nicht nur die erfolgreichen Listen.
+    #
+    # Die Schwellen sind BEWUSST niedrig. Am 08.09.2026 standen nach dem
+    # ersten Lauf 5 Turniere / 229 Archetyp- / 7.363 Karten- / 2.378
+    # Matchupzeilen drin — das ist der Anfang eines Rueckbaus, nicht der
+    # Zielbestand. Eine Schwelle knapp unter dem heutigen Stand waere in
+    # zwei Wochen bedeutungslos und heute schon riskant. Diese Zahlen
+    # fangen den einen Fall ab, um den es geht: die Datei ist ploetzlich
+    # leer oder fast leer, weil der Lauf ins Leere gegriffen hat.
+    # Hochsetzen, sobald der Rueckbau steht.
+    'online_api_tournaments.csv':            1,       # 5 beobachtet 08.09.2026
+    'online_api_archetypes.csv':             50,      # 229 beobachtet
+    'online_api_cards.csv':                  1_000,   # 7.363 beobachtet
+    'online_api_matchups.csv':               300,     # 2.378 beobachtet
+
     # ── Labs (major tournaments): Meta Call's empirical predictor.
     'labs_tournament_decks.csv':             2_000,   # 4 585 observed
     'labs_tournament_matchups.csv':          20_000,  # 44 458 observed
