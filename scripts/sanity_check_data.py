@@ -83,8 +83,14 @@ THRESHOLDS: Dict[str, int] = {
     # fangen den einen Fall ab, um den es geht: die Datei ist ploetzlich
     # leer oder fast leer, weil der Lauf ins Leere gegriffen hat.
     # Hochsetzen, sobald der Rueckbau steht.
-    'online_api_tournaments.csv':            1,       # 5 beobachtet 08.09.2026
-    'online_api_archetypes.csv':             50,      # 229 beobachtet
+    # Nachgezogen am 08.09.2026, nachdem der Rueckbau stand: aus 5/229
+    # sind 396/17.398 geworden. Die alten Schwellen (1 und 50) haetten
+    # einen Totalausfall nicht mehr gefangen. Die neuen liegen bei rund
+    # drei Vierteln des Bestands — weit genug unter dem Stand, dass eine
+    # Rotation nichts zurueckwirft, und hoch genug, dass ein leerer Lauf
+    # auffaellt.
+    'online_api_tournaments.csv':            300,     # 396 beobachtet 08.09.2026
+    'online_api_archetypes.csv':             12_000,  # 17.398 beobachtet
     #
     # Karten und Matchups liegen je Formatfenster in eigenen Dateien
     # (online_api_cards_TEF-PBL.csv …) und stehen deshalb nicht hier,
