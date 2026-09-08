@@ -223,6 +223,65 @@ def pruefe_fenster(datenverzeichnis: str = "data") -> List[str]:
     return fehlt
 
 
+def fehlendes_fenster(datenverzeichnis: str = "data") -> Optional[Tuple[str, str, int]]:
+    """Ist ein Set erschienen, das ROTATIONEN noch nicht kennt?
+
+    Gibt (Set-Code, Release-Datum, gespielte Karten) zurueck, wenn ein
+    Set NEUER ist als der oberste Eintrag von ROTATIONEN **und** im
+    Standardfeld wie ein Hauptset gespielt wird. Sonst None.
+
+    WARUM
+    -----
+    `pruefe_fenster()` faengt den einen Weg — ROTATIONEN nennt ein Set,
+    das es nicht gibt. Der andere Weg ist stiller und teurer: ein
+    echtes Hauptset erscheint, steht aber NICHT in ROTATIONEN. Dann
+    ordnet `formatschluessel()` alle Turniere danach weiter dem alten
+    Fenster zu — die Kartenzeilen zweier Formate landen in derselben
+    Datei, und genau das sollte die Aufteilung je Format verhindern.
+
+    Die Schwelle ist dieselbe wie beim Ankerriegel in update_sets.py
+    (25 verschiedene gespielte Karten, gemessen an PBL: 40 am Tag nach
+    dem Erscheinen gegen 8 beim groessten Mini-Set).
+    """
+    meta = _sets_metadata(datenverzeichnis)
+    fenster = formatfenster(datenverzeichnis)
+    if not fenster:
+        return None
+    juengstes = fenster[0][1]
+
+    gespielt: Dict[str, set] = {}
+    try:
+        namen = [n for n in os.listdir(datenverzeichnis)
+                 if n.startswith("online_api_cards_") and n.endswith(".csv")]
+    except OSError:
+        return None
+    for name in namen:
+        try:
+            with open(os.path.join(datenverzeichnis, name),
+                      encoding="utf-8", newline="") as datei:
+                for zeile in csv.DictReader(datei, delimiter=";"):
+                    code = (zeile.get("set") or "").strip().upper()
+                    nummer = (zeile.get("number") or "").strip()
+                    if code and nummer:
+                        gespielt.setdefault(code, set()).add(nummer)
+        except (OSError, csv.Error):
+            continue
+
+    bekannt = {s for _, s in ROTATIONEN}
+    for code, eintrag in meta.items():
+        datum = (eintrag or {}).get("release_date")
+        if not datum or datum <= juengstes or code in bekannt:
+            continue
+        n = len(gespielt.get(code.upper(), ()))
+        if n >= ANKER_MIN_KARTEN:
+            return (code, datum, n)
+    return None
+
+
+# Dieselbe gemessene Schwelle wie backend/core/update_sets.py.
+ANKER_MIN_KARTEN = 25
+
+
 # ---------------------------------------------------------------------------
 # Netzschicht
 # ---------------------------------------------------------------------------
@@ -249,10 +308,15 @@ class LimitlessApi:
         self.letzte_header: Dict[str, str] = {}
 
     def _url(self, pfad: str, params: Optional[Dict[str, Any]] = None) -> str:
-        p = dict(params or {})
-        if self.schluessel:
-            p["key"] = self.schluessel
-        frage = ("?" + urllib.parse.urlencode(p)) if p else ""
+        """Der Schluessel geht als HEADER raus, nicht als Query-Parameter.
+
+        Limitless erlaubt beides (`?key=` oder `X-Access-Key`). Der
+        Header ist der einzig vertretbare Weg: eine URL landet im
+        Protokoll des Laufs, in Fehlermeldungen und in jedem
+        Zwischenspeicher. Ein Zugangsschluessel hat dort nichts zu
+        suchen.
+        """
+        frage = ("?" + urllib.parse.urlencode(params)) if params else ""
         return f"{self.basis}/{pfad.lstrip('/')}{frage}"
 
     def get(self, pfad: str, params: Optional[Dict[str, Any]] = None) -> Any:
@@ -260,9 +324,11 @@ class LimitlessApi:
         letzter_fehler: Optional[Exception] = None
         for versuch in range(self.versuche):
             try:
-                anfrage = urllib.request.Request(
-                    url, headers={"User-Agent": "TheDipidis/1.0 (+https://thedipidis.app)",
-                                  "Accept": "application/json"})
+                kopf = {"User-Agent": "TheDipidis/1.0 (+https://thedipidis.app)",
+                        "Accept": "application/json"}
+                if self.schluessel:
+                    kopf["X-Access-Key"] = self.schluessel
+                anfrage = urllib.request.Request(url, headers=kopf)
                 with urllib.request.urlopen(anfrage, timeout=self.timeout) as antwort:
                     roh = antwort.read().decode("utf-8")
                     self.letzte_header = {k.lower(): v for k, v in antwort.headers.items()}
@@ -899,7 +965,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     a = p.parse_args(argv)
 
     pfad = lambda n: os.path.join(a.data_dir, n)
-    api = LimitlessApi(pause=a.pause)
+    # Der Schluessel ist OPTIONAL. Limitless vergibt ihn fuer hoehere
+    # Kontingente an oeffentliche Projekte; ohne ihn laeuft alles, was
+    # dieser Scraper tut (in fuenf Laeufen bis 26 min kein einziges 429).
+    # Er kommt ausschliesslich aus der Umgebung — nie aus einer Datei im
+    # Repo, nie aus einem Argument, das im Protokoll landet.
+    schluessel = os.environ.get("LIMITLESS_API_KEY") or None
+    api = LimitlessApi(pause=a.pause, schluessel=schluessel)
+    print("API-Schluessel: " + ("gesetzt" if schluessel else "keiner (nicht noetig)"))
     ab = datetime.now(timezone.utc) - timedelta(days=a.days)
 
     if a.verify:
@@ -921,6 +994,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print("::error::ROTATIONEN kennt Sets, die sets_metadata.json nicht "
               "hat: " + ", ".join(luecken), file=sys.stderr)
         return 1
+
+    # Der stillere der beiden Wege: ein echtes Hauptset ist erschienen und
+    # steht nicht in ROTATIONEN. Dann landen die Kartenzeilen zweier
+    # Formate in derselben Datei — genau das, was die Aufteilung je Format
+    # verhindern soll. Warnen, nicht abbrechen: der Lauf selbst ist
+    # weiterhin korrekt, nur das Fenster ist zu grob.
+    fehlt = fehlendes_fenster(a.data_dir)
+    if fehlt:
+        code, datum, n = fehlt
+        print(f"::warning::Set {code} ist am {datum} erschienen und wird im "
+              f"Standardfeld gespielt ({n} verschiedene Karten), steht aber "
+              f"nicht in ROTATIONEN. Alle Turniere danach werden weiter dem "
+              f"alten Fenster zugeordnet. Eintrag in ROTATIONEN ergaenzen.",
+              file=sys.stderr)
 
     metas = [m.strip() for m in a.meta.split(",") if m.strip()] or None
     if metas:
