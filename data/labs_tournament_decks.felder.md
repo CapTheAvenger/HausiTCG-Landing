@@ -138,7 +138,25 @@ stille Handkorrektur in der CSV. Bisher ein Fall: Turnier 518 / 0070.
   summieren sich die Anteile auf 100 % (± 0,07 Rundung).
 * `wins`, `losses`, `ties` — Partien aller Spieler dieses Decks zusammen, nicht
   je Spieler.
-* `win_pct` — Siegquote in Prozent (nicht als Bruch).
+* `win_pct` — **KEINE Siegquote.** Die Spalte fuehrt die
+  **Matchpunkte-Quote** `(3·S + U) / (3 · Partien)` in Prozent — also das,
+  was ueber die Platzierung entscheidet, mit einem Unentschieden als einem
+  Punkt statt dreien. Nachgemessen ueber alle 4.713 Zeilen: maximale
+  Abweichung 0,005 Punkte. Die Siegquote `S / (S + N + U)` liegt bis zu
+  **4,1 Punkte darunter** (Dragapult bei Worlds: 46,12 gegen 42,02).
+
+  Wer beide Zahlen nebeneinanderstellt, misst eine Differenz, die reine
+  Einheitenumrechnung ist. Genau das ist am 08.09.2026 passiert: ein
+  Gegentest des Kandidatenmodells stellte `win_pct` gegen die
+  Online-Siegquote aus `data/online_api_archetypes.csv` (Spalte
+  `win_rate`, Konvention `mitUnentschieden`) und meldete eine Verzerrung
+  von +1,94 Punkten. Nach Umrechnung auf dieselbe Konvention dreht sie
+  sich auf **−1,62** — Vorzeichen und Betrag falsch.
+
+  **Die Regel:** aus `wins`/`losses`/`ties` selbst rechnen und die
+  Konvention hinschreiben. `js/win-rate-konvention.js` fuehrt alle drei
+  und ist die Referenz. Anders als `online_api_archetypes.csv` hat diese
+  Datei **keine** Spalte `win_rate_convention`, die es verraten wuerde.
 
 ## Tag 1 und Tag 2
 
@@ -150,6 +168,9 @@ Turniere.
   `day1_win_pct`
 * `day2_players`, `day2_share_pct`, `day2_wins`, `day2_losses`, `day2_ties`,
   `day2_win_pct`
+
+`day1_win_pct` und `day2_win_pct` sind ebenfalls **Matchpunkte-Quoten**, nicht
+Siegquoten — dieselbe Falle wie oben, eine Ebene tiefer.
 * `day1_to_day2_conv` — Anteil der Tag-1-Spieler dieses Decks, die Tag 2
   erreichten, **als Bruch von 0 bis 1** (nicht in Prozent). In 2.009 Zeilen
   groesser als 0; die uebrigen 2.704 gehoeren zu Decks, die es nicht in Tag 2
