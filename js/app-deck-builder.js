@@ -4268,6 +4268,28 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                    Neu ist am 07.09.2026 nur der Vorspann: die Lage
                    heisst beim Namen "keine Daten". */
                 if (!_ohne.length || !stand || !stand.interaktionen) return;
+                /* DIE QUOTEN IN DIESEM SATZ TRUGEN KEINEN NAMEN
+                   (BEFUND W2, 08.09.2026). „Alakazam Dudunsparce
+                   (25,0 %, 743 Partien)" — 25,0 % wovon? `g.quote` ist
+                   `_zahl(z.win_rate)` aus js/tech-ideen.js, und die
+                   Spalte win_rate kommt aus
+                   data/limitless_online_decks_matchups.csv. Ueber alle
+                   1.716 Zeilen dieser Datei gegen `record` gerechnet
+                   trifft dort S/(S+N) auf 0,005 Punkte genau; die
+                   beiden anderen Konventionen treffen sie nicht (siehe
+                   tests/unit/test-w2-quellen-konventionen.js). Also
+                   OHNE_UNENTSCHIEDEN.
+
+                   Der Name steht EINMAL am Ende der Aufzaehlung statt
+                   fuenfmal vor jeder Zahl, die Formel haengt als
+                   Hinweis am Absatz. Beides kommt zur Laufzeit aus
+                   js/win-rate-konvention.js; ohne das Modul bleibt der
+                   Satz, wie er war — ein erfundener Name waere
+                   schlimmer als keiner. */
+                const _wkLuecke = (typeof window !== 'undefined')
+                    ? window.WinRateKonvention : null;
+                const _konvName = _wkLuecke ? _wkLuecke.kurz('ohneUnentschieden') : '';
+                const _konvHinweis = _wkLuecke ? _wkLuecke.hinweis('ohneUnentschieden') : '';
                 const liste = _ohne.slice(0, 5).map(g =>
                     t('buildInfo.techIdeenOhneEintrag')
                         .replace('{name}', g.name)
@@ -4280,7 +4302,9 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                 p.textContent = kopf + t('buildInfo.techIdeenOhne')
                     .replace('{liste}', liste)
                     .replace('{n}', stand.interaktionen)
-                    .replace('{datum}', _ideenDatum(stand.datum));
+                    .replace('{datum}', _ideenDatum(stand.datum))
+                    + (_konvName ? ' — ' + _konvName + '.' : '');
+                if (_konvHinweis) p.title = _konvHinweis;
                 wrap.appendChild(p);
             };
 

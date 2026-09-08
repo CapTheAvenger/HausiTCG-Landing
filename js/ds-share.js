@@ -5,7 +5,7 @@
  * sind die beiden Bilder, nach denen im Wettkampfumfeld tatsächlich
  * gefragt wird:
  *
- *   1. Die Deck-Analyse als 1200×675 — Anteil, Win Rate, Top-8 gegen
+ *   1. Die Deck-Analyse als 1200×675 — Anteil, Quote, Top-8 gegen
  *      Erwartung, dazu die Matchup-Tabelle. Nach poke_hives Vorlage,
  *      mit drei Korrekturen: die Skala ist blau↔rot statt grün↔rot
  *      (css/tokens.css nennt poke_hive dort ausdrücklich als Vorbild
@@ -24,6 +24,39 @@
  */
 (function () {
     'use strict';
+
+    /* NAMEN DER WIN-RATEN-KONVENTIONEN (08.09.2026).
+
+       Angeordnet vom Betreiber: „Win-Raten ueberall in der
+       Limitless-Bezeichnung 'Win %' — keine eigenen Begriffe."
+       „Win Rate" ist damit selbst ein Hausname. Welcher Name richtig
+       ist, entscheidet die Datei, aus der die Zahl kommt — es sind drei
+       Konventionen (js/win-rate-konvention.js), und „Win %" gehoert
+       allein den Matchpunkten (3S + U) / (3n).
+
+       Hier gezeichnet wird durchweg S/(S+N+U): die Deck-Zahl kommt aus
+       data/limitless_online_decks.csv (win_rate_numeric, nachgemessen:
+       mittlere Abweichung 0,0033 Punkte zu dieser Formel, 0,42 zur
+       Konvention ohne Unentschieden), und die Journal-Zahl rechnet
+       weiter unten w / (w + l + t). Also `mitUnentschieden`.
+
+       EIN BILD HAT KEINE SPRECHBLASE. Was auf der Leinwand steht, ist
+       alles, was der Leser bekommt — deshalb steht hier der ganze Name
+       und nicht das Kuerzel, und die Fusszeile traegt die Formel. */
+    var SHARE_KONVENTION = 'mitUnentschieden';
+
+    function quotenName(konvention) {
+        var K = window.WinRateKonvention;
+        if (K && typeof K.kurz === 'function') return K.kurz(konvention || SHARE_KONVENTION);
+        return 'S / (S + N + U)';
+    }
+
+    function quotenFormel(konvention) {
+        var K = window.WinRateKonvention;
+        var e = (K && typeof K.hol === 'function') ? K.hol(konvention || SHARE_KONVENTION) : null;
+        return (e && e.formel) ? e.formel : 'S / (S + N + U)';
+    }
+
 
     /* ── Palette ──────────────────────────────────────────────────────
      *
@@ -395,7 +428,7 @@
             wrDelta === null ? C.dvZero : (wrDelta >= 0 ? C.dvPos : C.dvNeg),
             isFinite(spec.winRate) ? num(spec.winRate, 2) + ' %' : '–',
             C.ink,
-            'Win Rate',   /* in beiden Sprachen gleich — die Szene sagt Win Rate */
+            quotenName(),   /* Name aus js/win-rate-konvention.js, nicht abgeschrieben */
             wrDelta === null ? L('keine Daten', 'no data')
                 : signed(wrDelta, 2) + ' ' + L('ggü. 50 %', 'vs 50%'),
             /* Die Fussnote beschrieb eine vierte Konvention, die hier
@@ -561,7 +594,7 @@
         ctx.textAlign = 'right';
         label(ctx, L('Matches', 'Games'), xGames, ty);
         label(ctx, L('Record', 'Record'), xRecord, ty);
-        label(ctx, 'Win Rate', wrX + wrW - 10, ty);
+        label(ctx, quotenName('ohneUnentschieden'), wrX + wrW - 10, ty);
         ctx.textAlign = 'start';
         ctx.fillStyle = C.line;
         ctx.fillRect(tx, ty + 8, DC.W - 20 - tx, 1);
@@ -647,8 +680,10 @@
             var note = mus.some(function (m) { return m.thin; })
                 ? L('Graue Zeilen: unter ' + (spec.thinGames || 20) + ' Matches — die Quote ist dort noch ein Gerücht.',
                     'Grey rows: fewer than ' + (spec.thinGames || 20) + ' games — that rate is still a rumour.')
-                : L('Sortiert nach Win Rate. Jede Zeile trägt ihre Matchzahl.',
-                    'Sorted by win rate. Every row carries its game count.');
+                : L('Sortiert nach ' + quotenName('ohneUnentschieden') + ' ('
+                      + quotenFormel('ohneUnentschieden') + '). Jede Zeile trägt ihre Matchzahl.',
+                    'Sorted by ' + quotenName('ohneUnentschieden') + ' ('
+                      + quotenFormel('ohneUnentschieden') + '). Every row carries its game count.');
             ctx.font = fSans(11, 400);
             ctx.fillStyle = C.ink3;
             ctx.textBaseline = 'alphabetic';
@@ -749,8 +784,12 @@
         ctx.font = fMono(40, 700);
         ctx.fillStyle = C.ink;
         ctx.fillText(recText, recX, topY + 40);
+        /* Kuerzel W · L · T, aber die Prozentzahl daneben braucht ihren
+           Namen: ohne ihn ist nicht erkennbar, ob die Unentschieden im
+           Nenner stehen. Auf dem Bild gibt es keine Sprechblase, also
+           steht die Formel dabei. */
         label(ctx, isFinite(spec.winRate)
-            ? 'W · L · T · ' + num(spec.winRate, 1) + ' %'
+            ? 'W · L · T · ' + num(spec.winRate, 1) + ' % ' + quotenFormel()
             : 'W · L · T', recX, topY + 60);
         ctx.textAlign = 'start';
 
@@ -1363,7 +1402,8 @@
                        farbe: day2 ? C.gold : C.brandInk, mono: true,
                        marke: day2 ? 'DAY 2' : '' });
         spalten.push({ lab: L('RUNDEN', 'ROUNDS'), val: String((spec.rounds || []).length),
-                       fuss: isFinite(spec.winRate) ? num(spec.winRate, 1) + ' % Win Rate' : '',
+                       fuss: isFinite(spec.winRate)
+                           ? num(spec.winRate, 1) + ' % ' + quotenName() : '',
                        farbe: C.brandInk, mono: true });
 
         var bandY = 206, bandH = 168;

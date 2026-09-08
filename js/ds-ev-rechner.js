@@ -49,6 +49,45 @@
 (function () {
     'use strict';
 
+    /* WELCHE KONVENTION HIER GERECHNET WIRD — nachgemessen, nicht geraten.
+       quote() in js/matchup-glaettung.js rechnet (S + k/2) / (S + N + k):
+       Unentschieden stehen NICHT im Nenner. Das ist `ohneUnentschieden`
+       = S / (S + N) aus js/win-rate-konvention.js, geglaettet mit k = 20.
+       Die Rohquoten kommen aus data/limitless_online_decks_matchups.csv,
+       Feld win_rate — dieselbe Konvention (ueber alle 1.716 Zeilen gegen
+       das Feld record nachgerechnet, groesste Abweichung 0,005 pp).
+       Sie ist damit NICHT die Groesse, die Limitless "Win %" nennt; jene
+       sind die Matchpunkte (3S + U) / (3n). Deshalb steht hier der Name
+       der Konvention und nicht der Hausname "Win Rate".
+
+       Der Name wird zur Laufzeit geholt, damit hier keine zweite
+       Abschrift entsteht. Faellt js/win-rate-konvention.js aus, steht
+       die Formel da — die ist immer richtig, ein Hausname nie. */
+    var EV_KONVENTION = 'ohneUnentschieden';
+
+    function quotenName(konvention) {
+        var K = window.WinRateKonvention;
+        if (K && typeof K.kurz === 'function') return K.kurz(konvention || EV_KONVENTION);
+        return 'S / (S + N)';
+    }
+
+    /* `formel` ist KEINE Funktion des Moduls, sondern ein Feld des
+       Eintrags, den hol() liefert (js/win-rate-konvention.js:333 —
+       exportiert sind hol/kurz/hinweis/kurzHinweis/bilanz/…). */
+    function quotenFormel(konvention) {
+        var K = window.WinRateKonvention;
+        var e = (K && typeof K.hol === 'function') ? K.hol(konvention || EV_KONVENTION) : null;
+        return (e && e.formel) ? e.formel : 'S / (S + N)';
+    }
+
+    function quotenHinweis(konvention) {
+        return quotenName(konvention) + ' (' + quotenFormel(konvention) + ')'
+            + ', geglaettet mit k = 20 (js/matchup-glaettung.js). Unentschieden'
+            + ' stehen nicht im Nenner; das ist NICHT die Groesse, die'
+            + ' Limitless "Win %" nennt.';
+    }
+
+
     var HOST_ID = 'currentMetaContent';
     var BLOCK   = 'ds-ev-block';
     /* v2 seit dem 01.09.2026, und der Sprung ist der Zweck.
@@ -316,7 +355,7 @@
               + (evDuenn ? ' title="' + esc(evDuennTitel) + '"' : '') + '>'
               + '<span class="ds-stat-role">'
               + esc(L('gegen dieses Meta', 'against this meta') + evDuennText) + '</span>'
-              + '<span class="ds-stat-label">' + esc(L('Erwartete Win Rate', 'Expected win rate')) + '</span>'
+              + '<span class="ds-stat-label">' + esc(L('Erwartete ' + quotenName(), 'Expected ' + quotenName())) + '</span>'
               + '<span class="ds-stat-value">' + esc(zahl(r.ev, 1)) + '<span class="ds-stat-unit"> %</span></span>'
               + '<span class="ds-stat-context">' + esc(L(
                   'Unsicherheitsband ' + zahl(r.unten, 1) + ' bis ' + zahl(r.oben, 1) + ' %',
@@ -328,8 +367,8 @@
               + '<span class="ds-stat-label">' + esc(L('Erwartete Siege', 'Expected wins')) + '</span>'
               + '<span class="ds-stat-value">' + esc(zahl(siege, 1)) + '</span>'
               + '<span class="ds-stat-context">' + esc(L(
-                  zahl(siegeUnten, 1) + ' bis ' + zahl(siegeOben, 1) + ' Siege · Runden × Win Rate, kein Turniermodell',
-                  zahl(siegeUnten, 1) + ' to ' + zahl(siegeOben, 1) + ' wins · rounds × win rate, not a tournament model'))
+                  zahl(siegeUnten, 1) + ' bis ' + zahl(siegeOben, 1) + ' Siege · Runden × ' + quotenName() + ', kein Turniermodell',
+                  zahl(siegeUnten, 1) + ' to ' + zahl(siegeOben, 1) + ' wins · rounds × ' + quotenName() + ', not a tournament model'))
               + '</span>'
             + '</div>'
             + '<div class="ds-stat">'
@@ -384,14 +423,14 @@
                     + 'is in the meta performance table.'))
                 + '">' + esc(L('Gewicht hier', 'Weight here')) + '</th>'
               + '<th class="ds-num" title="' + esc(L(
-                  'Geglättete Quote (k = 20) — ein 3-0 zählt hier nicht als 100 %',
-                  'Smoothed rate (k = 20) — a 3-0 does not count as 100 % here'))
-                + '">' + esc(L('Deine Win Rate', 'Your win rate')) + '</th>'
+                  quotenHinweis() + ' Ein 3-0 zählt hier deshalb nicht als 100 %.',
+                  quotenHinweis() + ' A 3-0 therefore does not count as 100 % here.'))
+                + '">' + esc(L('Deine ' + quotenName(), 'Your ' + quotenName())) + '</th>'
               + '<th class="ds-num">' + esc(L('Matches', 'Games')) + '</th>'
               + '<th>' + esc(L('trägt bei', 'contributes')) + '</th>'
               + '<th class="ds-num" title="' + esc(L(
-                  'Anteil × (Win Rate − 50). Die Summe dieser Spalte ist genau der Abstand deiner erwarteten Win Rate von 50 %.',
-                  'Share × (win rate − 50). This column sums to exactly how far your expected win rate sits from 50 %.'))
+                  'Anteil × (' + quotenName() + ' − 50). Die Summe dieser Spalte ist genau der Abstand deiner erwarteten ' + quotenName() + ' von 50 %. ' + quotenHinweis(),
+                  'Share × (' + quotenName() + ' − 50). This column sums to exactly how far your expected ' + quotenName() + ' sits from 50 %. ' + quotenHinweis()))
                 + '">' + esc(L('Punkte', 'Points')) + '</th>'
             + '</tr></thead>'
             + '<tbody>' + zeilen + '</tbody>'
@@ -421,11 +460,11 @@
         + '<p class="ds-note">' + L(
             'Die Heatmap sagt, wer wen schlägt. Hier steht, was daraus für <em>dich</em> folgt: '
             + 'du wählst dein Deck, und die Seite gewichtet jede Paarung mit dem Anteil, den der '
-            + 'Gegner im Meta hat. Heraus kommt die Win Rate, mit der du über ein ganzes Turnier '
+            + 'Gegner im Meta hat. Heraus kommt die ' + quotenName() + ', mit der du über ein ganzes Turnier '
             + 'rechnen kannst — nicht gegen ein Deck, sondern gegen alle auf einmal.',
             'The heatmap says who beats whom. This says what that means for <em>you</em>: pick your '
             + 'deck and every matchup is weighted by how much of the field that opponent is. The '
-            + 'result is the win rate to expect across a whole tournament — not against one deck, '
+            + 'result is the ' + quotenName() + ' to expect across a whole tournament — not against one deck, '
             + 'but against all of them at once.') + '</p>'
         + '<div class="ds-controls">'
           + '<label class="ds-field is-wide"><span class="ds-stat-label">'
@@ -448,13 +487,13 @@
     function fussHtml(r) {
         if (!r) return '';
         return L(
-            'Gerechnet wird <strong>Anteil × Win Rate</strong>, aufsummiert über alle Gegner, zu denen '
+            'Gerechnet wird <strong>Anteil × ' + quotenName() + '</strong> (' + quotenFormel() + '), aufsummiert über alle Gegner, zu denen '
             + 'Daten vorliegen. Die Quoten sind geglättet (Beta-Binomial, k = 20), damit ein 3-0 nicht '
             + 'als 100 % durchgeht. Das Band ist ±1,96 Standardabweichungen aus der Streuung der '
             + 'einzelnen Paarungen; es nimmt die Meta-Anteile als bekannt an und ist deshalb eher zu '
             + 'schmal als zu breit. Paarungen ohne Daten werden weggelassen, nicht mit 50 % aufgefüllt '
             + '— darum steht die Abdeckung daneben. Datenraum: Global/EN, Limitless Online.',
-            'The sum is <strong>share × win rate</strong> over every opponent we have data for. Rates '
+            'The sum is <strong>share × ' + quotenName() + '</strong> (' + quotenFormel() + ') over every opponent we have data for. Rates '
             + 'are smoothed (beta-binomial, k = 20) so a 3-0 does not pass as 100 %. The band is ±1.96 '
             + 'standard deviations from the spread of the individual matchups; it treats the field '
             + 'shares as known and is therefore narrow rather than wide. Pairings without data are '

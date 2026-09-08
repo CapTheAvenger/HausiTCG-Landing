@@ -491,7 +491,7 @@ const translations = {
     'heatmap.placeholderY':     'e.g. N\'s Zoroark',
     'heatmap.placeholderX':     'e.g. Dragapult',
     'heatmap.yourDeck':         'Your Deck ',
-    'heatmap.desc':             'Each cell carries both sources — one row online, one row Major — with the win rate and, on the right, the matches it rests on. Both values are calculated the same way: wins ÷ decided games, smoothed alike. Fewer than 10 matches is set in italics; details in the cell tooltip.',
+    'heatmap.desc':             'Each cell carries both sources — one row online, one row Major — with the {quote} ({formel}) and, on the right, the matches it rests on. Both values are calculated the same way: wins ÷ decided games, smoothed alike. Fewer than 10 matches is set in italics; details in the cell tooltip.',
     'heatmap.favorable':        'Favorable',
     'heatmap.even':             'Even',
     'heatmap.unfavorable':      'Unfavorable',
@@ -506,15 +506,20 @@ const translations = {
     'heatmap.games':            'games',
     'heatmap.onlineLabel':      'online',
     'heatmap.majorLabel':       'Major',
-    'heatmap.legendeWr':        'win rate',
+    'heatmap.legendeWr':        '{quote} ({formel})',
     'heatmap.legendeM':         'matches behind it',
     'heatmap.legendeOnline':    'Limitless online tournaments',
-    'heatmap.legendeMajor':     'in-person events (win rate)',
+    'heatmap.legendeMajor':     'in-person events — same {quote} ({formel})',
     'heatmap.legendeKursiv':    'fewer than 10 matches',
     'heatmap.legendeKursivKurz': 'italic',
     'heatmap.wrLabel':          'WR',
     'heatmap.majorTip':         'major {w} from {n} games, record {b} — same calculation as the online line: wins ÷ decided games, smoothed alike',
-    'heatmap.majorOhneBilanz':  'in-person: {n} games, but the source row carries no record — no win rate can be formed from it, hence the dash',
+    /* KEIN PLATZHALTER HIER: js/app-current-meta.js setzt diesen Wert
+       roh ein (der majorTip laeuft nicht durch heatmapMitQuote), ein
+       {quote} stuende woertlich auf dem Bildschirm. Statt eines
+       Hausnamens steht deshalb die FORMEL da — die ist kein vierter
+       Name und nie falsch. Die Heatmap rechnet S/(S+N). */
+    'heatmap.majorOhneBilanz':  'in-person: {n} games, but the source row carries no record — without wins and losses there is no S / (S + N) to form, hence the dash',
     'heatmap.majorNurRemis':    'in-person: {n} games, all drawn — none were decided, hence the dash',
     'heatmap.majorFehlt':       'no Major matches for this pairing',
     'heatmap.gamesShort':        'M',
@@ -538,7 +543,7 @@ const translations = {
     'tier.clThinSampleTip':      'Fewer than {n} lists. Placement and share are shown, but a single list can move them by a whole place — no trend arrow is drawn below this line.',
     'tier.cmSubRogue':           'Below the tier thresholds — the thinnest samples on the page',
     'tier.rogueSampleTip':       'Number of lists this row is based on.',
-    'tier.rogueThinTip':         'Fewer than {n} lists. The win rate shown is already smoothed towards the mean — the raw value is in the tooltip of the badge next to it.',
+    'tier.rogueThinTip':         'Fewer than {n} lists. The {quote} ({formel}) shown is already smoothed towards the mean — the raw value is in the tooltip of the badge next to it.',
     'tier.rogueTrendTip':        'Trend over the last 7 days (previous snapshot: {vorher})',
     'tier.searchPlaceholder':    '🔎 Search archetype…',
     'tier.searchAria':           'Filter deck cards',
@@ -1043,7 +1048,20 @@ const translations = {
     // Archetype card (Paket 3)
     'arc.repLabel':             'Share',
     'arc.repCtx':               '{n} lists in the meta',
-    'arc.wrLabel':              'Win Rate',
+    /* ── {quote} UND {formel} SIND PFLICHTPLATZHALTER (08.09.2026) ──
+       Die folgenden Beschriftungen benennen eine QUOTE, und welche
+       Konvention dahintersteht, entscheidet die Datei, aus der die Zahl
+       kommt — nicht dieses Woerterbuch. Der Name steht deshalb NICHT
+       hier, sondern wird zur Laufzeit aus js/win-rate-konvention.js
+       geholt und in {quote} eingesetzt ({formel} ebenso).
+
+       Grund: „Win %" ist bei Limitless der Name der Konvention
+       MATCHPUNKTE (3S+U)/(3·Partien). Stuende hier ein fester Name,
+       truege frueher oder spaeter eine S/(S+N+U)- oder S/(S+N)-Zahl
+       ihn mit — genau der Fehler, gegen den js/win-rate-konvention.js
+       geschrieben wurde. Wer einen dieser Werte anfasst, laesst den
+       Platzhalter stehen. */
+    'arc.wrLabel':              '{quote}',
     'arc.wrCtx':                'from {n} games',
     'arc.wrCtxLeer':            'game count unknown',
     'arc.convLabel':            'Top-8 vs. exp.',
@@ -1071,13 +1089,13 @@ const translations = {
     'arc.convTip3':             '{t} of {b} entries at events with a top-8 cut.',
     'arc.convCtx':              '{t} of {b} entries in cut events → {q} % cut rate',
     'arc.convMissing':          'not enough data',
-    'arc.convMissingTip':       'This deck is absent from the top-cut file. That does not mean it never converts \u2014 the win rate comes from a different source.',
+    'arc.convMissingTip':       'This deck is absent from the top-cut file. That does not mean it never converts \u2014 the {quote} comes from a different source.',
     'arc.convThin':             'Small sample \u2014 the value is smoothed toward the field average.',
     'arc.noData':               'no data',
     'arc.matchupTitle':         'Matchups',
     'arc.colOpponent':          'Deck',
-    'arc.muLegende':            'WR = win rate (wins ÷ decided games) · M = matches · W/L/T = wins / losses / ties · Major-WR = the same calculation at in-person events, Major matches the games behind it',
-    'arc.muLegendeOhneMajor':   'WR = win rate \u00b7 M = matches \u00b7 W/L/T = wins / losses / ties. In-person events are not included \u2014 there are none for this deck in this format.',
+    'arc.muLegende':            'WR = {quote} ({formel}) · M = matches · W/L/T = wins / losses / ties · Major-WR = the same calculation at in-person events, Major matches the games behind it',
+    'arc.muLegendeOhneMajor':   'WR = {quote} ({formel}) \u00b7 M = matches \u00b7 W/L/T = wins / losses / ties. In-person events are not included \u2014 there are none for this deck in this format.',
     'arc.colGamesKurz':         'M',
     'arc.colMajorNKurz':        'Major matches',
     'arc.colWinRate':           'WR',
@@ -1085,8 +1103,8 @@ const translations = {
     'arc.colMajorN':            'in-person games for this pairing',
     'arc.colMajorTip':          'In-person events: wins ÷ decided games (ties left out) — the same calculation and the same smoothing as the WR column on the left, just measured at in-person events instead of online.',
     'arc.muMajorTip':           '{w} from {n} in-person games (record {b}). Same calculation as the column on the left: wins ÷ decided games, with the same allowance for thin pairings. Raw {r} %.',
-    'arc.muMajorOhneBilanz':    '{n} in-person games, but the source row carries no record — without wins and losses there is no win rate to show. Hence the dash instead of an estimate.',
-    'arc.muMajorNurRemis':      '{n} in-person games, all drawn ({b}). This win rate counts wins against decided games — none here were decided. A number would stand for nothing.',
+    'arc.muMajorOhneBilanz':    '{n} in-person games, but the source row carries no record — without wins and losses there is no {quote} ({formel}) to show. Hence the dash instead of an estimate.',
+    'arc.muMajorNurRemis':      '{n} in-person games, all drawn ({b}). The {quote} ({formel}) counts wins against decided games — none here were decided. A number would stand for nothing.',
     'arc.muMajorFehlt':         'No in-person games for this pairing.',
     'arc.colGames':             'Games',
     'arc.noMatchups':           'No matchup data for this deck.',
@@ -1107,9 +1125,7 @@ const translations = {
     'cl.skelNicheHint':         '(rare picks \u2014 click to collapse)',
     'arc.shareImageTip':        'Save or share this analysis as an image (1200 \u00d7 675)',
     'mc.badgeTrend':            'Week-over-week share change',
-    'mc.badgeTg':               'Testing Group win rate (your deck vs this opponent)',
     'mc.badgeJournal':          'Battle Journal record (your deck vs this opponent)',
-    'mc.badgeTgShare':          'Testing Group expected share (folds into the predictor)',
     'mc.panelRecommendations':  'Recommended Decks for this Field',
     'mc.recBadgeTopN':          'Top {n}',
     'mc.recBadgeZielCount':     '{n} {ziel}-capable',
@@ -1228,7 +1244,6 @@ const translations = {
     'mc.predictTitleTopCut':    'Top Cut chance',
     'mc.predictTitleTopFinish': '1st / 2nd place chance',
     'mc.shareFieldAndRecs':     'Share Field + Recommendations image',
-    'mc.labelJunkWinRate':      'Others Win % (vs Others)',
     'mc.labelJunkPlayers':      'Others Players',
     'mc.junkExplanation':       'e.g. 30 % → 30 % of players play anything with no clue about the meta.',
     'mc.junkDecks':             'Others',
@@ -1487,7 +1502,13 @@ const translations = {
     'bj.allTournaments':        'All Tournaments',
     'bj.allResults':            'All Results',
     'bj.histMatches':           'Matches',
-    'bj.histWinRate':           'Win Rate',
+    /* {quote} IST PFLICHTPLATZHALTER — wie bei den arc-Beschriftungen
+       weiter oben. js/battle-journal.js rechnet an allen vier
+       Zaehlstellen S/(S+N+U) (Nenner = Zahl ALLER Eintraege,
+       Unentschieden eingeschlossen) und fuellt den Platzhalter zur
+       Laufzeit (bjMitQuote). Welcher Name das ist, entscheidet
+       js/win-rate-konvention.js, nicht dieses Woerterbuch. */
+    'bj.histWinRate':           '{quote}',
     'bj.histEmpty':             'No journal entries yet.',
     'bj.histEmptyDesc':         'Log your first match to start tracking your results!',
     'bj.histPending':           'pending',
@@ -1581,7 +1602,8 @@ const translations = {
     'ma.wins':                  'Wins',
     'ma.losses':                'Losses',
     'ma.ties':                  'Ties',
-    'ma.winRate':               'Win Rate',
+    /* Dieselbe Rechnung wie die Verlaufskachel — {quote} bleibt stehen. */
+    'ma.winRate':               '{quote}',
     'ma.decks':                 'Decks',
     'ma.opponents':             'Opponents',
     'ma.noData':                'No matchup data.',
@@ -1919,13 +1941,13 @@ const translations = {
     'cm.filterAll':             'All',
     'cm.filterLive':            'Limitless Decks',
     'cm.filterPlay':            'Major Tournament Decks',
-    'stats.totalWinrate':       'Total Win Rate Limitless Online Tournaments',
+    'stats.totalWinrate':       '{quote} — Limitless online tournaments',
     'stats.matchupTop20':       'Matchup vs Top 20',
     'matchup.title':            'Deck Matchups',
     'matchup.best':             'Best Matchups',
     'matchup.worst':            'Worst Matchups',
     'matchup.opponent':         'Opponent',
-    'matchup.winRate':          'Win Rate',
+    'matchup.winRate':          '{quote}',
     'matchup.record':           'Record',
     'matchup.totalGames':       'Total games:',
     'matchup.vsTitle':          'Matchup vs {n}',
@@ -1981,9 +2003,12 @@ const translations = {
     'antiTech.modalTitle':            'Build vs Specific Decks',
     'antiTech.modalIntroMulti':       'Pick the decks you want to tech against. Suggested counter cards will be shown for the combined selection.',
     'antiTech.legendField':           'Field % = how often the deck shows up in the predicted meta',
-    'antiTech.legendWr':              'WR pill = your current win rate (red = tech priority)',
+    /* {quote}/{formel} werden von js/app-anti-tech.js gefuellt
+       (_quotenNamenImDom / _mitQuote). Die Pille zeigt win_rate aus
+       data/limitless_online_decks_matchups.csv = S/(S+N). */
+    'antiTech.legendWr':              'WR pill = {quote} ({formel}) against this deck (red = tech priority)',
     'antiTech.fieldShareTooltip':     'Share of the predicted field',
-    'antiTech.wrTooltip':             'Your current win rate against this deck — red means tech priority',
+    'antiTech.wrTooltip':             'Your current {quote} ({formel}) against this deck — red means tech priority',
     'antiTech.continueBtn':           'Continue → Pick Tech Cards',
     'antiTech.continueBtnCount':      'Continue → Pick Tech Cards ({n})',
     'antiTech.step2Title':            'Suggested Tech Cards',
@@ -3101,7 +3126,7 @@ const translations = {
     'heatmap.placeholderY':     'z.B. N\'s Zoroark',
     'heatmap.placeholderX':     'z.B. Dragapult',
     'heatmap.yourDeck':         'Dein Deck ',
-    'heatmap.desc':             'Jede Zelle trägt beide Quellen — eine Zeile online, eine Zeile Major — mit der Win Rate und rechts den Matches, auf denen sie steht. Beide Werte rechnen gleich: Siege ÷ entschiedene Partien, gleich geglättet. Unter 10 Matches steht der Wert kursiv; Genaueres im Tooltip der Zelle.',
+    'heatmap.desc':             'Jede Zelle trägt beide Quellen — eine Zeile online, eine Zeile Major — mit der {quote} ({formel}) und rechts den Matches, auf denen sie steht. Beide Werte rechnen gleich: Siege ÷ entschiedene Partien, gleich geglättet. Unter 10 Matches steht der Wert kursiv; Genaueres im Tooltip der Zelle.',
     'heatmap.favorable':        'Gut',
     'heatmap.even':             'Ausgeglichen',
     'heatmap.unfavorable':      'Schlecht',
@@ -3116,15 +3141,16 @@ const translations = {
     'heatmap.games':            'Matches',
     'heatmap.onlineLabel':      'online',
     'heatmap.majorLabel':       'Major',
-    'heatmap.legendeWr':        'Win Rate',
+    'heatmap.legendeWr':        '{quote} ({formel})',
     'heatmap.legendeM':         'Matches, auf denen sie steht',
     'heatmap.legendeOnline':    'Limitless-Online-Turniere',
-    'heatmap.legendeMajor':     'Präsenzturniere (Win Rate)',
+    'heatmap.legendeMajor':     'Präsenzturniere — dieselbe {quote} ({formel})',
     'heatmap.legendeKursiv':    'unter 10 Matches',
     'heatmap.legendeKursivKurz': 'kursiv',
     'heatmap.wrLabel':          'WR',
     'heatmap.majorTip':         'Major {w} aus {n} Matches, Bilanz {b} — dieselbe Rechnung wie die Online-Zeile: Siege ÷ entschiedene Partien, gleich geglättet',
-    'heatmap.majorOhneBilanz':  'Präsenz: {n} Matches, aber ohne Bilanz in der Quelle — daraus lässt sich keine Win Rate bilden, deshalb der Strich',
+    /* siehe die englische Fassung: hier steht die Formel, kein Name. */
+    'heatmap.majorOhneBilanz':  'Präsenz: {n} Matches, aber ohne Bilanz in der Quelle — ohne Siege und Niederlagen lässt sich kein S / (S + N) bilden, deshalb der Strich',
     'heatmap.majorNurRemis':    'Präsenz: {n} Matches, alle unentschieden — entschiedene Partien gibt es hier keine, deshalb der Strich',
     'heatmap.majorFehlt':       'keine Major-Matches f\u00fcr diese Paarung',
     'heatmap.gamesShort':        'M',
@@ -3148,7 +3174,7 @@ const translations = {
     'tier.clThinSampleTip':      'Weniger als {n} Listen. Platzierung und Share stehen da, aber eine einzige Liste kann sie um einen ganzen Platz verschieben — unterhalb dieser Grenze wird kein Trendpfeil gezeichnet.',
     'tier.cmSubRogue':           'Unter den Tier-Schwellen — die dünnsten Stichproben der Seite',
     'tier.rogueSampleTip':       'Anzahl der Listen, auf denen diese Zeile beruht.',
-    'tier.rogueThinTip':         'Weniger als {n} Listen. Die gezeigte Win Rate ist bereits zum Mittel hin geglättet — die rohe steht im Tooltip der Plakette daneben.',
+    'tier.rogueThinTip':         'Weniger als {n} Listen. Die gezeigte {quote} ({formel}) ist bereits zum Mittel hin geglättet — die rohe steht im Tooltip der Plakette daneben.',
     'tier.rogueTrendTip':        'Trend über die letzten 7 Tage (vorheriger Stand: {vorher})',
     'tier.searchPlaceholder':    '🔎 Archetyp suchen…',
     'tier.searchAria':           'Deck-Karten filtern',
@@ -3677,7 +3703,20 @@ const translations = {
     // Archetyp-Karte (Paket 3)
     'arc.repLabel':             'Share',
     'arc.repCtx':               '{n} Listen im Meta',
-    'arc.wrLabel':              'Win Rate',
+    /* ── {quote} UND {formel} SIND PFLICHTPLATZHALTER (08.09.2026) ──
+       Die folgenden Beschriftungen benennen eine QUOTE, und welche
+       Konvention dahintersteht, entscheidet die Datei, aus der die Zahl
+       kommt — nicht dieses Woerterbuch. Der Name steht deshalb NICHT
+       hier, sondern wird zur Laufzeit aus js/win-rate-konvention.js
+       geholt und in {quote} eingesetzt ({formel} ebenso).
+
+       Grund: „Win %" ist bei Limitless der Name der Konvention
+       MATCHPUNKTE (3S+U)/(3·Partien). Stuende hier ein fester Name,
+       truege frueher oder spaeter eine S/(S+N+U)- oder S/(S+N)-Zahl
+       ihn mit — genau der Fehler, gegen den js/win-rate-konvention.js
+       geschrieben wurde. Wer einen dieser Werte anfasst, laesst den
+       Platzhalter stehen. */
+    'arc.wrLabel':              '{quote}',
     'arc.wrCtx':                'aus {n} Matches',
     'arc.wrCtxLeer':            'Anzahl Matches unbekannt',
     'arc.convLabel':            'Top-8 vs. Erw.',
@@ -3705,13 +3744,13 @@ const translations = {
     'arc.convTip3':             '{t} von {b} Antritten auf Turnieren mit Top-8-Schnitt.',
     'arc.convCtx':              '{t} von {b} Antritten mit Top-8-Schnitt → {q} % Cut-Quote',
     'arc.convMissing':          'zu wenig Daten',
-    'arc.convMissingTip':       'Dieses Deck fehlt in der Top-Cut-Datei. Das hei\u00dft nicht, dass es nie konvertiert \u2014 die Win Rate stammt aus einer anderen Quelle.',
+    'arc.convMissingTip':       'Dieses Deck fehlt in der Top-Cut-Datei. Das hei\u00dft nicht, dass es nie konvertiert \u2014 die {quote} stammt aus einer anderen Quelle.',
     'arc.convThin':             'Kleine Stichprobe \u2014 der Wert ist zum Meta-Durchschnitt hin gegl\u00e4ttet.',
     'arc.noData':               'keine Daten',
     'arc.matchupTitle':         'Matchups',
     'arc.colOpponent':          'Gegner-Deck',
-    'arc.muLegende':            'WR = Win Rate (Siege ÷ entschiedene Partien) · M = Matches · W/L/T = Siege / Niederlagen / Unentschieden · Major-WR = dieselbe Rechnung auf Präsenzturnieren, Major-Matches die Partien dahinter',
-    'arc.muLegendeOhneMajor':   'WR = Win Rate \u00b7 M = Matches \u00b7 W/L/T = Siege / Niederlagen / Unentschieden. Präsenzturniere sind hier nicht dabei \u2014 für dieses Deck liegen in diesem Format keine vor.',
+    'arc.muLegende':            'WR = {quote} ({formel}) · M = Matches · W/L/T = Siege / Niederlagen / Unentschieden · Major-WR = dieselbe Rechnung auf Präsenzturnieren, Major-Matches die Partien dahinter',
+    'arc.muLegendeOhneMajor':   'WR = {quote} ({formel}) \u00b7 M = Matches \u00b7 W/L/T = Siege / Niederlagen / Unentschieden. Präsenzturniere sind hier nicht dabei \u2014 für dieses Deck liegen in diesem Format keine vor.',
     'arc.colGamesKurz':         'M',
     'arc.colMajorNKurz':        'Major-Matches',
     'arc.colWinRate':           'WR',
@@ -3719,8 +3758,8 @@ const translations = {
     'arc.colMajorN':            'Pr\u00e4senzpartien dieser Paarung',
     'arc.colMajorTip':          'Präsenzturniere: Siege ÷ entschiedene Partien (Unentschieden bleiben außen vor) — dieselbe Rechnung und dieselbe Glättung wie die WR-Spalte links, nur auf den Präsenzturnieren statt online.',
     'arc.muMajorTip':           '{w} aus {n} Präsenzpartien (Bilanz {b}). Dieselbe Rechnung wie die Spalte links: Siege ÷ entschiedene Partien, mit demselben Ausgleich für dünne Paarungen. Roh {r} %.',
-    'arc.muMajorOhneBilanz':    '{n} Präsenzpartien, aber ohne Bilanz in der Quelle — ohne Siege und Niederlagen lässt sich keine Win Rate bilden. Deshalb steht hier ein Strich statt einer geschätzten Zahl.',
-    'arc.muMajorNurRemis':      '{n} Präsenzpartien, alle unentschieden ({b}). Diese Win Rate zählt Siege gegen entschiedene Partien — entschieden ist hier keine. Ein Wert stünde für nichts.',
+    'arc.muMajorOhneBilanz':    '{n} Präsenzpartien, aber ohne Bilanz in der Quelle — ohne Siege und Niederlagen lässt sich keine {quote} ({formel}) bilden. Deshalb steht hier ein Strich statt einer geschätzten Zahl.',
+    'arc.muMajorNurRemis':      '{n} Präsenzpartien, alle unentschieden ({b}). Die {quote} ({formel}) zählt Siege gegen entschiedene Partien — entschieden ist hier keine. Ein Wert stünde für nichts.',
     'arc.muMajorFehlt':         'Keine Pr\u00e4senzpartien f\u00fcr diese Paarung.',
     'arc.colGames':             'Matches',
     'arc.noMatchups':           'F\u00fcr dieses Deck liegen keine Matchup-Daten vor.',
@@ -3741,9 +3780,7 @@ const translations = {
     'cl.skelNicheHint':         '(seltene Wahl \u2014 zum Einklappen klicken)',
     'arc.shareImageTip':        'Analyse als Bild speichern oder teilen (1200 \u00d7 675)',
     'mc.badgeTrend':            'Share-Trend pro Woche',
-    'mc.badgeTg':               'Testing-Group-Win Rate (dein Deck vs diesen Gegner)',
     'mc.badgeJournal':          'Battle-Journal-Record (dein Deck vs diesen Gegner)',
-    'mc.badgeTgShare':          'Erwarteter Share der Testing Group (fließt in die Prognose ein)',
     'mc.panelRecommendations':  'Empfohlene Decks für dieses Meta',
     'mc.recBadgeTopN':          'Top {n}',
     'mc.recBadgeZielCount':     '{n} {ziel}-fähig',
@@ -3793,7 +3830,12 @@ const translations = {
     'mc.intelMajorDay2':        'Day 2',
     'mc.intelMajorConv':        'Conv.',
     'mc.intelMajorDayConv':     'Day 1 → Day 2',
-    'mc.intelTgWr':             'Mein Matchup-Win (Testing Group)',
+    /* GRAMMATIK NACH DER ERSETZUNG (08.09.2026). js/app-meta-call.js:12319
+       schickt diesen Wert durch _wrKurzform(): der Hausname wird zu „WR".
+       Mit „Mein Matchup-Win" stand danach „Mein WR" auf der Kachel — die
+       Quote ist aber weiblich (die Siegquote, die Win Rate). Der Artikel
+       muss also schon hier passen, weil die Ersetzung ihn nicht kennt. */
+    'mc.intelTgWr':             'Meine Matchup-Win Rate (Testing Group)',
     'mc.intelJournal':          'Battle-Journal-Record',
     'mc.intelTgShare':          'Testing-Group-Share',
     // ── Geheimtipps ──────────────────────────────────────────
@@ -3865,7 +3907,6 @@ const translations = {
     'mc.labelPlayers':          'Spieler',
     'mc.labelRounds':           'Runden',
     'mc.labelDay2Points':       'Punkte für Day 2',
-    'mc.labelJunkWinRate':      'Others-Win% (vs Others)',
     'mc.labelJunkPlayers':      'Others-Spieler',
     'mc.junkExplanation':       'z.B. 30 % → 30% der Spieler spielen irgendetwas und haben keine Ahnung vom Meta.',
     'mc.junkDecks':             'Sonstige',
@@ -4125,7 +4166,13 @@ const translations = {
     'bj.allTournaments':        'Alle Turniere',
     'bj.allResults':            'Alle Ergebnisse',
     'bj.histMatches':           'Matches',
-    'bj.histWinRate':           'Win Rate',
+    /* {quote} IST PFLICHTPLATZHALTER — wie bei den arc-Beschriftungen
+       weiter oben. js/battle-journal.js rechnet an allen vier
+       Zaehlstellen S/(S+N+U) (Nenner = Zahl ALLER Eintraege,
+       Unentschieden eingeschlossen) und fuellt den Platzhalter zur
+       Laufzeit (bjMitQuote). Welcher Name das ist, entscheidet
+       js/win-rate-konvention.js, nicht dieses Woerterbuch. */
+    'bj.histWinRate':           '{quote}',
     'bj.histEmpty':             'Noch keine Journal-Eintr\u00e4ge.',
     'bj.histEmptyDesc':         'Trage dein erstes Match ein, um deine Ergebnisse zu tracken!',
     'bj.histPending':           'wartend',
@@ -4213,7 +4260,8 @@ const translations = {
     'ma.wins':                  'Wins',
     'ma.losses':                'Losses',
     'ma.ties':                  'Ties',
-    'ma.winRate':               'Win Rate',
+    /* Dieselbe Rechnung wie die Verlaufskachel — {quote} bleibt stehen. */
+    'ma.winRate':               '{quote}',
     'ma.decks':                 'Decks',
     'ma.opponents':             'Gegner',
     'ma.noData':                'Keine Matchup-Daten.',
@@ -4549,13 +4597,13 @@ const translations = {
     'cm.filterAll':             'Alle',
     'cm.filterLive':            'Limitless Decks',
     'cm.filterPlay':            'Major-Decks',
-    'stats.totalWinrate':       'Gesamte Win Rate — Limitless Online Turniere',
+    'stats.totalWinrate':       '{quote} — Limitless Online Turniere',
     'stats.matchupTop20':       'Matchup gegen Top 20',
     'matchup.title':            'Deck-Matchups',
     'matchup.best':             'Beste Matchups',
     'matchup.worst':            'Schlechteste Matchups',
     'matchup.opponent':         'Gegner',
-    'matchup.winRate':          'Win Rate',
+    'matchup.winRate':          '{quote}',
     'matchup.record':           'Record',
     'matchup.totalGames':       'Partien gesamt:',
     'matchup.vsTitle':          'Matchup gegen {n}',
@@ -4609,9 +4657,10 @@ const translations = {
     'antiTech.modalTitle':            'Bauen gegen spezifische Decks',
     'antiTech.modalIntroMulti':       'Wähle die Decks aus gegen die du techen willst. Vorgeschlagene Counter-Karten werden für die kombinierte Auswahl gezeigt.',
     'antiTech.legendField':           'Field % = wie häufig das Deck im vorhergesagten Meta auftaucht',
-    'antiTech.legendWr':              'WR-Pille = deine aktuelle Win Rate (rot = Tech-Priorität)',
+    /* siehe die englische Fassung: gefuellt von js/app-anti-tech.js. */
+    'antiTech.legendWr':              'WR-Pille = deine {quote} ({formel}) gegen dieses Deck (rot = Tech-Priorität)',
     'antiTech.fieldShareTooltip':     'Share am prognostizierten Meta',
-    'antiTech.wrTooltip':             'Deine aktuelle Win Rate gegen dieses Deck — rot bedeutet Tech-Priorität',
+    'antiTech.wrTooltip':             'Deine {quote} ({formel}) gegen dieses Deck — rot bedeutet Tech-Priorität',
     'antiTech.continueBtn':           'Weiter → Tech-Karten wählen',
     'antiTech.continueBtnCount':      'Weiter → Tech-Karten wählen ({n})',
     'antiTech.step2Title':            'Vorgeschlagene Tech-Karten',

@@ -18,6 +18,64 @@
             return /^-?\d+\.\d+$/.test(roh) ? roh.replace('.', ',') : roh;
         }
 
+        /* ── WIE DIE QUOTEN DIESER ANSICHT HEISSEN (08.09.2026) ──────────
+         *
+         * ANORDNUNG DES BETREIBERS: „Win-Raten ueberall in der
+         * Limitless-Bezeichnung ‚Win %‘ — keine eigenen Begriffe."
+         * Der Name „Win %" gehoert dabei AUSSCHLIESSLICH der Konvention
+         * MATCHPUNKTE (3S+U)/(3·Partien): so nennt Limitless diese eine
+         * Spalte, und js/win-rate-konvention.js haelt ihn dafuer frei.
+         *
+         * KEINE ZAHL DIESER DATEI IST MATCHPUNKTE. Nachgemessen am
+         * 08.09.2026 an den Dateien selbst:
+         *
+         *   Heldenkacheln, Tier-Kacheln und die Spalte der
+         *   Meta-Performance lesen new_winrate aus
+         *   data/limitless_online_decks_comparison.csv. Gegen die Bilanz
+         *   derselben Decks in data/limitless_online_decks.csv gerechnet
+         *   trifft S/(S+N+U) 135 der 136 Zeilen auf 0,011 Punkte genau
+         *   (mittlere Abweichung 0,0032); S/(S+N) liegt im Mittel 0,43
+         *   und die Matchpunkte 0,33 Punkte daneben und treffen je nur
+         *   45 Zeilen. Die eine Ausnahme ist Wailord — ein bekannter
+         *   Datenfehler der Quelle, in js/win-rate-konvention.js belegt.
+         *   Also MIT_UNENTSCHIEDEN.
+         *
+         *   Die Labs-Plakette (🏆) zeigt ent.winPct, und das ist oben in
+         *   dieser Datei als wins / (wins + losses + ties) gerechnet —
+         *   ebenfalls MIT_UNENTSCHIEDEN. Die Matchpunktquote derselben
+         *   Zeilen steht daneben im Hinweis und heisst dort „Win %".
+         *
+         * Der Name wird deshalb zur Laufzeit geholt und nirgends
+         * abgeschrieben — auch weil in dieser Datei kein deutsches Wort
+         * fuer die Quote stehen darf (tests/unit/test-sprache-win-rate.js). */
+        function tierQuotenName(id) {
+            const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+            const kurz = (K && typeof K.kurz === 'function') ? K.kurz(id) : '';
+            return kurz || tierQuotenFormel(id) || String(id);
+        }
+
+        function tierQuotenFormel(id) {
+            const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+            const k = (K && typeof K.hol === 'function') ? K.hol(id) : null;
+            return k ? k.formel : '';
+        }
+
+        /** {quote} und {formel} in einem Uebersetzungswert fuellen. */
+        function tierMitQuote(text, id) {
+            return String(text == null ? '' : text)
+                .replace(/\{quote\}/g, tierQuotenName(id))
+                .replace(/\{formel\}/g, tierQuotenFormel(id));
+        }
+
+        /* Was eine Plakette mit der Kurzform „WR" tragen MUSS, damit die
+           Kurzform keine zweite Bezeichnung ist: voller Name und Formel. */
+        function tierQuotenHinweis(id) {
+            const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+            const lang = (K && typeof K.hinweis === 'function') ? K.hinweis(id) : '';
+            const name = tierQuotenName(id);
+            return lang ? (name + ' — ' + lang) : (name + ' ' + tierQuotenFormel(id));
+        }
+
         function calculatePowerScore(share, winRate = null) {
             let score = 0;
 
@@ -1594,13 +1652,18 @@
                        Runden hier schon einmal angerichtet hat. */
                     const nZahl = antritte > 0 ? fmtHalb(antritte) : '';
                     const nText = antritte > 0 ? `· ${nZahl}` : '';
-                    const wrTitel = getLang() === 'de'
+                    /* Die Plakette schreibt „WR" — eine Kurzform. Zulaessig
+                       ist sie nur mit einem Hinweis, der den vollen Namen UND
+                       die Formel nennt; den liefert tierQuotenHinweis(). Die
+                       Zahl ist der mit den Antritten gewichtete Mittelwert der
+                       Spalte new_winrate, also MIT_UNENTSCHIEDEN. */
+                    const wrTitel = tierQuotenHinweis('mitUnentschieden') + '  ' + (getLang() === 'de'
                         ? (antritte > 0
-                            ? `Gewichtete durchschnittliche Win Rate über ${nZahl} Antritte`
-                            : 'Gewichtete durchschnittliche Win Rate')
+                            ? `Gewichteter Durchschnitt über ${nZahl} Antritte.`
+                            : 'Gewichteter Durchschnitt.')
                         : (antritte > 0
-                            ? `Weighted average win rate across ${nZahl} entries`
-                            : 'Weighted average win rate');
+                            ? `Weighted average across ${nZahl} entries.`
+                            : 'Weighted average.'));
 
                     heroHtml += `
                         <div class="tier-hero-card" role="button" tabindex="0"
@@ -1620,7 +1683,7 @@
                                             : `Sum across ${variantCount} variants — the individual variant is smaller and listed in the table below.`)
                                         : (getLang() === 'de' ? 'Eine einzelne Variante' : 'Single variant')}">${
                                         fmtPct(parseFloat(shareText))}</span>
-                                    <span class="stat-badge" title="${wrTitel}">WR ${fmtPct(parseFloat(winrateText))} <span class="stat-badge-nenner">${nText}</span></span>
+                                    <span class="stat-badge" title="${escapeHtmlAttr(wrTitel)}" data-quote-konvention="mitUnentschieden">WR ${fmtPct(parseFloat(winrateText))} <span class="stat-badge-nenner">${nText}</span></span>
                                 </div>
                             </div>
                         </div>`;
@@ -2136,8 +2199,15 @@
                         { k: 'listen',   de: 'Listen',        en: 'Lists',       num: true,
                           tip: { de: 'gemeldete Decklisten aus den Limitless-Online-Turnieren', en: 'reported decklists from the Limitless online tournaments' } },
                         { k: 'anteil',   de: 'Anteil',        en: 'Share',       num: true, hilf: 'share' },
-                        { k: 'wr',       de: 'Win Rate',      en: 'Win rate',    num: true,
-                          tip: { de: 'gewonnene Matches in den Limitless-Online-Turnieren — Siege durch alle gespielten Partien', en: 'games won in the Limitless online tournaments — wins over all games played' } },
+                        /* Der Kopf traegt den vollen Namen der Konvention,
+                           nicht den Hausnamen: die Spalte liest new_winrate
+                           aus limitless_online_decks_comparison.csv, und das
+                           ist S/(S+N+U) — nicht die Matchpunkte, die
+                           Limitless „Win %" nennt. */
+                        { k: 'wr',       de: tierQuotenName('mitUnentschieden'),
+                                         en: tierQuotenName('mitUnentschieden'),    num: true,
+                          tip: { de: tierQuotenHinweis('mitUnentschieden'),
+                                 en: tierQuotenHinweis('mitUnentschieden') } },
                         /* DREI UEBERSCHRIFTEN NEU BENANNT AM 01.09.2026.
                            Gemeldet: "was sind denn bitte 618,5 Antritte?
                            Was ist das fuer eine Kennzahl? … 'davon Top 8,
@@ -2337,7 +2407,8 @@
                                           + 'gleich, die Stückzahlen aber nicht. Ein Strich heißt: das Deck steht in der einen '
                                           + 'Quelle und in der anderen nicht — oder es heißt in den beiden '
                                           + 'Quellen verschieden. Jede Spaltenüberschrift sortiert und erklärt sich selbst. '
-                                        : '<strong>Listen</strong>, <strong>Anteil</strong> und <strong>Win Rate</strong> '
+                                        : '<strong>Listen</strong>, <strong>Anteil</strong> und <strong>'
+                                          + tierQuotenName('mitUnentschieden') + '</strong> '
                                           + 'kommen von der Deck-Übersicht der Limitless-Online-Turniere, '
                                           + '<strong>Top-8-Quote</strong> und '
                                           + '<strong>ggü. Schnitt</strong> aus den Endständen derselben Turniere. '
@@ -2358,7 +2429,8 @@
                                       + 'totals do not. A dash means the deck is in one source and not the other — '
                                       + 'or it goes by a different name in the two sources. Every column heading sorts '
                                       + 'and explains itself. '
-                                    : '<strong>Lists</strong>, <strong>share</strong> and <strong>win rate</strong> come '
+                                    : '<strong>Lists</strong>, <strong>share</strong> and <strong>'
+                                      + tierQuotenName('mitUnentschieden') + '</strong> come '
                                       + 'from the Limitless online-tournament deck breakdown, <strong>top-8 rate</strong> '
                                       + 'and <strong>vs. average</strong> '
                                       + 'from the standings of the same events. A dash means the deck is in one source and not the other — or it '
@@ -2651,12 +2723,16 @@
                     // Archetyp-Kaertchen daneben rechnet S/(S+N). Zwei
                     // richtige Zahlen, die ohne diesen Zusatz aussehen wie
                     // ein Widerspruch.
-                    const wrKonv = window.WinRateKonvention
-                        ? ' · ' + window.WinRateKonvention.kurzHinweis('mitUnentschieden') : '';
-                    const wrTitel = (sc && isFinite(sc.adjWR)) ? escapeHtml((getLang() === 'de'
-                        ? `geglättet (k = 50) — roh ${winRate.toFixed(1)} % aus ${listenN} Listen`
-                        : `smoothed (k = 50) — raw ${winRate.toFixed(1)} % from ${listenN} lists`)
-                        + wrKonv) : '';
+                    /* BEFUND 08.09.2026: die Kachel schrieb „0,7 % · 49,4 % WR".
+                       „WR" ist eine Kurzform, und sie war nur dann aufgeloest,
+                       wenn die Glaettung gegriffen hatte — ohne Glaettung stand
+                       das Kuerzel voellig nackt da. Jetzt traegt JEDE Kachel den
+                       vollen Namen und die Formel; der Glaettungssatz kommt
+                       dahinter, wo es einen gibt. */
+                    const wrGlatt = (sc && isFinite(sc.adjWR)) ? ((getLang() === 'de'
+                        ? `  Geglättet (k = 50) — roh ${winRate.toFixed(1)} % aus ${listenN} Listen.`
+                        : `  Smoothed (k = 50) — raw ${winRate.toFixed(1)} % from ${listenN} lists.`)) : '';
+                    const wrTitel = escapeHtml(tierQuotenHinweis('mitUnentschieden') + wrGlatt);
                     
                     // Get archetype image
                     const archetypeCards = fuzzyArchetypeLookup(archetypeName, cardDataByArchetype);
@@ -2716,10 +2792,12 @@
                             // Unterschied betraegt bis zu 6,4 pp auf identischer
                             // Bilanz. Trainer Hill macht das vor und schreibt die
                             // Formel neben die Zahl.
-                            const _labsTitle = (getLang() === 'de'
-                                ? `Turnierdaten aus Limitless Labs · ${ent.tournaments} Turniere, ${ent.games} Matches · angezeigt: Siege je Match = S/(S+N+U) · Limitless-Spalte "Win %" = (3S+U)/3n: ${fmtPct(ent.matchPointPct)}`
-                                : `Limitless Labs tournament data · ${ent.tournaments} tournaments, ${ent.games} games · shown: wins per game = W/(W+L+T) · Limitless column "Win %" = (3W+T)/3n: ${fmtPct(ent.matchPointPct)}`);
-                            labsBadge = `<span class="stat-badge stat-labs" title="${escapeHtml(_labsTitle)}">🏆 ${fmtPct(ent.winPct)} WR · ${ent.tournaments}T</span>`;
+                            const _wpName = tierQuotenName('matchpunkte');
+                            const _wpFormel = tierQuotenFormel('matchpunkte');
+                            const _labsTitle = tierQuotenHinweis('mitUnentschieden') + '  ' + (getLang() === 'de'
+                                ? `Turnierdaten aus Limitless Labs · ${ent.tournaments} Turniere, ${ent.games} Matches. Die Spalte, die Limitless „${_wpName}“ nennt ${_wpFormel}, steht bei denselben Zeilen auf ${fmtPct(ent.matchPointPct)} — angezeigt wird sie hier NICHT.`
+                                : `Limitless Labs tournament data · ${ent.tournaments} tournaments, ${ent.games} games. The column Limitless calls “${_wpName}” ${_wpFormel} sits at ${fmtPct(ent.matchPointPct)} for the same rows — it is NOT what is shown here.`);
+                            labsBadge = `<span class="stat-badge stat-labs" title="${escapeHtml(_labsTitle)}" data-quote-konvention="mitUnentschieden">🏆 ${fmtPct(ent.winPct)} WR · ${ent.tournaments}T</span>`;
                         }
                     }
 
@@ -2737,9 +2815,9 @@
                             <div class="deck-banner-content">
                                 <div class="deck-banner-name">${archetypeName}</div>
                                 <div class="deck-banner-stats">
-                                    <span class="stat-badge"${wrTitel ? ` title="${wrTitel}"` : ''}>${fmtPct(share)} · ${fmtPct(zeigWR)} WR</span>
+                                    <span class="stat-badge" title="${wrTitel}" data-quote-konvention="mitUnentschieden">${fmtPct(share)} · ${fmtPct(zeigWR)} WR</span>
                                     ${listenN > 0
-                                      ? `<span class="stat-badge stat-sample-size${listenN < ROGUE_MIN_LISTEN ? ' tier-listen-duenn' : ''}" title="${escapeHtml(listenN < ROGUE_MIN_LISTEN ? t('tier.rogueThinTip').replace('{n}', String(ROGUE_MIN_LISTEN)) : t('tier.rogueSampleTip'))}">${
+                                      ? `<span class="stat-badge stat-sample-size${listenN < ROGUE_MIN_LISTEN ? ' tier-listen-duenn' : ''}" title="${escapeHtml(listenN < ROGUE_MIN_LISTEN ? tierMitQuote(t('tier.rogueThinTip'), 'mitUnentschieden').replace('{n}', String(ROGUE_MIN_LISTEN)) : t('tier.rogueSampleTip'))}">${
                                           getLang() === 'de'
                                             ? `${listenN.toLocaleString('de-DE')} ${listenN === 1 ? 'Liste' : 'Listen'}`
                                             : `${listenN.toLocaleString('en-US')} ${listenN === 1 ? 'list' : 'lists'}`

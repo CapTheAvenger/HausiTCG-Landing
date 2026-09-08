@@ -2533,9 +2533,22 @@
             // continuity. Showing "0-0-0 · 0,0%" for those would read
             // as "this player went 0-0-0", which is wrong — better to
             // hide the block than display misleading data.
+            /* DER NAME HAENGT ALS HINWEIS AN DER ZAHL (nachgeprueft
+               08.09.2026, BEFUND W2). `wpStr` kommt aus
+               WK.KONVENTIONEN.matchpunkte.rechne(), rechnet also
+               (3S+U)/(3n) — und `wpHinweis` ist
+               WinRateKonvention.hinweis('matchpunkte'), beginnt somit
+               mit genau dem Namen, den das Modul dafuer vergibt
+               („Win %"), und nennt die Formel. Der Name steht bewusst
+               NICHT zusaetzlich im sichtbaren Text: die Zeile ist die
+               Bilanz einer einzelnen Liste, und
+               tests/unit/test-audit2-A-winrate-konvention.js haelt
+               ihren Wortlaut („6-2-1 · 70,4%") fest. Zusaetzlich
+               data-hinweis, damit der Hinweis auch ohne Zeigegeraet
+               auffindbar ist. */
             const games = (best.wins || 0) + (best.losses || 0) + (best.ties || 0);
             const recordBlock = games > 0
-                ? `<span class="past-meta-best-record"${wpHinweis ? ` title="${_esc(wpHinweis)}"` : ''}>${best.wins || 0}-${best.losses || 0}-${best.ties || 0} · ${wpStr}</span>`
+                ? `<span class="past-meta-best-record"${wpHinweis ? ` title="${_esc(wpHinweis)}" data-hinweis="${_esc(wpHinweis)}"` : ''}>${best.wins || 0}-${best.losses || 0}-${best.ties || 0} · ${wpStr}</span>`
                 : '';
 
             body.innerHTML = `

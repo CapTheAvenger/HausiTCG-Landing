@@ -18,6 +18,117 @@
         // app-deck-builder.js via window.currentMetaDateFrom.
         let currentMetaDateFrom = null; // 'YYYY-MM-DD' | null
         if (typeof window !== 'undefined') window.currentMetaDateFrom = null;
+
+        /* ── DIE NAMEN DER QUOTEN IN DIESEM REITER (08.09.2026) ──────────
+         *
+         * ANORDNUNG DES BETREIBERS: „Win-Raten ueberall in der
+         * Limitless-Bezeichnung ‚Win %‘ — keine eigenen Begriffe."
+         * „Win %" gehoert dabei AUSSCHLIESSLICH der Konvention
+         * MATCHPUNKTE (3S+U)/(3·Partien) — so nennt Limitless genau
+         * diese Spalte. Eine S/(S+N+U)-Zahl so zu nennen waere derselbe
+         * Fehler in die andere Richtung.
+         *
+         * DIESER REITER ZEIGT ZWEI KONVENTIONEN, KEINE DAVON MATCHPUNKTE
+         * (nachgemessen am 08.09.2026):
+         *
+         *   Kachel „Gesamte Quote"  MIT_UNENTSCHIEDEN  S/(S+N+U)
+         *       win_rate_numeric aus data/limitless_online_decks.csv,
+         *       135 von 136 Zeilen auf 0,011 Punkte genau.
+         *
+         *   Alles, was aus der Paarungsdatei kommt — beste/schlechteste
+         *   Matchups, das Matchup-Feld, die Tabelle „vs Meta Call" —
+         *       OHNE_UNENTSCHIEDEN  S/(S+N)
+         *       win_rate aus data/limitless_online_decks_matchups.csv,
+         *       1.716 von 1.716 Zeilen auf 0,005 Punkte genau; S/(S+N+U)
+         *       verfehlt dieselbe Spalte um bis zu 16,7 Punkte.
+         *
+         * Der Name wird zur Laufzeit aus dem Modul geholt, nie
+         * abgeschrieben: wird er dort umbenannt, wandert die Aenderung
+         * mit. Faellt das Modul aus, steht die FORMEL da — die ist kein
+         * vierter Name und nie falsch. */
+        function cmaQuotenName(id) {
+            const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+            const kurz = (K && typeof K.kurz === 'function') ? K.kurz(id) : '';
+            return kurz || cmaQuotenFormel(id) || String(id);
+        }
+
+        function cmaQuotenFormel(id) {
+            const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+            const k = (K && typeof K.hol === 'function') ? K.hol(id) : null;
+            return k ? k.formel : '';
+        }
+
+        /** {quote} und {formel} in einem Uebersetzungswert fuellen. */
+        function cmaMitQuote(text, id) {
+            return String(text == null ? '' : text)
+                .replace(/\{quote\}/g, cmaQuotenName(id))
+                .replace(/\{formel\}/g, cmaQuotenFormel(id));
+        }
+
+        /* Voller Name plus Formel — der Hinweis, ohne den eine Kurzform
+           wie „WR" oder „Ø WR" ein Hausname waere. */
+        function cmaQuotenHinweis(id) {
+            const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+            const lang = (K && typeof K.hinweis === 'function') ? K.hinweis(id) : '';
+            const name = cmaQuotenName(id);
+            return lang ? (name + ' — ' + lang) : (name + ' ' + cmaQuotenFormel(id));
+        }
+
+        /* WELCHE BESCHRIFTUNG IM MARKUP WELCHE KONVENTION MEINT.
+         *
+         * Diese vier Beschriftungen stehen als data-i18n in index.html
+         * und werden von js/i18n.js gesetzt — dort steht deshalb ein
+         * Platzhalter {quote} und KEIN Name. Ihn hier zu fuellen ist der
+         * einzige Weg, den Namen zur Laufzeit aus js/win-rate-konvention.js
+         * zu holen, statt ihn ein zweites Mal hinzuschreiben. */
+        const CMA_QUOTEN_SCHLUESSEL = {
+            'stats.totalWinrate': 'mitUnentschieden',
+            'matchup.winRate':    'ohneUnentschieden',
+        };
+
+        /**
+         * Setzt in allen [data-i18n]-Beschriftungen dieses Reiters den
+         * Platzhalter {quote} auf den Namen der Konvention, die dort
+         * wirklich gerechnet wird — und haengt den vollen Hinweis als
+         * title an, damit auch eine Kurzform aufgeloest ist.
+         */
+        function cmaQuotenNamenImDom(wurzel) {
+            const d = wurzel || (typeof document !== 'undefined' ? document : null);
+            if (!d || typeof d.querySelectorAll !== 'function') return 0;
+            let gesetzt = 0;
+            Object.keys(CMA_QUOTEN_SCHLUESSEL).forEach((key) => {
+                const id = CMA_QUOTEN_SCHLUESSEL[key];
+                d.querySelectorAll('[data-i18n="' + key + '"]').forEach((el) => {
+                    const roh = (typeof t === 'function') ? t(key) : '';
+                    const txt = cmaMitQuote(roh && roh !== key ? roh : '{quote}', id);
+                    el.textContent = txt;
+                    if (typeof el.setAttribute === 'function') {
+                        el.setAttribute('title', cmaQuotenHinweis(id));
+                        el.setAttribute('data-quote-konvention', id);
+                    }
+                    gesetzt++;
+                });
+            });
+            return gesetzt;
+        }
+
+        if (typeof window !== 'undefined') {
+            window.cmaQuotenNamenImDom = cmaQuotenNamenImDom;
+            /* i18n ersetzt beim Sprachwechsel ALLE data-i18n-Texte und
+               schriebe den Platzhalter zurueck. Also danach noch einmal. */
+            /* KEIN EIGENER languageChanged-Listener AN DIESER STELLE.
+               tests/unit/test-sprachbefunde-2026-08-30.js liest den ERSTEN
+               Listener der Datei und verlangt von ihm die Neuzeichnung der
+               Ansicht; ein zweiter, frueherer Listener haette ihn verdeckt.
+               Der Aufruf haengt deshalb im bestehenden Handler weiter unten. */
+            if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => cmaQuotenNamenImDom());
+                } else {
+                    cmaQuotenNamenImDom();
+                }
+            }
+        }
         // _currentMetaRenderGen is declared in app-core.js (alongside _cityLeagueRenderGen and _pastMetaRenderGen)
 
         // Parse "14th March 2026" style dates into Date objects
@@ -1755,8 +1866,9 @@
                sonst sucht der Leser den Unterschied zwischen zwei
                Reitern und findet ihn nicht. */
             const WK = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
-            const kurzName = (WK && WK.kurz('mitUnentschieden'))
-                || (de ? 'Siegquote inkl. Unentschieden' : 'Win share incl. ties');
+            /* KEIN ABGESCHRIEBENER NAME. Faellt das Modul aus, steht die
+               FORMEL da — sie ist kein vierter Name und nie falsch. */
+            const kurzName = cmaQuotenName('mitUnentschieden');
             const kurzFormel = (WK && WK.hol('mitUnentschieden') && WK.hol('mitUnentschieden').formel)
                 || 'S / (S + N + U)';
             const winProzentName = (WK && WK.kurz('matchpunkte')) || 'Win %';
@@ -2430,6 +2542,7 @@
                    Jetzt steht unter jeder, was gezaehlt wurde, wie gross
                    der Nenner ist, aus welcher Datei und welchem Feld die
                    Zahl kommt und welchen Zeitraum sie abdeckt. */
+                cmaQuotenNamenImDom();
                 _cmKennzahlHinweis('currentMetaStatWinrate', _cmWinrateFussnote(deckStatEntry));
                 _cmKennzahlHinweis('currentMetaStatMatchup', _cmMatchupFussnote(_top20));
                 
@@ -2692,6 +2805,14 @@
             const avgWr = enriched.reduce((s, m) => s + m.wr, 0) / enriched.length;
             if (titleEl) {
                 titleEl.textContent = `${archetype} (${t('matchup.avgWr')} ${fmtPct(avgWr)}%, ${enriched.length} ${t('matchup.matchups')})`;
+                /* „Ø WR" ist eine Kurzform. Zulaessig nur mit einem
+                   Hinweis, der den vollen Namen und die Formel nennt —
+                   der Schnitt laeuft ueber die Spalte win_rate der
+                   Paarungsdatei, also S/(S+N). */
+                if (typeof titleEl.setAttribute === 'function') {
+                    titleEl.setAttribute('title', cmaQuotenHinweis('ohneUnentschieden'));
+                    titleEl.setAttribute('data-quote-konvention', 'ohneUnentschieden');
+                }
             }
 
             matchupsSection.classList.remove('d-none');
@@ -2827,7 +2948,7 @@
 
             summaryEl.innerHTML = `
                 <div class="mc-vs-summary-row">
-                    <span class="mc-vs-summary-label">${t('matchup.weightedWrLabel')}</span>
+                    <span class="mc-vs-summary-label" title="${escapeHtml(cmaQuotenHinweis('ohneUnentschieden'))}" data-quote-konvention="ohneUnentschieden">${t('matchup.weightedWrLabel')}</span>
                     <span class="mc-vs-pill ${wrClass}">${fmt(weightedWr)}%</span>
                     <span class="mc-vs-summary-verdict">${t(verdictKey)}</span>
                     <span class="mc-vs-summary-coverage" title="${escapeHtml(
@@ -4545,8 +4666,7 @@
                 const _de = (typeof getLang === 'function') && getLang() === 'de';
                 const _spiele = parseInt(totalGames, 10);
                 const _WK = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
-                const _kName = (_WK && _WK.kurz('ohneUnentschieden'))
-                    || (_de ? 'Siegquote ohne Unentschieden' : 'Win share excluding ties');
+                const _kName = cmaQuotenName('ohneUnentschieden');
                 const _kFormel = (_WK && _WK.hol('ohneUnentschieden') && _WK.hol('ohneUnentschieden').formel)
                     || 'S / (S + N)';
                 const _wpName = (_WK && _WK.kurz('matchpunkte')) || 'Win %';
@@ -4559,7 +4679,7 @@
                     <h4 style="margin-top: 0; color: var(--ink);">${t('matchup.vsTitle').replace('{n}', escapeHtml(opponent))}</h4>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 10px;">
                         <div>
-                            <strong style="color: var(--ink-2);">${t('matchup.winRate')}:</strong><br>
+                            <strong style="color: var(--ink-2);" title="${escapeHtml(cmaQuotenHinweis('ohneUnentschieden'))}" data-quote-konvention="ohneUnentschieden">${escapeHtml(cmaMitQuote(t('matchup.winRate'), 'ohneUnentschieden'))}:</strong><br>
                             <span style="font-size: 1.5em; color: var(--dv-pos-ink);">${escapeHtml(winRate)}</span>
                         </div>
                         <div>
@@ -5806,6 +5926,10 @@
  * verborgenen Reiter. Vorbild: js/app-quellen.js.
  */
 document.addEventListener('languageChanged', () => {
+    /* i18n hat gerade ALLE data-i18n-Texte neu gesetzt — darunter die
+       Beschriftungen mit dem Platzhalter {quote}. Den Namen der Konvention
+       wieder einsetzen, sonst stuende dort roh „{quote}". */
+    if (typeof cmaQuotenNamenImDom === 'function') cmaQuotenNamenImDom();
     const statusEl = document.getElementById('currentMetaFilterStatus');
     if (statusEl && statusEl.textContent.trim()
         && typeof updateCurrentMetaFilterStatusLabel === 'function') {

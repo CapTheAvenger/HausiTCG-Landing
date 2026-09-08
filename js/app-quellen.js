@@ -31,6 +31,54 @@
         });
     }
 
+    /* ── DER GLOSSAREINTRAG HIESS „WIN RATE" UND BESCHRIEB S/(S+N+U) ──
+     *
+     * ANORDNUNG DES BETREIBERS: „Win-Raten ueberall in der
+     * Limitless-Bezeichnung ‚Win %‘ — keine eigenen Begriffe." Das ist
+     * KEINE pauschale Umbenennung: js/win-rate-konvention.js haelt
+     * „Win %" der Konvention MATCHPUNKTE (3S+U)/(3·Partien) vor, weil
+     * Limitless genau diese Spalte so nennt.
+     *
+     * DER EINTRAG BESCHREIBT EINE ANDERE GROESSE — und tut das seit dem
+     * 01.09.2026 richtig: „Gewonnene Matches geteilt durch alle
+     * gespielten. Unentschieden zaehlen im Nenner mit." Das ist
+     * MIT_UNENTSCHIEDEN = S/(S+N+U). Der Beleg steht im Eintrag selbst
+     * (6.430 / 13.206 = 48,69 %) und deckt sich mit
+     * data/limitless_online_decks.csv, Spalte win_rate_numeric: ueber
+     * alle 136 Zeilen gegen wins/losses/ties nachgerechnet trifft
+     * S/(S+N+U) 135 Zeilen auf 0,01 pp genau (mittlere Abweichung
+     * 0,0032), waehrend S/(S+N) bis zu 3,33 pp und die Matchpunkte bis
+     * zu 5,55 pp danebenliegen (Ausnahme Wailord — ein Datenfehler der
+     * Quelle, siehe js/win-rate-konvention.js).
+     *
+     * Nur die UEBERSCHRIFT des Eintrags war ein Hausname. Sie steht
+     * jetzt als Platzhalter im Inhalt und wird ERST BEIM ZEICHNEN
+     * gefuellt: `INHALT` ist ein Literal, das beim Laden der Datei
+     * entsteht — da ist js/win-rate-konvention.js unter Umstaenden
+     * noch nicht da, und die Sprache kann sich spaeter noch aendern.
+     * Faellt das Modul aus, steht die FORMEL da; die ist kein vierter
+     * Name und nie falsch. */
+    var QU_GLOSSAR_KONVENTION = 'mitUnentschieden';
+
+    function quotenFormel(id) {
+        var K = window.WinRateKonvention;
+        var k = (K && typeof K.hol === 'function') ? K.hol(id || QU_GLOSSAR_KONVENTION) : null;
+        return (k && k.formel) ? k.formel : '';
+    }
+
+    function quotenName(id) {
+        var K = window.WinRateKonvention;
+        var kurz = (K && typeof K.kurz === 'function') ? K.kurz(id || QU_GLOSSAR_KONVENTION) : '';
+        return kurz || quotenFormel(id) || String(id || QU_GLOSSAR_KONVENTION);
+    }
+
+    /** {quote} und {formel} in einem Inhaltstext fuellen. */
+    function mitQuote(text, id) {
+        return String(text == null ? '' : text)
+            .replace(/\{quote\}/g, quotenName(id))
+            .replace(/\{formel\}/g, quotenFormel(id));
+    }
+
     /* ── Inhalt ───────────────────────────────────────────────────────
      *
      * Aufbau: jeder Abschnitt hat eine kurze Ueberschrift und darunter
@@ -129,7 +177,7 @@
                         // Mega Excadrill die Bilanz 6430-6666-110 und daneben
                         // 48,69 %. 6430 / 13.206 = 48,69. Unentschieden stehen
                         // im Nenner, nicht als halber Sieg im Zähler.
-                        ['Win Rate',
+                        ['{quote} ({formel})',
                          'Gewonnene Matches geteilt durch alle gespielten. ' +
                          'Unentschieden zählen im Nenner mit, aber nicht als ' +
                          'halber Sieg. Beispiel: eine Bilanz von 6.430 Siegen, ' +
@@ -279,7 +327,7 @@
                            englische beschrieb eine Rechnung, die das
                            Haus verworfen hat. Jetzt woertlich dieselbe
                            Aussage samt Beleg. */
-                        ['Win rate',
+                        ['{quote} ({formel})',
                          'Matches won divided by all matches played. Ties count in the ' +
                          'denominator, not as half a win. Example: a record of 6,430 wins, ' +
                          '6,666 losses and 110 ties is 13,206 matches and therefore 48.7 % — ' +
@@ -381,8 +429,11 @@
             }).join('') + '</dl>');
         }
         if (a.dl && a.dl.length) {
+            /* {quote}/{formel} werden ERST HIER gefuellt — siehe den Block
+               bei QU_GLOSSAR_KONVENTION. Im Inhalt steht kein Name. */
             teile.push('<dl class="qu-dl">' + a.dl.map(function (z) {
-                return '<dt>' + esc(z[0]) + '</dt><dd>' + esc(z[1]) + '</dd>';
+                return '<dt>' + esc(mitQuote(z[0], QU_GLOSSAR_KONVENTION))
+                     + '</dt><dd>' + esc(mitQuote(z[1], QU_GLOSSAR_KONVENTION)) + '</dd>';
             }).join('') + '</dl>');
         }
         return '<details class="qu-sec" id="qu-' + esc(a.id) + '"' + (a.auf ? ' open' : '') + '>' +

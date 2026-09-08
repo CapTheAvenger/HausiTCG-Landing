@@ -13,6 +13,58 @@
         // Matchup data registry (avoids Object.keys(window) scan)
         window._matchupRegistry = window._matchupRegistry || {};
 
+        /* ── DIE HEATMAP ZEIGT S/(S+N) — UND SAGT ES JETZT AUCH ──────────
+         *
+         * ANORDNUNG DES BETREIBERS (05.09.2026, erneut am 08.09.2026):
+         * „Win-Raten ueberall in der Limitless-Bezeichnung ‚Win %‘ —
+         * keine eigenen Begriffe." Das ist KEIN pauschales Umbenennen:
+         * js/win-rate-konvention.js haelt „Win %" der Konvention
+         * MATCHPUNKTE (3S+U)/(3·Partien) vor, weil Limitless genau diese
+         * Spalte so nennt.
+         *
+         * BEIDE ZAHLEN DIESER HEATMAP RECHNEN ETWAS ANDERES, nachgemessen
+         * am 08.09.2026:
+         *   online  win_rate aus data/limitless_online_decks_matchups.csv
+         *           — S/(S+N) trifft alle 1.716 Zeilen auf 0,005 Punkte
+         *           genau, S/(S+N+U) verfehlt sie um bis zu 16,7 und die
+         *           Matchpunkte um bis zu 11,1.
+         *   Major   oben aus vs_wins/vs_losses gerechnet, also ebenfalls
+         *           S/(S+N). Die Spalte vs_win_pct derselben Datei WAERE
+         *           Matchpunkte (811 von 811 Zeilen auf 0,005 genau) —
+         *           sie wird bewusst nicht gelesen.
+         *
+         * Beide sind damit OHNE_UNENTSCHIEDEN und duerfen nicht „Win %"
+         * heissen. Der Name kommt zur Laufzeit aus dem Modul; faellt es
+         * aus, steht die Formel da. */
+        function heatmapQuotenName(id) {
+            const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+            const kurz = (K && typeof K.kurz === 'function') ? K.kurz(id) : '';
+            return kurz || heatmapQuotenFormel(id) || String(id);
+        }
+
+        function heatmapQuotenFormel(id) {
+            const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+            const k = (K && typeof K.hol === 'function') ? K.hol(id) : null;
+            return k ? k.formel : '';
+        }
+
+        /** {quote} und {formel} in einem Uebersetzungswert fuellen. */
+        function heatmapMitQuote(text, id) {
+            return String(text == null ? '' : text)
+                .replace(/\{quote\}/g, heatmapQuotenName(id))
+                .replace(/\{formel\}/g, heatmapQuotenFormel(id));
+        }
+
+        /* Der Hinweis, der die Kurzform „WR" zulaessig macht: voller Name
+           und Formel. Ohne ihn waere „WR" in der Zelle und in der Legende
+           ein Hausname und damit verboten. */
+        function heatmapQuotenHinweis(id) {
+            const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+            const lang = (K && typeof K.hinweis === 'function') ? K.hinweis(id) : '';
+            const name = heatmapQuotenName(id);
+            return lang ? (name + ' — ' + lang) : (name + ' ' + heatmapQuotenFormel(id));
+        }
+
         /* DIE PRAESENZSEITE DER HEATMAP.
          *
          * Auftrag des Betreibers (02.09.2026): "vll sollten wir auch in der
@@ -612,8 +664,17 @@
                                des Betreibers (02.09.2026):
 
                                               online / Major
-                                   Win Rate     xx  /  xx
-                                   Matches      xx  /  xx
+                                   WR           xx  /  xx
+                                   M            xx  /  xx
+
+                               (In der Skizze stand in der ersten Spalte
+                               noch "Win Rate" und "Matches". Ausgeliefert
+                               werden seit dem 08.09.2026 die Kuerzel aus
+                               t('heatmap.wrLabel') und t('heatmap.gamesShort');
+                               "WR" traegt den vollen Namen und die Formel
+                               als title — heatmapQuotenHinweis('ohneUnentschieden')
+                               —, und die Legende rechts loest beide auf.
+                               Ein Hausname "Win Rate" steht dort nicht mehr.)
 
                                Vorher stand da "M 49,4 % \u00b7 52" unter der
                                Online-Zahl. R\u00fcckmeldung: "mit M kann man erstmal
@@ -653,7 +714,7 @@
                                 + `<span class="heatmap-zelle-quelle">${t('heatmap.onlineLabel')}</span>`
                                 + `<span class="heatmap-zelle-quelle">${t('heatmap.majorLabel')}</span>`
                                 + `<span class="heatmap-zelle-strich"></span>`
-                                + `<span class="heatmap-zelle-kennzahl">${t('heatmap.wrLabel')}</span>`
+                                + `<span class="heatmap-zelle-kennzahl" title="${escAttr(heatmapQuotenHinweis('ohneUnentschieden'))}" data-quote-konvention="ohneUnentschieden">${t('heatmap.wrLabel')}</span>`
                                 + `<span class="heatmap-zelle-wr">${
                                     (typeof window.formatPercent === 'function')
                                         ? window.formatPercent(winRate) : winRate.toFixed(1) + ' %'}</span>`
@@ -697,19 +758,35 @@
                              Matches … oder Matches = M weil sonst sind die
                              Zellen zu breit."
                              Also: die Woerter einmal an einer Stelle, die
-                             Kuerzel in den Zellen. -->
+                             Kuerzel in den Zellen.
+
+                             DIE BEIDEN SAETZE DARUEBER SIND ZITATE, KEINE
+                             ZUSAGE (nachgetragen am 08.09.2026). Was "WR"
+                             heute aufloest, entscheidet nicht dieser
+                             Kommentar, sondern das Konventionsmodul:
+                             beide Zahlen dieser Heatmap rechnen S/(S+N),
+                             also OHNE_UNENTSCHIEDEN — nachgemessen traf
+                             S/(S+N) alle 1.716 Zeilen von
+                             data/limitless_online_decks_matchups.csv auf
+                             0,005 Punkte genau, S/(S+N+U) verfehlte sie um
+                             bis zu 16,7. Ein Hausname steht in der Legende
+                             deshalb NICHT mehr: sie fuellt {quote} und
+                             {formel} zur Laufzeit aus dem Modul
+                             (heatmapMitQuote / heatmapQuotenHinweis). Und
+                             "Win %" darf es hier auch nicht heissen — so
+                             nennt Limitless die Matchpunkte (3S+U)/(3n). -->
                         <div class="heatmap-kopf">
                             <p class="heatmap-desc">
-                                ${t('heatmap.desc')}
+                                ${heatmapMitQuote(t('heatmap.desc'), 'ohneUnentschieden')}
                                 <span class="heatmap-key heatmap-key-fav"></span> ${t('heatmap.favorable')} (≥ 55 %),
                                 <span class="heatmap-key heatmap-key-even"></span> ${t('heatmap.even')} (45–54,9 %),
                                 <span class="heatmap-key heatmap-key-unfav"></span> ${t('heatmap.unfavorable')} (≤ 45 %)
                             </p>
                             <dl class="heatmap-legende">
-                                <dt>${t('heatmap.wrLabel')}</dt><dd>${t('heatmap.legendeWr')}</dd>
+                                <dt title="${escAttr(heatmapQuotenHinweis('ohneUnentschieden'))}" data-quote-konvention="ohneUnentschieden">${t('heatmap.wrLabel')}</dt><dd>${heatmapMitQuote(t('heatmap.legendeWr'), 'ohneUnentschieden')}</dd>
                                 <dt>${t('heatmap.gamesShort')}</dt><dd>${t('heatmap.legendeM')}</dd>
                                 <dt>${t('heatmap.onlineLabel')}</dt><dd>${t('heatmap.legendeOnline')}</dd>
-                                <dt>${t('heatmap.majorLabel')}</dt><dd>${t('heatmap.legendeMajor')}</dd>
+                                <dt>${t('heatmap.majorLabel')}</dt><dd>${heatmapMitQuote(t('heatmap.legendeMajor'), 'ohneUnentschieden')}</dd>
                                 <dt><i>${t('heatmap.legendeKursivKurz')}</i></dt><dd>${t('heatmap.legendeKursiv')}</dd>
                             </dl>
                         </div>
