@@ -185,7 +185,15 @@ describe('Die Zelle zeigt beide Zahlen mit ihrer Herkunft', () => {
            anfangen"). Also wird hier beides zugesichert: das Kuerzel in
            der Zelle UND sein Wort in der Legende darueber. */
         const i18n = lies(path.join('js', 'i18n.js'));
-        for (const [schluessel, wort] of [['heatmap.legendeWr', /[Ww]in [Rr]ate/],
+        /* SEIT DEM 08.09.2026 LOEST DIE LEGENDE „WR" NICHT MEHR NACH
+           EINEM HAUSNAMEN AUF, SONDERN NACH DER KONVENTION.
+           „Win Rate" ist als Bezeichnung gestrichen (Anordnung des
+           Betreibers: die Namen kommen von Limitless, und „Win %" gehoert
+           dort den Matchpunkten). Die Heatmap rechnet S/(S+N), also traegt
+           die Legende {quote} und {formel} — beides wird zur Laufzeit aus
+           js/win-rate-konvention.js gefuellt. Verlangt wird deshalb der
+           Platzhalter, nicht ein Wortlaut. */
+        for (const [schluessel, wort] of [['heatmap.legendeWr', /\{quote\}[\s\S]*\{formel\}/],
                                            ['heatmap.legendeM', /[Mm]atches/]]) {
             const w = [...i18n.matchAll(
                 new RegExp(`'${schluessel.replace('.', '\\.')}':\\s*'([^']*)'`, 'g'))]
@@ -210,7 +218,10 @@ describe('Die Zelle zeigt beide Zahlen mit ihrer Herkunft', () => {
         for (const sch of ['heatmap.wrLabel', 'heatmap.legendeWr',
                            'heatmap.gamesShort', 'heatmap.legendeM',
                            'heatmap.onlineLabel', 'heatmap.majorLabel']) {
-            assert.ok(new RegExp(`\\$\\{t\\('${sch.replace('.', '\\.')}'\\)\\}`).test(block),
+            // t('…') darf in einen Fueller gewickelt sein (heatmapMitQuote
+            // setzt {quote}/{formel} ein) — verlangt ist nur, dass der
+            // Schluessel wirklich noch abgerufen wird.
+            assert.ok(new RegExp(`t\\('${sch.replace('.', '\\.')}'\\)`).test(block),
                 `die Legende ruft ${sch} nicht mehr auf — der Eintrag fehlt `
                 + 'oder wird nicht mehr eingesetzt');
         }

@@ -16,6 +16,22 @@
  * bleibt — und zwar in der Schreibweise mit Leerzeichen, wie sie in der
  * Szene gesprochen wird.
  *
+ * NACHTRAG 08.09.2026 — DIE ZUSAGE GILT WEITER, ABER NICHT MEHR FUER
+ * ALLES. Der Betreiber hat nachgeschaerft: „Win-Raten ueberall in der
+ * Limitless-Bezeichnung ‚Win %‘ — keine eigenen Begriffe." „Win Rate"
+ * ist damit selbst ein Hausname geworden; die Namen kommen jetzt aus
+ * js/win-rate-konvention.js, und welcher es ist, entscheidet die Datei,
+ * aus der die Zahl kommt (drei Konventionen, drei Namen). In den fuenf
+ * Dateien des Arbeitspakets W1 — app-current-meta-analysis.js,
+ * app-current-meta.js, app-archetype-card.js, app-tier-meta.js,
+ * meta-analysis-hub.js — bewacht das jetzt
+ * tests/unit/test-w1-hausnamen.js (kein Hausname mehr) und
+ * tests/unit/test-w1-konvention-passt.js (der Name passt zur
+ * gerechneten Formel). Was HIER bleibt, ist die Zusage fuer die
+ * uebrigen Ansichten (ds-share.js, ds-ev-rechner.js, ds-sections.js)
+ * und die Regel, dass „Siegquote"/„Siegesrate"/„Winrate" nirgends als
+ * eigene Schreibweise auftauchen.
+ *
  * Nicht geprueft wird der Programmtext: `winrate` als Feldname,
  * `win_rate_numeric` als CSV-Spalte und `matchup.winRate` als
  * Uebersetzungsschluessel bleiben, wie sie sind. Ein Schluessel ist kein
@@ -53,13 +69,42 @@ const JS_ANZEIGE = [
 ].map(p => ({ p, src: read(p) }));
 
 describe('Win Rate — ein Begriff, eine Schreibweise', () => {
-    it('"Siegquote" steht nirgends mehr in einer Anzeige', () => {
-        const treffer = WERTE.filter(v => /Siegquote|Siegesrate|Siegrate/.test(v));
+    it('"Siegquote" steht nirgends mehr ALLEIN in einer Anzeige', () => {
+        /* NACHTRAG 08.09.2026 — DIESE ZUSAGE MUSSTE GESCHAERFT WERDEN,
+           WEIL SIE SONST DER NEUEREN WIDERSPRAECHE.
+
+           Am 19.08. war „Siegquote" eines von vier Woertern fuer
+           dieselbe Zahl und flog deshalb raus. Seit dem 05.09. sind
+           „Siegquote inkl. Unentschieden" und „Siegquote ohne
+           Unentschieden" aber die AMTLICHEN Namen zweier der drei
+           Konventionen in js/win-rate-konvention.js — angeordnet in
+           derselben Anweisung, die „Win %" den Matchpunkten vorbehaelt.
+           Ein pauschales Verbot des Wortes wuerde jetzt genau die
+           Benennung verbieten, die der Betreiber verlangt hat.
+
+           Verboten bleibt also das BLOSSE „Siegquote" ohne Zusatz — das
+           war der Hausname, der nicht sagt, was im Nenner steht — sowie
+           „Siegesrate" und „Siegrate", fuer die es keine Konvention
+           gibt. Erlaubt sind allein die beiden vollen Namen. */
+        const BLOSS = /Siegquote(?!\s+(?:inkl\.|ohne)\s+Unentschieden)|Siegesrate|Siegrate/;
+
+        const treffer = WERTE.filter(v => BLOSS.test(v));
         assert.deepEqual(treffer, [], 'in i18n.js: ' + treffer.join(' | '));
         for (const { p, src } of JS_ANZEIGE) {
-            assert.doesNotMatch(src, /Siegquote|Siegesrate/, p);
+            const zeilen = src.split('\n')
+                .map((z, i) => ({ nr: i + 1, z }))
+                .filter(o => BLOSS.test(o.z));
+            assert.deepEqual(zeilen.map(o => `${o.nr}: ${o.z.trim()}`), [],
+                p + ': blosses "Siegquote" ohne Zusatz');
         }
-        assert.doesNotMatch(HTML, /Siegquote|Siegesrate/);
+        assert.ok(!BLOSS.test(HTML), 'blosses "Siegquote" in index.html');
+
+        /* Gegenprobe: das Muster darf die erlaubten Namen NICHT fangen,
+           sonst waere die Ausnahme nur zufaellig grün. */
+        assert.ok(!BLOSS.test('Siegquote inkl. Unentschieden'));
+        assert.ok(!BLOSS.test('Siegquote ohne Unentschieden'));
+        assert.ok(BLOSS.test('Siegquote'), 'das Muster faengt den Hausnamen nicht mehr');
+        assert.ok(BLOSS.test('Siegesrate'));
     });
 
     it('auch nicht als "Winrate" in einem Wort', () => {
@@ -80,7 +125,13 @@ describe('Win Rate — ein Begriff, eine Schreibweise', () => {
         // Archetyp-Karte, Bildkarte und Meta-Performance-Tabelle. Genau
         // hier fiel es dem Nutzer auf: die Tabelle sagte Win Rate, die
         // Karte daneben Siegquote.
-        assert.match(read('js/app-archetype-card.js'), /L\('arc\.wrLabel', 'Win Rate'\)/);
+        /* 08.09.2026: die Kachel traegt keinen festen Namen mehr, sondern
+           den der Konvention, die sie wirklich rechnet — S/(S+N+U) aus
+           data/limitless_online_decks.csv. Geholt wird er zur Laufzeit. */
+        assert.match(read('js/app-archetype-card.js'),
+            /mitQuote\(L\('arc\.wrLabel', '\{quote\}'\), 'mitUnentschieden'\)/,
+            'die Quoten-Kachel holt ihren Namen nicht mehr aus '
+            + 'js/win-rate-konvention.js');
         /* NACHTRAG 02.09.2026 — die Regel ist jetzt schaerfer, nicht loser.
 
            In der Matchup-Tabelle heisst die Spalte "WR". Das ist erlaubt,
@@ -102,7 +153,11 @@ describe('Win Rate — ein Begriff, eine Schreibweise', () => {
            gewoehnliche Win Rate und heisst "Major-WR"; aufzuloesen ist
            jetzt, WORAUF sie sich bezieht (Praesenzturniere) und WIE sie
            rechnet (entschiedene Partien). */
-        for (const [kuerzel, wort] of [['WR', 'Win Rate'], ['M', 'Matches'],
+        /* „WR" loest die Legende seit dem 08.09.2026 nach {quote} auf —
+           dem Platzhalter, den js/app-archetype-card.js zur Laufzeit mit
+           dem Namen der Konvention fuellt. Ein fester Name stuende dort
+           wieder fuer eine von dreien. */
+        for (const [kuerzel, wort] of [['WR', '{quote}'], ['M', 'Matches'],
                                         ['Major-WR', 'Präsenzturnieren'],
                                         ['Major-Matches', 'Partien']]) {
             const zeilen = [...I18N.matchAll(/'arc\.muLegende':\s*'([^']*)'/g)]
@@ -112,9 +167,42 @@ describe('Win Rate — ein Begriff, eine Schreibweise', () => {
             assert.ok(de_zeile.includes(kuerzel) && de_zeile.includes(wort),
                 `die Legende loest "${kuerzel}" nicht mehr nach "${wort}" auf`);
         }
-        assert.match(read('js/ds-share.js'), /'Win Rate'/);
-        assert.match(read('js/app-tier-meta.js'), /Win Rate/);
-        assert.match(read('js/ds-ev-rechner.js'), /Erwartete Win Rate/);
+        /* NACHTRAG 08.09.2026 — die Bildkarte holt ihren Namen jetzt
+           ebenfalls aus dem Konventionsmodul. Ein Bild hat keine
+           Sprechblase: was auf der Leinwand steht, ist alles, was der
+           Leser bekommt. Deshalb steht dort der ganze Name (Deck-Zahl:
+           win_rate_numeric aus data/limitless_online_decks.csv =
+           S/(S+N+U)) bzw. der der Matchup-Tabelle (win_rate aus
+           data/limitless_online_decks_matchups.csv = S/(S+N)) und
+           zusaetzlich die Formel — nicht mehr das Wort "Win Rate". */
+        const SHARE = read('js/ds-share.js');
+        assert.match(SHARE, /var SHARE_KONVENTION = 'mitUnentschieden';/,
+            'js/ds-share.js legt seine Konvention nicht mehr fest');
+        assert.match(SHARE, /quotenName\(\)/,
+            'die Deck-Kachel im Bild holt ihren Namen nicht aus dem Modul');
+        assert.match(SHARE, /quotenName\('ohneUnentschieden'\)/,
+            'der Kopf der Matchup-Spalte im Bild holt seinen Namen nicht aus dem Modul');
+        /* app-tier-meta.js zeigt dieselbe Zahl (new_winrate aus
+           data/limitless_online_decks_comparison.csv, ebenfalls S/(S+N+U))
+           und muss sie deshalb ebenso benennen — aus demselben Modul. */
+        assert.match(read('js/app-tier-meta.js'),
+            /tierQuotenName\('mitUnentschieden'\)/,
+            'die Meta-Performance holt ihren Namen nicht mehr aus '
+            + 'js/win-rate-konvention.js');
+        /* NACHTRAG 08.09.2026 — auch der EV-Rechner. Er rechnet ueber
+           quote() in js/matchup-glaettung.js, also (S + k/2)/(S + N + k):
+           Unentschieden stehen NICHT im Nenner. Das ist
+           `ohneUnentschieden`, nicht die Groesse, die Limitless
+           "Win %" nennt. Bewacht wird das ausfuehrlich in
+           tests/unit/test-w3-ev-und-abschnitt.js — hier steht nur, dass
+           der Hausname weg ist und der Name aus dem Modul kommt. */
+        const EVR = read('js/ds-ev-rechner.js');
+        assert.match(EVR, /var EV_KONVENTION = 'ohneUnentschieden';/,
+            'js/ds-ev-rechner.js legt seine Konvention nicht mehr fest');
+        assert.ok(!/esc\(L\('Erwartete Win Rate'/.test(EVR),
+            'der Hausname "Erwartete Win Rate" steht wieder in js/ds-ev-rechner.js');
+        assert.ok(!/esc\(L\('Deine Win Rate'/.test(EVR),
+            'der Hausname "Deine Win Rate" steht wieder in js/ds-ev-rechner.js');
     });
 
     it('die Uebersetzungsschluessel bleiben unangetastet', () => {

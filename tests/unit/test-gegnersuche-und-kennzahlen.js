@@ -144,6 +144,14 @@ function sandkasten(opt) {
     };
     vm.createContext(kontext);
     vm.runInContext(
+        /* Seit dem 08.09.2026 holt selectCurrentMetaOpponent() den Namen
+           der Konvention zur Laufzeit aus js/win-rate-konvention.js. Die
+           drei Helfer kommen aus DERSELBEN Datei — als Attrappe pruefte
+           der Test einen Text, den die Seite so nie zeigt. */
+        ausschnitt('function cmaQuotenFormel(id)') + '\n' +
+        ausschnitt('function cmaQuotenName(id)') + '\n' +
+        ausschnitt('function cmaMitQuote(text, id)') + '\n' +
+        ausschnitt('function cmaQuotenHinweis(id)') + '\n' +
         ausschnitt('function _cmRegistrySchluessel(reg, name)') + '\n' +
         ausschnitt('function _cmWinProzentText(zahl, roh)') + '\n' +
         ausschnitt('function _cmGegnerLeerText(archetype, quelle)') + '\n' +

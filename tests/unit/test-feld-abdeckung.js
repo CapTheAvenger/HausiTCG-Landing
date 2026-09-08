@@ -46,6 +46,12 @@ function schneideFunktion(quelle, name) {
 function rendere(feld, wrs, eigen = 'Testdeck') {
     const quelle = lies('js/app-current-meta-analysis.js');
     const koerper = schneideFunktion(quelle, 'renderMatchupsVsMetaCall');
+    /* Die Beschriftung „WR" traegt seit dem 08.09.2026 einen Hinweis mit
+       dem vollen Namen der Konvention. Die drei Helfer kommen aus
+       DERSELBEN Datei, nicht als Attrappe — sonst pruefte der Test einen
+       anderen Text als die Seite zeigt. */
+    const helfer = ['cmaQuotenFormel', 'cmaQuotenName', 'cmaQuotenHinweis']
+        .map(n => schneideFunktion(quelle, n)).join('\n');
 
     const knoten = () => ({
         innerHTML: '', classList: { add() {}, remove() {}, contains: () => false }
@@ -92,7 +98,7 @@ function rendere(feld, wrs, eigen = 'Testdeck') {
 
     // eslint-disable-next-line no-new-func
     new Function('window', 'document', 'console',
-        vorspann + koerper + `\nrenderMatchupsVsMetaCall(${JSON.stringify(eigen)});`
+        vorspann + helfer + koerper + `\nrenderMatchupsVsMetaCall(${JSON.stringify(eigen)});`
     )(sandbox.window, sandbox.document, sandbox.console);
 
     return summary.innerHTML;

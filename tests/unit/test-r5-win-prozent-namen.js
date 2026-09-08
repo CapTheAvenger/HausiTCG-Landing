@@ -346,12 +346,11 @@ const IST_SCHLUESSEL = /^[a-z][A-Za-z0-9]*\.[A-Za-z0-9_.]+$/;
  * sich bei jeder Aenderung, der Wortlaut nicht.
  */
 const POSITIVLISTE = [
-    {
-        datei: 'js/app-meta-call.js',
-        beginnt: '% Win Rate /',
-        grund: 'console.log des Predictors 6.2 — Werkzeugausgabe fuer den '
-             + 'Betreuer, keine Oberflaeche. Sie erreicht keinen Nutzer.',
-    },
+    /* AUSGETRAGEN AM 08.09.2026 — siehe die gleichlautende Notiz in
+       tests/unit/test-w2-hausnamen.js: der console.log des Predictors
+       6.2 in js/app-meta-call.js traegt keinen Hausnamen mehr, sondern
+       holt den Namen zur Laufzeit aus dem Konventionsmodul. Die
+       Ausnahme deckte nichts mehr ab. */
     {
         datei: 'js/app-meta-call.js',
         beginnt: 'Siegquote ohne Unentschieden',
