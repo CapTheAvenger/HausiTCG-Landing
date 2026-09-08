@@ -28,6 +28,8 @@ Sources:
 import csv
 import json
 import os
+import subprocess
+import sys
 import urllib.parse
 from collections import defaultdict
 
@@ -45,16 +47,93 @@ BOT_INDEX_PATH = os.path.join(DATA_DIR, "bot-deck-index.json")
 # Fixtures
 # ──────────────────────────────────────────────────────────────────────
 
+# ──────────────────────────────────────────────────────────────────────
+# Der Bot-Index wird fuer diese Suite FRISCH GEBAUT, nie eingelesen
+# ──────────────────────────────────────────────────────────────────────
+#
+# BEFUND 08.09.2026
+# -----------------
+# Diese Suite meldete lokal zwei Fehlschlaege: "Wailord Ex Pbl" als
+# Bot-Deck ohne Gegenstueck in der Website-Quelle, und drei abweichende
+# Matchup-Zahlen (Festival Lead vs N's Zoroark: Bot 78,2 %, Website
+# 65,8 %). Beides sah nach einem echten Bruch zwischen Bot und Website
+# aus. Es war keiner: die eingecheckte `data/bot-deck-index.json` stammte
+# aus einem aelteren Datenstand. Ein Lauf von
+# `scripts/generate-bot-deck-index.py` machte alle vier Zusicherungen
+# gruen, ohne dass sich eine Zeile Code geaendert hatte.
+#
+# Das ist die Umkehrung von "gruen ohne Pruefung": ROT OHNE DEFEKT. Es
+# kostet dieselbe Zeit und ist gefaehrlicher, weil man sich daran
+# gewoehnt, diese zwei Namen zu ueberlesen — und dann den Tag uebersieht,
+# an dem sie etwas Echtes melden.
+#
+# Ein Zeitstempelvergleich reicht als Abhilfe NICHT: ein `cp` oder ein
+# frischer Checkout setzt die Aenderungszeit auf jetzt, waehrend der
+# Inhalt alt bleibt. Deshalb baut diese Suite den Index selbst, in ein
+# Wegwerfverzeichnis, aus genau den Dateien, die auch die Website liest.
+# Damit prueft sie das, wofuer sie gebaut wurde — das Verhaeltnis
+# zwischen Generator und aktuellen Daten — und nie mehr das Alter einer
+# Datei im Arbeitsbaum.
+#
+# Gibt DATA_DIR vor (CI nach dem Build), wird nichts gebaut: dort ist der
+# Index schon frisch, und der Test soll genau den pruefen, der
+# ausgeliefert wird.
+
+GENERATOR = os.path.join(REPO_ROOT, "scripts", "generate-bot-deck-index.py")
+
+
+def _index_frisch_bauen(ziel_wurzel):
+    """Baut den Index in ein Wegwerfverzeichnis und gibt seinen Pfad zurueck.
+
+    Die Eingaben werden verknuepft statt kopiert — data/ ist mehrere
+    hundert Megabyte gross, und der Generator liest nur.
+    """
+    daten = os.path.join(ziel_wurzel, "data")
+    os.makedirs(daten, exist_ok=True)
+    quelle = os.path.join(REPO_ROOT, "data")
+    for name in os.listdir(quelle):
+        if name == "bot-deck-index.json":
+            continue
+        ziel = os.path.join(daten, name)
+        if not os.path.exists(ziel):
+            os.symlink(os.path.join(quelle, name), ziel)
+    ergebnis = subprocess.run(
+        [sys.executable, GENERATOR, ziel_wurzel, "testlauf"],
+        capture_output=True, text=True,
+    )
+    if ergebnis.returncode != 0:
+        raise AssertionError(
+            "generate-bot-deck-index.py ist gescheitert:\n"
+            + (ergebnis.stderr or ergebnis.stdout)[-2000:]
+        )
+    return os.path.join(daten, "bot-deck-index.json")
+
+
 @pytest.fixture(scope="module")
-def bot_index():
-    """The bot index is only present after the Pages deploy generates it —
-    in the data/ tree directly we have the source files but not the
-    compiled artifact. Skip rather than fail when missing so dev runs
-    don't error out before the first generate."""
-    if not os.path.isfile(BOT_INDEX_PATH):
-        pytest.skip("bot-deck-index.json not in data/ — run generate-bot-deck-index.py first")
-    with open(BOT_INDEX_PATH, encoding="utf-8") as f:
+def bot_index(tmp_path_factory):
+    if os.environ.get("DATA_DIR"):
+        # CI: der Index wurde vor diesem Lauf gebaut. Genau den pruefen.
+        if not os.path.isfile(BOT_INDEX_PATH):
+            pytest.skip("bot-deck-index.json fehlt in DATA_DIR")
+        pfad = BOT_INDEX_PATH
+    else:
+        pfad = _index_frisch_bauen(str(tmp_path_factory.mktemp("botindex")))
+    with open(pfad, encoding="utf-8") as f:
         return json.load(f)
+
+
+def test_der_generator_ist_da_wo_die_suite_ihn_erwartet():
+    """Ohne den Generator baut die Suite nichts und prueft nichts.
+
+    Waere er umbenannt oder verschoben, faellt der Bau oben mit einer
+    unverstaendlichen Meldung um; diese Zusicherung sagt stattdessen,
+    was fehlt.
+    """
+    assert os.path.isfile(GENERATOR), (
+        f"{GENERATOR} fehlt — diese Suite baut ihren Pruefgegenstand "
+        "selbst und kann ohne den Generator nichts pruefen."
+    )
+
 
 
 @pytest.fixture(scope="module")
