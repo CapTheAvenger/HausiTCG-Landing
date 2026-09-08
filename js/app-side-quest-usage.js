@@ -207,8 +207,20 @@
             const kopf = teile[0];
             const rest = teile.slice(1);
             const letzte = rest[rest.length - 1];
-            // "ninetales-alola" -> "alolan-ninetales"
-            if (USAGE_REGION[letzte]) aus.push(USAGE_REGION[letzte] + '-' + kopf);
+            /* "ninetales-alola" -> "alolan-ninetales" erzeugt die
+               Schleife darunter bereits selbst: fuer die letzte Stelle
+               ist `uebrig` leer, und dann steht am Ende `aus.push(vorn)`
+               mit genau diesem Wert. Bis zum 08.09.2026 stand hier eine
+               eigene Zeile davor, die dasselbe noch einmal anhaengte —
+               `alolan-ninetales` und `mega-gallade` standen deshalb
+               doppelt in der Liste.
+
+               Folgenlos war das nur, weil usageSlug() den ersten Treffer
+               nimmt. Aufgefallen ist es bei einer Mutationsprobe: die
+               Zeile zu entfernen aenderte nichts, weil die Schleife
+               einsprang — eine Regel, die kein Test halten kann, weil es
+               sie zweimal gibt. Entfernt; die Kandidatenliste ist jetzt
+               doppelfrei, und das ist zugesichert. */
             // "tauros-paldea-aqua" -> "paldean-tauros-aqua-breed"
             for (let i = 0; i < rest.length; i++) {
                 const reg = USAGE_REGION[rest[i]];
@@ -224,6 +236,20 @@
             }
             // "charizard-mega-y" / "gallade-mega" -> "mega-gallade"
             if (rest.indexOf('mega') !== -1) {
+                /* BEIDE ZEILEN WERDEN GEBRAUCHT — nachgemessen am
+                   08.09.2026, nachdem ich die erste faelschlich fuer
+                   redundant hielt.
+
+                   Bei "gallade-mega" liefern sie dasselbe
+                   ("mega-gallade"); bei "charizard-mega-y" NICHT: die
+                   erste gibt "mega-charizard", die zweite
+                   "mega-charizard-y". Beide Schreibweisen kommen in
+                   Nutzungsstaenden vor, je nachdem ob die Quelle die
+                   Mega-Formen trennt. Die erste zu streichen haette
+                   "mega-charizard" aus der Liste genommen.
+
+                   Die Dopplung im Gleichstand faengt die Entdopplung
+                   beim Rueckgeben ab. */
                 aus.push('mega-' + kopf);
                 aus.push(['mega', kopf].concat(rest.filter(x => x !== 'mega')).join('-'));
             }
@@ -237,7 +263,13 @@
             // dem Namen einer anderen.
             aus.push(kopf);
         }
-        return aus;
+        /* Doppelfrei zurueckgeben, Reihenfolge erhalten. usageSlug()
+           nimmt ohnehin den ersten Treffer, aber eine Liste, in der
+           derselbe Schluessel zweimal steht, laesst sich nicht mehr
+           pruefen: eine Regel, die ihn erzeugt, kann dann entfallen,
+           ohne dass sich etwas aendert — und genau das ist am
+           08.09.2026 in einer Mutationsprobe passiert. */
+        return aus.filter((x, i) => x && aus.indexOf(x) === i);
     }
 
     function usageSlug(name) {
