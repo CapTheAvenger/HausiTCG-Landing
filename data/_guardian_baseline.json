@@ -125,8 +125,8 @@
    "PLS 130"
   ]
  },
- "champions_teams": 110,
- "champions_ueber_grenze": 17,
+ "champions_teams": 108,
+ "champions_ueber_grenze": 18,
  "empty_files": {
   "city_league_analysis.csv": true,
   "city_league_archetypes.csv": true,
@@ -141,7 +141,7 @@
   "price_data.csv": 20419,
   "prizepack_official_images.csv": 266
  },
- "generated": "2026-09-07 09:41 UTC",
+ "generated": "2026-09-08 09:38 UTC",
  "jp_set_rows": {
   "HSP": 9,
   "M4": 83,
