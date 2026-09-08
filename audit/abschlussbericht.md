@@ -1,6 +1,6 @@
 # Abschlussbericht — 100 % Agenten-Live-Prüfung, Datenverifikation und Turniervorbereitung
 
-**Seite:** thedipidis.app · **Lauf:** 07.–08.09.2026 · **Ausgeliefert:** `202609080142` (PR #697 und #698, beide gemerged)
+**Seite:** thedipidis.app · **Lauf:** 07.–08.09.2026 · **Ausgeliefert:** `202609080208-42294a3` (PR #697 und #698, beide gemerged)
 **Ziel des Betreibers:** Turnier 26.09.2026 Frankfurt, Format TEF–PBL, ca. 2.700 Spieler, Deck Mega Excadrill, Ziel Day 2.
 
 Alles hier ist gemessen. Wo nicht gemessen werden konnte, steht **NICHT GEPRÜFT** — nie „OK".
@@ -170,7 +170,7 @@ Auf `202609080008-33eb397` gemessen, vor der zweiten Auslieferung:
 
 | Punkt | Stand |
 |---|---|
-| **Drei Testpartien im Kampftagebuch** („CLAUDE AUDIT TEST — bitte loeschen", 24.08. 17:58 zweimal, 15.08. 22:23) | **NICHT ENTFERNT.** Kontodaten zu löschen liegt außerhalb dessen, was ich selbst tun darf. Im Chat gemeldet, Entscheidung liegt beim Betreiber. |
+| **Drei Testpartien im Kampftagebuch** („CLAUDE AUDIT TEST — bitte loeschen") | **ERLEDIGT, aber nicht von mir.** Live nachgemessen am 08.09.2026 auf `202609080208-42294a3`, angemeldet als `SUSCeMi8oS…`: das Kampftagebuch führt „0 Matches · 0 Win · 0 Loss · 0 Tie" und zeigt „Noch keine Journal-Einträge." Die drei Einträge sind also weg. Gelöscht habe ich sie nicht — Kontodaten zu löschen liegt außerhalb dessen, was ich selbst tun darf. |
 | **Rundenzahl bei großen Turnieren** | Vorgabe bleibt 8 Runden / 16 Punkte, unabhängig von der Spielerzahl. Die offizielle Seite der International Championships sagt: „The number of Swiss rounds will be determined by attendance." Die Oberfläche weist ausdrücklich darauf hin und lässt 9 Runden wählen. Ob die Vorgabe der Spielerzahl folgen soll, ist eine Entscheidung des Betreibers und im Chat gestellt. |
 | **Exakte Rundenstaffelung nach Spielerzahl** | **NICHT GEPRÜFT.** Die offizielle Handbuch-PDF ist gegen automatisches Abrufen gesperrt. Eine Sekundärquelle nennt 9 Runden als Normalfall und Tag 2 als Top 32 oder ≥ 19 Punkte; das ist kein Primärbeleg. |
 | **`city-league-tier-title` auf dem Telefon** | Rendert 12 px statt 14,04 px wegen der Pauschalregel `.tab-content [class*="title"]{font-size:12px !important}`. Bewusst nicht mitbehoben — das braucht eine eigene Abnahme, weil die Regel viele Stellen trägt. |
