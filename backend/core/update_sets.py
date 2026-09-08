@@ -423,6 +423,87 @@ def _pick_current_set(release_dates: dict) -> str:
     return candidates[0][0]
 
 
+# Wie viele VERSCHIEDENE Karten eines Sets im echten Standardfeld
+# gespielt werden muessen, damit es als Rotationsanker durchgeht.
+#
+# GEMESSEN am 08.09.2026 an data/online_api_cards_TEF-PBL.csv
+# (257.116 Zeilen aus 186 Turnieren):
+#
+#   PBL, ein echtes Hauptset, am TAG NACH dem Erscheinen:  40 Karten
+#   die kleinsten vertretenen Sets im ganzen Bestand:
+#     SVI 2 · MEP 3 · SVP 4 · MEE 8    (Promos und Mini-Sets)
+#     SFA 27 · PRE 31 · BLK 34         (echte Erweiterungen)
+#
+# Zwischen 8 und 27 liegt der Graben. 25 sitzt darin, mit Abstand nach
+# beiden Seiten, und ist keine geratene Zahl.
+ANKER_MIN_KARTEN = 25
+
+
+def _gespielte_karten_je_set(data_dir: str) -> dict:
+    """{Set-Code: Zahl verschiedener im Feld gespielter Karten}.
+
+    Quelle sind die Kartenzeilen des Limitless-API-Laufs
+    (data/online_api_cards_*.csv). Fehlen sie, kommt ein leeres dict
+    zurueck — der Aufrufer behandelt das als "keine Auskunft", nicht
+    als "kein Set gespielt".
+    """
+    heraus: dict = {}
+    try:
+        namen = [n for n in os.listdir(data_dir)
+                 if n.startswith('online_api_cards_') and n.endswith('.csv')]
+    except OSError:
+        return {}
+    for name in namen:
+        try:
+            with open(os.path.join(data_dir, name), encoding='utf-8', newline='') as f:
+                for zeile in csv.DictReader(f, delimiter=';'):
+                    code = (zeile.get('set') or '').strip().upper()
+                    nummer = (zeile.get('number') or '').strip()
+                    if code and nummer:
+                        heraus.setdefault(code, set()).add(nummer)
+        except (OSError, csv.Error):
+            continue
+    return {k: len(v) for k, v in heraus.items()}
+
+
+def anker_belegt(data_dir: str, set_code: str) -> tuple:
+    """Ist `set_code` durch echte Turnierlisten als Rotationsanker belegt?
+
+    Gibt (belegt, zahl, grund) zurueck.
+
+    WARUM ES DIESEN RIEGEL GIBT
+    ---------------------------
+    `_pick_current_set()` nimmt schlicht das Set mit dem juengsten
+    Erscheinungsdatum. Es unterscheidet ein Hauptset nicht von einem
+    Sammler- oder Promoset — und am 16.09.2026 erscheint "30th
+    Celebration", ein Sonderset. Ohne diesen Riegel waere daraus am
+    naechsten Wochenlauf (Fr, 18.09.) ein Formatschluessel `TEF-30C`
+    geworden, den keine einzige Chunkdatei traegt: jede
+    formatabhaengige Ansicht haette ins Leere gegriffen — acht Tage
+    vor dem Turnier in Frankfurt am 26.09.
+
+    Der Riegel ist bewusst KEINE gepflegte Ausnahmeliste. Er fragt die
+    Wirklichkeit: spielt das Feld dieses Set? Ein echtes Hauptset
+    beantwortet das binnen eines Tages selbst (PBL: 40 Karten am
+    18.07., einen Tag nach Erscheinen). Ein Sammlerset, das das Format
+    nicht bewegt, beantwortet es nie — und wenn doch, dann ist der
+    Formatwechsel richtig.
+    """
+    code = (set_code or '').strip().upper()
+    if not code:
+        return (False, 0, 'kein Set-Code')
+    gezaehlt = _gespielte_karten_je_set(data_dir)
+    if not gezaehlt:
+        # Keine Auskunft ist keine Ablehnung: laeuft das Projekt ohne
+        # die API-Kartendateien, bleibt es beim alten Verhalten.
+        return (True, -1, 'keine Kartendaten vorhanden — Riegel ausgesetzt')
+    n = gezaehlt.get(code, 0)
+    if n >= ANKER_MIN_KARTEN:
+        return (True, n, f'{n} verschiedene Karten im Feld')
+    return (False, n, f'nur {n} verschiedene Karten im Feld '
+                      f'(noetig: {ANKER_MIN_KARTEN})')
+
+
 def _extract_iso_date(text: str) -> str:
     """Pull a YYYY-MM-DD date out of free text. Accepts ISO and a few
     common English/German formats. Returns '' on no match.
@@ -782,6 +863,27 @@ def write_format_window(sets_metadata_path: str,
                   f"abgebrochen. Meist heisst das, dass die Quelle nicht "
                   f"erreichbar war und der Fallback gegriffen hat.")
             return ''
+
+        # Ankerriegel: ein Formatwechsel nach VORNE muss durch echte
+        # Turnierlisten belegt sein. Der Monotonie-Riegel darueber faengt
+        # nur Ruecksprunge; ein Sonderset erscheint aber NEUER als das
+        # laufende Hauptset und kaeme durch.
+        alt_set = str(existing.get('current_set') or '').strip().upper()
+        neu_set = str(out.get('current_set') or '').strip().upper()
+        if alt_set and neu_set and neu_set != alt_set:
+            belegt, zahl, grund = anker_belegt(data_dir, neu_set)
+            if not belegt:
+                print(f"[Update Sets] ! Formatwechsel {alt_set} -> {neu_set} "
+                      f"nicht belegt: {grund}. Es wird NICHTS geschrieben.")
+                print(f"::error::update_sets: {neu_set} erschien zwar zuletzt, "
+                      f"wird aber im Standardfeld kaum gespielt ({grund}) — "
+                      f"das ist das Muster eines Sammler- oder Promosets, "
+                      f"nicht eines Rotationsankers. Das Formatfenster bleibt "
+                      f"auf {alt_set}. Ist der Wechsel richtig, current_set in "
+                      f"data/format_window.json von Hand setzen.")
+                return ''
+            print(f"[Update Sets] Formatwechsel {alt_set} -> {neu_set} belegt: "
+                  f"{grund}.")
 
         alt_jp = str(existing.get('jp_release_date') or '')
         neu_jp = str(out.get('jp_release_date') or '')
