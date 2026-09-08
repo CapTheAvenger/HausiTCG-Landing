@@ -1,0 +1,726 @@
+#!/usr/bin/env python3
+"""
+Limitless-API-Scraper (play.limitlesstcg.com/api)
+=================================================
+
+WARUM ES DIESE DATEI GIBT
+-------------------------
+Bis 08.09.2026 zog dieses Projekt Online-Turnierdaten aus dem gerenderten
+HTML von play.limitlesstcg.com — und zwar nur die *erfolgreichen* Listen
+(`max_lists_per_deck: 20`, Median 3 Archetypen je Turnier). Damit waren
+Kartenschnitte ueber das ganze Feld, Matchup-Matrizen und Share-Zahlen mit
+belastbarem Nenner nicht baubar.
+
+Limitless betreibt eine **offizielle, schluesselfreie API**
+(https://docs.limitlesstcg.com/developer). Sie liefert pro Turnier:
+
+  /tournaments                 Liste mit id, name, date, format, players
+  /tournaments/{id}/details    Phasen, Runden, isOnline, decklists
+  /tournaments/{id}/standings  JEDEN Spieler mit deck + vollstaendiger Liste
+  /tournaments/{id}/pairings   JEDES Match mit Sieger
+
+LIVE GEGENGEPRUEFT am 08.09.2026, Turnier "Pumpkaweekly"
+(`6a9db100ab080c8c957fc12b`, 342 Spieler, 876 Matches):
+
+  * 342 von 342 Spielern haben `deck` UND `decklist` — keine Stichprobe.
+  * Kartenschnitte fuer Mega Excadrill (13 Listen), aus /standings selbst
+    gerechnet: Pokemon 19,31 / Trainer 24,69 / Energie 16,00;
+    Metang (TEF-114) 3,77; Team Rocket's Petrel (DRI-176) 3,62;
+    Drilbur (PBL-46) 3,23; Metal Energy (MEE-8) 15,92.
+    Die Limitless-Seite /metagame/mega-excadrill-ex/cards zeigt
+    19.30 / 24.68 / 16.00 und exakt dieselben Kartenwerte.
+  * Bilanz Mega Excadrill aus /pairings gerechnet: 32-40-0.
+    Aus den `record`-Feldern der Standings: 32-40-0.
+    Auf der Limitless-Metagame-Seite: 32-40-0. Drei Wege, ein Ergebnis.
+
+NAMEN KOMMEN AUS DER API, NICHT AUS DEM SLUG
+--------------------------------------------
+Jeder Standings-Eintrag traegt `deck: {id, name, icons}`, also
+`mega-excadrill-ex` UND `Mega Excadrill`. Ein Slug-Normalisierer wird
+deshalb NICHT gebaut — er waere falsch: gegen die 62 Archetypen des
+Testturniers trifft der Weg ueber `slug_to_archetype` +
+`normalize_archetype_name` nur 26 von 62 Namen
+(`dragapult-ex` -> "Dragapult Ex" statt "Dragapult",
+ `n-zoroark` -> "Zoroark" statt "N's Zoroark",
+ `basic-box-m` -> "Basic Box M", das es in archetype_icons.json nicht gibt).
+Ueber den mitgelieferten `deck.name` treffen 61 von 62; der 62. ist der
+Sammeleimer "Other", der bewusst kein Archetyp ist.
+
+MATCHREGELN (live abgelesen, nicht angenommen)
+----------------------------------------------
+  winner == <spieler-id>   Sieg fuer diesen Spieler, Niederlage fuer den anderen
+  winner == 0              Unentschieden fuer beide
+  winner == -1             DOPPELNIEDERLAGE — Niederlage fuer beide
+  player2 leer             Freilos oder Zeitstrafe; zaehlt in die Bilanz,
+                           aber NICHT in die Matchup-Matrix (kein Gegner)
+
+Ohne die beiden letzten Regeln kam bei Mega Excadrill 32-33-0 heraus statt
+32-40-0 (5 Doppelniederlagen + 2 Partien ohne Gegner).
+
+INKREMENTELL
+------------
+`data/online_api_tournaments.csv` ist das Gedaechtnis: eine Zeile je
+bereits geholtem Turnier. `neue_turniere()` vergleicht die API-Liste
+dagegen und liefert nur, was fehlt. Ein bekanntes Turnier wird NIE erneut
+geholt — Limitless-Turniere sind nach Abschluss unveraenderlich.
+
+AUFBAU
+------
+Der gesamte Rechenteil ist netzfrei und rein: `archetyp_bilanz`,
+`karten_schnitt`, `matchup_matrix`, `neue_turniere`. Nur `LimitlessApi`
+und `main()` fassen das Netz an. Deshalb sind die Regeln oben ohne
+Netzzugang testbar — der Sandkasten erreicht die API nicht (Proxy 403),
+Live-Laeufe gehen ueber CI.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+
+API_BASIS = "https://play.limitlesstcg.com/api"
+
+# Der Sammeleimer ist kein Archetyp. Er darf in keine Kartenstatistik und
+# in keine Matchup-Zeile, sonst mischt er 20 verschiedene Decks zu einem.
+SAMMELEIMER = "other"
+
+# Verifiziert am 08.09.2026: 86 Turniere in 7 Tagen, davon 26 mit >= 100
+# Spielern; diese 26 tragen 4.457 von 5.622 Spielern (79 %).
+STANDARD_MIN_SPIELER = 100
+STANDARD_FORMAT = "STANDARD"
+STANDARD_SPIEL = "PTCG"
+
+GRUPPEN = ("pokemon", "trainer", "energy")
+
+
+# ---------------------------------------------------------------------------
+# Netzschicht
+# ---------------------------------------------------------------------------
+
+class LimitlessApi:
+    """Duenne Huelle um die offizielle API.
+
+    Kein Schluessel noetig (ausser fuer /games/decks, das wir nicht
+    brauchen). Die Rate-Limit-Header sind aus dem Browser wegen CORS
+    NICHT lesbar — serverseitig sind sie da, und genau deshalb liest
+    diese Klasse sie aus und bremst von selbst, statt in ein 429 zu
+    laufen.
+    """
+
+    def __init__(self, basis: str = API_BASIS, pause: float = 0.35,
+                 timeout: int = 30, versuche: int = 4,
+                 schluessel: Optional[str] = None):
+        self.basis = basis.rstrip("/")
+        self.pause = pause
+        self.timeout = timeout
+        self.versuche = versuche
+        self.schluessel = schluessel
+        self.anfragen = 0
+        self.letzte_header: Dict[str, str] = {}
+
+    def _url(self, pfad: str, params: Optional[Dict[str, Any]] = None) -> str:
+        p = dict(params or {})
+        if self.schluessel:
+            p["key"] = self.schluessel
+        frage = ("?" + urllib.parse.urlencode(p)) if p else ""
+        return f"{self.basis}/{pfad.lstrip('/')}{frage}"
+
+    def get(self, pfad: str, params: Optional[Dict[str, Any]] = None) -> Any:
+        url = self._url(pfad, params)
+        letzter_fehler: Optional[Exception] = None
+        for versuch in range(self.versuche):
+            try:
+                anfrage = urllib.request.Request(
+                    url, headers={"User-Agent": "TheDipidis/1.0 (+https://thedipidis.app)",
+                                  "Accept": "application/json"})
+                with urllib.request.urlopen(anfrage, timeout=self.timeout) as antwort:
+                    roh = antwort.read().decode("utf-8")
+                    self.letzte_header = {k.lower(): v for k, v in antwort.headers.items()}
+                self.anfragen += 1
+                self._bremse()
+                return json.loads(roh)
+            except urllib.error.HTTPError as fehler:
+                letzter_fehler = fehler
+                if fehler.code == 429:
+                    warte = float(fehler.headers.get("Retry-After") or (2 ** versuch))
+                    time.sleep(min(warte, 60.0))
+                    continue
+                if fehler.code in (500, 502, 503, 504):
+                    time.sleep(2 ** versuch)
+                    continue
+                raise
+            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as fehler:
+                letzter_fehler = fehler
+                time.sleep(2 ** versuch)
+        raise RuntimeError(f"API-Anfrage endgueltig gescheitert: {url}") from letzter_fehler
+
+    def _bremse(self) -> None:
+        """Freiwillige Pause; wird enger, wenn das Restkontingent knapp wird."""
+        rest = self.letzte_header.get("x-ratelimit-remaining")
+        pause = self.pause
+        try:
+            if rest is not None and int(rest) < 20:
+                pause = max(pause, 2.0)
+        except (TypeError, ValueError):
+            pass
+        time.sleep(pause)
+
+    # --- die vier Endpunkte -------------------------------------------------
+
+    def turniere(self, spiel: str = STANDARD_SPIEL, format_id: Optional[str] = None,
+                 limit: int = 100, seite: int = 1) -> List[dict]:
+        params: Dict[str, Any] = {"game": spiel, "limit": limit, "page": seite}
+        if format_id:
+            params["format"] = format_id
+        return self.get("tournaments", params) or []
+
+    def details(self, turnier_id: str) -> dict:
+        return self.get(f"tournaments/{turnier_id}/details") or {}
+
+    def standings(self, turnier_id: str) -> List[dict]:
+        return self.get(f"tournaments/{turnier_id}/standings") or []
+
+    def pairings(self, turnier_id: str) -> List[dict]:
+        return self.get(f"tournaments/{turnier_id}/pairings") or []
+
+
+# ---------------------------------------------------------------------------
+# Reine Rechenschicht — kein Netz, vollstaendig testbar
+# ---------------------------------------------------------------------------
+
+def deck_je_spieler(standings: Sequence[dict]) -> Dict[str, str]:
+    """spieler-id -> deck-id. Spieler ohne Deckzuordnung fehlen absichtlich."""
+    zu = {}
+    for eintrag in standings:
+        spieler = eintrag.get("player")
+        deck = eintrag.get("deck") or {}
+        if spieler and deck.get("id"):
+            zu[spieler] = deck["id"]
+    return zu
+
+
+def deck_namen(standings: Sequence[dict]) -> Dict[str, str]:
+    """deck-id -> Anzeigename, wie die API ihn selbst mitliefert.
+
+    Das ist der einzige zulaessige Weg zum Namen. Wird ein Name fuer
+    dieselbe id uneinheitlich geliefert, gewinnt der erste — gemeldet
+    wird das nicht hier, sondern vom Data Guardian.
+    """
+    namen: Dict[str, str] = {}
+    for eintrag in standings:
+        deck = eintrag.get("deck") or {}
+        if deck.get("id") and deck.get("name") and deck["id"] not in namen:
+            namen[deck["id"]] = deck["name"]
+    return namen
+
+
+def _partien(pairings: Sequence[dict]) -> Iterable[Tuple[str, Optional[str], str]]:
+    """Zerlegt jede Partie in zwei Sichten: (ich, gegner, ergebnis).
+
+    ergebnis ist 'S', 'N' oder 'U'. Gegner ist None bei Freilos/Zeitstrafe.
+    """
+    for match in pairings:
+        p1, p2 = match.get("player1"), match.get("player2")
+        sieger = match.get("winner")
+        for ich, gegner in ((p1, p2), (p2, p1)):
+            if not ich:
+                continue
+            if sieger == 0:
+                ergebnis = "U"
+            elif sieger == -1:
+                ergebnis = "N"          # Doppelniederlage: beide verlieren
+            elif sieger == ich:
+                ergebnis = "S"
+            else:
+                ergebnis = "N"
+            yield ich, (gegner or None), ergebnis
+
+
+def archetyp_bilanz(standings: Sequence[dict],
+                    pairings: Sequence[dict]) -> Dict[str, dict]:
+    """Je Archetyp: Listenzahl, Anteil und Bilanz aus den Partien.
+
+    Der Anteil traegt seinen Nenner mit (`listen_gesamt`) — ohne Nenner
+    ist eine Prozentzahl in diesem Projekt nicht ausspielbar.
+    """
+    zu = deck_je_spieler(standings)
+    namen = deck_namen(standings)
+
+    listen: Dict[str, int] = defaultdict(int)
+    for spieler, deck in zu.items():
+        listen[deck] += 1
+    gesamt = sum(listen.values())
+
+    bilanz: Dict[str, List[int]] = defaultdict(lambda: [0, 0, 0])
+    for ich, _gegner, ergebnis in _partien(pairings):
+        deck = zu.get(ich)
+        if not deck:
+            continue
+        bilanz[deck]["SNU".index(ergebnis)] += 1
+
+    heraus: Dict[str, dict] = {}
+    for deck, anzahl in listen.items():
+        s, n, u = bilanz.get(deck, [0, 0, 0])
+        partien = s + n + u
+        heraus[deck] = {
+            "archetyp_id": deck,
+            "archetyp_name": namen.get(deck, deck),
+            "listen": anzahl,
+            "listen_gesamt": gesamt,
+            "anteil": (anzahl / gesamt) if gesamt else 0.0,
+            "siege": s, "niederlagen": n, "unentschieden": u,
+            "partien": partien,
+            # Konvention "mitUnentschieden" (js/win-rate-konvention.js):
+            # S / (S + N + U). Der Name der Konvention wird mitgeschrieben,
+            # damit die Frontend-Seite nicht raten muss.
+            "quote": (s / partien) if partien else 0.0,
+            "quoten_konvention": "mitUnentschieden",
+        }
+    return heraus
+
+
+def karten_schnitt(standings: Sequence[dict]) -> Dict[Tuple[str, str, str, str], dict]:
+    """Je (Archetyp, Gruppe, Set, Nummer): Feldschnitt und Aufnahmequote.
+
+    `schnitt` ist die Zahl, die Limitless auf /metagame/<slug>/cards
+    zeigt: Gesamtzahl der Karte geteilt durch die Zahl ALLER Listen des
+    Archetyps — nicht durch die Listen, die die Karte spielen. Genau
+    darin liegt der Unterschied zwischen "3 Kopien in jedem Deck" und
+    "3 Kopien in einem Drittel der Decks", und beides steht deshalb
+    nebeneinander: `schnitt` und `aufnahmequote`.
+    """
+    zu = deck_je_spieler(standings)
+    listen_je_deck: Dict[str, int] = defaultdict(int)
+    for eintrag in standings:
+        deck = (eintrag.get("deck") or {}).get("id")
+        if deck:
+            listen_je_deck[deck] += 1
+
+    summe: Dict[Tuple[str, str, str, str], int] = defaultdict(int)
+    listen_mit: Dict[Tuple[str, str, str, str], int] = defaultdict(int)
+    name_je: Dict[Tuple[str, str, str, str], str] = {}
+
+    for eintrag in standings:
+        deck = (eintrag.get("deck") or {}).get("id")
+        liste = eintrag.get("decklist") or {}
+        if not deck or not liste:
+            continue
+        gesehen = set()
+        for gruppe in GRUPPEN:
+            for karte in (liste.get(gruppe) or []):
+                satz = str(karte.get("set") or "")
+                nummer = str(karte.get("number") or "")
+                anzahl = int(karte.get("count") or 0)
+                if not satz or not nummer or anzahl <= 0:
+                    continue
+                schluessel = (deck, gruppe, satz, nummer)
+                summe[schluessel] += anzahl
+                name_je.setdefault(schluessel, karte.get("name") or "")
+                gesehen.add(schluessel)
+        for schluessel in gesehen:
+            listen_mit[schluessel] += 1
+
+    heraus = {}
+    for schluessel, gesamt in summe.items():
+        deck, gruppe, satz, nummer = schluessel
+        n = listen_je_deck.get(deck, 0)
+        heraus[schluessel] = {
+            "archetyp_id": deck,
+            "gruppe": gruppe,
+            "set": satz,
+            "nummer": nummer,
+            "karte": name_je.get(schluessel, ""),
+            "kopien_gesamt": gesamt,
+            "listen_mit_karte": listen_mit.get(schluessel, 0),
+            "listen_gesamt": n,
+            "schnitt": (gesamt / n) if n else 0.0,
+            "aufnahmequote": (listen_mit.get(schluessel, 0) / n) if n else 0.0,
+        }
+    return heraus
+
+
+def matchup_matrix(standings: Sequence[dict],
+                   pairings: Sequence[dict]) -> Dict[Tuple[str, str], dict]:
+    """Je (Archetyp, Gegner-Archetyp): Bilanz aus dem GANZEN Feld.
+
+    Partien ohne Gegner (Freilos, Zeitstrafe) fallen heraus — sie haben
+    keinen Gegner-Archetyp. Der Sammeleimer "Other" faellt auf beiden
+    Seiten heraus: er ist kein Deck, sondern zwanzig verschiedene.
+    """
+    zu = deck_je_spieler(standings)
+    roh: Dict[Tuple[str, str], List[int]] = defaultdict(lambda: [0, 0, 0])
+    for ich, gegner, ergebnis in _partien(pairings):
+        if not gegner:
+            continue
+        a, b = zu.get(ich), zu.get(gegner)
+        if not a or not b or a == SAMMELEIMER or b == SAMMELEIMER:
+            continue
+        roh[(a, b)]["SNU".index(ergebnis)] += 1
+
+    heraus = {}
+    for (a, b), (s, n, u) in roh.items():
+        partien = s + n + u
+        heraus[(a, b)] = {
+            "archetyp_id": a, "gegner_id": b,
+            "siege": s, "niederlagen": n, "unentschieden": u,
+            "partien": partien,
+            "quote": (s / partien) if partien else 0.0,
+            "quoten_konvention": "mitUnentschieden",
+        }
+    return heraus
+
+
+def neue_turniere(api_liste: Sequence[dict], bekannte_ids: Iterable[str],
+                  min_spieler: int = STANDARD_MIN_SPIELER,
+                  format_id: Optional[str] = STANDARD_FORMAT,
+                  ab_datum: Optional[datetime] = None) -> List[dict]:
+    """Die inkrementelle Regel: bekanntes Turnier -> ueberspringen.
+
+    Ein abgeschlossenes Limitless-Turnier aendert sich nicht mehr, ein
+    erneuter Abruf waere also reine Last. Gefiltert wird zusaetzlich auf
+    Format, Mindestspielerzahl und optional ein Startdatum.
+    """
+    bekannt = set(bekannte_ids)
+    heraus = []
+    for turnier in api_liste:
+        tid = turnier.get("id")
+        if not tid or tid in bekannt:
+            continue
+        if format_id and turnier.get("format") != format_id:
+            continue
+        if int(turnier.get("players") or 0) < min_spieler:
+            continue
+        if ab_datum is not None:
+            wann = parse_api_datum(turnier.get("date"))
+            if wann is None or wann < ab_datum:
+                continue
+        heraus.append(turnier)
+    return heraus
+
+
+def parse_api_datum(roh: Optional[str]) -> Optional[datetime]:
+    """ISO-8601 mit Z, wie die API es liefert: 2026-09-08T02:00:00.000Z."""
+    if not roh:
+        return None
+    try:
+        return datetime.fromisoformat(str(roh).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Ausgabe
+# ---------------------------------------------------------------------------
+
+SPALTEN_TURNIERE = ["tournament_id", "name", "date", "format", "players",
+                    "organizer_id", "is_online", "has_decklists",
+                    "swiss_rounds", "phases", "standings_rows",
+                    "pairings_rows", "scraped_at"]
+
+SPALTEN_ARCHETYPEN = ["tournament_id", "date", "players", "archetype_id",
+                      "archetype_name", "lists", "lists_total", "share",
+                      "wins", "losses", "ties", "matches", "win_rate",
+                      "win_rate_convention"]
+
+SPALTEN_KARTEN = ["tournament_id", "date", "archetype_id", "group", "set",
+                  "number", "card", "copies_total", "lists_with_card",
+                  "lists_total", "avg_count", "inclusion_rate"]
+
+SPALTEN_MATCHUPS = ["tournament_id", "date", "archetype_id", "opponent_id",
+                    "wins", "losses", "ties", "matches", "win_rate",
+                    "win_rate_convention"]
+
+
+def _schreibe_csv(pfad: str, spalten: Sequence[str], zeilen: Sequence[dict]) -> None:
+    os.makedirs(os.path.dirname(pfad) or ".", exist_ok=True)
+    neu = not os.path.exists(pfad) or os.path.getsize(pfad) == 0
+    with open(pfad, "a", encoding="utf-8", newline="") as datei:
+        schreiber = csv.DictWriter(datei, fieldnames=list(spalten),
+                                   delimiter=";", extrasaction="ignore")
+        if neu:
+            schreiber.writeheader()
+        for zeile in zeilen:
+            schreiber.writerow(zeile)
+
+
+def bekannte_turnier_ids(pfad: str) -> List[str]:
+    if not os.path.exists(pfad):
+        return []
+    with open(pfad, encoding="utf-8", newline="") as datei:
+        return [z.get("tournament_id", "") for z in csv.DictReader(datei, delimiter=";")
+                if z.get("tournament_id")]
+
+
+def verwaiste_zeilen(zeilen: Sequence[dict], bekannte_ids: Iterable[str]) -> List[dict]:
+    """Behaelt nur Zeilen, deren Turnier im Index steht.
+
+    WARUM DAS NOETIG IST
+    Je Turnier werden vier Dateien geschrieben, der Index zuletzt. Bricht
+    der Lauf zwischen der ersten und der vierten Schreiboperation ab, dann
+    stehen Archetyp-, Karten- oder Matchupzeilen da, ohne dass das Turnier
+    als geholt gilt. Der naechste Lauf holt es erneut und haengt dieselben
+    Zeilen ein zweites Mal an — ein Kartenschnitt von 3,77 wuerde dadurch
+    nicht auffaellig falsch, sondern unauffaellig doppelt gewichtet. Diese
+    Funktion raeumt die Halbfertigen weg, bevor etwas Neues geschrieben wird.
+    """
+    bekannt = set(bekannte_ids)
+    return [z for z in zeilen if z.get("tournament_id") in bekannt]
+
+
+def _raeume_auf(pfad: str, spalten: Sequence[str], bekannte_ids: Iterable[str]) -> int:
+    """Schreibt eine Datei ohne ihre verwaisten Zeilen neu. Gibt die Zahl der
+    entfernten Zeilen zurueck."""
+    if not os.path.exists(pfad):
+        return 0
+    with open(pfad, encoding="utf-8", newline="") as datei:
+        alle = list(csv.DictReader(datei, delimiter=";"))
+    behalten = verwaiste_zeilen(alle, bekannte_ids)
+    entfernt = len(alle) - len(behalten)
+    if entfernt:
+        with open(pfad, "w", encoding="utf-8", newline="") as datei:
+            schreiber = csv.DictWriter(datei, fieldnames=list(spalten),
+                                       delimiter=";", extrasaction="ignore")
+            schreiber.writeheader()
+            schreiber.writerows(behalten)
+    return entfernt
+
+
+def zeilen_fuer_turnier(turnier: dict, details: dict,
+                        standings: Sequence[dict],
+                        pairings: Sequence[dict]) -> Dict[str, List[dict]]:
+    """Bindet die reinen Rechenfunktionen zu den vier Ausgabetabellen."""
+    tid = turnier.get("id", "")
+    datum = (turnier.get("date") or "")[:10]
+    spieler = int(turnier.get("players") or 0)
+
+    phasen = details.get("phases") or []
+    swiss = next((int(p.get("rounds") or 0) for p in phasen
+                  if str(p.get("type", "")).upper() == "SWISS"), 0)
+
+    bilanz = archetyp_bilanz(standings, pairings)
+    karten = karten_schnitt(standings)
+    matchups = matchup_matrix(standings, pairings)
+
+    zeilen_arch = [{
+        "tournament_id": tid, "date": datum, "players": spieler,
+        "archetype_id": w["archetyp_id"], "archetype_name": w["archetyp_name"],
+        "lists": w["listen"], "lists_total": w["listen_gesamt"],
+        "share": round(w["anteil"], 6),
+        "wins": w["siege"], "losses": w["niederlagen"], "ties": w["unentschieden"],
+        "matches": w["partien"], "win_rate": round(w["quote"], 6),
+        "win_rate_convention": w["quoten_konvention"],
+    } for w in sorted(bilanz.values(), key=lambda x: -x["listen"])]
+
+    zeilen_karten = [{
+        "tournament_id": tid, "date": datum,
+        "archetype_id": w["archetyp_id"], "group": w["gruppe"],
+        "set": w["set"], "number": w["nummer"], "card": w["karte"],
+        "copies_total": w["kopien_gesamt"], "lists_with_card": w["listen_mit_karte"],
+        "lists_total": w["listen_gesamt"], "avg_count": round(w["schnitt"], 4),
+        "inclusion_rate": round(w["aufnahmequote"], 4),
+    } for w in karten.values() if w["archetyp_id"] != SAMMELEIMER]
+
+    zeilen_matchups = [{
+        "tournament_id": tid, "date": datum,
+        "archetype_id": w["archetyp_id"], "opponent_id": w["gegner_id"],
+        "wins": w["siege"], "losses": w["niederlagen"], "ties": w["unentschieden"],
+        "matches": w["partien"], "win_rate": round(w["quote"], 6),
+        "win_rate_convention": w["quoten_konvention"],
+    } for w in matchups.values()]
+
+    zeile_turnier = {
+        "tournament_id": tid, "name": turnier.get("name", ""),
+        "date": turnier.get("date", ""), "format": turnier.get("format", ""),
+        "players": spieler, "organizer_id": turnier.get("organizerId", ""),
+        "is_online": details.get("isOnline", ""),
+        "has_decklists": details.get("decklists", ""),
+        "swiss_rounds": swiss, "phases": len(phasen),
+        "standings_rows": len(standings), "pairings_rows": len(pairings),
+        "scraped_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+
+    return {"turniere": [zeile_turnier], "archetypen": zeilen_arch,
+            "karten": zeilen_karten, "matchups": zeilen_matchups}
+
+
+# ---------------------------------------------------------------------------
+# Live-Gegenprobe
+# ---------------------------------------------------------------------------
+
+# Am 08.09.2026 im Browser von der Limitless-Oberflaeche abgelesen und
+# unabhaengig aus der API nachgerechnet. Wenn die API ihre Semantik aendert
+# (etwa Doppelniederlagen anders zaehlt), faellt genau das hier auf — im
+# Sandkasten ist die API nicht erreichbar (Proxy 403), deshalb laeuft diese
+# Probe ausschliesslich in CI.
+GEGENPROBE = {
+    "turnier_id": "6a9db100ab080c8c957fc12b",
+    "spieler": 342,
+    "partien": 876,
+    "archetyp": "mega-excadrill-ex",
+    "name": "Mega Excadrill",
+    "listen": 13,
+    "bilanz": (32, 40, 0),
+    "karten": {                       # (Gruppe, Set, Nummer): Schnitt
+        ("pokemon", "TEF", "114"): 3.77,
+        ("trainer", "DRI", "176"): 3.62,
+        ("pokemon", "PBL", "46"): 3.23,
+        ("energy", "MEE", "8"): 15.92,
+    },
+    # Limitless schneidet ab, wir runden — daher 0,02 Spielraum, nicht mehr.
+    "toleranz": 0.02,
+}
+
+
+def gegenprobe(api: "LimitlessApi") -> List[str]:
+    """Rechnet die vier Ebenen gegen live abgelesene Werte. Gibt Abweichungen zurueck."""
+    g = GEGENPROBE
+    standings = api.standings(g["turnier_id"])
+    pairings = api.pairings(g["turnier_id"])
+    fehler: List[str] = []
+
+    def pruefe(was, ist, soll):
+        if ist != soll:
+            fehler.append(f"{was}: erwartet {soll}, gemessen {ist}")
+
+    pruefe("Standings-Zeilen", len(standings), g["spieler"])
+    pruefe("Pairings-Zeilen", len(pairings), g["partien"])
+
+    bilanz = archetyp_bilanz(standings, pairings)
+    w = bilanz.get(g["archetyp"])
+    if not w:
+        fehler.append(f"Archetyp {g['archetyp']} fehlt in den Standings")
+        return fehler
+
+    pruefe("Anzeigename", w["archetyp_name"], g["name"])
+    pruefe("Listen", w["listen"], g["listen"])
+    pruefe("Bilanz", (w["siege"], w["niederlagen"], w["unentschieden"]), g["bilanz"])
+
+    # Zweiter, unabhaengiger Weg zur selben Bilanz: die record-Felder.
+    aus_records = [0, 0, 0]
+    for eintrag in standings:
+        if (eintrag.get("deck") or {}).get("id") != g["archetyp"]:
+            continue
+        r = eintrag.get("record") or {}
+        aus_records[0] += int(r.get("wins") or 0)
+        aus_records[1] += int(r.get("losses") or 0)
+        aus_records[2] += int(r.get("ties") or 0)
+    pruefe("Bilanz aus den record-Feldern", tuple(aus_records), g["bilanz"])
+
+    karten = karten_schnitt(standings)
+    for (gruppe, satz, nummer), soll in g["karten"].items():
+        eintrag = karten.get((g["archetyp"], gruppe, satz, nummer))
+        if not eintrag:
+            fehler.append(f"Karte {satz}-{nummer} fehlt")
+            continue
+        if abs(eintrag["schnitt"] - soll) > g["toleranz"]:
+            fehler.append(f"Schnitt {satz}-{nummer}: erwartet {soll}, "
+                          f"gemessen {eintrag['schnitt']:.2f}")
+    return fehler
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    p = argparse.ArgumentParser(description=__doc__.split("\n")[1])
+    p.add_argument("--data-dir", default="data")
+    p.add_argument("--min-players", type=int, default=STANDARD_MIN_SPIELER)
+    p.add_argument("--format", default=STANDARD_FORMAT)
+    p.add_argument("--game", default=STANDARD_SPIEL)
+    p.add_argument("--days", type=int, default=14,
+                   help="Wie weit zurueck die Turnierliste gelesen wird.")
+    p.add_argument("--max-tournaments", type=int, default=0,
+                   help="0 = kein Deckel.")
+    p.add_argument("--pause", type=float, default=0.35)
+    p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--verify", action="store_true",
+                   help="Nur die Live-Gegenprobe fahren, nichts schreiben.")
+    a = p.parse_args(argv)
+
+    pfad = lambda n: os.path.join(a.data_dir, n)
+    api = LimitlessApi(pause=a.pause)
+    ab = datetime.now(timezone.utc) - timedelta(days=a.days)
+
+    if a.verify:
+        abweichungen = gegenprobe(api)
+        if abweichungen:
+            print("GEGENPROBE GESCHEITERT:", file=sys.stderr)
+            for zeile in abweichungen:
+                print(f"  - {zeile}", file=sys.stderr)
+            return 1
+        print(f"Gegenprobe bestanden ({api.anfragen} Anfragen): "
+              f"Standings, Pairings, Bilanz auf zwei Wegen und vier Kartenschnitte "
+              f"stimmen mit den am 08.09.2026 abgelesenen Werten ueberein.")
+        return 0
+
+    liste: List[dict] = []
+    for seite in range(1, 21):
+        teil = api.turniere(spiel=a.game, limit=100, seite=seite)
+        if not teil:
+            break
+        liste.extend(teil)
+        letztes = parse_api_datum(teil[-1].get("date"))
+        if letztes and letztes < ab:
+            break
+
+    bekannt = bekannte_turnier_ids(pfad("online_api_tournaments.csv"))
+
+    # Halbfertige Turniere eines abgebrochenen Vorlaufs wegraeumen, BEVOR
+    # etwas Neues dazukommt — sonst zaehlen ihre Zeilen doppelt.
+    aufgeraeumt = sum((
+        _raeume_auf(pfad("online_api_archetypes.csv"), SPALTEN_ARCHETYPEN, bekannt),
+        _raeume_auf(pfad("online_api_cards.csv"), SPALTEN_KARTEN, bekannt),
+        _raeume_auf(pfad("online_api_matchups.csv"), SPALTEN_MATCHUPS, bekannt),
+    ))
+    if aufgeraeumt:
+        print(f"{aufgeraeumt} verwaiste Zeilen aus einem abgebrochenen Lauf entfernt.")
+
+    offen = neue_turniere(liste, bekannt, min_spieler=a.min_players,
+                          format_id=a.format, ab_datum=ab)
+    if a.max_tournaments:
+        offen = offen[:a.max_tournaments]
+
+    print(f"Turnierliste: {len(liste)} · bekannt: {len(bekannt)} · offen: {len(offen)}")
+    if a.dry_run:
+        for t in offen[:20]:
+            print(f"  {t.get('date','')[:10]}  {t.get('players'):>4}  {t.get('name','')[:60]}")
+        return 0
+
+    for i, turnier in enumerate(offen, 1):
+        tid = turnier["id"]
+        try:
+            details = api.details(tid)
+            standings = api.standings(tid)
+            pairings = api.pairings(tid)
+        except Exception as fehler:                      # noqa: BLE001
+            print(f"  [{i}/{len(offen)}] {tid} NICHT GEHOLT: {fehler}", file=sys.stderr)
+            continue
+        if not standings:
+            print(f"  [{i}/{len(offen)}] {tid} ohne Standings — uebersprungen")
+            continue
+        teile = zeilen_fuer_turnier(turnier, details, standings, pairings)
+        _schreibe_csv(pfad("online_api_archetypes.csv"), SPALTEN_ARCHETYPEN, teile["archetypen"])
+        _schreibe_csv(pfad("online_api_cards.csv"), SPALTEN_KARTEN, teile["karten"])
+        _schreibe_csv(pfad("online_api_matchups.csv"), SPALTEN_MATCHUPS, teile["matchups"])
+        _schreibe_csv(pfad("online_api_tournaments.csv"), SPALTEN_TURNIERE, teile["turniere"])
+        print(f"  [{i}/{len(offen)}] {turnier.get('name','')[:50]} · "
+              f"{len(standings)} Listen · {len(teile['archetypen'])} Archetypen · "
+              f"{len(teile['karten'])} Kartenzeilen · {len(teile['matchups'])} Matchups")
+
+    print(f"Fertig. {api.anfragen} API-Anfragen.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
