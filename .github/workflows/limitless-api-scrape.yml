@@ -52,6 +52,15 @@ on:
         description: 'Wie weit zurueck die Turnierliste gelesen wird'
         type: string
         default: '14'
+      tiefe:
+        description: 'voll = alle vier Ebenen (3 Anfragen/Turnier) · archetypen = nur Anteil und Bilanz (1 Anfrage, ~6 KB statt ~200 KB)'
+        type: choice
+        options: ['voll', 'archetypen']
+        default: 'voll'
+      meta:
+        description: 'Nur diese Formatfenster, komma-getrennt (z. B. TEF-CRI,TEF-POR). Leer = alle im Zeitraum'
+        type: string
+        default: ''
       turniere:
         description: 'Hoechstens N Turniere holen (0 = alle offenen)'
         type: string
@@ -121,9 +130,13 @@ jobs:
           TAGE: ${{ inputs.tage }}
           TURNIERE: ${{ inputs.turniere }}
           TROCKEN: ${{ inputs.trocken }}
+          TIEFE: ${{ inputs.tiefe }}
+          META: ${{ inputs.meta }}
         run: |
           set +e
           args="--min-players $MINDEST_SPIELER --days $TAGE --max-tournaments $TURNIERE"
+          if [ -n "$TIEFE" ]; then args="$args --tiefe $TIEFE"; fi
+          if [ -n "$META" ]; then args="$args --meta $META"; fi
           if [ "$TROCKEN" = "true" ]; then args="$args --dry-run"; fi
 
           vorher=0
@@ -138,12 +151,18 @@ jobs:
           {
             echo "### Limitless-API-Lauf"
             echo ""
-            echo "| Datei | Zeilen |"
-            echo "| --- | ---: |"
-            echo "| online_api_tournaments.csv | $(zeilen data/online_api_tournaments.csv) (vorher $vorher) |"
-            echo "| online_api_archetypes.csv | $(zeilen data/online_api_archetypes.csv) |"
-            echo "| online_api_cards.csv | $(zeilen data/online_api_cards.csv) |"
-            echo "| online_api_matchups.csv | $(zeilen data/online_api_matchups.csv) |"
+            echo "| Datei | Zeilen | Groesse |"
+            echo "| --- | ---: | ---: |"
+            echo "| online_api_tournaments.csv | $(zeilen data/online_api_tournaments.csv) (vorher $vorher) | $(du -h data/online_api_tournaments.csv 2>/dev/null | cut -f1) |"
+            echo "| online_api_archetypes.csv | $(zeilen data/online_api_archetypes.csv) | $(du -h data/online_api_archetypes.csv 2>/dev/null | cut -f1) |"
+            # Karten und Matchups liegen je Formatfenster in eigenen Dateien.
+            # Die Groesse steht mit dabei: 146 KB je Turnier heisst, dass eine
+            # Datei ueber ein ganzes Format 27 MB erreicht, und ab 50 MB warnt
+            # GitHub. Wer den Lauf ansieht, soll das sehen, bevor es eng wird.
+            for f in data/online_api_cards_*.csv data/online_api_matchups_*.csv; do
+              [ -f "$f" ] || continue
+              echo "| $(basename "$f") | $(zeilen "$f") | $(du -h "$f" | cut -f1) |"
+            done
             echo ""
             echo "Rueckgabewert: \`$rc\` · Argumente: \`$args\`"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -183,11 +202,15 @@ jobs:
           # data_stand.json MUSS mit: ohne sie waere der Schritt darueber
           # wirkungslos — die Datei wuerde im Laeufer erzeugt und mit ihm
           # verworfen.
+          # Die Chunkdateien per Glob — mit jeder Rotation kommt eine dazu,
+          # und eine Datei, die niemand in diese Liste nachtraegt, wird im
+          # Laeufer erzeugt und mit ihm verworfen.
           git add data/online_api_tournaments.csv \
                   data/online_api_archetypes.csv \
-                  data/online_api_cards.csv \
-                  data/online_api_matchups.csv \
                   data/data_stand.json
+          git add data/online_api_cards_*.csv data/online_api_matchups_*.csv 2>/dev/null || true
+          # Die alten flachen Dateien sind in die Chunks uebergegangen.
+          git add -u data/online_api_cards.csv data/online_api_matchups.csv 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "unveraendert — kein Push."
             exit 0
