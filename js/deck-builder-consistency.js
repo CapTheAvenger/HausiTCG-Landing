@@ -799,7 +799,7 @@
   // ── Phase 1: ACE-SPEC selection ───────────────────────────────────
   //
   // Spec rule 1: highest weighted share wins. When the leader and
-  // runner-up are within ACE_SPEC_TIEBREAK_WINDOW (10 pp), pick by
+  // runner-up are within ACE_SPEC_TIEBREAK_WINDOW (5 pp), pick by
   // top-cut frequency instead — that's the maintainer's "very close
   // split" tiebreak.
   function _pickAceSpec(scoredCards, trace) {
@@ -823,6 +823,11 @@
         chosen: leader.name,
         weightedShare: leader.weightedShare,
         topCutFreq: leader.topCutFreq,
+        candidates: [{
+          name: leader.name,
+          weightedShare: leader.weightedShare,
+          topCutFreq: leader.topCutFreq,
+        }],
       });
       return leader;
     }
@@ -837,6 +842,18 @@
         weightedShare: leader.weightedShare,
         runnerUpShare: runner.weightedShare,
         gap,
+        // Der Normalfall (22 von 33 Archetypen) — und bis zum 08.09.2026
+        // der einzige Zweig OHNE candidates. Der Aufrufer baut daraus
+        // cands = [{ name: chosen }], also eine Tabelle mit genau einer
+        // Zeile: "Warum diese Ace Spec?" beantwortet mit dem Gewinner und
+        // sonst nichts, obwohl der Motor die Alternativen kennt. Live
+        // nachgesehen am 08.09. bei Mega Excadrill: nur Hero's Cape stand
+        // da, ohne die geschlagene Alternative.
+        candidates: aces.slice(0, 4).map(a => ({
+          name: a.name,
+          weightedShare: a.weightedShare,
+          topCutFreq: a.topCutFreq,
+        })),
       });
       return leader;
     }
