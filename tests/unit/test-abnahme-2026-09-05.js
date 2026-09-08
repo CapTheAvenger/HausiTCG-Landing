@@ -558,10 +558,30 @@ describe('Champions-Nutzung: unmögliche und unvollständige Verteilungen', () =
 
 describe('Champions-Nutzung: Regionalformen finden ihre Daten', () => {
 
-    // Diese Zusicherung rechnet gegen data/champions_usage.json. Sie prüft
-    // eine EIGENSCHAFT der Namensumrechnung, keinen Wochenwert: für einen
-    // Namen aus der Rangliste muss ein Schlüssel herauskommen, den die Datei
-    // wirklich führt. Welche Pokémon diese Woche dort stehen, ist ihr egal.
+    // BEFUND 08.09.2026 — DER KOMMENTAR HIER WAR FALSCH, UND DAS HAT
+    // MAIN ROT GEMACHT.
+    //
+    // Er behauptete, die Zusicherung prüfe „eine EIGENSCHAFT der
+    // Namensumrechnung, keinen Wochenwert … Welche Pokémon diese Woche
+    // dort stehen, ist ihr egal." Genau das stimmte nicht: die zweite
+    // Zusicherung verlangte, dass der errechnete Schlüssel auch in
+    // data/champions_usage.json STEHT — und diese Datei wird
+    // wöchentlich neu gescrapt.
+    //
+    // Am 08.09.2026 führte sie 236 Schlüssel, darunter `maushold`, aber
+    // nicht mehr `maushold-family-of-four`. Folge: Deploy-Läufe 2795,
+    // 2796 und 2797 rot, `build` und `deploy` übersprungen, die Seite
+    // hing auf dem alten Stand — ohne dass jemand etwas geändert hätte.
+    // Genau der Fall, vor dem CLAUDE.md unter „Absolute quality
+    // thresholds produce noise here" warnt.
+    //
+    // Die Trennung ist jetzt sauber:
+    //   - Die UMRECHNUNG wird für JEDEN Fall geprüft. Sie ist Code und
+    //     hat mit der Woche nichts zu tun.
+    //   - Die ABDECKUNG wird nur für die Fälle geprüft, die diese Woche
+    //     überhaupt in der Datei stehen — mit einer Untergrenze, damit
+    //     die Zusicherung nicht lautlos leerläuft, wenn die Datei einmal
+    //     gar nichts mehr hergibt.
     const usage = JSON.parse(lies('data/champions_usage.json')).pokemon;
     const quelle = NUTZUNG.match(/var USAGE_REGION[\s\S]*?\n {4}function usageSlug\(name\) \{[\s\S]*?\n {4}\}/);
 
@@ -569,23 +589,106 @@ describe('Champions-Nutzung: Regionalformen finden ihre Daten', () => {
         assert.ok(quelle, 'usageSlug/usageKandidaten sind nicht mehr als Block lesbar');
     });
 
-    it('Regional-, Mega- und Formnamen lösen auf', () => {
-        // Gemessen am 05.09.2026: 17 von 86 Zeilen der Rangliste fanden
-        // ihre Daten nicht — alle Regionalformen und alle Mega-Formen.
+    // Gemessen am 05.09.2026: 17 von 86 Zeilen der Rangliste fanden
+    // ihre Daten nicht — alle Regionalformen und alle Mega-Formen.
+    const FAELLE = [
+        ['Ninetales-Alola',  'alolan-ninetales'],
+        ['Decidueye-Hisui',  'hisuian-decidueye'],
+        ['Zoroark-Hisui',    'hisuian-zoroark'],
+        ['Slowbro-Galar',    'galarian-slowbro'],
+        ['Lycanroc-Dusk',    'lycanroc-dusk-form'],
+        ['Maushold-Four',    'maushold-family-of-four'],
+        ['Gallade-Mega',     'mega-gallade'],
+    ];
+
+    it('die Umrechnung BIETET den richtigen Schluessel an — vor der Grundform', () => {
+        /* DIE WOCHENUNABHAENGIGE EIGENSCHAFT, und zwar die richtige.
+           usageSlug() nimmt den ERSTEN Kandidaten, den der
+           Nutzungsstand kennt (js/app-side-quest-usage.js:243 ff.) —
+           sein Ergebnis haengt also zwangslaeufig an der Datei. Was
+           NICHT an ihr haengt, ist die Kandidatenliste: sie kommt
+           allein aus dem Namen.
+
+           Zwei Dinge muessen dort stimmen, und beide sind reiner Code:
+           der richtige Schluessel muss ueberhaupt angeboten werden, und
+           er muss VOR der blossen Grundform stehen. Stuende er dahinter,
+           bekaeme „Ninetales-Alola" die Zahlen von „ninetales" — und
+           genau davor warnt der Kommentar an der Ausweichzeile
+           („sonst stuende die Zahl der Grundform unter dem Namen einer
+           anderen"). */
+        const kand = new Function('_usage', quelle[0] + '; return usageKandidaten;')({});
+        for (const [name, erwartet] of FAELLE) {
+            const liste = kand(name);
+            const i = liste.indexOf(erwartet);
+            assert.ok(i >= 0,
+                `${name} bietet ${erwartet} gar nicht an — angeboten wird: ${liste.join(', ')}`);
+            const grundform = liste.indexOf(String(name).toLowerCase().split('-')[0]);
+            if (grundform >= 0) {
+                assert.ok(i < grundform,
+                    `${name} bietet die Grundform (${liste[grundform]}) VOR ${erwartet} an — `
+                    + 'dann bekaeme die Form die Zahlen der Art');
+            }
+            /* DOPPELFREI — sonst laesst sich die Liste nicht pruefen.
+               Steht ein Schluessel zweimal drin, kann die Regel, die
+               ihn erzeugt, ersatzlos entfallen, ohne dass sich etwas
+               aendert. Genau das ist am 08.09.2026 in einer
+               Mutationsprobe passiert: zwei Regeln lieferten
+               "alolan-ninetales" bzw. "mega-gallade", und das Streichen
+               der einen blieb folgenlos. */
+            const doppelt = liste.filter((x, k) => liste.indexOf(x) !== k);
+            assert.deepEqual([...new Set(doppelt)], [],
+                `${name} bietet Schluessel doppelt an: ${[...new Set(doppelt)].join(', ')}`);
+        }
+    });
+
+    it('Mega-Formen bieten BEIDE Schreibweisen an', () => {
+        /* Nachgemessen am 08.09.2026: bei "charizard-mega-y" liefern die
+           zwei Mega-Regeln Verschiedenes — "mega-charizard" und
+           "mega-charizard-y". Beides kommt in Nutzungsstaenden vor, je
+           nachdem ob die Quelle die Mega-Formen trennt. Ich hatte die
+           erste Regel fuer redundant gehalten und wollte sie streichen;
+           der Vergleich der Kandidatenlisten hat es gezeigt. Diese
+           Zusicherung haelt das fest. */
+        const kand = new Function('_usage', quelle[0] + '; return usageKandidaten;')({});
+        const liste = kand('Charizard-Mega-Y');
+        assert.ok(liste.includes('mega-charizard'),
+            `"mega-charizard" fehlt: ${liste.join(', ')}`);
+        assert.ok(liste.includes('mega-charizard-y'),
+            `"mega-charizard-y" fehlt: ${liste.join(', ')}`);
+        // Und bei einer Mega-Form ohne Zusatz faellt beides zusammen —
+        // ohne die Entdopplung stuende der Wert dann zweimal da.
+        const einfach = kand('Gallade-Mega');
+        assert.strictEqual(einfach.filter(x => x === 'mega-gallade').length, 1);
+    });
+
+    it('wo der Nutzungsstand den Schluessel fuehrt, wird er auch genommen', () => {
+        /* Hier darf die Woche mitreden — aber nur so: ein Fall, den die
+           Datei diese Woche gar nicht kennt, ist kein Fehler der
+           Umrechnung, sondern eine Luecke im Scrape. Vorher stand hier
+           ein hartes assert.ok(usage[s]), und genau das hat main am
+           08.09.2026 rot gemacht, als maushold-family-of-four aus dem
+           Nutzungsstand verschwand. */
         const usageSlug = new Function('_usage', quelle[0] + '; return usageSlug;')(usage);
-        const faelle = [
-            ['Ninetales-Alola',  'alolan-ninetales'],
-            ['Decidueye-Hisui',  'hisuian-decidueye'],
-            ['Zoroark-Hisui',    'hisuian-zoroark'],
-            ['Slowbro-Galar',    'galarian-slowbro'],
-            ['Lycanroc-Dusk',    'lycanroc-dusk-form'],
-            ['Maushold-Four',    'maushold-family-of-four'],
-            ['Gallade-Mega',     'mega-gallade'],
-        ];
-        for (const [name, erwartet] of faelle) {
-            const s = usageSlug(name);
-            assert.equal(s, erwartet, `${name} löst auf ${s} auf statt auf ${erwartet}`);
-            assert.ok(usage[s], `${s} steht nicht in champions_usage.json`);
+        const gefunden = [];
+        const fehlend  = [];
+        for (const [name, erwartet] of FAELLE) {
+            if (usage[erwartet]) {
+                assert.equal(usageSlug(name), erwartet,
+                    `${name} findet ${erwartet} nicht, obwohl der Schluessel in der Datei steht`);
+                gefunden.push(erwartet);
+            } else {
+                fehlend.push(erwartet);
+            }
+        }
+        /* Untergrenze, damit die Zusicherung nicht lautlos leerlaeuft,
+           wenn die Datei einmal gar nichts mehr hergibt. Eine feste
+           Zahl waere wieder ein Wochenwert — deshalb „mindestens einer". */
+        assert.ok(gefunden.length >= 1,
+            'kein einziger der erwarteten Schluessel steht in data/champions_usage.json '
+            + `(${Object.keys(usage).length} Schluessel) — das ist kein Wochenwert mehr, `
+            + `sondern ein kaputter Aufbau. Erwartet wurden: ${FAELLE.map(f => f[1]).join(', ')}`);
+        if (fehlend.length) {
+            console.log(`    # diese Woche nicht im Nutzungsstand: ${fehlend.join(', ')}`);
         }
     });
 });
