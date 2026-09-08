@@ -28,16 +28,33 @@ name: Limitless-API-Lauf
 # (4.457 von 5.622 Spielern, 79 %). Ein Wochenlauf sind damit rund
 # 54 Anfragen. Der HTML-Weg haette 806 bis 3.250 gekostet.
 #
-# KEIN ZEITPLAN, SOLANGE ER NICHT EINMAL VON HAND GRUEN WAR
-# ---------------------------------------------------------
-# Dieselbe Regel wie bei online-decklists.yml: ob der GitHub-Laeufer bei
-# play.limitlesstcg.com ueberhaupt durchkommt, ist unbekannt. Ein
-# Zeitplan, der jede Nacht eine Warnung erzeugt und nie eine Zeile Daten,
-# ist schlimmer als kein Zeitplan.
+# ZEITPLAN: TAEGLICH, seit dem 08.09.2026
+# --------------------------------------
+# Die Bedingung "erst ein gruener Lauf von Hand, dann ein cron" ist
+# erfuellt: fuenf Laeufe von Hand, alle gruen, 396 Turniere geschrieben,
+# kein einziges 429. Der laengste (186 Turniere in voller Tiefe) lief
+# 26 min 24 s.
 #
-# Anstoss: GitHub -> Actions -> Limitless-API-Lauf -> Run workflow
+# WARUM TAEGLICH UND NICHT ZWEIMAL DIE WOCHE
+# Gemessen am 08.09.2026: 26 Turniere je Woche ab 100 Spielern, zwei bis
+# drei Anfragen je Turnier — rund 8 Anfragen pro Tag. Dieselbe Wochenlast
+# wie ein Mi/Fr-Rhythmus, nur gleichmaessig verteilt statt in zwei
+# Bloecken, und die Daten sind nie aelter als 24 Stunden. Die
+# Meta-Transition-Analyse liest Wochenverlaeufe; zwei Messpunkte je Woche
+# machen daraus eine gezackte Linie ohne Not.
+#
+# 03:40 UTC liegt zwischen dem Champions-Lauf (04:00) und dem
+# Preis-Lauf (08:00) — kein Gedraenge auf denselben Laeufern.
+#
+# `tage: 3` statt 14: der Lauf ist inkrementell, ein Fenster von drei
+# Tagen deckt jede Luecke ab, die ein ausgefallener Lauf reissen kann,
+# und spart 20 der 30 Listenabrufe.
+#
+# Anstoss von Hand: GitHub -> Actions -> Limitless-API-Lauf -> Run workflow
 
 on:
+  schedule:
+    - cron: '40 3 * * *'
   workflow_dispatch:
     inputs:
       gegenprobe:
@@ -108,6 +125,12 @@ jobs:
       # zaehlt), schreibt der Lauf sonst stillschweigend falsche Bilanzen
       # in vier Dateien. Dieser Schritt darf hart umfallen.
       - name: Gegenprobe gegen live abgelesene Werte
+        env:
+          # OPTIONAL. Ist das Geheimnis nicht gesetzt, ist die Variable
+          # leer und der Scraper laeuft ohne Schluessel — genau wie
+          # bisher. Der Wert geht als Header raus, nie als Teil einer URL:
+          # URLs landen im Protokoll dieses Laufs.
+          LIMITLESS_API_KEY: ${{ secrets.LIMITLESS_API_KEY }}
         run: |
           python backend/scrapers/limitless_api_scraper.py --verify 2>&1 | tee /tmp/verify.log
           rc=${PIPESTATUS[0]}
@@ -123,15 +146,25 @@ jobs:
             exit $rc
           fi
 
+      # Beim Zeitplanlauf ist `inputs.gegenprobe` leer, nicht true — der
+      # Schritt laeuft also. Genau so soll es sein: der naechtliche Lauf
+      # faehrt erst die Gegenprobe (Schritt davor, immer) und schreibt
+      # dann.
       - name: Turnierdaten holen
         if: ${{ inputs.gegenprobe != true }}
         env:
-          MINDEST_SPIELER: ${{ inputs.mindest_spieler }}
-          TAGE: ${{ inputs.tage }}
-          TURNIERE: ${{ inputs.turniere }}
+          # Beim Zeitplanlauf sind alle inputs leer — dann greifen die
+          # Vorgaben dahinter. Ohne sie liefe der naechtliche Lauf mit
+          # `--min-players` ohne Wert und braeche mit einem Argumentfehler
+          # ab; ein Zeitplan, der jede Nacht rot meldet, wird nach drei
+          # Nächten nicht mehr gelesen.
+          MINDEST_SPIELER: ${{ inputs.mindest_spieler || '100' }}
+          TAGE: ${{ inputs.tage || '3' }}
+          TURNIERE: ${{ inputs.turniere || '0' }}
           TROCKEN: ${{ inputs.trocken }}
-          TIEFE: ${{ inputs.tiefe }}
+          TIEFE: ${{ inputs.tiefe || 'voll' }}
           META: ${{ inputs.meta }}
+          LIMITLESS_API_KEY: ${{ secrets.LIMITLESS_API_KEY }}
         run: |
           set +e
           args="--min-players $MINDEST_SPIELER --days $TAGE --max-tournaments $TURNIERE"
