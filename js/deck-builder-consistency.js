@@ -213,8 +213,19 @@
   const CORE_THRESHOLDS = [0.90, 0.85, 0.80];  // tried in order
   const CORE_MIN_DISTINCT_CARDS = 12;  // below this, relax threshold
 
-  // Spec rule 1: ACE-SPEC tiebreak window (Δ ≤ 10 pp = "very close").
-  const ACE_SPEC_TIEBREAK_WINDOW = 0.10;
+  // Spec rule 1: ACE-SPEC tiebreak window (Δ ≤ 5 pp = "very close").
+  //
+  // Stand 08.09.2026 auf 0.05 gezogen. Der Kopf dieser Datei nennt seit
+  // jeher "±5 pp (the 45-55 % range the maintainer named)", die Konstante
+  // stand auf 0.10 — doppelt so breit wie die Ansage. Damit haette der
+  // Tiebreak in Faellen gegriffen, in denen der Betreiber einen klaren
+  // Fuehrenden erwartet (55 % gegen 46 %).
+  //
+  // Gemessen ueber alle 33 Archetypen mit Ace Spec: der KLEINSTE Abstand
+  // zwischen Platz 1 und Platz 2 ist 16,0 pp (Mega Lucario). Weder 5 noch
+  // 10 pp greifen heute irgendwo — die Aenderung ist verhaltensneutral und
+  // stellt nur die Ansage wieder her.
+  const ACE_SPEC_TIEBREAK_WINDOW = 0.05;
 
   // Spec rule 8: co-occurrence threshold for Tech packages.
   const TECH_PACKAGE_COOCCURRENCE = 0.70;
@@ -830,18 +841,42 @@
       return leader;
     }
 
-    // Tiebreak by top-cut frequency
-    const byTopCut = aces.slice(0, 4).sort((a, b) => b.topCutFreq - a.topCutFreq);
+    // Tiebreak by top-cut frequency.
+    //
+    // Der Topf sind die Karten IM FENSTER, nicht die ersten vier. Vorher
+    // stand hier aces.slice(0, 4): das Fenster wurde nur zwischen Platz 1
+    // und Platz 2 geprueft, der Tiebreak lief dann ueber die Top 4
+    // unabhaengig vom Abstand. Ist der Vorsprung auf Platz 2 knapp, konnte
+    // Platz 4 gewinnen, auch 40 pp zurueck — er brauchte nur die hoechste
+    // topCutFreq. Schlafender Fehler, gefunden 08.09.2026; live nicht
+    // ausgeloest, weil der kleinste Abstand im Bestand 16,0 pp betraegt.
+    const imFenster = aces.filter(
+      a => leader.weightedShare - a.weightedShare < ACE_SPEC_TIEBREAK_WINDOW
+    ).slice(0, 4);
+    const byTopCut = imFenster.slice().sort((a, b) => b.topCutFreq - a.topCutFreq);
     const winner = byTopCut[0];
+
+    // Wenn KEINE Liste des Archetyps einen Platz <= 8 hat, ist topCutFreq
+    // fuer jede Karte 0. Der sort ist dann ein No-op und es entscheidet die
+    // Anteilsreihenfolge — der Trace behauptete trotzdem, die Top-Cut-Quote
+    // habe entschieden. Das ist genau der stille Muenzwurf, den
+    // tech_gleichstand an anderer Stelle bewusst offenlegt. Gemessen:
+    // 22 der 33 Archetypen haben keinen einzigen Platz <= 8.
+    const ohneTopCut = imFenster.every(a => !a.topCutFreq);
     trace.push({
-      phase: 1, decision: 'ace_spec_tiebreak_by_top_cut_freq',
+      phase: 1,
+      decision: ohneTopCut
+        ? 'ace_spec_tiebreak_ohne_top_cut'
+        : 'ace_spec_tiebreak_by_top_cut_freq',
       chosen: winner.name,
-      candidates: aces.slice(0, 4).map(a => ({
+      candidates: imFenster.map(a => ({
         name: a.name,
         weightedShare: a.weightedShare,
         topCutFreq: a.topCutFreq,
       })),
-      detail: `Leaders within ${(ACE_SPEC_TIEBREAK_WINDOW*100).toFixed(0)} pp; tiebreak by top-cut frequency.`,
+      detail: ohneTopCut
+        ? `Leaders within ${(ACE_SPEC_TIEBREAK_WINDOW*100).toFixed(0)} pp, but no list of this archetype placed in the top 8 — top-cut frequency is 0 for every candidate, so the share order decided.`
+        : `Leaders within ${(ACE_SPEC_TIEBREAK_WINDOW*100).toFixed(0)} pp; tiebreak by top-cut frequency.`,
     });
     return winner;
   }
@@ -1270,7 +1305,15 @@
           }
           const placed = Math.min(cnt, c.is_basic_energy ? 59 : 4);
           _emitTech(c, placed, g.gid !== c.key ? g.gid : null);
-          used += cnt;
+          // Gebucht wird, was gesetzt wurde — nicht, was gewuenscht war.
+          // Vorher stand hier `used += cnt` (ungedeckelt), waehrend der
+          // Normalzweig unten `used += placed` bucht. Sobald
+          // round(weightedAvgCount) > 4 fuer eine Nicht-Basis-Energie gilt,
+          // buchte dieser Zweig mehr als er setzte und das Deck blieb unter
+          // 60 Karten. Heute nicht ausloesbar (im Bestand hat keine Karte
+          // ausser Basis-Energien mehr als 4 Kopien), aber die beiden
+          // Zweige duerfen nicht verschieden rechnen. Gefunden 08.09.2026.
+          used += placed;
         }
         continue;
       }
