@@ -221,6 +221,27 @@ jobs:
       #
       # Der Stand gehoert dorthin, wo er entsteht — genau die Begruendung,
       # die schon im Wochenlauf ueber demselben Aufruf steht.
+      # Die Prognose sitzt auf den Daten, die der Schritt davor geholt hat.
+      # Sie laeuft auch im Gegenprobe-Modus NICHT — dort wird nichts
+      # geschrieben, und eine Prognose aus unveraenderten Daten waere nur
+      # ein neuer Zeitstempel auf derselben Zahl.
+      - name: Meta-Prognose rechnen
+        if: ${{ success() && inputs.gegenprobe != true && inputs.trocken != true }}
+        run: |
+          python3 scripts/build_meta_prognose.py 2>&1 | tee /tmp/prognose.log
+          rc=${PIPESTATUS[0]}
+          {
+            echo "### Meta-Prognose"
+            echo ""
+            echo '```'
+            cat /tmp/prognose.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ $rc -ne 0 ]; then
+            echo "::error::Meta-Prognose gescheitert (Code $rc)"
+            exit $rc
+          fi
+
       - name: Datenstaende fortschreiben
         if: ${{ success() && inputs.gegenprobe != true && inputs.trocken != true }}
         run: python3 scripts/build_data_stand.py
@@ -240,7 +261,8 @@ jobs:
           # Laeufer erzeugt und mit ihm verworfen.
           git add data/online_api_tournaments.csv \
                   data/online_api_archetypes.csv \
-                  data/data_stand.json
+                  data/data_stand.json \
+                  data/meta_prognose.json
           git add data/online_api_cards_*.csv data/online_api_matchups_*.csv 2>/dev/null || true
           # Die alten flachen Dateien sind in die Chunks uebergegangen.
           git add -u data/online_api_cards.csv data/online_api_matchups.csv 2>/dev/null || true
