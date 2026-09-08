@@ -26,6 +26,9 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
+const vm = require('node:vm');
+// BEFUND B2: die gelebte Tier-Regel wird ausgefuehrt statt gelesen.
+const { funktion, schnitt } = require('./lib-tier-sandkasten.js');
 
 const ROOT = path.join(__dirname, '..', '..');
 const TIER = fs.readFileSync(path.join(ROOT, 'js', 'app-tier-meta.js'), 'utf8');
@@ -91,8 +94,18 @@ describe('die Vergleichsdatei wird gelesen, wie sie geschrieben ist', () => {
     });
 
     it('die Tier-Einstufung hängt an der ungekürzten Zahl', () => {
-        // Vier Decks lagen mit 1,6–1,7 % über der 1,5-%-Grenze und
-        // fielen abgeschnitten auf 1,0 % — also aus der Liste.
+        /* BEFUND B2 (07.09.2026): hier stand
+             assert.match(TIER, /const share = parseLocaleNumber\(shareRaw, 0\)/)
+           — und `shareRaw` gab es NUR in getDeckTier(), einer zweiten
+           Tier-Regel ohne eine einzige Aufrufstelle. Dieser Test hat also
+           toten Code abgesichert und dabei so ausgesehen, als pruefe er
+           die Einstufung der Seite. Als getDeckTier geloescht wurde, fiel
+           er — das war der Beleg.
+
+           Jetzt wird die GELEBTE Regel ausgefuehrt: computeTierScore()
+           bestimmt die Reihenfolge, und der Anteil geht mit Gewicht in
+           den Punktwert ein. Am Komma abgeschnitten kippt die
+           Reihenfolge — genau der Schaden, um den es hier geht. */
         const tier = (s) => (s >= 8 ? 1 : s >= 4 ? 2 : s >= 1.5 ? 3 : 0);
         const moved = rows.filter(r => {
             const t = parseFloat(r.new_share), real = parseLocaleNumber(r.new_share, 0);
@@ -100,7 +113,23 @@ describe('die Vergleichsdatei wird gelesen, wie sie geschrieben ist', () => {
         });
         assert.ok(moved.length > 0,
             'Testannahme veraltet: kein Deck wechselt mehr die Stufe');
-        assert.match(TIER, /const share = parseLocaleNumber\(shareRaw, 0\)/);
+
+        const kasten = { Math, Number, String, Object, Array, JSON };
+        vm.createContext(kasten);
+        vm.runInContext(
+            schnitt('const TIER_SCORE = Object.freeze({', 'const TIER_SCORE = Object.freeze({')
+            + '\n' + funktion('computeTierScore'), kasten);
+        const punkt = (rohAnteil, winrate, leser) => kasten.computeTierScore(
+            { archetype: 'X', share: leser(rohAnteil, 0), winrate, new_count: 4000 }, null).score;
+
+        // Zwei Decks, deren Reihenfolge sich einzig am Anteil entscheidet.
+        const a = ['5,9', 53.0], b = ['5,2', 53.25];
+        assert.ok(punkt(a[0], a[1], parseLocaleNumber) > punkt(b[0], b[1], parseLocaleNumber),
+            'ungekuerzt gelesen muss das Deck mit dem groesseren Anteil vorn stehen');
+        const schnitten = (v) => parseFloat(v);
+        assert.ok(punkt(a[0], a[1], schnitten) < punkt(b[0], b[1], schnitten),
+            'am Komma abgeschnitten kippt die Reihenfolge — genau deshalb darf hier '
+            + 'kein parseFloat stehen');
     });
 });
 

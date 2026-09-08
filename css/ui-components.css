@@ -3108,6 +3108,46 @@ img[src*="limitlesstcg"] {
 .city-league-info-card-exit {
     color: #ff6b6b;
 }
+/* WORAUS DIESE ANSICHT BESTEHT (07.09.2026).
+ *
+ * js/app-city-league.js:1428 haengt den Herkunftssatz als <span> hinter
+ * die Turnierzahl. Ohne Regel war er in JEDER messbaren Eigenschaft
+ * derselbe Text wie die Datenzeilen darueber: gemessen an der Karte
+ * "Datenquelle" bei 360/390/768/1280 px — 12px/400/rgb(255,255,255),
+ * genau wie das Label "Turniere" (12px/700) und der Wert darunter
+ * (12px/400), display:inline, kein Abstand. Drei Saetze Kleingedrucktes
+ * klebten so direkt unter der Zahl und lasen sich wie ein weiterer
+ * Messwert.
+ *
+ * KEINE DAEMPFUNG DER FARBE. Der Kartengrund ist ein fester Verlauf
+ * (--solid-info #4663e6 -> #764ba2). Weiss traegt darauf 5,01:1 am
+ * blauen Ende. Jede gedaempfte Variante faellt dort unter 4,5:1 —
+ * nachgerechnet: --on-dark (#b9c1e0) 2,81:1, --on-dark-2 (#8791b8)
+ * 1,62:1, ein aufgehelltes #e8ebf7 noch 4,22:1. Deshalb bleibt der Satz
+ * weiss und wird ueber Bau und Abstand abgesetzt, nicht ueber Farbe —
+ * dieselbe Begruendung, die weiter oben schon die Deckkraft 0,9 von der
+ * Ueberschrift genommen hat.
+ *
+ * AUCH KEINE KLEINERE SCHRIFT. css/mobile-responsive.css setzt unter
+ * (max-width: 768px) auf jedes <span> in .tab-content
+ * `font-size: 12px !important`. Eine Groessenangabe hier waere auf dem
+ * Telefon — also genau dort, wo die Karte am engsten ist — wirkungslos
+ * und auf dem Schirm wirksam: zwei Erscheinungsbilder aus einer Regel.
+ *
+ * Bleibt der Bau: eigener Block, Trennlinie in currentColor (also das
+ * geerbte Weiss, keine zweite Farbentscheidung), Luft darueber und
+ * lockerere Zeilen. Gemessen nach der Aenderung: display block,
+ * margin-top 8px, padding-top 8px, Zeilenhoehe 17,4px statt "normal",
+ * kein Ueberhang ueber die Karteninnenkante (0,0 px bei 360/390/768/
+ * 1280 px). */
+.city-league-info-card-herkunft {
+    display: block;
+    margin-top: var(--s-2);
+    padding-top: var(--s-2);
+    border-top: 1px solid currentColor;
+    line-height: 1.45;
+    color: inherit;
+}
 /* Modular loading indicator for City League */
 .city-league-loading-indicator {
     text-align: center;

@@ -11223,6 +11223,46 @@ body.arc-open { overflow: hidden; }
 }
 .arc-mu-major-duenn { font-style: italic; }
 
+/* DIE ROHBILANZ STATT EINES PROZENTWERTS (07.09.2026).
+ *
+ * js/app-archetype-card.js:1267 haengt .arc-mu-major-bilanz an die
+ * Zelle, wenn unter MIN_PRAESENZ_PARTIEN (30) bewusst KEINE Quote
+ * gezeigt wird, sondern "8–1–0". Ohne Regel stand diese Bilanz in
+ * derselben Tinte wie eine echte Quote — gemessen in der Karte:
+ * rgb(238,242,255) = --arc-ink, gleiche Groesse wie "62,5 %" eine Zeile
+ * darueber. Kursiv war sie schon, das kommt aber von
+ * .arc-mu-major-duenn und trifft auch die Strich-Zellen; die Klasse
+ * selbst trug NICHTS bei.
+ *
+ * --arc-ink2 setzt sie eine Stufe zurueck, ohne sie wegzunehmen: auf
+ * dem Zellgrund --arc-s1 (#111730) sind das 9,90:1, auf --arc-bg1
+ * (#0b0f1e) 10,68:1. Die Quote daneben behaelt --arc-ink. Beide
+ * Flaechen gehoeren zur festen Palette der .arc-card und drehen mit
+ * keinem Farbschema mit — die Regel gilt hell wie dunkel gleich.
+ *
+ * DIE SPUR IST GEMESSEN, NICHT GESCHAETZT. Die Spalte ist 58 px breit,
+ * innen bleiben 50,1 px (Zellpolster 4 px auf dem Telefon). Zwischen
+ * 391 und 430 px Schirmbreite stehen die Zellen auf 12 px — dort ist es
+ * am engsten. Gemessen bei 412 px, Spur 0: "13–13–2" 46,7 px (3,4 px
+ * Luft), "25–25–10" 53,4 px — also 3,3 px UEBER die Innenkante, und im
+ * Bild lief die Bilanz sichtbar ueber die linke Spaltenlinie. Mit
+ * -0,04em: "13–13–2" 6,8 px Luft, "25–25–10" 0,6 px Luft — kein
+ * Ueberlauf mehr, bei 320/360/390/391/412/430/768/1280 px nachgemessen.
+ * Achtstellig wird die Bilanz nur mit zweistelligen Unentschieden; in
+ * den 811 Zeilen mit vollstaendiger Bilanz unter der Schwelle
+ * (data/labs_tournament_matchups_*.csv) liegt das Hoechstmass bei 8,
+ * die laengste dort vorkommende Bilanz ist "13–13–2".
+ *
+ * Zwei Klassen im Selektor, kein Ausrufezeichen: `table:not(.ds-table)
+ * td` aus css/mobile-responsive.css liegt bei (0,1,2) und setzt unter
+ * 430 px die Zellgroesse. `td.arc-mu-major.arc-mu-major-bilanz` liegt
+ * bei (0,2,1) und gewinnt darueber; die Klasse allein (0,1,0) haette
+ * verloren. */
+td.arc-mu-major.arc-mu-major-bilanz {
+    color: var(--arc-ink2);
+    letter-spacing: -0.04em;
+}
+
 /* Die Kopfzeilen duerfen umbrechen (02.09.2026).
  *
  * th und td stehen auf `white-space: nowrap`, damit Zahlen nicht

@@ -1736,11 +1736,43 @@
                 : (de
                     ? 'Nenner: die Bilanzspalten dieser Zeile fehlen — ohne sie ist die Grundgesamtheit nicht nachzählbar.'
                     : 'Denominator: this row carries no record columns — without them the base cannot be counted.');
+            /* BEFUND B2 (07.09.2026): HIER STAND „Win %".
+               js/win-rate-konvention.js reserviert diesen Namen fuer die
+               MATCHPUNKTE-Konvention (3S+U)/(3·Matches) — so nennt
+               Limitless diese Spalte, und so hat es der Betreiber am
+               05.09.2026 angeordnet. Gerechnet wird hier aber
+               win_rate_numeric aus data/limitless_online_decks.csv, und
+               das ist S/(S+N+U): nachgewiesen in der Konventionsdatei
+               (KONVENTIONEN.mitUnentschieden.beleg — 135 von 136 Zeilen
+               auf 0,01 Punkte genau) und nachgerechnet von
+               tests/unit/test-win-rate-konventionen-belegt.js.
+
+               Zwei Formeln unter einem Namen sind genau der Fehler,
+               gegen den die Konventionsdatei geschrieben wurde. Der Name
+               kommt deshalb jetzt AUS dem Modul (kurz()), nicht aus einer
+               Abschrift: wird er dort umbenannt, wandert die Aenderung
+               mit. Dass „Win %" hier NICHT gemeint ist, steht dabei —
+               sonst sucht der Leser den Unterschied zwischen zwei
+               Reitern und findet ihn nicht. */
+            const WK = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+            const kurzName = (WK && WK.kurz('mitUnentschieden'))
+                || (de ? 'Siegquote inkl. Unentschieden' : 'Win share incl. ties');
+            const kurzFormel = (WK && WK.hol('mitUnentschieden') && WK.hol('mitUnentschieden').formel)
+                || 'S / (S + N + U)';
+            const winProzentName = (WK && WK.kurz('matchpunkte')) || 'Win %';
+            const winProzentFormel = (WK && WK.hol('matchpunkte') && WK.hol('matchpunkte').formel)
+                || '(3S + U) / (3 · Matches)';
             return de
-                ? `Win % = Siege ÷ alle Matches. ${nenner} Quelle: data/limitless_online_decks.csv, `
+                ? `${kurzName} = ${kurzFormel}: Siege ÷ alle Matches, Unentschieden stehen im `
+                  + `Nenner und zählen nicht als halber Sieg. NICHT „${winProzentName}“ — `
+                  + `so heißt bei Limitless die Matchpunkte-Konvention ${winProzentFormel}, `
+                  + `und die wird hier nicht gerechnet. ${nenner} Quelle: data/limitless_online_decks.csv, `
                   + `Spalte win_rate_numeric. Zeitraum: Gesamtstand des letzten Scraper-Laufs — `
                   + `die Datei führt kein Turnierdatum, das Datenfenster „Daten ab“ wirkt hier nicht.`
-                : `Win % = wins ÷ all games. ${nenner} Source: data/limitless_online_decks.csv, `
+                : `${kurzName} = ${kurzFormel}: wins ÷ all games, ties sit in the denominator and `
+                  + `do not count as half a win. NOT “${winProzentName}” — that is the label Limitless `
+                  + `uses for the match-points convention ${winProzentFormel}, which is not what is `
+                  + `computed here. ${nenner} Source: data/limitless_online_decks.csv, `
                   + `column win_rate_numeric. Period: cumulative for the latest scraper run — `
                   + `the file carries no tournament date, so the “data from” window does not apply here.`;
         }
@@ -1787,11 +1819,32 @@
             let partien = 0;
             let siege = 0;
             let spiegelPartien = 0;
+            /* BEFUND B3 (07.09.2026): WELCHE URSACHE IST DIE GRÖSSERE?
+               Für die Fußnote wird derselbe Satz Paarungen noch zweimal
+               gemittelt — geglättet und partiengewichtet, und geglättet
+               und ungewichtet (letzteres ist genau das, was ein Leser
+               bekommt, der die Zellen der Tabelle im Kopf mittelt).
+               Erst diese beiden Zahlen sagen, ob die Abweichung von der
+               Glättung oder von der Gewichtung kommt; geraten wurde es
+               vorher. Die Glättung kommt aus js/matchup-glaettung.js,
+               nicht aus einer zweiten Abschrift. */
+            const _G = (typeof window !== 'undefined') ? window.DsGlaettung : null;
+            let siegeGeglaettet = 0, summeZellen = 0, zellen = 0;
+            let kleinste = null, groesste = null;
             relevant.forEach(m => {
                 const games = parseInt(m.total_games) || 0;
                 const winRate = parseLocaleNumber(m.win_rate || '0', 0);
                 partien += games;
                 siege += (games * winRate / 100);
+                if (_G && typeof _G.ausEintrag === 'function') {
+                    const g = _G.ausEintrag({ record: m.record, total_games: m.total_games,
+                        win_rate_numeric: winRate });
+                    siegeGeglaettet += (games * g / 100);
+                    summeZellen += g;
+                    zellen++;
+                }
+                if (kleinste === null || games < kleinste) kleinste = games;
+                if (groesste === null || games > groesste) groesste = games;
                 /* Der Spiegel zaehlt mit — und das muss dastehen.
                    Gemessen am 07.09.2026 fuer Mega Excadrill:
                    1.032 der 10.361 Partien sind die Spiegelpaarung
@@ -1814,6 +1867,16 @@
                 paarungen: relevant.length,
                 partien: partien,
                 spiegelPartien: spiegelPartien,
+                /* Die drei Zahlen, aus denen die Fußnote ihre Ursachen
+                   auseinanderzieht. `zellenMittel` ist null, wenn die
+                   Glättung nicht geladen ist — dann sagt die Fußnote
+                   nichts über einen Vergleich, den sie nicht rechnen
+                   kann. */
+                wert: _wr,
+                geglaettetGewichtet: zellen ? (siegeGeglaettet / partien * 100) : null,
+                zellenMittel: zellen ? (summeZellen / zellen) : null,
+                kleinstePaarung: kleinste,
+                groesstePaarung: groesste,
             };
         }
 
@@ -1853,6 +1916,127 @@
                 : (de
                     ? ' Eine Spiegelpaarung ist nicht dabei.'
                     : ' No mirror pairing is included.');
+            /* BEFUND B6 (07.09.2026): ZWEI RECHENWEGE IN EINER ANSICHT.
+               Dieser Schnitt ist ROH — er mittelt die Spalte win_rate
+               der Datei, partiengewichtet. Die Matchup-Tabelle der
+               Archetyp-Karte im selben Reiter zeigt fuer dieselben
+               Paarungen GEGLAETTETE Werte: js/matchup-glaettung.js legt
+               je Paarung K/2 Pseudo-Siege und K/2 Pseudo-Niederlagen
+               dazu (Beta-Binomial), damit aus einem 3-0 nicht "100 %"
+               wird. Ein Leser, der die Zellen im Kopf mittelt, kommt
+               deshalb NICHT auf die Zahl in dieser Kachel — und nichts
+               sagte ihm, warum.
+
+               NACHTRAG, BEFUND B3 (07.09.2026): DIE FUSSNOTE NANNTE DIE
+               KLEINERE URSACHE.
+               Sie schob den ganzen Unterschied auf die Glaettung. Es
+               sind aber ZWEI Unterschiede, und bei den Decks mit Daten
+               ist der zweite der groessere:
+
+                 1. geglaettet statt roh (Beta-Binomial, K = 20)
+                 2. UNGEWICHTET statt partiengewichtet — dieser Schnitt
+                    wiegt jede Paarung nach ihren Partien, ein Mittel
+                    ueber die Zellen zaehlt jede gleich.
+
+               NACHGERECHNET am 07.09.2026 an
+               data/limitless_online_decks_matchups.csv (alle 100 Decks
+               mit Top-20-Paarungen, Zellenwerte aus DsGlaettung):
+
+                 Dragapult     53,23 % Kachel gegen 53,80 % Zellenmittel
+                               Glaettung -0,13, Gewichtung +0,70
+                 Festival Lead 51,01 % gegen 54,45 %
+                               Glaettung -0,22, Gewichtung +3,66
+                 Ränge 1-20    Median |Glaettung| 0,15, |Gewichtung| 0,92;
+                               die Gewichtung ist bei 16 der 20 Decks
+                               die groessere Ursache.
+                 alle 100      Median |Glaettung| 1,77, |Gewichtung| 0,71 —
+                               bei duennen Decks dreht sich das um.
+
+               Weil es sich dreht, behauptet die Fussnote nichts mehr
+               pauschal: sie RECHNET beide Beitraege fuer das gerade
+               gezeigte Deck aus und nennt den groesseren. Die Zahlen
+               kommen aus _cmTop20Schnitt(), also aus denselben Zeilen,
+               die auch die Kachel traegt.
+
+               Geglaettet wird in der Kachel weiterhin bewusst nicht:
+               dieser Schnitt ruht auf der SUMME der Partien aller
+               Paarungen, nicht auf einer einzelnen duennen Zelle.
+
+               K kommt aus dem Modul, nicht aus einer Abschrift — steht
+               es dort eines Tages auf 30, wandert die Zahl mit. */
+            const G = (typeof window !== 'undefined') ? window.DsGlaettung : null;
+            const kWert = (G && typeof G.K === 'number') ? G.K : null;
+            const zahl2 = (x) => (typeof zahlLokal === 'function')
+                ? zahlLokal(x, 2) : Number(x).toFixed(2);
+            /* Vorzeichen ausgeschrieben: "-0,13" und "+0,70" addieren
+               sich auf die genannte Gesamtabweichung, "0,13 und 0,70"
+               taeten es nicht. */
+            const pp = (x) => (x >= 0 ? '+' : '\u2212') + zahl2(Math.abs(x));
+            const zellenMittel = (s && typeof s.zellenMittel === 'number') ? s.zellenMittel : null;
+            const wert = (s && typeof s.wert === 'number') ? s.wert : null;
+            const gg = (s && typeof s.geglaettetGewichtet === 'number') ? s.geglaettetGewichtet : null;
+            let glaettungSatz;
+            if (kWert && zellenMittel !== null && wert !== null && gg !== null) {
+                /* Zwei Schritte auf einem Weg, in dieser Reihenfolge:
+                   erst glaetten (Gewichtung bleibt), dann die Gewichtung
+                   weglassen. Beide Beitraege addieren sich exakt auf die
+                   Gesamtabweichung. */
+                const dGlaettung = gg - wert;
+                const dGewichtung = zellenMittel - gg;
+                const gewichtungGroesser = Math.abs(dGewichtung) > Math.abs(dGlaettung);
+                const spannePaarungen = (s.kleinstePaarung != null && s.groesstePaarung != null)
+                    ? (de
+                        ? ` Die Paarungen sind hier ${zahl(s.kleinstePaarung)} bis `
+                          + `${zahl(s.groesstePaarung)} Partien groß.`
+                        : ` Pairings here range from ${zahl(s.kleinstePaarung)} to `
+                          + `${zahl(s.groesstePaarung)} games.`)
+                    : '';
+                const ursache = de
+                    ? (gewichtungGroesser
+                        ? ` Der größere Teil kommt also von der GEWICHTUNG, nicht von der `
+                          + `Glättung: hier wiegt jede Paarung nach ihren Partien, im `
+                          + `Zellenmittel zählt jede gleich.${spannePaarungen}`
+                        : ` Der größere Teil kommt hier von der GLÄTTUNG: bei so dünnen `
+                          + `Paarungen zieht der Prior die Zellen sichtbar zur Mitte.`
+                          + `${spannePaarungen}`)
+                    : (gewichtungGroesser
+                        ? ` So the larger part comes from the WEIGHTING, not from the `
+                          + `smoothing: here every pairing counts by its games, in a cell `
+                          + `average every pairing counts the same.${spannePaarungen}`
+                        : ` The larger part here comes from the SMOOTHING: with pairings this `
+                          + `thin the prior visibly pulls the cells towards the middle.`
+                          + `${spannePaarungen}`);
+                glaettungSatz = (de
+                    ? ` Dieser Schnitt ist ROH (Spalte win_rate) und PARTIENGEWICHTET. Die `
+                      + `Matchup-Tabelle der Archetyp-Karte darüber zeigt dieselben Paarungen `
+                      + `GEGLÄTTET (js/matchup-glaettung.js, Beta-Binomial mit K = ${zahl(kWert)}); `
+                      + `ein einfaches Mittel über jene Zellen ergibt ${zahl2(zellenMittel)} % `
+                      + `statt ${zahl2(wert)} %. Davon ${pp(dGlaettung)} Punkte durch die `
+                      + `Glättung und ${pp(dGewichtung)} Punkte dadurch, dass ein Zellenmittel `
+                      + `ungewichtet ist.`
+                    : ` This average is RAW (column win_rate) and GAME-WEIGHTED. The matchup `
+                      + `table of the archetype card above shows the same pairings SMOOTHED `
+                      + `(js/matchup-glaettung.js, beta-binomial with K = ${zahl(kWert)}); a plain `
+                      + `mean over those cells gives ${zahl2(zellenMittel)} % instead of `
+                      + `${zahl2(wert)} %. Of that, ${pp(dGlaettung)} points come from the `
+                      + `smoothing and ${pp(dGewichtung)} points from a cell mean being `
+                      + `unweighted.`) + ursache;
+            } else if (kWert) {
+                glaettungSatz = de
+                    ? ` Dieser Schnitt ist ROH (Spalte win_rate) und PARTIENGEWICHTET. Die `
+                      + `Matchup-Tabelle der Archetyp-Karte darüber zeigt dieselben Paarungen `
+                      + `GEGLÄTTET (js/matchup-glaettung.js, Beta-Binomial mit K = ${zahl(kWert)}) `
+                      + `und ungewichtet nebeneinander; ein Mittel über jene Zellen ergibt `
+                      + `deshalb nicht diese Zahl.`
+                    : ` This average is RAW (column win_rate) and GAME-WEIGHTED. The matchup `
+                      + `table of the archetype card above shows the same pairings SMOOTHED `
+                      + `(js/matchup-glaettung.js, beta-binomial with K = ${zahl(kWert)}) and `
+                      + `unweighted, so averaging those cells does not reproduce this figure.`;
+            } else {
+                glaettungSatz = de
+                    ? ' Dieser Schnitt ist ROH (Spalte win_rate) und PARTIENGEWICHTET.'
+                    : ' This average is RAW (column win_rate) and GAME-WEIGHTED.';
+            }
             return (de
                 ? `Partiengewichteter Schnitt über ${zahl(paarungen)} Paarungen gegen die Ränge 1–20. `
                   + `Nenner: ${zahl(partien)} Matches (Summe total_games dieser Paarungen). `
@@ -1864,7 +2048,7 @@
                   + `Source: data/limitless_online_decks_matchups.csv (win_rate, total_games); `
                   + `ranks from data/limitless_online_decks.csv (column rank). `
                   + `Period: cumulative for the latest scraper run, not narrowed by date.`)
-                + spiegelSatz;
+                + glaettungSatz + spiegelSatz;
         }
 
         // Load deck data with format filtering
@@ -3916,7 +4100,15 @@
         }
 
         /**
-         * EINE Schreibweise fuer die Win % einer Paarung.
+         * EINE Schreibweise fuer die Siegquote einer Paarung.
+         *
+         * Der Wert ist win_rate_numeric aus
+         * data/limitless_online_decks_matchups.csv, also S/(S+N)
+         * (Konvention ohneUnentschieden). Hier stand bis zum
+         * 07.09.2026 „Win %“ — der Name, den
+         * js/win-rate-konvention.js den Matchpunkten vorbehaelt
+         * (Befund B2). Diese Funktion setzt nur die Schreibweise,
+         * die Beschriftung steht in selectCurrentMetaOpponent().
          *
          * BEFUND B3 (Abnahme 07.09.2026): dieselbe Zahl kam in zwei
          * Schreibweisen auf dieselbe Stelle. Der Registry-Weg reichte
@@ -3933,7 +4125,7 @@
          * ohnehin schon fuehren. Damit gibt es genau eine Stelle, an der
          * die Schreibweise entsteht.
          *
-         * @param {number} zahl  Win % als Zahl (68.73)
+         * @param {number} zahl  Siegquote als Zahl (68.73)
          * @param {*} roh        Rohwert, nur als Rueckfall wenn `zahl`
          *                       keine Zahl ist — geraten wird nichts.
          */
@@ -4337,13 +4529,32 @@
                 /* Nenner und Quelle unter die drei Zahlen. Ohne sie steht
                    dort eine Quote ohne Grundgesamtheit — genau der Fehler,
                    den diese Seite an anderen Stellen schon abgearbeitet
-                   hat (Befund H6, 07.09.2026). "Win %" ist die
-                   Limitless-Bezeichnung und heisst hier ueberall so. */
+                   hat (Befund H6, 07.09.2026).
+
+                   BEFUND B2 (07.09.2026): DER NAME WAR FALSCH.
+                   Hier stand „Win % = Siege ÷ entschiedene Partien" —
+                   zwei Zeilen Code, zwei Konventionen unter einem Namen:
+                   dieselbe Datei nennt 1.700 Zeilen weiter oben ebenfalls
+                   „Win %" und rechnet dort S/(S+N+U). js/win-rate-konvention.js
+                   haelt „Win %" fuer die Matchpunkte frei
+                   (Betreiberanordnung 05.09.2026). Die Spalte win_rate aus
+                   data/limitless_online_decks_matchups.csv ist S/(S+N)
+                   (KONVENTIONEN.ohneUnentschieden.beleg: alle 1.716 Zeilen
+                   auf 0,005 Punkte genau). Der Name kommt jetzt aus dem
+                   Modul, nicht aus einer Abschrift. */
                 const _de = (typeof getLang === 'function') && getLang() === 'de';
                 const _spiele = parseInt(totalGames, 10);
+                const _WK = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+                const _kName = (_WK && _WK.kurz('ohneUnentschieden'))
+                    || (_de ? 'Siegquote ohne Unentschieden' : 'Win share excluding ties');
+                const _kFormel = (_WK && _WK.hol('ohneUnentschieden') && _WK.hol('ohneUnentschieden').formel)
+                    || 'S / (S + N)';
+                const _wpName = (_WK && _WK.kurz('matchpunkte')) || 'Win %';
+                const _wpFormel = (_WK && _WK.hol('matchpunkte') && _WK.hol('matchpunkte').formel)
+                    || '(3S + U) / (3 · Matches)';
                 const _herkunft = _de
-                    ? `Win % = Siege ÷ entschiedene Partien, gerechnet von Limitless. Bilanz ${record} aus ${Number.isFinite(_spiele) ? _spiele : totalGames} Partien. Quelle: data/limitless_online_decks_matchups.csv (Spalten win_rate, record, total_games), Gesamtstand des letzten Scraper-Laufs — nicht nach Datum eingegrenzt.`
-                    : `Win % = wins ÷ decided games, as reported by Limitless. Record ${record} from ${Number.isFinite(_spiele) ? _spiele : totalGames} games. Source: data/limitless_online_decks_matchups.csv (columns win_rate, record, total_games), cumulative for the latest scraper run — not narrowed by date.`;
+                    ? `${_kName} = ${_kFormel}: Siege ÷ entschiedene Partien, Unentschieden bleiben ganz außen vor — so gerechnet von Limitless. NICHT „${_wpName}“: so heißt dort die Matchpunkte-Konvention ${_wpFormel}. Bilanz ${record} aus ${Number.isFinite(_spiele) ? _spiele : totalGames} Partien. Quelle: data/limitless_online_decks_matchups.csv (Spalten win_rate, record, total_games), Gesamtstand des letzten Scraper-Laufs — nicht nach Datum eingegrenzt.`
+                    : `${_kName} = ${_kFormel}: wins ÷ decided games, ties left out entirely — as reported by Limitless. NOT “${_wpName}”: that is the label for the match-points convention ${_wpFormel}. Record ${record} from ${Number.isFinite(_spiele) ? _spiele : totalGames} games. Source: data/limitless_online_decks_matchups.csv (columns win_rate, record, total_games), cumulative for the latest scraper run — not narrowed by date.`;
                 detailsEl.innerHTML = `
                     <h4 style="margin-top: 0; color: var(--ink);">${t('matchup.vsTitle').replace('{n}', escapeHtml(opponent))}</h4>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 10px;">
@@ -4687,7 +4898,7 @@
                 const originalSetNumber = card.set_number || '';
                 const rawCardName = card.card_name || '';
                 const cardName = getDisplayCardName(rawCardName, originalSetCode, originalSetNumber);
-                const cardNameEscaped = escapeJsStr(cardName);
+                const cardNameEscaped = escapeHtmlAttr(escapeJsStr(cardName));
                 
                 let versionsToRender = [];
                 
@@ -4862,7 +5073,7 @@
                     }
                     const priceDisplay = eurPrice || '0,00€';
                     const priceBackground = eurPrice ? 'linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%)' : 'linear-gradient(135deg, #777 0%, #999 100%)';
-                    const cardmarketUrlEscaped = escapeJsStr(cardmarketUrl || '');
+                    const cardmarketUrlEscaped = escapeHtmlAttr(escapeJsStr(cardmarketUrl || ''));
                     
                     // Card type category
                     const cardType = card.type || card.card_type || '';
@@ -5165,7 +5376,7 @@
                     });
                     const rawPercentage = parseLocaleNumber(card.percentage_in_archetype || card.share_percent || 0, 0);
                     const maxCount = parseInt(card.max_count) || card.max_count || '?';
-                    const cardNameEscaped = escapeJsStr(cardName);
+                    const cardNameEscaped = escapeHtmlAttr(escapeJsStr(cardName));
                     const setCode = displayCard.set_code || '';
                     const setNumber = displayCard.set_number || '';
                     const avgCountUsedRaw = parseLocaleNumber(card.average_count || card.avg_count || 0, 0);
@@ -5216,6 +5427,26 @@
                        hinter der Quote. Fehlt die Spalte, rechnet der
                        Code darueber aus denselben zwei Feldern — die
                        Klammer stimmt also in beiden Faellen. */
+                    /* BEFUND B5 (07.09.2026): ZWEI NAMEN FUER EINE KENNZAHL.
+                       Hier stand "Usage Share:" fest verdrahtet — auf
+                       Englisch, mitten in der deutschen Oberflaeche, und
+                       unter einem anderen Namen als derselbe Wert im
+                       Japan-Reiter, der ueber t('cl.usageShare') laeuft
+                       und dort auf Deutsch "Playrate:" heisst
+                       (js/i18n.js:612 englisch, :3223 deutsch).
+
+                       Es gewinnt der SCHLUESSEL, nicht ein neuer Name:
+                       cl.usageShare ist schon da, wird schon benutzt und
+                       ist schon uebersetzt. Ihn hier aufzurufen ist die
+                       einzige Aenderung, die keine dritte Schreibweise in
+                       die Welt setzt — und sie faellt zugleich das feste
+                       Englisch. js/i18n.js gehoert einem anderen
+                       Arbeitspaket und wird nicht angefasst; der
+                       Rueckfall unten ist der englische Wert aus :612,
+                       damit auch ohne i18n kein leeres Feld dasteht. */
+                    const _usageLabel = (typeof t === 'function' && t('cl.usageShare') !== 'cl.usageShare')
+                        ? t('cl.usageShare')
+                        : 'Usage Share:';
                     const _deShare = (typeof getLang === 'function') && getLang() === 'de';
                     const _shareHinweis = _deShare
                         ? `Anteil der Listen dieses Archetyps, die diese Karte führen: `
@@ -5242,7 +5473,7 @@
                                 <h3 style="margin: 0 0 8px 0; font-size: 1.2em; color: #333;">${cardName}</h3>
                                 <div style="color: #333; font-size: 0.9em; margin-bottom: 10px; font-weight: 600;">${setCode} ${setNumber}</div>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 10px;">
-                                    <div title="${escapeHtml(_shareHinweis)}"><span style="color: #555; font-size: 0.85em; font-weight: 600;">Usage Share:</span> <span style="font-weight: 600; color: #667eea; margin-left: 5px;">${percentage}%</span> <span style="color: #555; font-size: 0.78em; font-weight: 500;">(${decksWithCardDisplay} / ${totalDecksDisplay})</span></div>
+                                    <div title="${escapeHtml(_shareHinweis)}"><span style="color: #555; font-size: 0.85em; font-weight: 600;">${escapeHtml(_usageLabel)}</span> <span style="font-weight: 600; color: #667eea; margin-left: 5px;">${percentage}%</span> <span style="color: #555; font-size: 0.78em; font-weight: 500;">(${decksWithCardDisplay} / ${totalDecksDisplay})</span></div>
                                     <div><span style="color: #555; font-size: 0.85em; font-weight: 600;">Ø Count (if used):</span> <span style="font-weight: 600; color: var(--tint-ok-ink); margin-left: 5px;">${avgCount}x</span></div>
                                     <div><span style="color: #555; font-size: 0.85em; font-weight: 600;">Ø Count (overall):</span> <span style="font-weight: 600; color: #f39c12; margin-left: 5px;">${avgCountOverall}x</span></div>
                                     <div><span style="color: #555; font-size: 0.85em; font-weight: 600;">Deck Count:</span> <span style="font-weight: 600; color: #333; margin-left: 5px;">${decksWithCardDisplay} / ${totalDecksDisplay}</span></div>
@@ -5594,3 +5825,195 @@ document.addEventListener('languageChanged', () => {
         }
     }
 });
+
+/* ── BEFUND B4 (07.09.2026): DER REITER OHNE DATENSTAND ──────────────
+ *
+ * Live gemessen auf thedipidis.app: der Reiter „Current meta"
+ * (#current-meta) trug seinen Frische-Chip mit „6.9.2026", der Reiter
+ * „Deck-Analyse (Global)" (#current-analysis) trug gar keinen. Fünf von
+ * sechs Reitern nannten ihren Stand, dieser eine nicht — und er ist der,
+ * auf dem die meisten Zahlen stehen.
+ *
+ * Der Chip steckt bei allen anderen Reitern in index.html; index.html
+ * gehört einem anderen Arbeitspaket. Er wird deshalb hier eingehängt,
+ * mit derselben Klasse und demselben Mechanismus wie überall sonst
+ * (js/ds-datenstand.js liest data/data_stand.json, das
+ * scripts/build_data_stand.py aus dem Git-Verlauf schreibt).
+ *
+ * WELCHES DATUM? NICHT irgendeins, sondern das ÄLTESTE der Quellen,
+ * aus denen dieser Reiter seine Kennzahlen rechnet:
+ *
+ *   data/limitless_online_decks.csv            Quote, Rang, Bilanz
+ *   data/limitless_online_decks_matchups.csv   Paarungen, Top-20-Schnitt
+ *   data/online_tournament_top8_decks.csv      Top-8-Quote der Kachelreihe
+ *
+ * „Am besten so frisch wie die älteste Quelle" ist die einzige Aussage,
+ * die über eine Ansicht aus drei Dateien stimmt. Steht für KEINE davon
+ * ein Stand in data_stand.json, bleibt der Chip bei „unbekannt" — ein
+ * geratenes Datum ist schlimmer als gar keins, und diese Regel steht im
+ * Kopf von js/ds-datenstand.js aus genau diesem Grund.
+ *
+ * UND SIE GILT NUR ÜBER DIE QUELLEN, DIE EINEN STAND HABEN (Befund B2,
+ * 07.09.2026). Fehlt der Eintrag für eine der drei, wird sie
+ * übersprungen; das angezeigte Datum ist dann das älteste der
+ * ÜBRIGEN und kann jünger sein als die übergangene Datei. Der Chip
+ * schreibt diese Reichweite deshalb sichtbar daneben — „älteste von 3
+ * Quellen" bzw. „älteste der 2 von 3 Quellen mit Stand" — statt ein
+ * Teilwissen als vollständige Auskunft auszugeben.
+ *
+ * Die Kartenliste des Reiters kommt aus einer Formatdatei
+ * (tournament_cards_data_cards_<Format>.csv), die der Wochenlauf über
+ * das Manifest auflöst; für sie führt data_stand.json keinen Eintrag.
+ * Sie steht deshalb NICHT in der Liste: ein Chip, der eine Datei
+ * mitzählt, deren Stand niemand kennt, behauptet mehr, als er weiß.
+ */
+var CM_STAND_QUELLEN = [
+    'limitless_online_decks.csv',
+    'limitless_online_decks_matchups.csv',
+    'online_tournament_top8_decks.csv',
+];
+
+/**
+ * Die älteste der Quellen, FÜR DIE EIN STAND HINTERLEGT IST — und wie
+ * viele das sind.
+ *
+ * BEFUND B2 (07.09.2026): DIE FUNKTION WUSSTE WENIGER, ALS IHR NAME SAGTE.
+ * Sie hieß „die älteste Quelle" und übersprang jede Zeile ohne Datum.
+ * Führt data_stand.json für eine der drei Dateien keinen Eintrag, kam
+ * trotzdem eine Antwort heraus — und die konnte JÜNGER sein als die
+ * übergangene Datei. Der Chip hätte dann eine Frische behauptet, die
+ * für den Reiter nicht gilt: „am besten so frisch wie die älteste
+ * Quelle" stimmt nur über die Quellen, die man kennt.
+ *
+ * Deshalb gibt sie jetzt beides zurück: den Fund UND seine Reichweite
+ * (`bekannt` von `gesamt`, dazu `ohneStand` mit den übergangenen
+ * Dateinamen). Der Aufrufer schreibt diese Reichweite an den Chip, statt
+ * sie zu verschweigen.
+ *
+ * Reine Funktion, damit eine Zusicherung sie AUSFÜHREN kann, statt den
+ * Quelltext zu lesen.
+ *
+ * @param {Array<{datei:string, stand:Date|null}>} staende
+ * @returns {{datei:string, stand:Date, bekannt:number, gesamt:number,
+ *            ohneStand:string[]}|null} null, wenn für KEINE der Quellen
+ *          ein Stand hinterlegt ist
+ */
+function cmAeltesteQuelle(staende) {
+    var liste = staende || [];
+    var beste = null, bekannt = 0, ohneStand = [];
+    for (var i = 0; i < liste.length; i++) {
+        var e = liste[i];
+        if (!e || !e.datei) continue;
+        var t = (e.stand && e.stand.getTime) ? e.stand.getTime() : NaN;
+        if (!isFinite(t)) { ohneStand.push(e.datei); continue; }
+        bekannt++;
+        if (!beste || t < beste.stand.getTime()) beste = { datei: e.datei, stand: e.stand };
+    }
+    if (!beste) return null;
+    beste.bekannt = bekannt;
+    beste.gesamt = bekannt + ohneStand.length;
+    beste.ohneStand = ohneStand;
+    return beste;
+}
+
+/**
+ * Hängt den Frische-Chip in die Überschrift des Reiters, einmal.
+ * Ohne DsDatenstand passiert nichts — dann steht lieber kein Chip da
+ * als einer, den niemand füllen kann.
+ */
+function cmDatenstandChipEinhaengen(wurzel) {
+    var host = wurzel || document;
+    var titel = host.querySelector && host.querySelector('#current-analysis .header h2');
+    if (!titel) return null;
+    if (titel.querySelector('.data-freshness-chip')) return titel.querySelector('.data-freshness-chip');
+    if (!window.DsDatenstand || typeof window.DsDatenstand.stand !== 'function') return null;
+
+    var de = (typeof getLang === 'function') && getLang() === 'de';
+    var chip = document.createElement('span');
+    chip.className = 'data-freshness-chip';
+    chip.setAttribute('data-cm-stand', '1');
+    /* BEFUND B2 (07.09.2026): DER CHIP SAGT JETZT, WORÜBER ER REDET.
+       Er trug „Daten: 6.9.2026" und daneben, über ds-datenstand.js,
+       den Namen EINER Datei. Gemeint war aber „so frisch wie die
+       älteste der Quellen dieses Reiters" — und selbst das nur, soweit
+       für sie überhaupt ein Stand hinterlegt ist. Beides stand nirgends.
+       Die Reichweite gehört sichtbar an die Zahl, sonst liest sich ein
+       Teilwissen wie eine vollständige Auskunft.
+
+       Das Feld dafür wird HIER angelegt und später nur noch beschriftet:
+       ds-datenstand.js schreibt in `.js-data-freshness` und in title und
+       Klassen des Chips — dieses Feld fasst es nicht an. */
+    chip.innerHTML = ' <span class="data-freshness-chip-icon" aria-hidden="true">\u{1F504}</span> '
+        + '<span data-i18n="data.updated">' + (de ? 'Daten:' : 'Data:') + '</span> '
+        + '<span class="js-data-freshness">' + (de ? 'unbekannt' : 'unknown') + '</span>'
+        + '<span class="cm-stand-umfang"></span>';
+    titel.appendChild(chip);
+
+    Promise.all(CM_STAND_QUELLEN.map(function (f) {
+        return window.DsDatenstand.stand(f).then(function (d) { return { datei: f, stand: d }; });
+    })).then(function (staende) {
+        var aelteste = cmAeltesteQuelle(staende);
+        var feld = chip.querySelector('.js-data-freshness');
+        if (!aelteste) {
+            /* Kein Stand für keine der Quellen. Dann bleibt „unbekannt"
+               stehen — und der Hinweis sagt, warum, statt den Leser
+               raten zu lassen. */
+            chip.classList.add('is-unbekannt');
+            chip.setAttribute('title', (de
+                ? 'Für keine der Quellen dieses Reiters ist ein Stand hinterlegt: '
+                : 'No recorded date for any source of this tab: ') + CM_STAND_QUELLEN.join(', '));
+            return;
+        }
+        /* WORÜBER GILT DIESE ZAHL? Über die älteste der Quellen, für die
+           ein Stand hinterlegt ist — nicht über „die Daten dieses
+           Reiters". Fehlt für eine Quelle der Eintrag, wird sie
+           übersprungen, und die angezeigte Frische kann JÜNGER sein als
+           die übergangene Datei. Genau das steht jetzt daneben, mit den
+           Namen der übergangenen Dateien im Titel. */
+        var umfang = chip.querySelector('.cm-stand-umfang');
+        if (umfang) {
+            if (aelteste.ohneStand.length) {
+                umfang.textContent = de
+                    ? ' (älteste der ' + aelteste.bekannt + ' von ' + aelteste.gesamt
+                      + ' Quellen mit Stand)'
+                    : ' (oldest of the ' + aelteste.bekannt + ' of ' + aelteste.gesamt
+                      + ' sources with a recorded date)';
+                umfang.setAttribute('title', (de
+                    ? 'Ohne hinterlegten Stand und deshalb nicht berücksichtigt: '
+                      + aelteste.ohneStand.join(', ')
+                      + '. Diese Dateien können älter sein als das angezeigte Datum.'
+                    : 'No recorded date, therefore not considered: '
+                      + aelteste.ohneStand.join(', ')
+                      + '. Those files may be older than the date shown.'));
+            } else {
+                umfang.textContent = de
+                    ? ' (älteste von ' + aelteste.gesamt + ' Quellen)'
+                    : ' (oldest of ' + aelteste.gesamt + ' sources)';
+                umfang.setAttribute('title', (de
+                    ? 'Quellen dieses Reiters: ' : 'Sources of this tab: ')
+                    + CM_STAND_QUELLEN.join(', '));
+            }
+        }
+        chip.setAttribute('data-cm-bekannt', String(aelteste.bekannt));
+        chip.setAttribute('data-cm-gesamt', String(aelteste.gesamt));
+        /* Ab hier macht ds-datenstand.js den Rest — dieselbe Anzeige,
+           dieselben Klassen und derselbe Hinweis wie in den fünf
+           Reitern, deren Chip in index.html steht. */
+        chip.setAttribute('data-cm-quelle', aelteste.datei);
+        if (feld) feld.setAttribute('data-quelle', aelteste.datei);
+        window.DsDatenstand.zeichne(chip);
+    }).catch(function () { /* still bleiben ist hier richtig: der Chip sagt dann „unbekannt" */ });
+
+    return chip;
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { cmDatenstandChipEinhaengen(); });
+} else {
+    cmDatenstandChipEinhaengen();
+}
+document.addEventListener('languageChanged', function () { cmDatenstandChipEinhaengen(); });
+
+window.cmAeltesteQuelle = cmAeltesteQuelle;
+window.cmDatenstandChipEinhaengen = cmDatenstandChipEinhaengen;
+window.CM_STAND_QUELLEN = CM_STAND_QUELLEN;

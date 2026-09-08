@@ -233,7 +233,13 @@ describe('small samples are tamed', () => {
         assert.ok(dekl, 'TIER_SCORE steht nicht mehr in js/app-tier-meta.js');
         // eslint-disable-next-line no-new-func
         const tierScore = new Function(dekl[0] + '\nreturn TIER_SCORE;')();
-        assert.equal(tierScore.PRIOR_GAMES, compute.CONV_PRIOR,
+        /* BEFUND B1 (07.09.2026): die Konstante hiess PRIOR_GAMES und
+           wurde mit LISTEN gefuettert; sie heisst jetzt PRIOR_LISTEN.
+           Beide Namen werden gelesen, aber nur einer darf da sein —
+           sonst steht die Umbenennung nur halb in der Datei. */
+        assert.equal('PRIOR_GAMES' in tierScore, false,
+            'PRIOR_GAMES ist zurueck — der Vorwert zaehlt Listen, nicht Partien (B1)');
+        assert.equal(tierScore.PRIOR_LISTEN, compute.CONV_PRIOR,
             'computeTierScore changed its prior — keep the two in step or say why');
     });
 });

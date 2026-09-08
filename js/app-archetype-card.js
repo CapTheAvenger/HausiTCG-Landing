@@ -588,6 +588,114 @@
     /* Die Summen der Praesenzseite — Nenner fuer die Hinweise.
        Einmal gerechnet, nicht je Kachel: die Karte zeichnet bis zu 30
        Kacheln je Seitenaufbau. */
+    /* WORAUF RUHT DER ONLINE-ANTEIL? (07.09.2026, Befund B1)
+     *
+     * DER BEFUND. Fuer dasselbe Deck standen an zwei Stellen der Seite
+     * zwei verschiedene Zahlen, beide als Anteil beschriftet, keine mit
+     * ihrer Grundgesamtheit:
+     *
+     *   Startseite (js/meta-analysis-hub.js)   Dragapult  9,77 %
+     *       Nenner: Summe total_brought ueber die 121 Zeilen von
+     *       data/online_tournament_top8_decks.csv = 12.287 ANTRITTE.
+     *   Diese Karte                            Dragapult  7,62 %
+     *       Nenner: das Feld, gegen das LIMITLESS rechnet — nicht die
+     *       Summe der gelisteten LISTEN.
+     *
+     * Zwei Groessen, zwei Grundgesamtheiten, ein Wort. Beide Zahlen sind
+     * richtig; falsch war, dass keine sagte, wovon sie der Anteil ist.
+     * Eine dritte, "vereinheitlichte" Zahl gibt es hier nicht — die
+     * Quellen zaehlen wirklich Verschiedenes (Antritte an Turnieren
+     * gegen gemeldete Listen des Onlinefeldes).
+     *
+     * DER NENNER STEHT NICHT IN DER DATEI. data/limitless_online_decks.csv
+     * fuehrt count und share_numeric je Zeile, aber keine Feldgroesse; die
+     * Anteile summieren sich auf 96,19 %, weil Limitless alles unterhalb
+     * seiner Namensschwelle als "Other" fuehrt und der Scraper diese Zeile
+     * weglaesst (backend/scrapers/limitless_online_scraper.py). Die Summe
+     * der gelisteten Listen ist deshalb NICHT der Nenner: 3.138/39.694
+     * waeren 7,91 %, die Datei sagt 7,62.
+     *
+     * Eingegrenzt wird er mit feldGroesseAusAnteilen() aus js/app-utils.js
+     * — derselben Rechnung, mit der der Donut seinen Nenner findet, nicht
+     * mit einer zweiten. Gemessen am Stand vom 06.09.2026: 41.200 Listen,
+     * davon 39.694 benannt und 1.506 unter "Other"; 3.138/41.200 = 7,62 %
+     * und trifft damit die Spalte der Datei.
+     *
+     * Laesst sich der Nenner nicht eingrenzen (Datei uneinig, Helfer
+     * fehlt), gibt es KEINE Zahl — dann sagt der Hinweis, dass die
+     * Grundgesamtheit nicht in der Datei steht. Ein geratener Nenner
+     * waere hier schlimmer als gar keiner. */
+    let _onlineFeldCache = null;
+    function _onlineFeld() {
+        if (_onlineFeldCache) return _onlineFeldCache;
+        let gelistet = 0, anteilSumme = 0;
+        const zeilen = [];
+        for (const k of Object.keys(_decks || {})) {
+            const anzahl = Number(_decks[k].count) || 0;
+            const anteil = Number(_decks[k].share) || 0;
+            if (anzahl > 0) { gelistet += anzahl; anteilSumme += anteil; }
+            zeilen.push({ anteil: anteil, anzahl: anzahl });
+        }
+        const n = (typeof window !== 'undefined' && typeof window.feldGroesseAusAnteilen === 'function')
+            ? window.feldGroesseAusAnteilen(zeilen) : 0;
+
+        /* WIE SCHARF IST DER HOCHGERECHNETE NENNER? (Nachtrag zu B1,
+           07.09.2026)
+           -----------------------------------------------------------
+           `n` ist KEINE gezaehlte Groesse. Bis heute stand er trotzdem
+           wie eine da ("3.138 / 41.200"), und aus ihm folgte ein
+           ebenso scheingenaues "1.506 Other".
+
+           Hier wird deshalb nachgemessen, wie weit er wandern darf,
+           ohne die Datei zu verletzen. Die Anteilsspalte steht auf
+           zwei Nachkommastellen, jede Zeile laesst also ein Intervall
+           zu:
+
+               count / ((share + 0,005) / 100)  ..  count / ((share - 0,005) / 100)
+
+           Der Schnitt ueber alle Zeilen, DIE MIT n EINIG SIND, ist die
+           Spanne, die hier ausgegeben wird. Gemessen am Stand vom
+           07.09.2026: 41.191,9 bis 41.207,2 — n = 41.200 liegt darin,
+           und "Other" liegt damit zwischen 1.498 und 1.513, nicht auf
+           1.506.
+
+           Das ist KEINE zweite Rechnung fuer den Nenner: n kommt
+           weiter allein aus feldGroesseAusAnteilen() (js/app-utils.js).
+           Gemessen wird nur seine Schaerfe. Zeilen, deren Intervall n
+           nicht enthaelt, bleiben draussen — sonst waere die Spanne
+           leer, sobald eine einzige Zeile der Datei aus der Reihe
+           faellt (genau der Fall Wailord vom 03.09.2026). */
+        let von = 0, bis = Infinity;
+        if (n > gelistet) {
+            for (const z of zeilen) {
+                if (!(z.anzahl > 0) || !(z.anteil > 0.005)) continue;
+                const u = z.anzahl / ((z.anteil + 0.005) / 100);
+                const o = z.anzahl / ((z.anteil - 0.005) / 100);
+                if (!(u <= n && n <= o)) continue;
+                if (u > von) von = u;
+                if (o < bis) bis = o;
+            }
+        }
+        const spanne = (n > gelistet && von > gelistet && isFinite(bis) && bis >= von)
+            ? { von: von, bis: bis } : null;
+
+        _onlineFeldCache = {
+            gelistet: gelistet,
+            // Summe der Anteilsspalte — die Luecke zu 100 % IST das,
+            // was Limitless unter "Other" fuehrt, und der Grund, warum
+            // der Nenner ueber der Summe der gelisteten Listen liegt.
+            anteilSumme: anteilSumme,
+            listen: (n > gelistet) ? n : null,
+            other: (n > gelistet) ? (n - gelistet) : null,
+            // Spanne des Nenners und, daraus, die Spanne von "Other".
+            // null heisst: nicht messbar — dann steht auch keine da.
+            spanne: spanne,
+            otherSpanne: spanne
+                ? { von: spanne.von - gelistet, bis: spanne.bis - gelistet } : null,
+        };
+        return _onlineFeldCache;
+    }
+
     let _majorFeldCache = null;
     function _majorFeld() {
         if (_majorFeldCache) return _majorFeldCache;
@@ -688,22 +796,75 @@
         const m = _major ? (_major[findKey(_major, name)] || null) : null;
         const majorLeer = L('arc.keinMajor', de ? 'kein Major' : 'no major');
 
+        /* BEFUND B1 (07.09.2026): DIE GRUNDGESAMTHEIT STEHT JETZT DA —
+           UND ZWAR ALS DAS, WAS SIE IST.
+           Rechts stand bis zum Vormittag nur die Zahl der gemeldeten
+           Listen — 3.138 neben "7,62 %", und 3.138 durch irgendetwas
+           Sichtbares ergibt diese Quote nicht. Der Nenner ist das
+           Onlinefeld, in dem auch die unbenannten "Other"-Listen
+           stecken; er wird in _onlineFeld() aus der Datei
+           hochgerechnet, nicht abgeschrieben.
+
+           NACHTRAG DESSELBEN TAGES. Danach stand "3.138 / 41.200" da,
+           beide Zahlen in derselben Schreibweise — als haette jemand
+           41.200 Listen gezaehlt. Hat niemand: 41.200 ist die Mitte
+           eines Bereichs (41.192 bis 41.207), den die Anteilsspalte
+           zulaesst, und "1.506 Other" war 41.200 minus 39.694, also
+           irgendwo zwischen 1.498 und 1.513. Zwei Scheingenauigkeiten
+           aus einer Schaetzung.
+
+           Jetzt traegt die Kachel "3.138 / ≈ 41.200", und der Hinweis
+           sagt den Rechenweg, die Spanne und dass "Other" rund 1.500
+           sind. Gezaehlt ist an diesem Bruch nur der Zaehler. */
+        const _oFeld = _onlineFeld();
+        /* Die Spanne des hochgerechneten Nenners und, daraus, die von
+           "Other". Fehlt sie (Datei uneinig), bleibt der Satz weg —
+           eine erfundene Spanne waere schlimmer als keine. */
+        const _sp = _oFeld.spanne;
+        const _osp = _oFeld.otherSpanne;
+        const _spanneSatz = _sp
+            ? (de ? ` (eingegrenzt auf ${fmtGanz(_sp.von)} bis ${fmtGanz(_sp.bis)})`
+                  : ` (bracketed to ${fmtGanz(_sp.von)}–${fmtGanz(_sp.bis)})`)
+            : '';
+        const _otherSpanneSatz = _osp
+            ? (de ? `, je nach Nenner ${fmtGanz(_osp.von)} bis ${fmtGanz(_osp.bis)}`
+                  : `, ${fmtGanz(_osp.von)}–${fmtGanz(_osp.bis)} depending on the base`)
+            : '';
+        /* "rund 1.500" statt "1.506": auf Hundert gerundet ist der Wert
+           breiter als die Spanne (15 Listen) und behauptet damit nicht
+           mehr, als die Rechnung hergibt. */
+        const _otherRund = fmtGanz(Math.round((_oFeld.other || 0) / 100) * 100);
         const rep = d
             ? tileGeteilt('rep', 'neutral', L('arc.repLabel', de ? 'Anteil' : 'Share'),
                 `${esc(fmt(d.share))} %`,
-                /* Rechts steht, worauf der Anteil ruht: online die Zahl der
-                   gemeldeten Listen, beim Major die Zahl der Antritte. Beides
-                   ist "so viele Leute haben das Deck gespielt", nur aus zwei
-                   Quellen — deshalb blanke Zahlen ohne Wort, die Kachel sagt
-                   ueber der Spalte schon, was gemeint ist. */
-                fmtGanz(d.count),
+                /* Rechts steht, worauf der Anteil ruht: online die Listen
+                   dieses Decks UEBER der Grundgesamtheit des Onlinefeldes,
+                   beim Major die Zahl der Antritte (deren Nenner im Hinweis
+                   steht). Beides ist "so viele Leute haben das Deck
+                   gespielt", nur aus zwei Quellen. */
+                _oFeld.listen ? `${fmtGanz(d.count)} / ≈ ${fmtGanz(_oFeld.listen)}` : fmtGanz(d.count),
                 m ? `${esc(fmt(m.share))} %` : '',
                 m ? fmtGanz(m.antritte) : '',
                 majorLeer,
                 false,
-                L('arc.repTip2', de
-                    ? '{n} Listen im Meta online. {mj}'
-                    : '{n} lists in the online field. {mj}')
+                /* KEIN NEUER i18n-SCHLUESSEL: js/i18n.js gehoert einem
+                   anderen Arbeitspaket. Zweisprachig inline ueber
+                   getLang(), wie es das Projekt an Dutzenden Stellen
+                   macht (siehe praesenzNote weiter unten). */
+                (_oFeld.listen
+                    ? (de
+                        ? 'Anteil am Onlinefeld: der Bruch {n} / {g}. Gezählt ist davon nur der Zähler (Spalte count in data/limitless_online_decks.csv). Der Nenner steht in KEINER Spalte — er ist aus den Anteilen derselben Datei HOCHGERECHNET: {s} Listen sind namentlich gelistet und tragen zusammen {a} % der Anteile, den Rest führt Limitless als „Other“. Daraus ≈ {g} Listen{u}. Unter „Other“ liegen danach rund {r} Listen ({g} − {s} = {o}{c}) — auch diese Zahl ist nicht gezählt. NICHT dieselbe Größe wie der Meta-Anteil auf der Startseite: der zählt Antritte an Online-Turnieren aus data/online_tournament_top8_decks.csv. {mj}'
+                        : 'Share of the online field: the fraction {n} / {g}. Only the numerator is counted (column count in data/limitless_online_decks.csv). The base appears in NO column — it is EXTRAPOLATED from the file\u2019s own shares: {s} lists are named and carry {a} % of the shares between them, the remainder is what Limitless groups as \u201cOther\u201d. Hence ≈ {g} lists{u}. \u201cOther\u201d is then about {r} lists ({g} − {s} = {o}{c}) — that figure is not counted either. NOT the same quantity as the meta share on the home page: that one counts entries at online tournaments from data/online_tournament_top8_decks.csv. {mj}')
+                        .replace('{u}', _spanneSatz)
+                        .replace('{c}', _otherSpanneSatz)
+                        .replace('{r}', _otherRund)
+                        .replace('{a}', fmt(_oFeld.anteilSumme, 2))
+                        .replace(/\{s\}/g, fmtGanz(_oFeld.gelistet))
+                        .replace('{o}', fmtGanz(_oFeld.other))
+                        .replace(/\{g\}/g, fmtGanz(_oFeld.listen))
+                    : (de
+                        ? '{n} Listen im Meta online. Die Grundgesamtheit, gegen die Limitless diesen Anteil rechnet, steht nicht in data/limitless_online_decks.csv und ließ sich aus den Anteilen der Datei nicht eingrenzen — deshalb steht hier keine. {mj}'
+                        : '{n} lists in the online field. The base Limitless computes this share against is not in data/limitless_online_decks.csv and could not be bracketed from the file\u2019s shares — so none is given. {mj}'))
                     .replace('{n}', fmtGanz(d.count))
                     .replace('{mj}', m
                         ? L('arc.repTipMajor', de
@@ -716,6 +877,53 @@
                             : 'No in-person event with this deck in this format yet.')))
             : tile('rep', 'tie', L('arc.repLabel', de ? 'Anteil' : 'Share'), '–',
                 esc(L('arc.noData', de ? 'keine Daten' : 'no data')));
+
+        /* ── BEFUND B3 (07.09.2026): EINE DATEI, ZWEI MAJOR-QUOTEN ──
+         *
+         * Diese Kachel rechnet die Major-Quote aus wins/losses/ties der
+         * Datei data/labs_tournament_decks_<Format>.csv neu, als
+         * S/(S+N+U) (siehe _majorLaden(): "Siege durch ALLE Partien").
+         * Der Reiter „Past Meta“ (js/app-past-meta.js) zeigt aus
+         * DERSELBEN Datei die Spalte win_pct — das sind Matchpunkte
+         * (3S+U)/(3·Partien), und die heißen bei Limitless „Win %".
+         *
+         * Beide sind richtig gerechnet, und beide bleiben: die
+         * Entscheidung des Betreibers vom 01.09.2026 („online wird die
+         * winrate ganz normal gewonnene kaempfe durch gesamtanzahl
+         * kaempfe genommen") gilt für diese Karte, damit ihre linke und
+         * rechte Spalte auf EINER Skala stehen. Zwei Skalen auf einem
+         * Bildschirm wären der schlimmere Fehler.
+         *
+         * Was hier fehlte, war der Name. Ohne ihn stehen zwei Zahlen für
+         * dasselbe Deck auf zwei Reitern, und nichts sagt, warum sie
+         * auseinandergehen. Der Kurzname kommt aus
+         * js/win-rate-konvention.js — abgeschrieben wird er nicht (siehe
+         * die Begründung bei quoteName in zeitraumHtml()).
+         *
+         * OFFEN und NICHT hier zu lösen: js/app-past-meta.js gehört einem
+         * anderen Arbeitspaket. Dort steht der Name schon richtig
+         * (WK.hinweis('matchpunkte') am Kachel-title), aber die Kachel
+         * heißt „Cumulative Win %" und sagt nicht, dass die Deck-Analyse
+         * dieselbe Datei anders rechnet. */
+        function _wrKonventionsSatz(deutsch) {
+            var K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+            if (!K) return '';
+            var mit = K.kurz('mitUnentschieden');
+            var mp = K.kurz('matchpunkte');
+            var fMit = K.hol('mitUnentschieden') ? K.hol('mitUnentschieden').formel : '';
+            var fMp = K.hol('matchpunkte') ? K.hol('matchpunkte').formel : '';
+            /* Kein neuer i18n-Schlüssel: js/i18n.js gehört einem anderen
+               Arbeitspaket. Zweisprachig inline über getLang(). */
+            return deutsch
+                ? ' Konvention beider Spalten: ' + mit + ' (' + fMit + ') — NICHT „' + mp
+                  + '“ (' + fMp + '). Der Reiter „Past Meta“ zeigt aus derselben '
+                  + 'Major-Datei die Spalte win_pct, also ' + mp + '; deshalb steht dort '
+                  + 'für dasselbe Deck eine andere Zahl.'
+                : ' Convention of both columns: ' + mit + ' (' + fMit + ') — NOT \u201c' + mp
+                  + '\u201d (' + fMp + '). The Past Meta tab shows the win_pct column of the '
+                  + 'same major file, i.e. ' + mp + '; that is why the same deck reads '
+                  + 'differently there.';
+        }
 
         const wrDelta = d ? d.winRate - 50 : null;
         // Gezeigt, sobald es Partien gibt. Wie sicher sie ist, steht daneben.
@@ -761,7 +969,8 @@
                             .replace('{k}', fmt(wrKi, 0))
                         : L('arc.wrTipOhne', de
                             ? 'Noch keine Major-Matches für dieses Deck in diesem Format.'
-                            : 'No in-person games for this deck in this format yet.')),
+                            : 'No in-person games for this deck in this format yet.'))
+                    + _wrKonventionsSatz(de),
                 arrow(wrDelta))
             : tile('wr', 'tie', L('arc.wrLabel', 'Win Rate'), '–',
                 esc(L('arc.noData', de ? 'keine Daten' : 'no data')));
@@ -902,7 +1111,7 @@
      *
      * BEFUND A-F4.7 (07.09.2026, live gemessen): das Datenfenster
      * "Daten ab" der Deck-Analyse wirkt auf die Kartenuebersicht, aber
-     * nicht auf diese Kacheln — Anteil, Win %, Top-8 und Day-2 bleiben
+     * nicht auf diese Kacheln — Anteil, Quote, Top-8 und Day-2 bleiben
      * bei jedem Fensterwechsel identisch. `grep currentMetaDateFrom` in
      * dieser Datei: 0 Treffer.
      *
@@ -912,7 +1121,7 @@
      *       share, share_numeric, wins, losses, ties, win_rate,
      *       win_rate_numeric. KEIN Datumsfeld, keine Turnierzeile — die
      *       Datei ist ein fertig aufsummierter Stand des Onlinefeldes.
-     *       Anteil und Win % lassen sich daraus fuer kein Fenster neu
+     *       Anteil und Quote lassen sich daraus fuer kein Fenster neu
      *       rechnen.
      *   data/online_tournament_top8_decks.csv   fuehrt genau EIN Datum je
      *       Deck (last_seen_date); die Antritte und Top-8-Zahlen daneben
@@ -936,11 +1145,35 @@
     function zeitraumHtml(variante) {
         const de = isDe();
         const z = _majorZeitraum;
+        /* BEFUND B2 (07.09.2026): HIER STAND „Win %". Die Kachel daneben
+           rechnet S/(S+N+U) aus win_rate_numeric — das ist
+           MIT_UNENTSCHIEDEN, nicht die Matchpunkte-Konvention, fuer die
+           js/win-rate-konvention.js den Namen „Win %" freihaelt
+           (Betreiberanordnung 05.09.2026). Der Kurzname kommt aus dem
+           Modul, damit hier keine zweite Abschrift entsteht. */
+        const WK = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+        /* KEIN ABGESCHRIEBENER NAME — UND EINE OFFENE SPANNUNG.
+           tests/unit/test-sprache-win-rate.js haelt seit dem 20.08.2026
+           fest, dass in DIESER Datei kein zweites deutsches Wort fuer die
+           Quote im Quelltext steht ("Ja auf jeden Fall win rate").
+           js/win-rate-konvention.js fuehrt seit dem 07.09.2026 aber genau
+           so ein Wort als Kurznamen — es MUSS eines geben, seit „Win %"
+           den Matchpunkten vorbehalten ist.
+
+           Beides geht nur so: der Name wird nirgends abgeschrieben,
+           sondern zur Laufzeit aus dem Modul geholt. Faellt das Modul
+           aus, steht die FORMEL da — die ist kein vierter Name und nie
+           falsch. Dass der Name im ANGEZEIGTEN Text auftaucht, ist eine
+           Entscheidung des Betreibers vom 05.09.2026 und gehoert ihm,
+           nicht dieser Datei. */
+        const quoteName = (WK && WK.kurz('mitUnentschieden'))
+            || ((WK && WK.hol('mitUnentschieden') && WK.hol('mitUnentschieden').formel)
+                || 'S / (S + N + U)');
         const online = de
-            ? 'Anteil, Win % und Top-8-Quote: data/limitless_online_decks.csv und '
+            ? `Anteil, ${quoteName} und Top-8-Quote: data/limitless_online_decks.csv und `
               + 'data/online_tournament_top8_decks.csv — Gesamtstand des Onlinefeldes, '
               + 'ohne Turnierdatum je Zeile.'
-            : 'Share, Win % and top-8 rate: data/limitless_online_decks.csv and '
+            : `Share, ${quoteName} and top-8 rate: data/limitless_online_decks.csv and `
               + 'data/online_tournament_top8_decks.csv — cumulative online field, '
               + 'no per-row tournament date.';
         let major;
@@ -1538,5 +1771,9 @@
         MIN_PRAESENZ_PARTIEN, praesenzZelle, praesenzZellen,
         setData: (decks, conv) => { _decks = decks; _conv = conv; },
         cardHtml, tilesHtml, matchupTableHtml, render, toneFor, shadeFor, barFor,
+        /* Befund B1 (07.09.2026): die Grundgesamtheit des Online-Anteils.
+           Nach aussen gegeben, damit eine Zusicherung sie AUSFUEHREN und
+           gegen die Datei nachrechnen kann, statt den Quelltext zu lesen. */
+        onlineFeld: _onlineFeld,
     };
 })();

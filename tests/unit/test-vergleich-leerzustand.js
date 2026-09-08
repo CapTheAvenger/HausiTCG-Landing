@@ -58,7 +58,12 @@ function hinweis(sprache, o) {
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     };
     vm.createContext(kasten);
-    vm.runInContext(funktion(SRC, 'cityLeagueVergleichLeerHinweis'), kasten);
+    /* BEFUND B5 (07.09.2026): die Rubriknamen stehen seither an EINER
+       Stelle (cityLeagueRubrikNamen) — dieselbe, aus der die
+       Tabellenueberschriften kommen. Also wird sie mitgeschnitten und
+       ausgefuehrt, nicht hier nachgebaut. */
+    vm.runInContext(funktion(SRC, 'cityLeagueRubrikNamen') + '\n'
+        + funktion(SRC, 'cityLeagueVergleichLeerHinweis'), kasten);
     return kasten.cityLeagueVergleichLeerHinweis(o);
 }
 
@@ -77,7 +82,13 @@ const OHNE_VORZEITRAUM = {
     mindestAnteil: 0.1,
     leer: { seltener: true, haeufiger: true, verbessert: true, verschlechtert: true,
             aufsteiger: true, neuTabelle: false, verschwunden: true },
-    vorhanden: { haeufiger: 0, neuTabelle: 11, verschwunden: 0 }
+    /* BEFUND B5 (07.09.2026): hiess `vorhanden` und meinte "hat Daten".
+       Seit es die drei Tabellen gibt, meint `ohneTabelle` das Engere:
+       hat Daten UND bekommt bewusst keine Tabelle. Das ist ohne
+       Vorzeitraum genau eine Rubrik. */
+    ohneTabelle: { neuTabelle: 11 },
+    ohneTabelleGrund: 'Eine Tabelle „Neue Archetypen“ steht hier bewusst nicht: ohne '
+        + 'Vorzeitraum trägt jede Zeile den Status NEU.'
 };
 
 /** Ein gesunder Zeitraum: alle Rubriken gefuellt. */
@@ -91,7 +102,9 @@ const VOLLSTAENDIG = {
     mindestAnteil: 0.1,
     leer: { seltener: false, haeufiger: false, verbessert: false, verschlechtert: false,
             aufsteiger: false, neuTabelle: false, verschwunden: false },
-    vorhanden: { haeufiger: 40, neuTabelle: 12, verschwunden: 5 }
+    // Mit Vorzeitraum bekommen alle drei Rubriken ihre Tabelle.
+    ohneTabelle: {},
+    ohneTabelleGrund: ''
 };
 
 describe('Erklaerter Leerzustand der Vergleichsrubriken (A-F2.11 bis F2.13 / H1)', () => {
@@ -100,7 +113,7 @@ describe('Erklaerter Leerzustand der Vergleichsrubriken (A-F2.11 bis F2.13 / H1)
         const h = hinweis('de', OHNE_VORZEITRAUM);
         ['Seltener gespielt', 'Häufiger gespielt', 'Performance verbessert',
          'Performance verschlechtert', 'Auf- und Absteiger der Top 10',
-         'verschwundene Archetypen'].forEach(n => {
+         'Verschwundene Archetypen'].forEach(n => {
             assert.ok(h.includes(n), 'Rubrik nicht genannt: ' + n + '\n' + h);
         });
     });
@@ -128,26 +141,22 @@ describe('Erklaerter Leerzustand der Vergleichsrubriken (A-F2.11 bis F2.13 / H1)
         assert.ok(!/undefined|null|N\/A/.test(h), h);
     });
 
-    it('Rubriken, die es gar nicht als Tabelle gibt, werden mit ihrer Zahl genannt', () => {
-        // newArchetypes ist im gemessenen Zustand mit 11 Zeilen gefuellt und
-        // wird nirgends gezeigt — genau das darf nicht verschwiegen werden.
+    it('B5: eine Rubrik mit Daten, die bewusst keine Tabelle bekommt, wird mit Zahl UND Grund genannt', () => {
         const h = hinweis('de', OHNE_VORZEITRAUM);
-        assert.match(h, /Ohne Tabelle auf dieser Seite, obwohl Daten vorliegen: neue Archetypen \(11\)/);
+        assert.match(h, /Ohne eigene Tabelle, obwohl Daten vorliegen: „Neue Archetypen“ \(11\)/);
+        assert.match(h, /bewusst nicht/, 'der Grund fehlt: ' + h);
     });
 
-    it('ist alles gefuellt, aber ohne Tabelle, sagt sie genau das und nichts ueber Fehlendes', () => {
+    it('B5: Rubriken, die jetzt eine Tabelle haben, werden NICHT mehr als ungezeigt gemeldet', () => {
+        // Bis zum 07.09.2026 standen "Häufiger gespielt", "neue Archetypen"
+        // und "verschwundene Archetypen" hier — obwohl sie nur deshalb
+        // ungezeigt waren, weil es die Tabellen nicht gab. Jetzt gibt es sie.
         const h = hinweis('de', VOLLSTAENDIG);
-        assert.ok(!h.includes('Hier fehlen'), h);
-        assert.match(h, /Ohne Tabelle auf dieser Seite/);
-        assert.match(h, /„Häufiger gespielt“ \(40\)/);
-        assert.match(h, /neue Archetypen \(12\)/);
-        assert.match(h, /verschwundene Archetypen \(5\)/);
+        assert.equal(h, '', 'nichts fehlt und nichts ist ungezeigt — dann bleibt der Block leer');
     });
 
     it('ist nichts zu melden, bleibt der Block leer statt eine Ueberschrift ohne Inhalt zu setzen', () => {
-        const still = Object.assign({}, VOLLSTAENDIG, {
-            vorhanden: { haeufiger: 0, neuTabelle: 0, verschwunden: 0 }
-        });
+        const still = Object.assign({}, VOLLSTAENDIG, { ohneTabelle: {} });
         assert.equal(hinweis('de', still), '');
     });
 
@@ -155,7 +164,7 @@ describe('Erklaerter Leerzustand der Vergleichsrubriken (A-F2.11 bis F2.13 / H1)
         const h = hinweis('de', Object.assign({}, VOLLSTAENDIG, {
             leer: { seltener: true, haeufiger: true, verbessert: true, verschlechtert: true,
                     aufsteiger: true, neuTabelle: true, verschwunden: true },
-            vorhanden: { haeufiger: 0, neuTabelle: 0, verschwunden: 0 }
+            ohneTabelle: {}
         }));
         assert.ok(!h.includes('keinen Vorzeitraum'), 'der Grund muss zum Zustand passen');
         assert.match(h, /mindestens 32 Listen \(10 % des größten Archetyps\)/);
@@ -164,19 +173,19 @@ describe('Erklaerter Leerzustand der Vergleichsrubriken (A-F2.11 bis F2.13 / H1)
     it('B4: der Prozentsatz im Satz ist der uebergebene, kein Literal', () => {
         const leer = { seltener: true, haeufiger: true, verbessert: true, verschlechtert: true,
                        aufsteiger: true, neuTabelle: true, verschwunden: true };
-        const nichts = { haeufiger: 0, neuTabelle: 0, verschwunden: 0 };
+        const nichts = {};
         const h = hinweis('de', Object.assign({}, VOLLSTAENDIG, {
-            leer, vorhanden: nichts, mindestAnteil: 0.25, mindestListen: 76
+            leer, ohneTabelle: nichts, mindestAnteil: 0.25, mindestListen: 76
         }));
         assert.match(h, /mindestens 76 Listen \(25 % des größten Archetyps\)/,
             'vorher stand hier fest "10 %": ' + h);
         const gebrochen = hinweis('de', Object.assign({}, VOLLSTAENDIG, {
-            leer, vorhanden: nichts, mindestAnteil: 0.125, mindestListen: 38
+            leer, ohneTabelle: nichts, mindestAnteil: 0.125, mindestListen: 38
         }));
         assert.match(gebrochen, /\(12,5 % des größten Archetyps\)/,
             'gebrochene Anteile duerfen nicht zu "12" oder "13" gerundet werden');
         const en = hinweis('en', Object.assign({}, VOLLSTAENDIG, {
-            leer, vorhanden: nichts, mindestAnteil: 0.25, mindestListen: 76
+            leer, ohneTabelle: nichts, mindestAnteil: 0.25, mindestListen: 76
         }));
         assert.match(en, /76 lists \(25 % of the largest archetype\)/);
     });
@@ -222,7 +231,17 @@ describe('Erklaerter Leerzustand der Vergleichsrubriken (A-F2.11 bis F2.13 / H1)
             countThreshold: 144,
             CL_MINDEST_ANTEIL_GROESSTER: 1.45,      // * 100 = 145
             decreased: [], increased: [], improvers: [], decliners: [],
-            entries: [], exits: [], disappeared: []
+            entries: [], exits: [], disappeared: [],
+            // BEFUND B4/B5: die Tabellen-Entscheidung wird hineingereicht,
+            // nicht hier gerechnet.
+            // BEFUND B1/2 (07.09.2026, zweite Runde): der Herkunftssatz wird
+            // hier NICHT mehr durchgereicht — er stand damit zweimal auf der
+            // Seite. Er bleibt in der Karte "Datenquelle"; siehe unten.
+            // Dafuer kommen Quelldatei und die ausgezaehlte Bilanz herein.
+            _quelle: 'data/QUELLE-147.csv',
+            zaehlwerk: { zeilen: 148, mitZuwachs: 149, zuwachsUndNeu: 149,
+                         statusVerschwunden: 0 },
+            _herkunftSatz: 'HERKUNFT-146', _herkunftDe: true, zeigeNeue: false
         });
         assert.equal(o.archetypen, 141, 'archetypen');
         assert.equal(o.neu, 142, 'neu: newArchetypes.length wurde nicht durchgereicht');
@@ -232,6 +251,26 @@ describe('Erklaerter Leerzustand der Vergleichsrubriken (A-F2.11 bis F2.13 / H1)
             + 'nicht eine zweite Rechnung an dieser Stelle');
         assert.equal(o.mindestAnteil, 1.45, 'mindestAnteil');
         assert.equal(o.zeitraum, '01.01.2099 – 02.01.2099', 'zeitraum');
+        /* BEFUND B1/2 (07.09.2026, zweite Runde): bis hierher verlangte
+           dieser Test, dass der Herkunftssatz durchgereicht wird. Genau
+           das war der Befund — er stand dadurch ZWEIMAL auf der Seite,
+           einmal in der Karte "Datenquelle" und einmal hier. Er bleibt in
+           der Karte (die wird immer gerendert, dieser Block nur solange
+           Rubriken fehlen), und die Aufrufstelle reicht ihn nicht mehr
+           herein. Gegenprobe in tests/unit/test-r4-herkunft-einmal.js. */
+        assert.equal(o.herkunftSatz, undefined,
+            'BEFUND B1/2: der Herkunftssatz wird wieder in den Leerzustand gereicht — '
+            + 'dann steht er ein zweites Mal auf der Seite');
+        assert.equal(o.quelle, 'data/QUELLE-147.csv',
+            'BEFUND B4: die Quelldatei muss durchgereicht werden, nicht hier gebildet');
+        assert.equal(o.zaehlwerk.zeilen, 148,
+            'BEFUND B2: die Bilanz muss aus getCityLeagueSortedSections kommen');
+        // Die Felder stammen aus dem vm-Realm; deepStrictEqual vergleicht
+        // auch den Prototyp, also Feld fuer Feld.
+        assert.deepEqual(Object.keys(o.ohneTabelle), ['neuTabelle'],
+            'BEFUND B5: ohne Tabelle gemeldet wird genau die Rubrik, die keine bekommt');
+        assert.equal(o.ohneTabelle.neuTabelle, 142,
+            'BEFUND B5: die Zahl der betroffenen Archetypen wird nicht durchgereicht');
 
         const h = hinweis('de', o);
         assert.ok(h.includes('alle 141 Archetypen'), h);
@@ -240,6 +279,11 @@ describe('Erklaerter Leerzustand der Vergleichsrubriken (A-F2.11 bis F2.13 / H1)
             'BEFUND B4 war genau das: neu liess sich auf 0 setzen, ohne dass etwas rot wurde\n' + h);
         assert.ok(h.includes('143 Turniere'), h);
         assert.ok(h.includes('01.01.2099 – 02.01.2099'), h);
+        assert.equal(h.includes('HERKUNFT-146'), false,
+            'BEFUND B1/2: der Herkunftssatz steht wieder im Leerzustandstext — '
+            + 'zusammen mit der Karte "Datenquelle" also zweimal auf der Seite:\n' + h);
+        assert.ok(h.includes('data/QUELLE-147.csv'),
+            'BEFUND B4: der Leerzustand nennt die Quelldatei nicht:\n' + h);
     });
 
     it('B4: an der Aufrufstelle steht rechts vom Doppelpunkt keine nackte Zahl mehr', () => {
@@ -305,7 +349,7 @@ describe('Erklaerter Leerzustand der Vergleichsrubriken (A-F2.11 bis F2.13 / H1)
             mindestAnteil: anteil,
             leer: { seltener: true, haeufiger: true, verbessert: true, verschlechtert: true,
                     aufsteiger: true, neuTabelle: true, verschwunden: true },
-            vorhanden: { haeufiger: 0, neuTabelle: 0, verschwunden: 0 }
+            ohneTabelle: {}
         }));
         assert.ok(h.includes('mindestens ' + schwelleSoll + ' Listen'),
             'der Satz nennt eine andere Zahl als die Filterung: ' + h);
@@ -316,9 +360,17 @@ describe('Erklaerter Leerzustand der Vergleichsrubriken (A-F2.11 bis F2.13 / H1)
             'der Aufruf steht in renderCityLeagueTable');
         const ab = SRC.indexOf('html += cityLeagueVergleichLeerHinweis({');
         const bis = SRC.indexOf('// Add conditional tables', ab);
-        assert.ok(bis > ab && bis - ab < 1800,
-            'er steht direkt vor den bedingten Tabellen, nicht irgendwo');
-        const block = SRC.slice(ab, bis);
+        /* BEFUND B5 (07.09.2026): zwischen dem Aufruf und den bedingten
+           Tabellen stehen seither die Bausteine der drei neuen Tabellen
+           (_kopf, _archZelle, _anteil ...). Die Aussage bleibt dieselbe —
+           dazwischen wird NICHTS gerendert —, und die wird jetzt direkt
+           geprueft statt ueber einen Abstand in Zeichen. */
+        assert.notEqual(bis, -1, 'die bedingten Tabellen stehen nicht mehr dahinter');
+        const dazwischen = SRC.slice(SRC.indexOf('});', ab) + 3, bis);
+        assert.equal(/html \+=/.test(dazwischen), false,
+            'zwischen dem Leerzustands-Hinweis und den bedingten Tabellen wird gerendert:\n'
+            + dazwischen);
+        const block = SRC.slice(ab, SRC.indexOf('});', ab));
         ['keinVorzeitraum: keinVorzeitraum', 'zeitraum: dateRange',
          'turniere: tournamentCount', 'archetypen: totalArchetypes',
          'neu: newArchetypes.length',

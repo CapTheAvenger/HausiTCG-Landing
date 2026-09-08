@@ -696,6 +696,46 @@ _LABS_ID_LOOKUP_CACHE = None
 _LABS_ID_OVERRIDES_CACHE = None
 
 
+def _overrides_verzeichnis() -> str:
+    """Wo die von Hand gepflegten Override-Dateien wirklich liegen.
+
+    BEFUND (07.09.2026), ohne jedes Umbiegen gemessen:
+
+        >>> import tournament_scraper_JH as jh
+        >>> jh.get_data_dir()
+        '.../backend/core/data'      # dort liegen nur .log-Dateien
+        >>> jh._load_date_overrides()
+        {}
+        >>> jh._load_labs_id_overrides()
+        {}                            # "[labs-id-overrides] loaded 0"
+
+    `get_data_dir()` haengt an `get_app_path()`, und das ist der Ordner
+    von backend/core/card_scraper_shared.py — nicht die Repo-Wurzel.
+    data/labs_tournament_id_overrides.json wurde dort also nur gefunden,
+    wenn ein Workflow-Schritt die Datei vorher hinkopiert hat. Nachgezaehlt
+    am 07.09.2026:
+      • .github/workflows/per-decklist-scrape.yml:101 kopiert sie im
+        Schritt "Seed backend/core/data/ from data/" (ab Z. 97) —
+        dort WURDE sie gelesen.
+      • .github/workflows/weekly-full-update.yml seedet sie NICHT
+        (Schritt ab Z. 154 fuehrt sie nicht in seiner Dateiliste), ruft
+        per_decklist_scraper.py aber in Z. 522 auf — dort blieben die
+        Datumskorrektur fuer Turnier 518 und die zehn Labs-ID-
+        Zuordnungen wirkungslos.
+    Gruen waren die Tests trotzdem, weil sie `get_data_dir` vor dem
+    Aufruf auf data/ umbiegen — der echte Lauf tut das nicht.
+
+    Die Overrides sind reine LESEQUELLEN aus dem Repo. Deshalb wird hier
+    zuerst data/ neben dieser Datei gesucht und erst danach auf
+    `get_data_dir()` zurueckgefallen. Schreibziele bleiben unberuehrt.
+    """
+    repo_daten = os.path.normpath(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data"))
+    if os.path.isdir(repo_daten):
+        return repo_daten
+    return get_data_dir()
+
+
 def _load_labs_id_overrides() -> Dict[str, str]:
     """data/labs_tournament_id_overrides.json provides manual
     cards-tid → labs-tid mappings for tournaments where the name-based
@@ -704,7 +744,7 @@ def _load_labs_id_overrides() -> Dict[str, str]:
     global _LABS_ID_OVERRIDES_CACHE
     if _LABS_ID_OVERRIDES_CACHE is not None:
         return _LABS_ID_OVERRIDES_CACHE
-    path = os.path.join(get_data_dir(), "labs_tournament_id_overrides.json")
+    path = os.path.join(_overrides_verzeichnis(), "labs_tournament_id_overrides.json")
     out: Dict[str, str] = {}
     if os.path.exists(path):
         try:
@@ -747,7 +787,7 @@ def _load_date_overrides() -> Dict[str, dict]:
     global _DATE_OVERRIDES_CACHE
     if _DATE_OVERRIDES_CACHE is not None:
         return _DATE_OVERRIDES_CACHE
-    path = os.path.join(get_data_dir(), "labs_tournament_id_overrides.json")
+    path = os.path.join(_overrides_verzeichnis(), "labs_tournament_id_overrides.json")
     out: Dict[str, dict] = {}
     if os.path.exists(path):
         try:

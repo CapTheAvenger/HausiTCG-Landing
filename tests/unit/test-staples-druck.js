@@ -51,6 +51,11 @@ function bauWidget(lang) {
         fmtPct: (v) => String(v) + '%',
         escapeHtml: (s) => String(s == null ? '' : s),
         escapeJsStr: (s) => String(s == null ? '' : s),
+        // escapeHtmlAttr: seit dem 07.09.2026 steckt jede escapeJsStr in
+        // einem HTML-Attribut zusaetzlich darin (HTML-Zerteiler vor
+        // JS-Zerteiler). Ohne die Attrappe wirft der Sandkasten
+        // ReferenceError.
+        escapeHtmlAttr: (s) => String(s == null ? '' : s),
         ladeStaplesAnzahl: () => 15,
         staplesAnzahl: () => 15,
         STAPLES_STUFEN: [15, 30],
@@ -120,6 +125,7 @@ describe('Format-Staples: Top 15 und Top 30', () => {
             t: (k) => k, getLang: () => 'de', fmtPct: (v) => String(v) + '%',
             escapeHtml: (s) => String(s == null ? '' : s),
             escapeJsStr: (s) => String(s == null ? '' : s),
+            escapeHtmlAttr: (s) => String(s == null ? '' : s),
             ladeStaplesAnzahl: () => 1, staplesAnzahl: () => 1,
             STAPLES_STUFEN: [15, 30], ladeStaplesModus: () => 'gespielt',
         };

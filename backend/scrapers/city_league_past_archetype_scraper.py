@@ -207,6 +207,21 @@ def get_tournaments_in_date_range(region: str, start_date: datetime, end_date: d
                 len(tournaments), page)
     return tournaments
 
+# BEFUND B5 (07.09.2026): die Ortsangabe der ueber `additional_tournament_ids`
+# nachgezogenen Turniere war ein fest verdrahtetes 'Special Event' — sie kommt
+# NICHT aus der Quelle. Der Listenweg (get_tournaments_in_range) liest die
+# Praefektur aus der dritten Tabellenspalte; die Turnierseite eines einzelnen
+# Turniers fuehrt keine solche Spalte, und geraten wird hier nichts.
+#
+# Der Wert bleibt, damit sich die bereits erzeugten Dateien unter data/ nicht
+# aendern. Er steht aber ab jetzt als BENANNTER Platzhalter da, und die
+# Oberflaeche kennt denselben Namen (CL_ORT_PLATZHALTER in
+# js/app-city-league.js) und schreibt an die Ortsangabe dazu, dass sie nicht
+# aus der Quelle stammt. Wer den Wert hier aendert, muss ihn dort mitaendern —
+# tests/unit/test-r4-ort-platzhalter.js wird sonst rot.
+ORT_PLATZHALTER_OHNE_QUELLE = 'Special Event'
+
+
 def get_tournament_by_id(tournament_id: str) -> dict:
     url = f"https://limitlesstcg.com/tournaments/{tournament_id}"
     soup = fetch_page_bs4(url)
@@ -227,7 +242,8 @@ def get_tournament_by_id(tournament_id: str) -> dict:
         'tournament_id': str(tournament_id),
         'url': url,
         'date_str': date_str,
-        'prefecture': 'Special Event',
+        # Platzhalter, kein Quellwert — siehe ORT_PLATZHALTER_OHNE_QUELLE.
+        'prefecture': ORT_PLATZHALTER_OHNE_QUELLE,
         'shop': name
     }
 

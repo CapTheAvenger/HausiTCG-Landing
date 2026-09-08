@@ -1988,8 +1988,8 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                 
                 const percentage = parseFloat(card.percentage_in_archetype || 0).toFixed(1);
                 const count = card.deck_count_in_selected || 1;
-                const cardNameEscaped = escapeJsStr(safeCardName);
-                const deckKeyEscaped = escapeJsStr(card.deck_key || safeCardName);
+                const cardNameEscaped = escapeHtmlAttr(escapeJsStr(safeCardName));
+                const deckKeyEscaped = escapeHtmlAttr(escapeJsStr(card.deck_key || safeCardName));
                 
                 // Fast price lookup using index
                 let eurPrice = '';
@@ -2005,7 +2005,7 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                 const priceDisplay = eurPrice || '0,00€';
                 const priceClass = eurPrice ? 'btn-cardmarket' : 'btn-cardmarket no-price';
                 const priceBackground = eurPrice ? 'linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%)' : 'linear-gradient(135deg, #777 0%, #999 100%)';
-                const cardmarketUrlEscaped = escapeJsStr(cardmarketUrl || '');
+                const cardmarketUrlEscaped = escapeHtmlAttr(escapeJsStr(cardmarketUrl || ''));
                 
                 const baseName = safeCardName;
                 const baseCardData =
@@ -2796,7 +2796,7 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                 // Card image or placeholder
                 let imgHtml = '';
                 if (imageUrl && imageUrl.trim() !== '') {
-                    imgHtml = `<img src="${imageUrl}" alt="${card.card_name}" loading="lazy" referrerpolicy="no-referrer" style="width: 100%; aspect-ratio: 2.5/3.5; object-fit: cover; cursor: zoom-in;" onerror="handleCardImageError(this, '${card.set_code || ''}', '${card.set_number || ''}')" onclick="if (typeof event !== 'undefined' && event) event.stopPropagation(); showSingleCard(this.src, '${escapeJsStr(card.card_name)} (${card.set_code || ''} ${card.set_number || ''})');">`;
+                    imgHtml = `<img src="${imageUrl}" alt="${card.card_name}" loading="lazy" referrerpolicy="no-referrer" style="width: 100%; aspect-ratio: 2.5/3.5; object-fit: cover; cursor: zoom-in;" onerror="handleCardImageError(this, '${card.set_code || ''}', '${card.set_number || ''}')" onclick="if (typeof event !== 'undefined' && event) event.stopPropagation(); showSingleCard(this.src, '${escapeHtmlAttr(escapeJsStr(card.card_name))} (${card.set_code || ''} ${card.set_number || ''})');">`;
                 } else {
                     imgHtml = `<div style="width: 100%; aspect-ratio: 2.5/3.5; background: linear-gradient(135deg, var(--solid-info) 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 2em;"></div>`;
                 }
@@ -2827,7 +2827,7 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                             </div>
                             
                             <!-- Add button -->
-                            <button class="btn btn-success" style="padding: 4px 8px; font-size: 0.75em; background: #1f8035; color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s; margin-top: 8px; width: 100%;" onclick="addCardToDeck('cityLeague', '${escapeJsStr(card.card_name)}', '${card.set_code || ''}', '${card.set_number || ''}')" title="${t('deck.addToDeck')}">${t('deck.addToDeck')}</button>
+                            <button class="btn btn-success" style="padding: 4px 8px; font-size: 0.75em; background: #1f8035; color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s; margin-top: 8px; width: 100%;" onclick="addCardToDeck('cityLeague', '${escapeHtmlAttr(escapeJsStr(card.card_name))}', '${card.set_code || ''}', '${card.set_number || ''}')" title="${t('deck.addToDeck')}">${t('deck.addToDeck')}</button>
                         </div>
                     </div>
                 `;
@@ -2933,7 +2933,7 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                 const imageUrl = getBestCardImage(card);
                 const count = card.deck_count_in_selected || 1;
                 const cardName = card.card_name || '';
-                const cardNameEscaped = escapeJsStr(cardName || '');
+                const cardNameEscaped = escapeHtmlAttr(escapeJsStr(cardName || ''));
                 
                 if (imageUrl && imageUrl.trim() !== '') {
                     return `
@@ -3740,6 +3740,98 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
          * for the requested source — the user just hasn't pressed
          * "Max Consistency" on this tab in the current session.
          */
+        /* ── BEFUND B1 (07.09.2026): ZWEI SKALEN, EIN WORT "score" ──
+         *
+         * Der Warum?-Kasten schrieb an jede Karte `score 87`. Diese Zahl
+         * kommt aus ZWEI Rechnungen, je nachdem, welcher Pfad gebaut hat
+         * — und nichts auf dem Bildschirm sagte, welche:
+         *
+         *   Y.2 (MostConsistencyBuilder). `consistency_score =
+         *       round(weightedShare · 100)`, siehe die Berichtszeilen in
+         *       _runMostConsistencyBuilderPath. Das IST der
+         *       erfolgsgewichtete Anteil der ausgewerteten Tag-2-Listen,
+         *       in Prozent — dieselbe Zahl, die daneben schon als
+         *       "N% share" steht, nur gerundet. Obergrenze 100.
+         *
+         *   Legacy-Stufen. `consistency_score = round(consistencyScore)`
+         *       mit consistencyScore = Anteil · (1 + metaBoost), gekappt
+         *       auf 0..120, danach +18 fuer den gewaehlten Tech-Konter,
+         *       -20 fuer die verdraengten, und ein Deckel bei 24 fuer
+         *       Karten, die im letzten Major fehlen. Das ist KEIN Anteil
+         *       mehr, sondern die Ordnungsgroesse, gegen die die Stufen
+         *       ihre Schwellen halten (75 Kern, 40 erweitert, 25 Tech).
+         *       Obergrenze 120.
+         *
+         * NACHGEMESSEN AM 07.09.2026 mit dem echten Modul unter node
+         * (data/tournament_decklists_per_player.csv, Formattor minDate =
+         * in_person_legal_date = 2026-07-31 aus data/format_window.json):
+         * von 1.201 Listen bleiben 143 im Fenster, verteilt auf 27
+         * Archetypen. 12 davon erreichen MIN_WEIGHTED_LISTS und bauen
+         * ueber Y.2 (Dragapult 22 Listen bis Clefairy Ogerpon 3), die
+         * uebrigen 15 stehen auf einer oder zwei Listen und fallen auf
+         * die Legacy-Stufen zurueck. Also: 15 von 27 Archetypen zeigen
+         * die 0..120-Skala, 12 die 0..100-Skala, unter demselben Wort.
+         *
+         * WARUM NICHT VEREINHEITLICHT. Die beiden Zahlen bedeuten
+         * Verschiedenes. Die eine ist ein gemessener Anteil, die andere
+         * eine Rangfolge mit eingebauten Zu- und Abschlaegen, an der
+         * Schwellen haengen. Eine Umrechnung zwischen ihnen gibt es
+         * nicht — sie waere erfunden, und die Schwellen 75/40/25 wuerden
+         * ihre Bedeutung verlieren. Also bleibt jede Zahl, wie sie ist,
+         * und SAGT, welche Skala sie traegt. Kein angezeigter Wert
+         * aendert sich dadurch; es kommt nur der Nenner dazu.
+         *
+         * Kein neuer i18n-Schluessel: js/i18n.js gehoert einem anderen
+         * Arbeitspaket. Zweisprachig inline ueber getLang(). */
+        const BUILD_SCORE_SKALEN = {
+            y2_anteil:     { id: 'y2_anteil',     max: 100 },
+            legacy_punkte: { id: 'legacy_punkte', max: 120 },
+        };
+
+        /**
+         * Welche Skala traegt `report.cards[].consistency_score`?
+         * Vorrang hat das ausdrueckliche Feld `score_scale`; ein Bericht
+         * ohne dieses Feld wird ueber `layers.phase_y2` zugeordnet, denn
+         * genau daran haengt der Pfad.
+         */
+        function _buildScoreSkala(report) {
+            const id = report && report.score_scale;
+            if (id && BUILD_SCORE_SKALEN[id]) return BUILD_SCORE_SKALEN[id];
+            const y2 = !!(report && report.layers && report.layers.phase_y2);
+            return y2 ? BUILD_SCORE_SKALEN.y2_anteil : BUILD_SCORE_SKALEN.legacy_punkte;
+        }
+
+        /** Der Satz, der die Skala benennt — zweisprachig, ohne i18n. */
+        function _buildScoreSkalaSatz(report) {
+            const skala = _buildScoreSkala(report);
+            const de = (typeof getLang === 'function' && getLang() === 'de');
+            if (skala.id === 'y2_anteil') {
+                return de
+                    ? 'Skala „score“: 0–100. Der Wert IST der erfolgsgewichtete Anteil '
+                    + 'der ausgewerteten Tag-2-Listen in Prozent — dieselbe Zahl wie '
+                    + 'das „% share“ daneben, nur gerundet.'
+                    : 'Scale of "score": 0–100. The value IS the success-weighted share '
+                    + 'of the analysed day-2 lists, in percent — the same figure as the '
+                    + '"% share" badge next to it, only rounded.';
+            }
+            return de
+                ? 'Skala „score“: 0–120. Der Wert ist KEIN Anteil, sondern die '
+                + 'Ordnungsgröße der Stufen: Anteil × (1 + Meta-Boost), gedeckelt bei '
+                + '120, dazu +18 für den gewählten Tech-Konter, −20 für verdrängte '
+                + 'Konter und ein Deckel bei 24 für Karten, die im letzten Major '
+                + 'fehlen. Die Schwellen 75 (Kern), 40 (erweitert) und 25 (Tech) '
+                + 'beziehen sich auf diese Skala.'
+                : 'Scale of "score": 0–120. The value is NOT a share but the ordering '
+                + 'figure the stages gate on: share × (1 + meta boost), capped at 120, '
+                + 'plus +18 for the chosen tech counter, −20 for displaced counters and '
+                + 'a cap of 24 for cards absent from the latest major. The 75 (core), '
+                + '40 (extended) and 25 (tech) thresholds refer to this scale.';
+        }
+        if (typeof window !== 'undefined') {
+            window._buildScoreSkala     = _buildScoreSkala;
+            window._buildScoreSkalaSatz = _buildScoreSkalaSatz;
+        }
+
         function showConsistencyBuildInfo(source) {
             const all = window.lastConsistencyBuild || {};
             const report = all[source];
@@ -3930,7 +4022,11 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                     // per-card row below).
                     const onlinePieces = [];
                     if (c.archetype_share != null) onlinePieces.push(`${c.archetype_share}% share`);
-                    onlinePieces.push(`score ${c.consistency_score}`);
+                    /* B1: auch hier der Nenner. Diese Zeile erscheint nur
+                       auf dem Legacy-Pfad (`if (!_y2)` unten), also immer
+                       auf der 0-120-Skala; sie wird trotzdem aus derselben
+                       Quelle beschriftet statt fest verdrahtet. */
+                    onlinePieces.push(`score ${c.consistency_score}/${_buildScoreSkala(report).max}`);
                     // Auf dem Y.2-Pfad ist die Zahl NICHT der
                     // Online-Aggregatanteil — sie steht schon vorn und
                     // waere hier ein zweites Mal, falsch beschriftet.
@@ -4416,6 +4512,12 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
 
             // Card reasoning list — one row per card, badges explain
             // which layer(s) contributed.
+            //
+            // B1 (07.09.2026): welche Skala die Spalte "score" traegt,
+            // haengt am Baupfad und stand bis heute nur in der Konsole.
+            // Sie wird hier EINMAL bestimmt und steht danach an jeder
+            // Zahl (als Nenner) und einmal als Satz unter der Liste.
+            const _skala = _buildScoreSkala(report);
             const list = document.createElement('div');
             list.className = 'build-info-cards';
             const cards = report.cards.slice().sort((a, b) =>
@@ -4471,13 +4573,24 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                 }
                 const right = document.createElement('div');
                 right.className = 'build-info-card-score';
-                right.textContent = `score ${c.consistency_score}`;
+                /* B1: die Zahl traegt ihren Nenner. Ohne ihn stehen 0-100
+                   und 0-120 unter demselben Wort (siehe
+                   _buildScoreSkalaSatz). */
+                right.textContent = `score ${c.consistency_score}/${_skala.max}`;
                 row.appendChild(left);
                 row.appendChild(mid);
                 row.appendChild(right);
                 list.appendChild(row);
             });
             modal.appendChild(list);
+
+            // B1: der Satz zur Skala, direkt unter den Zahlen, die er
+            // erklaert. Eigener Absatz, damit er nicht in der Legende
+            // untergeht.
+            const skalaNote = document.createElement('p');
+            skalaNote.className = 'build-info-notes build-info-score-scale';
+            skalaNote.textContent = _buildScoreSkalaSatz(report);
+            modal.appendChild(skalaNote);
 
             // Notes — short legend so the badges aren't cryptic
             const notes = document.createElement('p');
@@ -6776,6 +6889,150 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
             return _STADIUM_TYPE_PATTERN.test(t);
         }
 
+        /* BEFUND B5 (07.09.2026): DER RUECKFALL DARF NICHT STUMM SEIN.
+         *
+         * Erreicht ein Archetyp die Stichprobenuntergrenze des
+         * MostConsistencyBuilder nicht (MIN_WEIGHTED_LISTS, Stand 3),
+         * lehnt der Y.2-Pfad ab und die Legacy-Stufen bauen weiter. Das
+         * Ergebnis ist ein vollstaendiges 60-Karten-Deck — und bis heute
+         * stand nirgends, dass es NICHT auf den Praesenzlisten steht,
+         * fuer die der Nutzer den Archetyp gewaehlt hat.
+         *
+         * Gemessen am 07.09.2026 (siehe die Notiz an der Ablehnung in
+         * _runMostConsistencyBuilderPath): das betrifft 15 der 27
+         * Archetypen, die ueberhaupt Listen im Formatfenster haben.
+         *
+         * Die Schwelle wird NICHT angefasst. Der Bau bleibt, wie er ist.
+         * Dazu kommt nur dieser Befund, mit der TATSAECHLICHEN
+         * Listenzahl — eine Warnung ohne Nenner waere wieder nur ein
+         * Gefuehl.
+         *
+         * Kein i18n-Schluessel (js/i18n.js gehoert einem anderen
+         * Arbeitspaket): zweisprachig inline ueber getLang().
+         *
+         * @param {{archetyp:string, n_lists:number, schwelle:number|null}} mv
+         * @returns {{level:string,key:string,message:string,hint:string}|null}
+         */
+        function _duenneBasisBefund(mv) {
+            if (!mv) return null;
+
+            /* BEFUND B2 (07.09.2026, Nachpruefung): DIE ZAHL WAR ABGESCHRIEBEN.
+             *
+             * Im Kommentar an der Ablehnung stand "elf mit EINER Liste, vier
+             * mit zweien". Nachgezaehlt an data/tournament_decklists_per_player.csv
+             * (Feld deck_archetype, Fenstergrenze ueber Feld tournament_date
+             * gegen in_person_legal_date = 2026-07-31 aus
+             * data/format_window.json) sind es ZEHN und FUENF: von 1.201
+             * Listen bleiben 143 im Fenster, verteilt auf 27 Archetypen, 15
+             * davon unter MIN_WEIGHTED_LISTS = 3.
+             *
+             * Die Zahl war nie falsch gerechnet — sie war einmal gemessen und
+             * danach stehen geblieben, waehrend der Wochenlauf die Verteilung
+             * verschoben hat. Genau deshalb steht sie jetzt NICHT mehr im
+             * Text, sondern wird zur Laufzeit gezaehlt
+             * (MostConsistencyBuilder.bestandsLage, js/deck-builder-consistency.js)
+             * und der Satz nennt die Datei, aus der sie kommt. Veralten kann
+             * er damit nicht mehr; fehlt die Messung, faellt der Satz weg,
+             * statt eine alte Zahl zu behaupten.
+             *
+             * @param {object|null} lage  Rueckgabe von bestandsLage()
+             * @param {boolean} de
+             * @returns {string} '' wenn nichts gemessen wurde
+             */
+            function _bestandsLageSatz(lage, de) {
+                if (!lage || !(Number(lage.archetypen) > 0)) return '';
+                const v = lage.verteilung || {};
+                const teile = Object.keys(v)
+                    .map(Number)
+                    .filter(k => Number.isFinite(k) && k > 0)
+                    .sort((a, b) => a - b)
+                    .map(k => de
+                        ? `${v[k]} auf ${k === 1 ? 'einer Liste' : k + ' Listen'}`
+                        : `${v[k]} on ${k === 1 ? 'one list' : k + ' lists'}`);
+                const aufteilung = teile.length ? ` (${teile.join(', ')})` : '';
+                const fenster = lage.min_date
+                    ? (de ? `im Formatfenster ab ${lage.min_date}`
+                          : `in the format window from ${lage.min_date}`)
+                    : (de ? 'im gesamten Listenbestand' : 'across the whole stock of lists');
+                const felder = (lage.felder || []).join(', ');
+                const grenze = lage.min_date
+                    ? (de ? ', Fenstergrenze in_person_legal_date aus data/format_window.json'
+                          : ', window bound in_person_legal_date from data/format_window.json')
+                    : '';
+                return de
+                    ? `Das betrifft nicht nur diesen Archetyp: ${fenster} liegen `
+                      + `${lage.listen_im_fenster} von ${lage.listen_gesamt} Tag-2-Listen `
+                      + `auf ${lage.archetypen} Archetypen, ${lage.unter_schwelle} davon `
+                      + `unter der Schwelle${aufteilung}. Zur Laufzeit gezählt aus `
+                      + `${lage.quelle} (Felder ${felder})${grenze}.`
+                    : `This is not limited to this archetype: ${fenster} there are `
+                      + `${lage.listen_im_fenster} of ${lage.listen_gesamt} day-2 lists `
+                      + `across ${lage.archetypen} archetypes, ${lage.unter_schwelle} of them `
+                      + `below the threshold${aufteilung}. Counted at runtime from `
+                      + `${lage.quelle} (fields ${felder})${grenze}.`;
+            }
+
+            const n = Number(mv.n_lists || 0);
+            /* BEFUND B3 (07.09.2026, Nachpruefung): hier stand
+               `Number.isFinite(Number(mv.schwelle))`. `Number(null)` ist 0
+               und `Number.isFinite(0)` ist wahr — eine FEHLENDE Schwelle
+               kam damit als Zahl durch, und auf dem Bildschirm stand
+               "nötig sind 0". Das liest sich wie eine Aussage ueber den
+               Bau ("null Listen haetten gereicht"), ist aber nur eine
+               Luecke in den Daten.
+
+               Geprueft wird deshalb der WERT, nicht sein
+               Number()-Schatten: null, undefined und der leere String
+               (auch mit Leerzeichen) sind keine Schwelle, und eine
+               Schwelle von 0 oder darunter ist keine — unter ihr koennte
+               der Bau gar nicht erst abgelehnt worden sein. In allen
+               diesen Faellen sagt der Text, dass die Schwelle fehlt,
+               statt eine 0 hinzuschreiben. */
+            const _rohSchwelle = mv.schwelle;
+            const _leerString = typeof _rohSchwelle === 'string'
+                && _rohSchwelle.trim() === '';
+            const schwelle = (_rohSchwelle === null || _rohSchwelle === undefined
+                || _leerString || typeof _rohSchwelle === 'boolean'
+                || !Number.isFinite(Number(_rohSchwelle))
+                || Number(_rohSchwelle) <= 0)
+                ? null : Number(_rohSchwelle);
+            const de = (typeof getLang === 'function' && getLang() === 'de');
+            const arch = String(mv.archetyp || '').trim();
+            const listen = de
+                ? (n === 1 ? '1 Tag-2-Liste' : `${n} Tag-2-Listen`)
+                : (n === 1 ? '1 day-2 list' : `${n} day-2 lists`);
+            const wer = arch ? (de ? ` für „${arch}“` : ` for "${arch}"`) : '';
+            const lageSatz = _bestandsLageSatz(mv.lage, de);
+            return {
+                level: 'warn',
+                key:   'praesenzbasis_unter_mindestzahl',
+                message: de
+                    ? `Gebaut, ohne dass die Mindestzahl erreicht war: im Formatfenster liegen`
+                      + `${wer} nur ${listen}`
+                      + (schwelle != null
+                            ? `, nötig sind ${schwelle}`
+                            : ', keine Schwelle hinterlegt')
+                      + '.'
+                    : `Built without reaching the minimum sample: the format window holds`
+                      + `${wer} only ${listen}`
+                      + (schwelle != null
+                            ? `, ${schwelle} are required`
+                            : ', no threshold on record')
+                      + '.',
+                hint: (de
+                    ? 'Dieser Bau kommt deshalb NICHT aus den Präsenz-Decklisten, sondern '
+                      + 'aus den aggregierten Archetyp-Anteilen (Legacy-Stufen). Die '
+                      + 'Schwelle bleibt unverändert — sie ist eine '
+                      + 'Stichprobenuntergrenze, keine Aussage über das Deck.'
+                    : 'This build therefore does NOT come from the in-person decklists but '
+                      + 'from the aggregated archetype shares (legacy stages). The '
+                      + 'threshold is unchanged — it is a sample-size floor, not a '
+                      + 'statement about the deck.')
+                    + (lageSatz ? ' ' + lageSatz : ''),
+            };
+        }
+        if (typeof window !== 'undefined') window._duenneBasisBefund = _duenneBasisBefund;
+
         function _buildQualityAudit(consistencyDeck) {
             const findings = [];
             if (!Array.isArray(consistencyDeck) || consistencyDeck.length === 0) {
@@ -7953,8 +8210,59 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
             //   • the produced deck is < 10 cards (something went
             //     wrong, legacy path probably handles it better)
             if (!result.dataQuality || !result.dataQuality.sufficient) {
-                return { applied: false, reason: 'data-too-thin (' +
-                    (result.dataQuality?.warning || 'no warning') + ')' };
+                /* BEFUND B5 (07.09.2026): DIESER RUECKFALL WAR STUMM.
+                   Der Aufrufer schrieb `reason` in die Konsole und baute
+                   ueber die Legacy-Stufen weiter — auf dem Bildschirm
+                   stand danach ein fertiges 60-Karten-Deck ohne ein Wort
+                   dazu, dass die Praesenzlisten dafuer nicht gereicht
+                   haben.
+
+                   NACHGEMESSEN mit dem echten Modul unter node
+                   (data/tournament_decklists_per_player.csv, Feld
+                   deck_archetype, Fenstergrenze ueber Feld
+                   tournament_date gegen in_person_legal_date =
+                   2026-07-31 aus data/format_window.json): von 1.201
+                   Listen bleiben 143 im Fenster, auf 27 Archetypen. 15
+                   davon liegen unter MIN_WEIGHTED_LISTS = 3 — also fuer
+                   mehr als die Haelfte der waehlbaren Archetypen.
+
+                   DIE AUFTEILUNG STAND HIER FALSCH (07.09.2026,
+                   Nachpruefung). Es hiess "elf mit EINER Liste, vier mit
+                   zweien"; nachgezaehlt sind es ZEHN mit einer und FUENF
+                   mit zwei Listen. Die Zahl war einmal gemessen und
+                   danach stehen geblieben. Sie steht deshalb nicht mehr
+                   im angezeigten Text: `lage` wird bei jeder Ablehnung
+                   frisch gezaehlt (MostConsistencyBuilder.bestandsLage)
+                   und der Warum?-Kasten nennt die Datei dazu. Auch die
+                   Zahlen in diesem Kommentar sind damit nur noch
+                   Zeitstempel, keine Quelle.
+
+                   Die Schwelle bleibt, wo sie ist (sie ist nicht
+                   geprueft, und sie zu verschieben waere geraten). Was
+                   sich aendert: die Messung faehrt mit, damit der
+                   Warum?-Kasten sie hinschreiben kann. */
+                const _dqThin  = result.dataQuality || {};
+                const _thinTr  = (result.trace || []).find(
+                    e => e.phase === 6 && e.decision === 'data_too_thin');
+                const _schwelle = (_thinTr && Number.isFinite(_thinTr.threshold))
+                    ? _thinTr.threshold
+                    : (Number.isFinite(builder.MIN_WEIGHTED_LISTS)
+                        ? builder.MIN_WEIGHTED_LISTS : null);
+                return {
+                    applied: false,
+                    reason: 'data-too-thin (' + (_dqThin.warning || 'no warning') + ')',
+                    duennerBestand: {
+                        archetyp: archetype || '',
+                        n_lists:  Number(_dqThin.n_lists || 0),
+                        schwelle: _schwelle,
+                        /* Zur Laufzeit gezaehlt statt im Text verdrahtet
+                           (B2). Kann das Modul es nicht, bleibt das Feld
+                           null und der Satz faellt weg. */
+                        lage: (typeof builder.bestandsLage === 'function')
+                            ? builder.bestandsLage((_fw && _fw.in_person_legal_date) || null)
+                            : null,
+                    },
+                };
             }
             if (!Array.isArray(result.deck) || result.deck.length < 10) {
                 return { applied: false, reason: `deck-too-small (${result.deck?.length || 0})` };
@@ -8421,6 +8729,12 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                         tech_audit_active_categories: [],
                         phase_y2:         true,
                     },
+                    /* B1 (07.09.2026): welche Skala `cards[].consistency_score`
+                       traegt. Hier ist es der erfolgsgewichtete Anteil in
+                       Prozent (0-100) — siehe reportCards oben. Der
+                       Warum?-Kasten liest das Feld und schreibt den Nenner
+                       an jede Zahl. */
+                    score_scale:      'y2_anteil',
                     cards:            reportCards,
                     ace_spec_pick:    acePick,
                     quality_audit:    { findings: auditFindings },
@@ -8883,6 +9197,10 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
             // The legacy stages stay intact below this branch so
             // any regression in the new builder degrades gracefully
             // instead of breaking the whole feature.
+            /* B5 (07.09.2026): traegt die Messung des abgelehnten
+               Y.2-Pfades bis zum Legacy-Bericht durch. `null`, solange
+               nichts abgelehnt wurde. */
+            let _mindestzahlVerfehlt = null;
             const _archetypeForNewBuilder =
                 source === 'cityLeague' ? window.currentCityLeagueArchetype :
                 source === 'currentMeta' ? window.currentMetaArchetype :
@@ -8939,6 +9257,13 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                         try { _schnappBauSchnappschuss(source, _antiTechTarget); }
                         catch (e) { devLog('[autoCompleteConsistency] Y.2-Schnappschuss fehlgeschlagen:', e); }
                         return;
+                    }
+                    /* B5: nicht nur in die Konsole. Der Rueckfall wegen zu
+                       duenner Praesenzdaten muss im Warum?-Kasten stehen —
+                       siehe die Notiz an der Rueckgabe in
+                       _runMostConsistencyBuilderPath. */
+                    if (_newPath && _newPath.duennerBestand) {
+                        _mindestzahlVerfehlt = _newPath.duennerBestand;
                     }
                     console.info('[autoCompleteConsistency] Phase Y.2 declined, falling back to legacy stages:', _newPath?.reason);
                 } catch (err) {
@@ -11182,6 +11507,11 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                 generated_at: new Date().toISOString(),
                 deck_size: currentTotal,
                 algo_desc: algoDesc,
+                /* B1 (07.09.2026): die Legacy-Stufen rechnen 0-120 mit
+                   Zu- und Abschlaegen, nicht 0-100 wie der Y.2-Pfad.
+                   Beide Berichte sagen es jetzt ausdruecklich, statt dass
+                   der Kasten es aus `layers.phase_y2` erraten muss. */
+                score_scale: 'legacy_punkte',
                 layers: {
                     meta_boost: hasMetaData,
                     time_decay: hasTimeDecay,
@@ -11230,7 +11560,16 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                 // for colorless engines, Mega-ex prize math, opening-hand
                 // probability, ACE-SPEC prize-back-up. Computed once at
                 // build time so the modal can render without recomputing.
-                quality_audit: _buildQualityAudit(consistencyDeck),
+                /* B5: der abgelehnte Y.2-Pfad steht im Bericht, nicht nur
+                   in der Konsole. Ganz vorn, weil er die Grundlage des
+                   ganzen Baus betrifft und nicht eine einzelne Regel. */
+                mindestzahl_verfehlt: _mindestzahlVerfehlt || null,
+                quality_audit: (function () {
+                    const _qa = _buildQualityAudit(consistencyDeck);
+                    const _b  = _duenneBasisBefund(_mindestzahlVerfehlt);
+                    if (_b) _qa.findings = [_b].concat(_qa.findings || []);
+                    return _qa;
+                })(),
                 // ACE-SPEC pick reasoning — chosen card + top alternatives
                 // with their Major-tournament shares + the blend weight
                 // applied at pick time. Lets the Why?-modal explain why
@@ -11474,6 +11813,16 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                         showDeckShareToast(successMsg);
                     } else {
                         showToast(successMsg, 'success');
+                    }
+                    /* B5: der Erfolgs-Toast allein war die halbe Auskunft.
+                       Wer den Warum?-Kasten nie oeffnet, sah bisher nur
+                       "fertig" — auch dann, wenn der Bau auf EINER
+                       Praesenzliste stand und deshalb gar nicht von dort
+                       kommt. Der Befund steht im Kasten (quality_audit)
+                       UND hier, weil er die Grundlage betrifft. */
+                    const _duennBefund = _duenneBasisBefund(_mindestzahlVerfehlt);
+                    if (_duennBefund && typeof showToast === 'function') {
+                        showToast(_duennBefund.message + ' ' + _duennBefund.hint, 'warning', 7000);
                     }
                 }
             }

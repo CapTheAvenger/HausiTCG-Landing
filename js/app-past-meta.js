@@ -1356,7 +1356,7 @@
                 html += `<td style="text-align: center; font-weight: bold; color: #2c3e50;">${count}</td>`;
                 html += `<td>${cardName}</td>`;
                 html += `<td style="text-align: center;">${isAceSpecCard ? '<span style="color: var(--tint-bad-ink); font-weight: bold;">★</span>' : '-'}</td>`;
-                html += `<td style="text-align: center; display:flex; gap:6px; justify-content:center;"><button class="btn btn-primary" onclick='addCardToDeck("pastMeta", "${escapeJsStr(cardName)}");' style="padding: 6px 12px; font-size: 0.85em;">+ Add</button><button class="btn" style="padding: 6px 10px; font-size: 0.8em; background:var(--solid-bad); color:white;" onclick='addCardToProxy("${escapeJsStr(cardName)}", "${proxySetCode}", "${proxySetNumber}", 1)'>Proxy</button></td>`;
+                html += `<td style="text-align: center; display:flex; gap:6px; justify-content:center;"><button class="btn btn-primary" onclick='addCardToDeck("pastMeta", "${escapeHtmlAttr(escapeJsStr(cardName))}");' style="padding: 6px 12px; font-size: 0.85em;">+ Add</button><button class="btn" style="padding: 6px 10px; font-size: 0.8em; background:var(--solid-bad); color:white;" onclick='addCardToProxy("${escapeHtmlAttr(escapeJsStr(cardName))}", "${proxySetCode}", "${proxySetNumber}", 1)'>Proxy</button></td>`;
                 html += '</tr>';
             });
             
@@ -1409,7 +1409,7 @@
             
             sortedCards.forEach(card => {
                 const cardFullName = fixMojibake(card.full_card_name || card.card_name || 'Unknown Card');
-                const cardNameEscaped = escapeJsStr(cardFullName);
+                const cardNameEscaped = escapeHtmlAttr(escapeJsStr(cardFullName));
                 const avgCount = parseLocaleNumber(card.card_count || card.average_count_overall || 0, 0); // Average count across all decklists (e.g., 0.98)
                 const maxCount = getPastMetaDisplayCount(card);
                 const decklistCount = parseLocaleNumber(card.decklist_count || card.total_decks_in_archetype || 0, 0); // Total decklists in archetype
@@ -1579,7 +1579,7 @@
                     }
                     const priceDisplay = eurPrice || '0,00€';
                     const priceBackground = eurPrice ? 'linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%)' : 'linear-gradient(135deg, #777 0%, #999 100%)';
-                    const cardmarketUrlEscaped = escapeJsStr(cardmarketUrl || '');
+                    const cardmarketUrlEscaped = escapeHtmlAttr(escapeJsStr(cardmarketUrl || ''));
                     
                     // Determine card type for filtering with database-based approach
                     const filterCategory = getCardType(cardName, setCode, setNumber);
@@ -2027,6 +2027,51 @@
             const recordLabel = (typeof t === 'function' ? t('pm.perfStatRecord') : 'Record (W-L-T)');
             const winPctLabel = (typeof t === 'function' ? t('pm.perfStatWinPct') : 'Cumulative Win %');
             const winPctHinweis = WK ? WK.hinweis('matchpunkte') : '';
+            /* ── BEFUND B4 (07.09.2026): DER GEGENVERWEIS FEHLTE HIER ──
+             *
+             * Diese Kachel zeigt die Konvention MATCHPUNKTE — dieselbe,
+             * die die Quelldatei data/labs_tournament_decks_<Format>.csv
+             * in ihrer Spalte win_pct fuehrt und die Limitless „Win %"
+             * nennt (siehe js/win-rate-konvention.js, Beleg: ueber alle
+             * 4.713 Zeilen weicht die Spalte hoechstens 0,005 Punkte von
+             * (3S+U)/(3·Partien) ab).
+             *
+             * Die Archetyp-Karte im Reiter Deck-Analyse rechnet aus
+             * DERSELBEN Datei S/(S+N+U) und zeigt fuer dasselbe Deck
+             * deshalb eine andere Zahl. Beide sind richtig; die Karte
+             * traegt den Hinweis seit dem 07.09.2026
+             * (js/app-archetype-card.js, _wrKonventionsSatz) und benennt
+             * dort ausdruecklich diese Kachel. Der Verweis in die
+             * Gegenrichtung fehlte — und ohne ihn stehen zwei Zahlen fuer
+             * ein Deck auf zwei Reitern, und nichts sagt, warum.
+             *
+             * Der Kurzname wird NICHT abgeschrieben, sondern aus
+             * js/win-rate-konvention.js geholt: er hat am 05.09.2026
+             * schon einmal gewechselt (von „Matchpunkte" auf „Win %"),
+             * und eine Kopie haette den Wechsel nicht mitgemacht.
+             *
+             * Kein neuer i18n-Schluessel — js/i18n.js gehoert einem
+             * anderen Arbeitspaket. Zweisprachig inline ueber getLang().
+             *
+             * Die Zahl selbst aendert sich dadurch nicht. */
+            const wkDe = (typeof getLang === 'function' && getLang() === 'de');
+            const wkKurz = WK ? WK.kurz('matchpunkte') : '';
+            const wkFormel = (WK && WK.hol('matchpunkte')) ? WK.hol('matchpunkte').formel : '';
+            const wkMit = WK ? WK.kurz('mitUnentschieden') : '';
+            const wkFormelMit = (WK && WK.hol('mitUnentschieden'))
+                ? WK.hol('mitUnentschieden').formel : '';
+            const winPctKonvSatz = WK
+                ? (wkDe
+                    ? `Konvention: ${wkKurz} (${wkFormel}) — die Spalte win_pct dieser `
+                      + `Major-Datei. Der Reiter „Deck-Analyse“ rechnet aus derselben `
+                      + `Datei ${wkMit} (${wkFormelMit}); deshalb steht dort für `
+                      + `dasselbe Deck eine andere Zahl.`
+                    : `Convention: ${wkKurz} (${wkFormel}) — the win_pct column of this `
+                      + `major file. The Deck Analysis tab computes ${wkMit} `
+                      + `(${wkFormelMit}) from the same file; that is why the same deck `
+                      + `reads differently there.`)
+                : '';
+            const winPctTitle = [winPctHinweis, winPctKonvSatz].filter(Boolean).join('  ');
             const day2Label = (typeof t === 'function' ? t('pm.perfStatDay2Conv') : 'Day-2 Conversion');
 
             cards.innerHTML = `
@@ -2042,9 +2087,10 @@
                     <div class="past-meta-stat-label">${recordLabel}</div>
                     <div class="past-meta-stat-value past-meta-stat-mono">${fmtInt(wins)}-${fmtInt(losses)}-${fmtInt(ties)}</div>
                 </div>
-                <div class="past-meta-stat-card" title="${(winPctHinweis || '').replace(/"/g, '&quot;')}">
+                <div class="past-meta-stat-card" title="${(winPctTitle || '').replace(/"/g, '&quot;')}">
                     <div class="past-meta-stat-label">${winPctLabel}</div>
                     <div class="past-meta-stat-value">${isFinite(winPct) ? fmtPct(winPct) : '–'}</div>
+                    <div class="past-meta-stat-nenner">${winPctKonvSatz}</div>
                 </div>
                 <div class="past-meta-stat-card${day2Duenn ? ' past-meta-stat-duenn' : ''}"${
                     day2Duenn ? ` title="${((typeof t === 'function'

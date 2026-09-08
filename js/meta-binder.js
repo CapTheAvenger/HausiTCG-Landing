@@ -1657,6 +1657,13 @@
         return Number.isFinite(value) ? value.toFixed(digits) : '—';
     }
 
+    /*
+     * NUR die JS-Maske. Der Rueckgabewert ist eine JS-Zeichenkette und
+     * noch KEIN Attributwert — wer ihn in ein onclick setzt, muss ihn
+     * zusaetzlich durch escapeHtmlAttr schicken (der HTML-Zerteiler
+     * laeuft vor dem JS-Zerteiler). Siehe die beiden Aufrufstellen
+     * unten. js/custom-binder.js benutzt den Helfer ueber shared.
+     */
     function escapeArchetypeForJs(value) {
         if (typeof escapeJsStr === 'function') return escapeJsStr(value);
         return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
@@ -1675,7 +1682,7 @@
             const cardsHtml = group.items.map(item => {
                 const safeName = escapeHtml(item.name || 'Unknown');
                 const safeImage = escapeHtml(item.imageUrl || '');
-                const escapedJsName = escapeArchetypeForJs(item.name || '');
+                const escapedJsName = escapeHtmlAttr(escapeArchetypeForJs(item.name || ''));
                 const navFn = item.source === 'current-meta' ? 'navigateToCurrentMetaWithDeck' : 'navigateToAnalysisWithDeck';
                 const currentMetaLabel = escapeHtml(item.currentMetaFormatLabel || (typeof window.getCurrentMetaFormat === 'function' && window.getCurrentMetaFormat()) || 'TEF-POR');
                 const rankText = formatMetaBinderMetric(item.currentMetaRank, 1);
@@ -2012,7 +2019,7 @@
                         <div class="deck-indicator-count">${card.decks.length} ${mbText('mb.deckIndicatorCountSuffix','Decks')}</div>
                         ${countLabel}
                     </div>
-                    ${printCount > 1 ? `<button type="button" class="meta-binder-prints-btn" onclick="openRaritySwitcherFromDB('${escapeArchetypeForJs(card.name)}','${safeSet}','${safeNumber}')" title="${mbText('mb.printsAvailable','{n} print versions of this card exist — tap to switch art/set (deck limit stays {max}×)').replace('{n}', printCount).replace('{max}', card.maxCount || 4)}" aria-label="${mbText('mb.ariaShowAllPrints','Show all prints for {name}').replace('{name}', safeName)}">🎴 ${printCount} ${mbText('mb.printsBtnLabel','Versions')}</button>` : ''}
+                    ${printCount > 1 ? `<button type="button" class="meta-binder-prints-btn" onclick="openRaritySwitcherFromDB('${escapeHtmlAttr(escapeArchetypeForJs(card.name))}','${escapeHtmlAttr(escapeArchetypeForJs(String(card.set || '')))}','${escapeHtmlAttr(escapeArchetypeForJs(String(card.number || '')))}')" title="${mbText('mb.printsAvailable','{n} print versions of this card exist — tap to switch art/set (deck limit stays {max}×)').replace('{n}', printCount).replace('{max}', card.maxCount || 4)}" aria-label="${mbText('mb.ariaShowAllPrints','Show all prints for {name}').replace('{name}', safeName)}">🎴 ${printCount} ${mbText('mb.printsBtnLabel','Versions')}</button>` : ''}
                 </div>`
             };
         });

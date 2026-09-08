@@ -342,6 +342,39 @@ window.MetaCall = (function () {
   const PREDICTOR_4_6_ZERO_DECAY_DAYS   = 28;     // zero boost past 28 days
   const PREDICTOR_4_6_BOOST_PP_MAX      = 2.5;    // hard cap on extra PP
 
+  /* ── BEFUND B2 (07.09.2026): DIE DAY-2-QUOTE HAT DREI RECHENWEGE ──
+   *
+   * Diese Datei LIEST die fertige Spalte `day1_to_day2_conv` aus
+   * data/labs_tournament_decks*.csv und mittelt sie rangewichtet ueber
+   * die Turniere eines Decks. Sie rechnet sie NICHT selbst aus
+   * day2_players/day1_players — das tun js/app-archetype-card.js
+   * (Zeile ~364) und js/app-tier-meta.js (Zeile ~408).
+   *
+   * Die Mindeststichprobe je Turnierzeile stand bis heute als nacktes
+   * `>= 10` mitten im Ladeblock und war nirgends angeschrieben. Sie ist
+   * NICHT dieselbe wie anderswo im Haus:
+   *
+   *   js/app-meta-call.js        10 Antritte je Turnierzeile (hier)
+   *   js/app-archetype-card.js    5 Antritte (DAY2_MIN_ANTRITTE)
+   *   scripts/build_deckempfehlung.py  8 (MIN_ZIELSPIELER)
+   *   js/app-tier-meta.js         keine (nur day1 > 0)
+   *
+   * WAS DAS AUSMACHT, an data/labs_tournament_decks.csv nachgemessen
+   * (07.09.2026, 4.713 Zeilen, davon 2.009 mit einer Konversion > 0):
+   * die Schwelle 10 laesst 1.466 Zeilen und 108 Decks stehen, die
+   * Schwelle 5 dagegen 1.730 Zeilen und 129 Decks. 21 Decks gibt es
+   * also nur unter der niedrigeren Schwelle, und wo beide etwas
+   * liefern, gehen sie weit auseinander — Zoroark Crustle 28,9 % gegen
+   * 13,3 %, Archaludon Dudunsparce 20,7 % gegen 6,2 % (ungewichtete
+   * Mittel, groesste von 108 Decks).
+   *
+   * Die Schwelle wird hier NICHT verschoben: welche der vier richtig
+   * ist, ist nicht geprueft, und eine Angleichung ins Blaue waere
+   * geraten. Was sich aendert, ist, dass die Zahl ihre Herkunft und
+   * ihre Mindeststichprobe mit sich traegt (_d2ConvHerkunft). */
+  const D2CONV_MIN_ANTRITTE = 10;   // Antritte (day1_players) je Turnierzeile
+  const D2CONV_SPALTE       = 'day1_to_day2_conv';
+
   // ── Predictor 4.7 — Online-Tournament-Win Signal ────────────────
   // Companion to Predictor 4.6 (Underdog-Champion-Boost, regional
   // wins). The Indianapolis post-mortem cited online wins as leading
@@ -3526,6 +3559,59 @@ window.MetaCall = (function () {
       + (_kernAbdeckung.rueckfall.length > 8 ? ' …' : ''));
   }
 
+  /* ── BEFUND B3 (07.09.2026): EIN RECHENTERM, DER NIE LAEUFT ──────
+   *
+   * `labsT8Boost` hat zwei Zweige. Der erste, `_clip(t8ConvAvg / 0.25,
+   * 0.5, 2.0)`, beruht auf `top8_conv_rate` aus
+   * data/labs_tournament_decks.csv. Diese Spalte steht dort in ALLEN
+   * 4.713 Zeilen auf 0,0 — selbst nachgezaehlt am 07.09.2026, ebenso in
+   * allen 14 Formatauszuegen (labs_tournament_decks_*.csv, zusammen
+   * 4.713 weitere Zeilen, keine einzige ungleich null). Der Zweig hat
+   * also seit dem ersten Tag nichts getragen; die Rechnung haengt
+   * vollstaendig am Ersatzpfad d2/d1 darunter.
+   *
+   * NICHT ZU VERWECHSELN mit dem Ladder-Daempfer weiter unten
+   * (`_clip(top8Conv / meanConv, …)`). Der liest `top8_conv_rate` aus
+   * data/online_tournament_top8_decks.csv — eine ANDERE Datei, und dort
+   * ist die Spalte gefuellt. Der Daempfer lebt; nur dieser Zweig hier
+   * nicht.
+   *
+   * WARUM DER ZWEIG BLEIBT. Er ist richtig gerechnet und die Spalte ist
+   * die eigentlich gemeinte Groesse — sobald der Labs-Scraper sie
+   * fuellt, soll sie greifen. Ein Ersatzwert wird NICHT erfunden.
+   *
+   * WAS SICH AENDERT. Er faellt nicht mehr still aus. Jeder Lauf zaehlt
+   * mit, welcher Zweig ein Deck getragen hat, und meldet es, sobald der
+   * Spaltenzweig KEIN einziges Deck erreicht — dieselbe Bauart wie die
+   * Kern-Wache darueber, und aus demselben Grund: ein Term, der
+   * schweigend nichts tut, kippt unbemerkt in beide Richtungen. */
+  const _t8Herkunft = { spalte: 0, ersatz: 0, ohne: 0 };
+  let _t8HerkunftLetzteMeldung = null;
+
+  function _t8Zaehle(zweig) {
+    if (Object.prototype.hasOwnProperty.call(_t8Herkunft, zweig)) _t8Herkunft[zweig]++;
+  }
+
+  function _meldeT8Herkunft() {
+    const gesamt = _t8Herkunft.spalte + _t8Herkunft.ersatz + _t8Herkunft.ohne;
+    if (gesamt === 0) return;
+    const kennung = `${_lastMajorInfo && _lastMajorInfo.id}|${gesamt}|`
+                  + `${_t8Herkunft.spalte}|${_t8Herkunft.ersatz}`;
+    if (kennung === _t8HerkunftLetzteMeldung) return;
+    _t8HerkunftLetzteMeldung = kennung;
+    if (_t8Herkunft.spalte > 0) return;   // der gemeinte Weg traegt wieder
+    console.warn(
+      `[Labs-T8-Boost] Die Spalte top8_conv_rate aus den Labs-Daten hat `
+      + `0 von ${gesamt} Decks getragen. Der Term `
+      + `_clip(t8ConvAvg / 0.25, …) laeuft damit nicht; die Verstaerkung `
+      + `kommt vollstaendig aus dem Ersatzpfad d2/d1 `
+      + `(${_t8Herkunft.ersatz} Deck(s)), ${_t8Herkunft.ohne} Deck(s) `
+      + `bekommen den neutralen Wert 1,0. Nachgemessen am 07.09.2026: `
+      + `die Spalte steht in allen 4.713 Zeilen von `
+      + `data/labs_tournament_decks.csv auf 0. Faellt diese Meldung `
+      + `weg, fuellt der Scraper sie wieder — dann gilt der andere Zweig.`);
+  }
+
   // ── Diagnostic: Counter Coverage vs Dominant Family ────────
   // Surfaces decks that should have a matchup row vs the
   // dominant family but don't, or whose WR falls below the 4.5
@@ -3903,6 +3989,12 @@ window.MetaCall = (function () {
     // bleibt auch dann bei 100 %, wenn gerade ein Deck durchfaellt.
     _kernAbdeckung.getroffen = 0;
     _kernAbdeckung.rueckfall.length = 0;
+    // B3: dieselbe Begruendung wie eine Zeile darueber — ohne
+    // Ruecksetzung summiert sich die Herkunft ueber mehrere Laeufe und
+    // ein einmal getragener Spaltenzweig verdeckt danach jeden Ausfall.
+    _t8Herkunft.spalte = 0;
+    _t8Herkunft.ersatz = 0;
+    _t8Herkunft.ohne   = 0;
     _famMedianAgg    = Object.create(null); // famKey → family-level median share across recent majors
     if (_shareList && totalLadder > 0) {
       // (a) Ladder + last-major aggregation per family.
@@ -4180,11 +4272,21 @@ window.MetaCall = (function () {
       const convStats3 = _labsConvByDeck[k];
       const t8ConvAvg = (convStats3 && convStats3.n > 0) ? convStats3.sum / convStats3.n : 0;
       let labsT8Boost;
+      /* B3 (07.09.2026): welcher Zweig getragen hat, wird gezaehlt —
+         siehe _meldeT8Herkunft. Der Aufruf steht hinter `typeof`, weil
+         zwei Testdateien (test-motor-acht-stufen-wirksamkeit.js,
+         test-motor-stufen-wirksamkeit.js) genau diesen Block aus dem
+         Quelltext schneiden und in einem eigenen Kontext AUSFUEHREN, in
+         dem es den Zaehler nicht gibt. Ohne die Wache waere die Zaehlung
+         eine Aenderung an dem, was jene Tests messen; mit ihr rechnet
+         der Block dort unveraendert weiter. */
       if (t8ConvAvg > 0) {
         labsT8Boost = _clip(t8ConvAvg / 0.25, 0.5, 2.0);
+        if (typeof _t8Zaehle === 'function') _t8Zaehle('spalte');
       } else {
         const q = _labsQualityByDeck[k];
         labsT8Boost = (q && q.d1 > 0) ? _clip(q.d2 / q.d1, 0.5, 2.0) : 1.0;
+        if (typeof _t8Zaehle === 'function') _t8Zaehle((q && q.d1 > 0) ? 'ersatz' : 'ohne');
       }
 
       // Predictors 4.0a + 4.5 — counter-meta boost (additive, capped pp).
@@ -5002,6 +5104,7 @@ window.MetaCall = (function () {
     // Diagnostic — surfaces matchup-coverage gaps once per major.
     _logCounterCoverageGaps();
     _meldeKernAbdeckung();
+    _meldeT8Herkunft();
 
     // Renormalise predicted shares to sum 100% so the field-composition
     // budget logic works unchanged.
@@ -7142,9 +7245,12 @@ window.MetaCall = (function () {
             // a "deck quality" multiplier independent of the share-
             // ratio above. Skip rows where day1_players is too small
             // for the conversion to be statistically meaningful.
-            const dayConv = parseEU(r.day1_to_day2_conv || '0');
+            const dayConv = parseEU(r[D2CONV_SPALTE] || '0');
             const day1Players = parseInt(r.day1_players || '0', 10) || 0;
-            if (dayConv > 0 && day1Players >= 10) {
+            /* B2: die Mindeststichprobe steht jetzt als benannte
+               Konstante da, damit die Anzeige sie nennen kann statt sie
+               abzuschreiben — siehe D2CONV_MIN_ANTRITTE. */
+            if (dayConv > 0 && day1Players >= D2CONV_MIN_ANTRITTE) {
               if (!_labsDay2ConvByDeck[k]) {
                 _labsDay2ConvByDeck[k] = { sum: 0, n: 0, samples: [] };
               } else if (!_labsDay2ConvByDeck[k].samples) {
@@ -9750,6 +9856,37 @@ window.MetaCall = (function () {
     return (typeof getLang === 'function' && getLang() === 'de');
   }
 
+  /* ── B2 (07.09.2026): WOHER DIE DAY-2-QUOTE KOMMT, IN EINEM SATZ ──
+   *
+   * Diese Datei rechnet die Quote nicht selbst, sondern liest die
+   * Spalte der Major-Datei und mittelt sie rangewichtet ueber die
+   * Turniere eines Decks — ab D2CONV_MIN_ANTRITTE Antritten je Turnier.
+   * Beides gehoert an jede angezeigte Zahl: der Rechenweg, weil zwei
+   * andere Ansichten des Hauses ihn anders waehlen, und die
+   * Mindeststichprobe, weil sie das Ergebnis bewegt (bis 15,6 pp
+   * zwischen Schwelle 5 und 10, gemessen ueber 108 Decks — siehe die
+   * Notiz bei D2CONV_MIN_ANTRITTE).
+   *
+   * Kein neuer i18n-Schluessel: js/i18n.js gehoert einem anderen
+   * Arbeitspaket. Zweisprachig inline ueber getLang(). */
+  function _d2ConvHerkunft() {
+    return _mcIstDeutsch()
+      ? `Gelesen aus der Spalte ${D2CONV_SPALTE} der Major-Datei `
+        + `(nicht selbst aus Tag-2- durch Tag-1-Antritten gerechnet), `
+        + `rangewichtet über die Turniere; gezählt werden nur Turniere mit `
+        + `mindestens ${D2CONV_MIN_ANTRITTE} Antritten dieses Decks.`
+      : `Read from the ${D2CONV_SPALTE} column of the major file (not `
+        + `recomputed from day-2 over day-1 entries), rank-weighted across `
+        + `tournaments; only tournaments with at least `
+        + `${D2CONV_MIN_ANTRITTE} entries of this deck are counted.`;
+  }
+  /** Der kurze Zusatz, der neben die Zahl selbst passt. */
+  function _d2ConvKurz() {
+    return _mcIstDeutsch()
+      ? ` · ab ${D2CONV_MIN_ANTRITTE} Antritten`
+      : ` · from ${D2CONV_MIN_ANTRITTE} entries`;
+  }
+
   // Dezimalzahl in der Sprache der Oberfläche: Komma für de, Punkt für en.
   // Ohne das rendert der Meta-Call rohes toFixed als '10.00%' in der
   // deutschen UI, direkt neben Komma-Werten wie '7,1' im selben Reiter (F11).
@@ -11128,9 +11265,15 @@ window.MetaCall = (function () {
             const cls = pct >= 25 ? 'mc-rec-d2wr-good'
                       : pct >= 15 ? 'mc-rec-d2wr-mid'
                       : 'mc-rec-d2wr-weak';
-            return `<div class="mc-rec-d2wr ${cls}" title="${esc(t('mc.d2ConvTooltip'))}">
+            /* B2: an die Zahl gehoeren Herkunft UND Mindeststichprobe.
+               Der Nenner (aus wie vielen Majors) stand schon da; was
+               fehlte, war, dass diese Ansicht die fertige Spalte LIEST
+               und dabei Turniere unter D2CONV_MIN_ANTRITTE weglaesst —
+               waehrend zwei andere Ansichten des Hauses selbst rechnen
+               und eine andere Schwelle ziehen. */
+            return `<div class="mc-rec-d2wr ${cls}" title="${esc(t('mc.d2ConvTooltip') + '  ' + _d2ConvHerkunft())}">
               <span class="mc-rec-d2wr-label">${esc(t('mc.d2ConvLabel'))}:</span>
-              <span class="mc-rec-d2wr-value">${pct.toFixed(1).replace('.', ',')} %${esc(_majors)}</span>
+              <span class="mc-rec-d2wr-value">${pct.toFixed(1).replace('.', ',')} %${esc(_majors)}${esc(_d2ConvKurz())}</span>
             </div>`;
           })()
         : '';
@@ -11142,7 +11285,10 @@ window.MetaCall = (function () {
       // post-cut win rate, both from labs majors.
       const historyParts = [];
       if (r.empConv != null && r.empConv > 0) {
-        historyParts.push(`${t('mc.histD2Conv')} ${(r.empConv * 100).toFixed(1).replace('.', ',')} %${_majors}`);
+        // B2: dieselbe Mindeststichprobe wie im aufgeklappten Feld —
+        // die Zeile zeigt dieselbe Zahl und darf sie nicht anders
+        // beschriften.
+        historyParts.push(`${t('mc.histD2Conv')} ${(r.empConv * 100).toFixed(1).replace('.', ',')} %${_majors}${_d2ConvKurz()}`);
       }
       if (r.d2WrPct != null) {
         historyParts.push(`${t('mc.histD2Wr')} ${r.d2WrPct.toFixed(1).replace('.', ',')} %`);
@@ -11286,7 +11432,7 @@ window.MetaCall = (function () {
   <div class="metacall-frozen-text">
     <strong>${esc(t('mc.frozenBannerTitle'))}</strong>
     <span class="metacall-frozen-meta">${esc(display)}</span>
-    <p class="metacall-frozen-hint">${esc(t('mc.frozenBannerHint'))}</p>
+    <p class="metacall-frozen-hint">${esc(_frozenWrBegriff(t('mc.frozenBannerHint')))}</p>
   </div>
 </div>`;
   }
@@ -11389,6 +11535,43 @@ window.MetaCall = (function () {
     return W ? W.hinweis('mitUnentschieden') : 'S / (S + N + U)';
   }
 
+  /* ZWEI TEXTE HABEN DEN UMBAU NICHT MITGEMACHT (07.09.2026,
+     Nachpruefung).
+
+     Der Kopf dieser Spalte kam seit dem 05.09.2026 aus dem Modul, die
+     Saetze DANEBEN nicht. Im Banner stand "sortiert nach Win % ×
+     Day-2-Conversion" (mc.frozenBannerHint) und ueber der Tabelle
+     "sortiert nach Final-Cumulative-Score (Win % × (1 +
+     Day-2-Conversion))" (mc.frozenRecHint) — beide ueber genau der
+     Spalte, die `agg.wins / games` rechnet, also S/(S+N+U). "Win %" ist
+     im Haus aber der Name der Konvention (3S+U)/(3·Matches)
+     (Anordnung des Betreibers vom 05.09.2026, siehe
+     js/win-rate-konvention.js). Derselbe Name stand damit auf zwei
+     verschiedenen Formeln — genau der Fehler, gegen den das Modul
+     geschrieben wurde.
+
+     Dazu kamen die beiden Spaltentexte mc.frozenColWinPct und
+     mc.frozenColScoreHint: sie tragen das hauseigene "Siege je Match"
+     bzw. "wins per game", einen Namen, den es seit dem 07.09.2026 nicht
+     mehr gibt (die Konvention heisst jetzt "Siegquote inkl.
+     Unentschieden" / "Win share incl. ties").
+
+     js/i18n.js gehoert einem anderen Arbeitspaket, deshalb wird der
+     Name nicht dort ausgetauscht, sondern an der Anzeige AUS DEM MODUL
+     geholt: was auch immer in der Uebersetzung steht, an dieser Spalte
+     heisst die Groesse so, wie kurz('mitUnentschieden') sie nennt.
+     Benennt das Modul sie um, wandert die Aenderung mit; wird die
+     Uebersetzung spaeter richtiggestellt, ist der Austausch ein
+     Leerlauf. Beides ist der Grund, warum hier ersetzt und nicht neu
+     geschrieben wird. */
+  function _frozenWrBegriff(text) {
+    const W = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+    const name = W ? W.kurz('mitUnentschieden') : '';
+    const roh = String(text == null ? '' : text);
+    if (!name) return roh;
+    return roh.replace(/Win\s?%|Siege\s+je\s+Match|Wins\s+per\s+game/gi, name);
+  }
+
   function renderFrozenRecommendationsPanel() {
     if (!_pastMetaFormatKey) return '';
     const cached = _pastMetaLabsCache.get(_pastMetaFormatKey);
@@ -11443,15 +11626,15 @@ window.MetaCall = (function () {
     ${t('mc.frozenRecPanelTitle')}
     <span class="mc-badge">${esc(t('mc.frozenRecBadge'))}</span>
   </div>
-  <p class="mc-rec-hint">${esc(t('mc.frozenRecHint'))}</p>
+  <p class="mc-rec-hint">${esc(_frozenWrBegriff(t('mc.frozenRecHint')))}</p>
   <p class="mc-rec-hint mc-rec-hint-meta">${esc(tournHint)}</p>
   <table class="mc-rec-table mc-rec-table-frozen">
     <thead><tr>
       <th>#</th>
       <th>${t('mc.recDeck')}</th>
-      <th title="${esc(t('mc.frozenColScoreHint'))}">${t('mc.frozenColScore')}</th>
-      <th title="${esc(_frozenWrHinweis())}">${t('mc.frozenColWinPct')}</th>
-      <th>${t('mc.frozenColDay2Conv')}</th>
+      <th title="${esc(_frozenWrBegriff(t('mc.frozenColScoreHint')))}">${t('mc.frozenColScore')}</th>
+      <th title="${esc(_frozenWrHinweis())}">${esc(_frozenWrBegriff(t('mc.frozenColWinPct')))}</th>
+      <th title="${esc(_frozenD2Hinweis())}">${t('mc.frozenColDay2Conv')}</th>
       <th>${t('mc.frozenColPlayers')}</th>
     </tr></thead>
     <tbody>${rows}</tbody>
@@ -11462,6 +11645,43 @@ window.MetaCall = (function () {
   // Build the human-readable reason line for a Geheimtipp. Picks the
   // strongest reason (or combines two short ones) so the text stays
   // scannable without burying the user in numbers.
+  /* B2 (07.09.2026): DIESE SPALTE RECHNET ANDERS ALS DER RECO-BLOCK.
+   *
+   * Der Reco-Block oben liest die fertige Spalte day1_to_day2_conv und
+   * laesst Turniere unter D2CONV_MIN_ANTRITTE weg (_d2ConvHerkunft).
+   * Diese Tabelle summiert stattdessen day1_players und day2_players
+   * ueber alle Turniere der Epoche und teilt einmal — ohne
+   * Mindeststichprobe je Turnier (siehe _loadPastMetaLabsAggregate,
+   * `agg.day1 > 0 ? agg.day2 / agg.day1 : 0`).
+   *
+   * Beide Wege sind vertretbar, und sie gehen auseinander: an
+   * data/labs_tournament_decks.csv nachgemessen (07.09.2026) trennt sie
+   * bei Pikachu Regis 19,7 Punkte (30,8 % gegen 11,1 %). Zwei Zahlen
+   * unter derselben Ueberschrift auf demselben Reiter sind genau der
+   * Fehler, gegen den js/win-rate-konvention.js geschrieben wurde —
+   * also steht der Rechenweg jetzt an der Spalte. Die Rechnung selbst
+   * bleibt unveraendert.
+   *
+   * Der Filter MIN_PLAYERS = 30 dieser Tabelle ist etwas anderes: er
+   * greift auf player_count der ganzen Epoche, nicht auf die Antritte
+   * eines Turniers, und entscheidet, WELCHE ZEILE erscheint — nicht,
+   * welches Turnier in die Quote eingeht. */
+  function _frozenD2Hinweis() {
+    return _mcIstDeutsch()
+      ? 'Summe der Tag-2-Antritte geteilt durch die Summe der Tag-1-Antritte '
+        + 'über alle Turniere dieser Epoche — selbst gerechnet, ohne '
+        + 'Mindeststichprobe je Turnier. Der Empfehlungsblock oben liest '
+        + 'stattdessen die Spalte ' + D2CONV_SPALTE + ' und zählt nur Turniere '
+        + 'mit mindestens ' + D2CONV_MIN_ANTRITTE + ' Antritten; für dasselbe '
+        + 'Deck stehen deshalb zwei verschiedene Zahlen.'
+      : 'Sum of day-2 entries divided by the sum of day-1 entries across all '
+        + 'tournaments of this era — computed here, with no per-tournament '
+        + 'minimum. The recommendation block above reads the '
+        + D2CONV_SPALTE + ' column instead and counts only tournaments with at '
+        + 'least ' + D2CONV_MIN_ANTRITTE + ' entries; the same deck therefore '
+        + 'shows two different figures.';
+  }
+
   function _formatTipReasons(tip) {
     if (!tip.reasons || !tip.reasons.length) return '';
     const fmt = (n, dp) => n.toFixed(dp).replace('.', ',');
@@ -11760,9 +11980,27 @@ window.MetaCall = (function () {
       const konv = (typeof window !== 'undefined' && window.WinRateKonvention)
         ? window.WinRateKonvention.KONVENTIONEN.ohneUnentschieden.formel
         : 'S / (S + N)';
+      /* AUCH DER NAME KOMMT AUS DEM MODUL (07.09.2026, Nachpruefung).
+         Die Formel holte sich dieser Satz schon von dort, den Namen
+         dahinter hat er abgeschrieben: "(Siegquote ohne
+         Unentschieden)" stand als fester Text in beiden Sprachen. Genau
+         diese Kurznamen haben am 07.09.2026 gewechselt — eine Kopie
+         haette den Wechsel nicht mitgemacht und den Leser mit zwei
+         Namen fuer dieselbe Groesse zurueckgelassen. */
+      const konvNameRoh = (typeof window !== 'undefined' && window.WinRateKonvention)
+        ? window.WinRateKonvention.kurz('ohneUnentschieden')
+        : (_mcIstDeutsch() ? 'Siegquote ohne Unentschieden' : 'Win share excluding ties');
+      /* Der Name steht mitten im Satz. Im Deutschen ist er ein
+         Substantiv und bleibt gross; im Englischen wird er klein
+         geschrieben, wie jedes andere Wort an dieser Stelle. Der Name
+         selbst kommt trotzdem aus dem Modul — nur seine Schreibung
+         folgt dem Satz. */
+      const konvName = _mcIstDeutsch()
+        ? konvNameRoh
+        : konvNameRoh.charAt(0).toLowerCase() + konvNameRoh.slice(1);
       const titel = _mcIstDeutsch()
-        ? 'Nennwerte des Paarungs-Mixes. Fehlt für ein Deckpaar eine Quelle, werden die verbleibenden Gewichte auf 100 % hochgerechnet. Der Predictor-5.3-Wert ist die gemessene Differenz zwischen dem Abschneiden des Decks beim letzten Major und seinem Abschneiden in den Limitless-Online-Turnieren — beide Seiten in der Konvention ' + konv + ' (Siegquote ohne Unentschieden). Nur diese Konvention ist zwischen den beiden Feldern vergleichbar: auf Papier enden rund 11 % der Partien unentschieden, online rund 1 %, und eine Quote, die Unentschieden im Nenner führt, misst dann vor allem diesen Unterschied. Die Differenz wird in getBaseMatchup auf dieselbe Quote der Paarung aufgeschlagen.'
-        : 'Nominal weights of the matchup mix. When a source is missing for a pair, the remaining weights are renormalised to 100 %. The Predictor 5.3 value is the measured gap between how the deck did at the last major and how it does in Limitless online tournaments — both sides in the ' + konv + ' convention (win share excluding ties). Only that convention is comparable across the two fields: about 11 % of games on paper end in a tie versus about 1 % online, so any rate that keeps ties in the denominator would mostly measure that difference. getBaseMatchup adds the gap to the pair\u2019s rate in the same convention.';
+        ? 'Nennwerte des Paarungs-Mixes. Fehlt für ein Deckpaar eine Quelle, werden die verbleibenden Gewichte auf 100 % hochgerechnet. Der Predictor-5.3-Wert ist die gemessene Differenz zwischen dem Abschneiden des Decks beim letzten Major und seinem Abschneiden in den Limitless-Online-Turnieren — beide Seiten in der Konvention ' + konv + ' (' + konvName + '). Nur diese Konvention ist zwischen den beiden Feldern vergleichbar: auf Papier enden rund 11 % der Partien unentschieden, online rund 1 %, und eine Quote, die Unentschieden im Nenner führt, misst dann vor allem diesen Unterschied. Die Differenz wird in getBaseMatchup auf dieselbe Quote der Paarung aufgeschlagen.'
+        : 'Nominal weights of the matchup mix. When a source is missing for a pair, the remaining weights are renormalised to 100 %. The Predictor 5.3 value is the measured gap between how the deck did at the last major and how it does in Limitless online tournaments — both sides in the ' + konv + ' convention (' + konvName + '). Only that convention is comparable across the two fields: about 11 % of games on paper end in a tie versus about 1 % online, so any rate that keeps ties in the denominator would mostly measure that difference. getBaseMatchup adds the gap to the pair\u2019s rate in the same convention.';
       return ` <span class="mc-predictor-banner-gewichtung" title="${esc(titel)}">${esc(kern + schub)}</span>`;
     })();
 
@@ -13881,7 +14119,17 @@ window.MetaCall = (function () {
     const btn   = document.getElementById('mc-override-btn');
     if (!panel) return;
     const open = panel.classList.toggle('open');
-    if (btn) btn.textContent = open ? 'Win-Rates anpassen ▲' : 'Win-Rates anpassen ▼';
+    /* DIE BESCHRIFTUNG WAR EINSPRACHIG UND ANDERS GESCHRIEBEN
+       (07.09.2026, Nachpruefung). Hier stand fest verdrahtet
+       "Win-Rates anpassen"; die Schaltflaeche wird aber aus
+       t('mc.adjustWinRates') gebaut ("Win Rates anpassen ▼" / "Adjust
+       Win Rates ▼"). Wer den Kasten oeffnete, bekam also eine andere
+       Schreibweise — und in englischer Oberflaeche einen deutschen
+       Text. Gedreht wird jetzt nur noch der Pfeil. */
+    if (btn) {
+      const _lbl = String(t('mc.adjustWinRates') || '');
+      btn.textContent = open ? _lbl.replace('▼', '▲') : _lbl.replace('▲', '▼');
+    }
     if (open && _settings.myDeck) panel.innerHTML = renderOverrideTable();
   }
 

@@ -942,9 +942,12 @@ const BASE_PATH = './data/';
                 }
                 const imageUrl = resolved || placeholderProxy;
                 const escapedImageUrl = window.escapeHtmlAttr(imageUrl);
-                const jsName = escapeJsStr(item.name || '');
-                const jsSet = escapeJsStr(item.set || '');
-                const jsNumber = escapeJsStr(item.number || '');
+                // Die drei Werte stehen unten in einem onclick/onchange:
+                // JS-Zeichenkette INNERHALB eines HTML-Attributwerts. Der
+                // HTML-Zerteiler laeuft zuerst, also maskiert er zuletzt.
+                const jsName = window.escapeHtmlAttr(escapeJsStr(item.name || ''));
+                const jsSet = window.escapeHtmlAttr(escapeJsStr(item.set || ''));
+                const jsNumber = window.escapeHtmlAttr(escapeJsStr(item.number || ''));
                 const dataKey = window.escapeHtmlAttr(key);
 
                 return `
@@ -2816,7 +2819,10 @@ const BASE_PATH = './data/';
         
         // Central isAceSpec function - checks against ace_specs.json list ONLY
         function isAceSpec(cardNameOrCard) {
-            const cardName = (typeof cardNameOrCard === 'string') ? cardNameOrCard : (cardNameOrCard.card_name || cardNameOrCard.full_card_name || cardNameOrCard.name || '');
+            // null/undefined duerfen NICHT werfen (BEFUND 07.09.2026): typeof null === 'object'
+            // fuehrte in den Objektzweig. Erwartet ist false, wie bei isBasicEnergy/
+            // isRadiantPokemon/isPrismStarCard in js/app-utils.js.
+            const cardName = (typeof cardNameOrCard === 'string') ? cardNameOrCard : (cardNameOrCard?.card_name || cardNameOrCard?.full_card_name || cardNameOrCard?.name || '');
             const normalized = cardName.toLowerCase().trim();
             return aceSpecsList.includes(normalized);
         }

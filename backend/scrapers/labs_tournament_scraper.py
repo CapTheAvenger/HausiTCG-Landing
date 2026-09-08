@@ -1119,6 +1119,11 @@ def scrape_tournament_decks(tournament_id: str) -> Tuple[List[Dict], int]:
             'losses'         : losses,
             'ties'           : ties,
             'win_pct'        : win_pct,
+            # NICHT BEFUELLBAR: die Quellansicht ?conversion fuehrt keine
+            # Top-Cut-Spalte mehr (siehe _CONV_HEADER_KEYS). Diese 0.0
+            # bleibt darum in jeder der 4.713 Zeilen stehen und ist ein
+            # Vorgabewert, keine Messung — beschrieben in
+            # data/labs_tournament_decks.felder.md.
             'top8_conv_rate' : 0.0,
             'top16_conv_rate': 0.0,
             'top32_conv_rate': 0.0,
@@ -1553,10 +1558,34 @@ def scrape_tournament_day(tournament_id: str, day: str) -> Dict[str, Dict[str, f
 
 
 # ── Output ────────────────────────────────────────────────────────────────────
+#
+# Was in diesen Spalten wirklich steht — mit Messungen, den beiden
+# Namensfallen und der Datumskonvention — beschreibt
+#
+#     data/labs_tournament_decks.felder.md
+#
+# Zwei Dinge daraus, weil sie hier beim Lesen der Liste zaehlen:
+#
+#   * `total_players` ist NICHT die Teilnehmerzahl, sondern die Summe
+#     der Decktabelle (= Summe von `player_count`, in allen 71
+#     Turnieren nachgerechnet). Fuer Turnier 0070 steht im Kopf der
+#     Quelle 3752, hier stehen 3743 — und `share_pct` rechnet auf die
+#     3743, genau wie die Quelle. Die Anwesenheit fuehren
+#     tournament_cards_data_overview.csv (Spalte `players`) und
+#     player_continuity.csv.
+#
+#   * `top8_conv_rate` / `top16_conv_rate` / `top32_conv_rate` sind
+#     NICHT BEFUELLBAR — siehe _CONV_HEADER_KEYS weiter oben. Ihre 0.0
+#     ist ein Vorgabewert, keine Messung.
+#
+# Wer diese Liste aendert, aendert die Beschreibung mit; festgehalten
+# wird das von tests/python/test_labs_felder_beschreibung.py.
 
 CSV_FIELDS = [
     'tournament_id', 'tournament_name', 'tournament_date',
-    'tournament_type', 'country', 'total_players',
+    'tournament_type', 'country',
+    # Decktabellen-Summe, nicht Anwesenheit — siehe Kopf dieses Blocks.
+    'total_players',
     'meta',  # Per-meta split (2026-05-24) — derived from tournament_date via tournament_cards_manifest's chunk_dates
     'deck_name', 'deck_slug', 'pokemon',
     'player_count', 'share_pct',

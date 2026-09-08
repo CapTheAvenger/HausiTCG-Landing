@@ -53,6 +53,51 @@ const MENU_CLUSTERS = {
     tools: ['proxy', 'calculator'],
 };
 
+/* Reiter, die ABSICHTLICH keinen Menuepunkt haben.
+ *
+ * `admin` (Datenluecken) ist der einzige. js/app-admin.js sagt es
+ * selbst: "diese Seite steht nicht im Menü, ist aber über #admin für
+ * jeden erreichbar", und tests/unit/test-hilfe-und-reitertitel-07-09.js
+ * haelt fest, dass es fuer `admin` keinen Menuepunkt geben darf — den
+ * Namen der Ansicht traegt dort ihre eigene Ueberschrift in Titel und
+ * Abzeichen, nicht das Menue.
+ *
+ * Alles ANDERE, was hier nicht steht und keinen Punkt hat, ist ein
+ * Befund und meldet sich unten. */
+const REITER_OHNE_MENUEPUNKT = ['admin'];
+
+/**
+ * Der Menuepunkt eines Reiters — die EINE Stelle, die das entscheidet.
+ *
+ * BEFUND (07.09.2026, Runde 3): den Punkt schlugen zwei Stellen
+ * unabhaengig voneinander ueber `menu-btn-<Reitername>` nach
+ * (hier und js/meta-analysis-hub.js setSideMenuActive). Fehlt der
+ * Punkt, entfernen beide erst jede Markierung und setzen dann keine —
+ * das Menue sagt dann "du bist nirgends", und zwar lautlos. Genau das
+ * war fuer `meta-analysis-hub` der Zustand, nachdem dessen Kennung an
+ * die Startseite ging: gemessen 0 markierte Punkte.
+ *
+ * Beide Stellen fragen jetzt hier. Und ein Reiter ohne Punkt, der
+ * nicht in REITER_OHNE_MENUEPUNKT steht, wird gemeldet statt
+ * verschwiegen — der naechste neue Reiter faellt damit beim ersten
+ * Oeffnen auf, nicht erst in einer Abnahme.
+ *
+ * @returns {Element|null} der Menuepunkt, oder null wenn es keinen gibt
+ */
+function menuepunktFuerReiter(tabId) {
+    const punkt = document.getElementById('menu-btn-' + tabId);
+    if (punkt) return punkt;
+    if (REITER_OHNE_MENUEPUNKT.indexOf(tabId) === -1
+        && typeof console !== 'undefined' && console && console.warn) {
+        console.warn('[menue] Reiter "' + tabId + '" hat keinen Menuepunkt '
+            + '(erwartet: id="menu-btn-' + tabId + '") — das Menue bleibt '
+            + 'unmarkiert. Entweder fehlt der Punkt, oder der Reiter gehoert '
+            + 'in REITER_OHNE_MENUEPUNKT (js/inline-init.js).');
+    }
+    return null;
+}
+window.__dsMenuepunktFuerReiter = menuepunktFuerReiter;
+
 function syncMenuClustersForTab(tabId) {
     Object.entries(MENU_CLUSTERS).forEach(([cluster, tabs]) => {
         const submenu = document.getElementById('menu-submenu-' + cluster);
@@ -288,7 +333,15 @@ function switchTabAndUpdateMenu(tabId) {
     }
 
     document.querySelectorAll('.menu-item.active').forEach(btn => btn.classList.remove('active'));
-    const activeBtn = document.getElementById('menu-btn-' + tabId);
+    /* Nachgeschlagen wird ueber __dsMenuepunktFuerReiter() — dieselbe
+       Stelle, die auch js/meta-analysis-hub.js fragt, damit zwei Wege
+       nicht zwei Menuezustaende ergeben (siehe dort setSideMenuActive).
+       Gefragt wird ueber `window`, wie ein paar Zeilen weiter oben schon
+       bei __dsSchreibeTabHash: dann verhaelt sich diese Funktion auch
+       dann noch wie frueher, wenn sie ohne den Rest der Datei laeuft. */
+    const activeBtn = typeof window.__dsMenuepunktFuerReiter === 'function'
+        ? window.__dsMenuepunktFuerReiter(tabId)
+        : document.getElementById('menu-btn-' + tabId);
     const badge = document.getElementById('current-tab-title');
     if (activeBtn) {
         activeBtn.classList.add('active');

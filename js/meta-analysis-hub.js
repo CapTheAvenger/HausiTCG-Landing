@@ -521,13 +521,32 @@
             const anteilWort = d.role === 'best'
                 ? (de ? 'Meta-Anteil' : 'field share')
                 : (de ? 'des Metas' : 'of the field');
+            /* BEFUND B1 (07.09.2026): WOVON IST DAS DER ANTEIL?
+               Hier stand "Meta-Anteil · aus 1.201 Antritten" — die
+               1.201 sind die Antritte DIESES Decks, nicht der Nenner.
+               9,77 % folgt daraus fuer niemanden. Der Nenner ist die
+               Summe aller Antritte des Blocks (model.totalBrought,
+               Spalte total_brought aus data/online_tournament_top8_decks.csv,
+               am 06.09.2026 12.287 ueber 121 Zeilen); er stand nur im
+               Satz unter dem ganzen Block, nicht an der Zahl.
+
+               Er muss HIER stehen, weil dieselbe Seite fuer dasselbe
+               Deck eine ZWEITE Zahl unter demselben Wort zeigt: die
+               Deck-Analyse nennt 7,62 % — Anteil an den LISTEN des
+               Onlinefeldes von Limitless (js/app-archetype-card.js,
+               _onlineFeld()). Zwei Grundgesamtheiten, ein Wort. Beide
+               Zahlen bleiben, weil beide etwas anderes zaehlen; was sie
+               zaehlen, steht jetzt an beiden. */
+            const gesamtAntritte = Math.round(model.totalBrought).toLocaleString(loc);
+            const anteilBezug = de
+                ? `${antritte} von ${gesamtAntritte} Antritten`
+                : `${antritte} of ${gesamtAntritte} entries`;
             return `
                 <div class="ds-stat${cls}">
                     <span class="ds-stat-role">${role}</span>
                     <span class="ds-stat-label">${escapeHtml(d.name)}</span>
                     <span class="ds-stat-value">${fmtPct(d.sharePct)}</span>
-                    <span class="ds-stat-context">${anteilWort} · ${
-                        de ? 'aus ' + antritte + ' Antritten' : 'from ' + antritte + ' entries'}<br>${
+                    <span class="ds-stat-context">${anteilWort} · ${anteilBezug}<br>${
                         de ? 'Top-8-Quote' : 'top-8 rate'} ${fmtPct(d.convPct)}${
                         verglichen ? ` · ${verglichen}` : ''}</span>
                 </div>`;
@@ -706,9 +725,24 @@
         if (backBtn) backBtn.addEventListener('click', exitToHub);
     }
 
+    /* Den Menuepunkt eines Reiters markieren.
+     *
+     * Nachgeschlagen wird ueber window.__dsMenuepunktFuerReiter
+     * (js/inline-init.js) — dieselbe Stelle, die auch
+     * switchTabAndUpdateMenu() fragt. Vorher stand hier eine zweite
+     * Abfrage mit derselben Regel; bei einem Reiter ohne Punkt hoben
+     * beide die Markierung auf und setzten keine neue, lautlos.
+     * Gemeldet wird das jetzt dort, einmal, statt hier ein zweites Mal
+     * verschwiegen zu werden.
+     *
+     * Der Rueckfall auf getElementById haelt die Kachelseite bedienbar,
+     * falls js/inline-init.js nicht geladen ist — er verhaelt sich
+     * genau wie die frueheren zwei Zeilen. */
     function setSideMenuActive(tabId) {
         document.querySelectorAll('.menu-item.active').forEach(btn => btn.classList.remove('active'));
-        const sideBtn = document.getElementById('menu-btn-' + tabId);
+        const sideBtn = typeof window.__dsMenuepunktFuerReiter === 'function'
+            ? window.__dsMenuepunktFuerReiter(tabId)
+            : document.getElementById('menu-btn-' + tabId);
         if (sideBtn) sideBtn.classList.add('active');
     }
 
@@ -762,10 +796,25 @@
     function exitToHub() {
         clearAllSubNavHosts();
         wechsleReiter('meta-analysis-hub');
-        // The hub now HAS its own top-level entry, so highlight it instead of
-        // leaving the menu with nothing selected — the "← Übersicht" buttons
-        // route through switchTabAndUpdateMenu and do highlight it, and two
-        // back-paths must not leave two different menu states.
+        /* BEFUND (07.09.2026, Runde 3): hier stand "The hub now HAS its own
+           top-level entry, so highlight it" — und genau die gab es zu dem
+           Zeitpunkt NICHT MEHR. Der Punkt, den der Kommentar meinte, war
+           `menu-btn-meta-analysis-hub`; er wurde im selben Durchgang zu
+           `menu-btn-home` (Startseite, oeffnet current-meta). Der Aufruf
+           unten suchte danach ins Leere: gemessen 0 markierte Menuepunkte
+           beim Ruecksprung auf die Kachelseite. Ein Kommentar, der das
+           Gegenteil des Verhaltens behauptet, versteckt den Befund.
+
+           Der Punkt ist jetzt wieder da, aber an der richtigen Stelle: in
+           der Gruppe "Meta & Tier Lists" (index.html), mit dem Namen der
+           Kachelseite und nicht dem der Startseite. Dieser Aufruf findet
+           ihn wieder.
+
+           Er bleibt trotzdem noetig: wechsleReiter() markiert zwar
+           ueber switchTabAndUpdateMenu() mit — aber nur, solange
+           js/inline-init.js geladen ist. Faellt sie aus, geht
+           wechsleReiter() auf switchTab() zurueck, und switchTab()
+           fasst das Pokeball-Menue nicht an. */
         setSideMenuActive('meta-analysis-hub');
     }
 

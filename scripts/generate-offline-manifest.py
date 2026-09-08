@@ -28,6 +28,33 @@ import os
 import sys
 
 
+# Dateien, die im Deploy gebraucht werden, aber NICHT im Browser.
+#
+# js/offline-prefetch.js waermt jede hier gelistete Datei bei jedem
+# Seitenaufruf in den Service-Worker-Cache. Was das Frontend nie holt,
+# gehoert darum nicht ins Manifest — es kostet jeden Besucher Bandbreite
+# und Cache-Platz fuer nichts.
+#
+# city_league_analysis_M3.csv, gemessen am 07.09.2026:
+#   * 133.437 Zeilen, 29,8 MB — der groesste Einzelposten nach
+#     city_league_analysis_past.csv, gut ein Zehntel des Prefetch-Gewichts.
+#   * Keine Datei unter js/ liest sie. Der einzige Treffer dort ist ein
+#     Kommentar in js/app-tier-meta.js, der sie als abgeloest bezeichnet
+#     (der Vergangenheits-Schnappschuss zog am 23.05.2026 auf
+#     city_league_analysis_past.csv um).
+#   * Gelesen wird sie von scripts/generate-bot-deck-index.py
+#     (_build_city_league) — beim Deploy, serverseitig. Der Lauf am
+#     07.09.2026 baute daraus 71 City-League-Decks fuer den
+#     Telegram-Bot-Index.
+#
+# Die Datei bleibt also liegen und wird weiter ausgeliefert; sie wird nur
+# nicht mehr vorgeladen. Holt eine js-Datei sie eines Tages doch, faellt
+# tests/python/test_m3_gehoert_dem_bot.py um.
+NUR_SERVERSEITIG = {
+    "city_league_analysis_M3.csv",
+}
+
+
 def build_data_manifest(data_dir: str, version_stamp: str) -> dict:
     files = []
     for entry in sorted(os.listdir(data_dir)):
@@ -41,6 +68,8 @@ def build_data_manifest(data_dir: str, version_stamp: str) -> dict:
         if entry.startswith("debug_") or entry.endswith("_local.html"):
             continue
         if "_BACKUP_" in entry or "_OLD_" in entry or "_PARTIAL_" in entry:
+            continue
+        if entry in NUR_SERVERSEITIG:
             continue
         files.append({"path": entry, "size": os.path.getsize(full)})
 
