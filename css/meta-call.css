@@ -229,6 +229,32 @@
   color: var(--color-info-ink);
 }
 
+/* DAS RUNDENABZEICHEN (08.09.2026).
+
+   Angeordnet: „Standard ist immer 8." Die Rundenzahl ist aenderbar, und
+   dann rechnet die Seite alles damit durch — erwartete Siege,
+   Day-2-Chance, Punkteziel, Rangfolge. Genau deshalb muss sichtbar
+   sein, auf welcher Zahl das gerade beruht: wer einmal auf 9 stellt und
+   es vergisst, liest sonst spaeter eine Chance, die auf einer anderen
+   Grundlage steht als der Vorgabe.
+
+   Bei 8 sieht das Abzeichen aus wie seine Nachbarn — kein Alarm fuer
+   den Normalfall. Nur bei einer abweichenden Zahl faerbt es sich, und
+   zwar nicht nur ueber die Farbe: die zusaetzliche Umrandung und das
+   Vorzeichen „≠" tragen dieselbe Aussage noch einmal, damit sie auch
+   ohne Farbunterscheidung ankommt. */
+.metacall-panel-title .mc-runden-badge.is-abweichend {
+  background: var(--mc-bg-tip);
+  color: var(--color-warning-ink);
+  border: 1px solid var(--color-warning);
+  /* Die Umrandung frisst sonst 2 px Hoehe und schiebt die Zeile um. */
+  padding: 1px 7px;
+}
+.metacall-panel-title .mc-runden-badge.is-abweichend::before {
+  content: "≠ ";
+  font-weight: 700;
+}
+
 /* --- Tournament-type tabs (Regional / Local Challenge / Local Cup) --- */
 .mc-tt-tabs {
   display: flex;
