@@ -93,6 +93,19 @@ DATEIEN = [
     # scripts/data_guardian.py aus dem vollen Verlauf; dieser Lauf hier
     # arbeitet auf einem flachen Klon und koennte es nur raten.
     "format_window.json",
+    # NACHTRAG 08.09.2026: die vier Dateien des Limitless-API-Laufs
+    # (.github/workflows/limitless-api-scrape.yml). Sie tragen die erste
+    # VOLLSTAENDIGE Online-Datenbasis dieses Projekts — jeden Spieler jedes
+    # erfassten Turniers statt nur der erfolgreichen Listen. Genau deshalb
+    # muessen sie hier stehen: eine Datei, aus der eine Prognose gerechnet
+    # wird, ohne Erhebungsdatum, ist die teuerste Sorte Zahl.
+    #
+    # Alle vier fuehren ihr Turnierdatum je Zeile, also steht auch ihr
+    # Inhaltsdatum unten in INHALT_BIS.
+    "online_api_tournaments.csv",
+    "online_api_archetypes.csv",
+    "online_api_cards.csv",
+    "online_api_matchups.csv",
 ]
 
 WURZEL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -119,6 +132,14 @@ INHALT_BIS = {
     # Dieselbe Frage fuer die Online-Turnierkarten: die Datei fuehrt je Zeile
     # das Turnierdatum, also laesst sich sagen, wie weit ihr Inhalt reicht.
     "online_tournament_dated_cards.csv": "tournament_date",
+    # Der Limitless-API-Lauf schreibt inkrementell an: die Datei kann heute
+    # geschrieben worden sein und trotzdem nur Turniere von letzter Woche
+    # enthalten, wenn seither keines die Schwelle erreicht hat. Beide Zahlen
+    # gehoeren hin.
+    "online_api_tournaments.csv": "date",
+    "online_api_archetypes.csv": "date",
+    "online_api_cards.csv": "date",
+    "online_api_matchups.csv": "date",
 }
 
 # Dateien, deren Inhaltsdatum in einer NEBENDATEI steht statt in einer Spalte:
