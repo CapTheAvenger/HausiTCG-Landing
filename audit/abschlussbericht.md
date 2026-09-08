@@ -150,7 +150,9 @@ Die angezeigten **21,58 %** sind exakt nachgerechnet: (8 + 30 · 0,179419) / (32
 
 Was **nicht** eingeht: die Spielerzahl. Weder 797 noch 2.700 stehen in der Formel. Ebenso wenig Win-Raten, Kartenwahl oder Rundenzahl. Der Anker ist **ein einziges Turnier mit 32 Piloten**, und zwar Worlds — ein eingeladenes Feld, kein offenes Regional.
 
-Die Markov-Kette im Meta Call rechnet anders und kommt mit eigenen, benannten Eingaben auf 14,64 % (8 Runden) bzw. 8,71 % (9 Runden). Der Code benennt die Lücke selbst und rechnet sie nicht weg. Diese Nachrechnung **bestätigt** sie und beziffert sie auf 6,9 Prozentpunkte.
+Die Markov-Kette im Meta Call rechnet anders und kommt mit eigenen, benannten Eingaben auf **14,64 %** — gerechnet auf der Vorgabe von **8 Runden**, die für dieses Turnier gilt. Der Code benennt die Lücke zur empirischen Zahl selbst und rechnet sie nicht weg; diese Nachrechnung **bestätigt** sie und beziffert sie auf 6,9 Prozentpunkte.
+
+(Der Vollständigkeit halber: mit 9 Runden käme dieselbe Kette auf 8,71 %. Das ist eine Rechnung für den Fall, dass die Ausschreibung eine andere Rundenzahl nennt — **keine Aussage darüber, wie Frankfurt läuft**. Ich hatte daraus in einer früheren Fassung dieses Berichts einen Befund gemacht; das war falsch und ist zurückgezogen.)
 
 ---
 
@@ -171,8 +173,7 @@ Auf `202609080008-33eb397` gemessen, vor der zweiten Auslieferung:
 | Punkt | Stand |
 |---|---|
 | **Drei Testpartien im Kampftagebuch** („CLAUDE AUDIT TEST — bitte loeschen") | **ERLEDIGT, aber nicht von mir.** Live nachgemessen am 08.09.2026 auf `202609080208-42294a3`, angemeldet als `SUSCeMi8oS…`: das Kampftagebuch führt „0 Matches · 0 Win · 0 Loss · 0 Tie" und zeigt „Noch keine Journal-Einträge." Die drei Einträge sind also weg. Gelöscht habe ich sie nicht — Kontodaten zu löschen liegt außerhalb dessen, was ich selbst tun darf. |
-| **Rundenzahl bei großen Turnieren** | Vorgabe bleibt 8 Runden / 16 Punkte, unabhängig von der Spielerzahl. Die offizielle Seite der International Championships sagt: „The number of Swiss rounds will be determined by attendance." Die Oberfläche weist ausdrücklich darauf hin und lässt 9 Runden wählen. Ob die Vorgabe der Spielerzahl folgen soll, ist eine Entscheidung des Betreibers und im Chat gestellt. |
-| **Exakte Rundenstaffelung nach Spielerzahl** | **NICHT GEPRÜFT.** Die offizielle Handbuch-PDF ist gegen automatisches Abrufen gesperrt. Eine Sekundärquelle nennt 9 Runden als Normalfall und Tag 2 als Top 32 oder ≥ 19 Punkte; das ist kein Primärbeleg. |
+| ~~Rundenzahl bei großen Turnieren~~ | **ZURÜCKGEZOGEN und erledigt (08.09.2026).** Das war kein Befund, sondern mein Fehler: der Betreiber hatte 8 Runden vorgegeben, und ich habe daraus mit einer Sekundärquelle eine offene Entscheidung gebaut, die keine war. Die Anordnung lautet: **Standard ist immer 8**, die Zahl ist änderbar, und dann rechnet die Seite alles damit durch. Genau das tut sie — live gemessen: 8 → 9 zieht das Punkteziel von 16 auf 19, die erwarteten Siege von 4,80 auf 5,40 und die Day-2-Chance von 47,2 % auf 38,7 % nach; zurück auf 8 kommen exakt dieselben Zahlen wieder. Ergänzt wurde nur die Sichtbarkeit: die Kopfzeile trägt jetzt ein Rundenabzeichen, das bei jeder Zahl außer 8 markiert ist. |
 | **`city-league-tier-title` auf dem Telefon** | Rendert 12 px statt 14,04 px wegen der Pauschalregel `.tab-content [class*="title"]{font-size:12px !important}`. Bewusst nicht mitbehoben — das braucht eine eigene Abnahme, weil die Regel viele Stellen trägt. |
 | **144 verwaiste CSS-Klassen** | Inventarisiert (25 mit Inline-Stil, 45 mit gestyltem Geschwister, 72 ohne Stil). Zwei mit sichtbarer Wirkung behoben, der Rest ist unsichtbar und harmlos. |
 
