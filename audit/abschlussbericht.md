@@ -1,6 +1,6 @@
 # Abschlussbericht — 100 % Agenten-Live-Prüfung, Datenverifikation und Turniervorbereitung
 
-**Seite:** thedipidis.app · **Lauf:** 07.09.2026 · **Ausgeliefert:** `202609071722-bc9a494`
+**Seite:** thedipidis.app · **Lauf:** 07.–08.09.2026 · **Ausgeliefert:** `202609080142` (PR #697 und #698, beide gemerged)
 **Ziel des Betreibers:** Turnier 26.09.2026 Frankfurt, Format TEF–PBL, ca. 2.700 Spieler, Deck Mega Excadrill, Ziel Day 2.
 
 Alles hier ist gemessen. Wo nicht gemessen werden konnte, steht **NICHT GEPRÜFT** — nie „OK".
@@ -11,178 +11,177 @@ Alles hier ist gemessen. Wo nicht gemessen werden konnte, steht **NICHT GEPRÜFT
 
 | PR | Inhalt | Prüfungen |
 |---|---|---|
-| **#695** | Tech-Belege (Entscheidung 2b), Navigation und Tieflinks, Meta Call M1–M6, Online-Deckliste-Leser samt Arbeitsablauf, Spalte `quelle` für 30.459 Zeilen | 3/3 grün, gemerged |
-| **#696** | Nacharbeit nach unabhängiger Abnahme: Deckschutz, Kartenabdeckung, Quellenangaben, Win-%-Konvention, drei Datenbefunde, Wachen | 3/3 grün, gemerged |
+| **#697** | Nacharbeit der drei unabhängigen Prüfberichte, 15 leere Testdateien gefüllt, fünf dabei gefundene Produktivfehler behoben, Attributmaskierung an über 90 Stellen | 3/3 grün, gemerged (`33eb397`) |
+| **#698** | Win-%-Benennung: jede Quote trägt den Namen ihrer Konvention; drei tote i18n-Schlüssel entfernt; Sprachreinheitstest auf Vorlagen umgestellt | 3/3 grün, gemerged (`13a218a`) |
 
-**Testbestand am Ende:** 4.793 JS-Zusicherungen · 1.546 Python-Tests · beide grün.
-15 leere Testdateien bestehen unverändert fort (vorbestehend, im Lauf ausgewiesen).
-
----
-
-## 2. Arbeitsweise
-
-Jede Änderung durchlief drei Hände:
-
-1. **Bauen** — ein Agent je Dateimenge, Dateimengen paarweise überschneidungsfrei.
-2. **Unabhängige Abnahme** — ein zweiter Agent, der die Änderung nicht gebaut hat: Diff lesen, Behauptungen nachmessen, eigene Mutationen fahren, md5 vorher/nachher.
-3. **Nacharbeit** — ein dritter Agent behebt, was die Abnahme gefunden hat.
-
-**Das hat sich gelohnt.** Von vier Paketen wurde in der ersten Abnahme **kein einziges vollständig** abgenommen. Die Abnahme fand unter anderem: eine Datenverlustgefahr, zwei weiterhin erfundene Zahlen und eine Quellenangabe auf eine Datei, die es nicht gibt.
+**Testbestand am Ende:** 6.056 JS-Zusicherungen · 1.603 Python-Tests · beide grün.
+**0 leere Testdateien** (vorher 15 — das war eine Lücke, die grün aussah).
 
 ---
 
-## 3. Behobene Befunde — nach Schwere
+## 2. Bestandsaufnahme (Phase 1)
 
-### 3.1 Datenverlust (schwer)
+Frisch erhoben, nicht fortgeschrieben:
 
-**Ein Doppelklick auf „Leeren" löschte das Deck unwiederbringlich.**
-Geprüft an `clearDeck('pastMeta')` mit zwei Aufrufen im Abstand von 0 ms → Deck geleert, `localStorage.removeItem('pastMetaDeck')` ausgeführt.
-Behoben: der zweite Klick zählt erst nach 400 ms; geprüft mit echter Uhr bei 0/50/120/250/399 ms → Deck bleibt vollständig; bei 450/1500 ms → geleert.
-Zwei Folgefehler mitbehoben: das Leeren einer Quelle setzte `rarityPreferences` **aller drei** Quellen zurück; und `updateDeckDisplay` löschte `autosave_deck`, die letzte Sicherungskopie. Beides jetzt nicht mehr.
+- `audit/inventar-oberflaeche.md` — **542 Einträge**, Gruppen F0–F17, 16 Reiter, 11 Profil-Unterreiter.
+  Gemessen: kein toter `on…`-Haken in `index.html`, keine doppelte `id` unter 585 statischen Kennungen.
+- `audit/datenfluss.md` — 7 Abschnitte, Kerntabelle „Kennzahl → Nenner → Quelldatei/Feld".
+- `audit/testmatrix.md` — **838 Zeilen** (Block F 722, Block D 88, Block H 28 Hypothesen).
 
-### 3.2 Erfundene Zahlen (schwer — Regelverstoß)
+---
 
-| Wo | Was behauptet wurde | Jetzt |
+## 3. Befunde der drei unabhängigen Prüfberichte — alle behoben
+
+### 3.1 Zahlen, die genauer aussahen als sie sind
+
+| Befund | Vorher | Jetzt |
 |---|---|---|
-| Handstatistik | „Mulligan 100,0 %", sobald die Kartendatenbank nur teilweise geladen war — im Past-Meta-Reiter der Regelfall | keine Prozentzahl, solange eine Deckkarte unbestimmbar ist; stattdessen der Grund |
-| Kartenabdeckung | Zähler über drei Erhebungen summiert. Live gemessen: **545 von 3.491** Einträgen mit Zähler über Nenner, Höchstwert **270 %** | gerechnet in genau **einer** Erhebung, die an der Plakette steht. Live nachgemessen: **13 Plaketten, 0 über 100 %, Höchstwert 100,0 %**, Beispiel „🔥 100,0% Coverage · 20/20 · Current Meta / Meta Live · Max: 4x" |
-| Rechner | Eingabe `6.5` wurde still als 6 gerechnet | der Ersatzwert steht sichtbar da |
+| Hochgerechneter Nenner als exakt ausgewiesen (**schwer**) | `3.138 / 41.200` | `3.138 / ≈ 41.200`, dazu der Rechenweg im Hinweis: 39.694 gelistete Listen tragen 96,19 % der Anteile, daraus ≈ 41.200 (eingegrenzt 41.192–41.207) |
+| „1.506 Other" als gezählt geschrieben | „1.506" | „rund 1.500 (41.200 − 39.694 = 1.506, je nach Nenner 1.498 bis 1.513) — auch diese Zahl ist nicht gezählt" |
+| Datenstand-Chip stellte Teilwissen als Gesamtwissen dar | „älteste Quelle" | „älteste der 2 von 3 Quellen mit Stand", Titel nennt die übergangene Datei |
+| Glättungs-Fußnote nannte die kleinere Ursache | pauschal „Glättung" | zerlegt in Glättungs- und Gewichtungsanteil, nennt den größeren — je Deck gerechnet (Dragapult: −0,13 gegen +0,70 → Gewichtung) |
+| „elf mit einer Liste, vier mit zweien" | falsch | zur Laufzeit gezählt: **10 und 5**, mit Quellenangabe im Text |
 
-### 3.3 Falsche Quellenangabe (schwer — Regelverstoß)
+Beleg für alle: `data/limitless_online_decks.csv` (`count`, `share_numeric`), `data/tournament_decklists_per_player.csv` (`deck_archetype`, `tournament_date`), `data/format_window.json` (`in_person_legal_date`).
 
-`data/tournament_cards_data_cards.csv` stand sichtbar auf der Seite. **Diese Datei existiert nicht** — sie ist ein Ladeschlüssel, aufgelöst auf die Formatdatei.
-Live nachgeprüft: dort steht jetzt „Quelle: ./data/tournament_cards_data_cards_TEF-PBL.csv — genau die Formatdatei, die der Lader für TEF-PBL holt."
-Beide betroffenen Module prüfen jetzt **jeden** in einem Oberflächentext genannten `data/`-Pfad gegen das Dateisystem, mit einer Zusicherung, die bei einem nicht existierenden Pfad rot wird.
+### 3.2 Ein scheingrüner Wächter
 
-### 3.4 „Win %" waren drei verschiedene Formeln (schwer)
+`backend/scrapers/per_decklist_scraper.py` bog `get_data_dir` **dauerhaft** auf dem echten Modul in `sys.modules` um und nahm es nie zurück. Folge: die Mutation „Fix vollständig zurückdrehen" ließ die **gesamte** Python-Suite grün (1583 passed). Der Wachhund davor konnte den Fehler nicht mehr sehen — der Test vor ihm hatte das Modul für ihn umgebogen.
 
-Nachgerechnet, Zeile für Zeile:
+Behoben durch den Kontextmanager `_overrides_aus()` mit `finally`. Nachgemessen: mit zurückgedrehtem Fix ist der Wachhund jetzt rot. **13 von 13 Mutationen** werden gefangen, keine überlebt.
 
-| Datei | Formel | geprüfte Zeilen |
-|---|---|---|
-| `limitless_online_decks.csv` | S/(S+N+U) | 135 von 136 (Ausnahme Wailord — Datenfehler der Quelle) |
-| `limitless_online_decks_matchups.csv` | S/(S+N) | 1.716 von 1.716 |
-| `labs_tournament_decks*.csv` | Matchpunkte (3S+U)/3n | 9.426 von 9.426 |
-| `labs_tournament_matchups*.csv` | Matchpunkte | 95.972 von 95.972 |
+### 3.3 Oberfläche
 
-Der Predictor-5.3-Vergleich stellte zwei davon nebeneinander. Beide Seiten laufen jetzt in S/(S+N); die Verschiebung für Mega Excadrill geht von **−4,60** auf **−1,24** Punkte zurück. Die Kurznamen der drei Konventionen sind entwirrt und stehen als `title` an jedem Chip.
-
-### 3.5 Tote Gegnersuche
-
-Die Gegner-Matchup-Auswahl war doppelt tot: sie las Globals, die es seit einem Umbau nicht mehr gibt, und das Detailfeld trug `display:none` auf der Grundklasse, während nur `d-none` entfernt wurde.
-Live nachgeprüft: 20 Gegner in der Liste; Klick auf „Alakazam Dudunsparce" → „Win Rate 24,87 % · Record 187 - 565 - 6 · Partien gesamt 758" — deckungsgleich mit `data/limitless_online_decks_matchups.csv`.
-
-### 3.6 Weitere behobene Befunde
-
-Navigation und Tieflinks (alle 16 Reiter und alle 11 Profil-Untertabs hin und zurück), neun tote Anleitungsverweise, Hilfe-Dialog mit Escape und Fokusführung, Fenstertitel für `admin`, Knopf-Hervorhebung (der abgewählte Knopf war grün statt neutral), Tier-Sortierung gegen ihre eigene Überschrift, Formatauswahl-Abgleich, Zähler mit zwei Wahrheiten, erklärte Leerzustände statt stiller Lücken.
+- Nach der Umbenennung `menu-btn-meta-analysis-hub` → `menu-btn-home` blieb beim Hub **kein Menüpunkt markiert**. Eigener Menüpunkt wieder angelegt; live nachgemessen: **16 von 16 Reitern markieren genau einen** Punkt, Ausnahme `admin` ist benannt und begründet (die Seite steht bewusst nicht im Menü).
+- City League: der Herkunftssatz stand **zweimal** → jetzt einmal, in der Karte „Datenquelle", die immer gerendert wird.
+- Die Begründung im Leerzustand war **sachlich falsch**. Nachgezählt an `data/city_league_archetypes_past_comparison.csv`: 11 von 11 Zeilen haben `count_change > 0`, alle 11 tragen `status = NEU`, 0 tragen `VERSCHWUNDEN`. Der Text nennt jetzt genau diese Bilanz.
+- Der Notaus `.d-none` wirkte gegen die eingespielte Regel nicht mehr → `:not(.d-none)` in der Sichtbarkeitsregel.
+- Drei Tabellen erschienen mit heutigen Daten **nie**. Statt unsichtbar zu bleiben, steht dort jetzt ein benannter Leerzustand mit Quelle und Zeitfenster.
+- „Special Event" ist ein fest verdrahteter Scraper-Platzhalter, keine Quellangabe → in der Oberfläche als solcher gekennzeichnet.
 
 ---
 
-## 4. Datenverifikation
+## 4. Fünf Produktivfehler, gefunden beim Füllen der leeren Testdateien
 
-### 4.1 Was in Ordnung ist
+Diese fünf standen in keinem Prüfbericht. Sie kamen ans Licht, weil die 15 leeren Testdateien echte Tests bekamen.
 
-| Prüfung | Ergebnis |
-|---|---|
-| Decklisten mit genau 60 Karten | **1.201 von 1.201** |
-| Verstöße gegen die 4er-Regel | **0** |
-| doppelte Kartenzeilen | **0** |
-| Karten-IDs ohne Treffer im Bestand (20.878 Karten) | **0 von 30.459** |
-| Σ `player_count` = `total_players` | **71 von 71 Turnieren** |
-| Σ `day2_share_pct` = 100,00 | **71 von 71** |
-
-### 4.2 Was repariert wurde
-
-**100 von 1.201 Decklisten trugen `0-0-0`** — bei Worlds jede fünfte (28 von 143), darunter Platz 53, Mega Excadrill.
-Ursache gemessen: der Rückfall im Scraper feuerte nur bei komplett genulltem Stapel, und der Namensschlüssel war groß-/kleinschreibungsempfindlich gegen eine Datei, die Namen kleingeschrieben führt. Zeichengenau: **0 Treffer**. Normalisiert: **84**. Über den Platz zusätzlich: **alle übrigen**.
-Ergebnis: **0 von 1.201** ohne Bilanz. 2.555 Zeilen geändert, 1.823.468 Zellen der übrigen Spalten Zelle für Zelle verglichen — keine Abweichung.
-Alle acht Mega-Excadrill-Listen bei Worlds tragen jetzt ihre Bilanz.
-
-**`day1` war eine byte-genaue Kopie von `overall`** in allen Paarungsdateien — die Quelle ignoriert das `d1`-Flag. Keine Zahl wurde verändert; neue Spalten `tagesfilter_quelle` und `ist_spiegel` machen es aus der Datei heraus erkennbar. Die 80 Zeilen mit `vs_count ≠ S+N+U` sind Spiegelpaarungen und in allen 80 exakt Faktor 2 — richtige Zählweise, jetzt benannt.
-
-**Die Decklisten decken nur das Tag-2-Feld ab.** Nicht durch einen Filter im Code, sondern weil limitlesstcg.com für Tag-1-Spieler keine Listen veröffentlicht. Belegt: Turnier 0071 hat 797 Spieler, davon 143 mit `day2=1` — und genau diese 143 stehen in der Datei, Plätze 1–143 lückenlos.
-Für Mega Excadrill: **8 Listen von 32 Piloten bei 797 Spielern.** Das steht jetzt an allen vier Anzeigen, nicht nur an einer. Der Kommentar nannte die Feldgröße mit 774; belegt sind 797 (drei Dateien übereinstimmend) — korrigiert und gegen die Dateien zugesichert.
-
-### 4.3 Wachen gegen stilles Veralten
-
-Vorher: der Herzschlag deckte vier Jobs ab, die **gesamte Online-Seite** der Datengrundlage war ungedeckt, und `limitless_online_fenster.csv` — die Datei mit dem einzigen aktuellen Meta-Anteil — hatte weder Frische-Anzeige noch Datenstand noch Herzschlag, bei einem Arbeitsschritt mit `continue-on-error`.
-
-Jetzt: vier Online-Scraper im Herzschlag, vier Dateien im Datenstand, eine Stillstandswache (eine Datei, die über mehrere planmäßige Läufe byte-identisch bleibt, meldet sich), und der Fensterschritt kann nicht mehr still scheitern — der Ausfall ist an drei Stellen sichtbar.
-Wächterstand: CRITICAL 0 · WARN 16 · INFO 10. Die sieben neuen WARN sind echte Lücken, die der nächste Wochenlauf (Di, 08.09.) schließt.
+1. **Die kartenweise Seltenheits-Vorliebe wirkte nie.** `getGlobalRarityPreference()` lieferte immer `'min'`/`'max'`, der Zweig `mode === 'specific'` war unerreichbar. Der Nutzer stellte etwas ein, und nichts geschah. Gemessen: Vorliebe `SSP 181` → gezeigt wurde `TEF 12`; nach der Behebung `SSP 181`. Der Cache-Schlüssel führt die Vorliebe bereits — vorher folgenlos, jetzt tragend.
+2. **`isAceSpec(null)` warf** `TypeError` statt `false` zurückzugeben, während die drei Nachbarklassifizierer `null` anstandslos vertragen.
+3. **Rücknahme in der Sammlung.** Zwei gleichzeitige, abgelehnte Klicks hinterließen eine Karte „besessen ohne Anzahl". Die Zugehörigkeit wird jetzt aus dem zurückgerechneten Zählerstand abgeleitet, nicht aus einer je Klick gemerkten Momentaufnahme.
+4. **Maskierung griff zu spät.** `escapeJsStr` allein reicht für einen Wert in einem HTML-Attribut nicht: der HTML-Zerteiler läuft vor dem JS-Zerteiler, ein `"` im Namen erzeugt ein **zweites Ereignisattribut**. An über 90 Stellen in 11 Dateien auf `escapeHtmlAttr(escapeJsStr(x))` umgestellt. Die Reihenfolge ist gemessen, nicht geraten: umgekehrt führt `x'); alert(1); ('` tatsächlich aus. Heute nicht ausnutzbar — keine der 20.878 Zeilen in `data/all_cards_merged.json` trägt `"` oder `<` im Namen —, aber das war eine Eigenschaft der Daten, nicht des Codes.
+5. **Zwei Archetyp-Normalisierer** trugen unterschiedliche Apostroph-Zeichenklassen; `N's Zoroark ex` lief im einen ins Leere. Vereinheitlicht auf sieben Schreibweisen, testseitig zeichengleich festgenagelt.
 
 ---
 
-## 5. Vertrauensurteil je Quelle
+## 5. Win-%-Benennung (PR #698)
 
-| Quelle | Kennzahl | Urteil | Stichprobe |
+Anordnung: „Win-Raten überall in der Limitless-Bezeichnung ‚Win %' — keine eigenen Begriffe."
+
+Das war **kein pauschales Umbenennen**. `js/win-rate-konvention.js` führt drei Konventionen, und „Win %" gehört allein den Matchpunkten. Jede Stelle wurde an ihrer Rechenstelle geprüft:
+
+| Quelle | Nachgerechnet | Konvention | Name |
 |---|---|---|---|
-| `limitless_online_fenster.csv` | Meta-Anteil (aktuell) | **VERLÄSSLICH** | 10.330 Decks / 15 Tage |
-| `limitless_online_decks.csv` | Win % gesamt | **VERLÄSSLICH** | 13.827 Partien (Excadrill) |
-| `limitless_online_decks_matchups.csv` | Paarungen | **VERLÄSSLICH** | 10.361 Partien, alle 20 Gegner ≥ 142 |
-| dieselbe | Zeitbezug | **EINGESCHRÄNKT** | kein Datumsfeld — kumulativ |
-| `limitless_online_decks.csv` | Meta-Anteil kumulativ | **EINGESCHRÄNKT** | 7,29 % kumulativ gegen 5,98 % im Fenster |
-| `online_tournament_top8_decks.csv` | Top-8-Quote | **EINGESCHRÄNKT** | 853 Antritte; zwei Nenner in einer Zeile |
-| dieselbe | `avg_winrate_in_top8` | **NICHT VERLÄSSLICH** | Spalte enthält Matchpunkte, keine Prozentwerte |
-| `labs_tournament_decks_TEF-PBL.csv` | Anteil, Win %, Day-2-Quote | **EINGESCHRÄNKT** | **1 Turnier**, 254 Partien, 32 Antritte |
-| dieselbe | `top8_conv_rate` | **NICHT VERLÄSSLICH** | steht in 4.713 von 4.713 Zeilen auf 0.0 — tote Spalte |
-| `labs_tournament_matchups_TEF-PBL.csv` | Paarungen Papier | **NICHT VERLÄSSLICH** | von 27 Gegnern hat **einer** ≥ 30 Partien |
-| `tournament_decklists_per_player.csv` | Kartenabdeckung | **VERLÄSSLICH** | 1.201 Listen, 0 Fehler |
-| dieselbe | Feldabdeckung | **EINGESCHRÄNKT** | Tag-2-Feld, 143 von 797 |
-| `city_league_*` | alles | **NICHT VERLÄSSLICH** | 0 Zeilen seit 38 Tagen — ehrlich ausgewiesen (japanische Saisonpause) |
+| `limitless_online_decks_matchups.csv` `win_rate` | 1.716/1.716 Zeilen, max. 0,005 pp | S/(S+N) | Siegquote ohne Unentschieden |
+| `labs_tournament_matchups_TEF-PBL.csv` `vs_win_pct` | 1.866/1.866, max. 0,005 pp | (3S+U)/3n | **Win %** |
+| `labs_tournament_decks.csv` `win_pct` | 4.713/4.713 | (3S+U)/3n | **Win %** |
+| `limitless_online_decks.csv` `win_rate_numeric` | 135/136, max. 0,01 pp | S/(S+N+U) | Siegquote inkl. Unentschieden |
+| `js/matchup-glaettung.js` `quote()` | (S+k/2)/(S+N+k) | S/(S+N) | Siegquote ohne Unentschieden |
+
+Kürzel („WR") bleiben, wo der Platz knapp ist — aber nur mit einem Hinweis, der vollen Namen und Formel nennt. Ein Kürzel ohne Hinweis ist ein Hausname. Auf den Bildkarten steht der Name **auf der Leinwand**, weil ein Bild keine Sprechblase hat.
+
+Die Namen werden überall zur Laufzeit aus dem Modul geholt. Fällt es aus, steht die **Formel** da — nie ein Hausname.
+
+Der Sprachreinheitstest verglich den angezeigten Text stumpf mit dem Rohwert und meldete die Vorlagen als Abweichung. Statt die Schlüssel zu überspringen (das hätte die Leck-Erkennung geblendet) zählt er jetzt die erlaubten Füllungen auf. Nachgeprüft: setzt der Füller einen fremden Namen ein, meldet er wieder 5 Fehler.
 
 ---
 
-## 6. Turniervorbereitung Frankfurt
+## 6. Datenverifikation (Phase 4)
 
-Vollständig in `audit/turniervorbereitung-frankfurt.md`. Kern, live nachgeprüft:
+**Karte für Karte gegen die Originalquelle**, nicht gegen die eigene Datenbank:
 
-**Mega Excadrill · 15,8 % Day-2-Chance · 16 Punkte in 8 Runden.**
-Darunter steht jetzt: „Turnierrahmen: 2.700 Spieler — geht nicht in diese Chance ein. Sie folgt aus Runden, Punkteziel, Feldanteilen und Paarungen." Denn die Spielerzahl ging nie in die Rechnung ein; vorher stand sie daneben, als täte sie es.
-Datengrundlage auf dem Banner: 46 Major-Turnier-Zeilen, Online-Stichprobe 10.330 Decks aus 15 Tagen (22.08.–06.09.2026), Gewichtung 80 % Papier (45 % Day 2 · 35 % Day 1) · 20 % Online.
-
-**Der gefährliche Feldanteil ist 27,25 %** — neun Gegner unter 45 % Win %, gewichtete Win % darin 34,11 %. Die drei Grundgesamtheiten sind sich einig (kumulativ 27,06 %, Worlds-Papier 25,74 %). Aber **26,64 Prozentpunkte des Feldes haben gar keine gemessene Paarung.**
-
-**Tech-Karten lassen sich in diesem Projekt inhaltlich nicht begründen.** `all_cards_database.json`: das Feld `card_text` ist leer bei 1.175/1.175 Supportern, 992/994 Items, 334/334 Tools, 270/270 Stadien. Zu jeder Trainer-Tech-Karte ist nur Häufigkeit belegbar, nie Wirkung. Für **keine** der fünf schlechten Paarungen existiert eine Partienmessung, die eine Karte rechtfertigt. Genau deshalb kennzeichnet die Seite seit Entscheidung 2b jede Empfehlung als belegt oder unbelegt.
+- **10 von 10 Decklisten** gegen limitlesstcg.com — 8 Mega Excadrill von Worlds (Slugs 28784, 28785, 28786, 28797, 28831, 28833, 28849, 28852), dazu 28249 und 27927. Alle 60 Karten je Liste identisch.
+- **5 Turniere** gegen labs.limitlesstcg.com — 0067 Lima, 0068 Indianapolis, 0069 Turin, 0070 New Orleans, 0071 San Francisco. Archetypzahlen CSV gegen Quelle 41/41, 69/69, 65/65, 82/82, 46/46; Anteile, Bilanzen und Quoten identisch.
+- **Datumsfehler behoben:** Turnier 0070 stand als 2026-06-10 statt 2026-06-12. Ursache war der still wirkungslose Override-Pfad (Abschnitt 3.2). 16.960 Zellen geändert — **alle** in `tournament_date`, 0 in den übrigen 21 Spalten, 30.459 Zeilen unverändert.
+- **H4 aufgelöst:** Die neueste JP City League an der Quelle ist der 06.05.2026, das Scrape-Fenster beginnt am 31.07.2026 — die Saisonpause ist echt, kein Scraper-Fehler. Aber `city_league_analysis_past` beruht auf `additional_tournament_ids: [568]` = **Japan Championships 2026**, nicht auf City Leagues. Das steht jetzt in der Oberfläche.
 
 ---
 
-## 7. NICHT GEPRÜFT
+## 7. Turniervorbereitung Frankfurt (Phase 3)
 
-| Punkt | Was fehlt |
+### 7.1 Was die Daten tragen
+
+Im Formatfenster (ab `in_person_legal_date` = 2026-07-31) liegen **143 Listen aus einem einzigen Turnier** (0071 Worlds), davon **8 Mega Excadrill**. Das sind laut `data/labs_tournament_decks_TEF-PBL.csv` (`player_count` 32, `day2_players` 8) **exakt die acht Tag-2-Qualifikanten von 32 Piloten**.
+
+**Kern — in allen 8 Listen, gleiche Anzahl (13 Slots):** Beldum 4, Metang 4, Genesect ex 2, Mega Excadrill ex 2, Mega Skarmory ex 1.
+
+**Fast Kern — in allen 8, unterschiedliche Anzahl:** Metal Energy (16–19, Median 17), Buddy-Buddy Poffin (1–4, Median 4), Drilbur (2–4, Median 4), Team Rocket's Petrel (2–4, Median 4), Jumbo Ice Cream (2–4, Median 3), Metagross (1–2, Median 1).
+
+Kern und fast Kern belegen im Median 46 der 60 Slots. **23 Karten sind Streitfall**; die fünf verbreitetsten stehen in 6 von 8 Listen (Pokégear 3.0, Kieran, Boss's Orders, Hero's Cape, Switch). Acht Karten stehen in genau einer Liste, sieben davon in derselben.
+
+### 7.2 Was die Daten NICHT tragen
+
+**Keine einzige Tech-Karte lässt sich aus diesen Daten beurteilen.** Drei Gründe, jeder für sich ausreichend:
+
+1. Es gibt nur drei verschiedene Bilanzen unter acht Listen (8-3-1 viermal, 7-4-1 zweimal, 6-4-2 zweimal). Der größte gemessene Unterschied beruht auf 3 gegen 5 Listen.
+2. Die Auswahl ist vollständig auf Erfolg gefiltert: alle acht haben Tag 2 erreicht. Die **24 gescheiterten** Mega-Excadrill-Listen veröffentlicht Limitless prinzipiell nicht.
+3. Die vier 8-3-1-Listen teilen fast denselben Bau — jede Karte darin „gewinnt", unabhängig von ihrer Wirkung.
+
+**Datenlage trägt das nicht.** Was fehlen würde: die Listen der Tag-1-Ausscheider, oder ein zweites Präsenzturnier in TEF–PBL.
+
+### 7.3 Gegnerfeld
+
+Online, 15-Tage-Fenster (`data/limitless_online_fenster.csv`, 10.330 Decks): Dragapult 9,49 % · Alakazam Dudunsparce 7,59 % (+1,92 pp) · Dragapult Dusknoir 6,54 % · **Mega Excadrill 5,98 % (−2,25 pp)** · Slowking 5,89 %.
+
+Präsenz (`data/labs_tournament_decks_TEF-PBL.csv`, Worlds, 797 Spieler): Dragapult 22,33 % · Dragapult Dusknoir 10,41 % · Dragapult Blaziken 9,79 % · Basic Box 9,28 % · **Mega Excadrill 4,02 %**.
+
+**Dragapult-Varianten stehen online bei 21,5 %, bei Worlds bei 42,5 %.** Ob Frankfurt näher am Online- oder am Worlds-Feld liegt, sagen die Daten **nicht** — es gibt kein offenes Präsenzturnier in diesem Format.
+
+### 7.4 Paarungen (S/(S+N), alle über 500 Partien)
+
+Stark: Grimmsnarl Froslass 58,82 % · Dragapult Dusknoir 56,98 % · N's Zoroark 56,39 % · Dhelmise 56,32 % · Festival Lead 54,33 % · Dragapult 52,33 % · Spiegel 50,00 %.
+
+**Drei Löcher, zusammen 18,55 % des Fensterfelds:** Alakazam Dudunsparce **24,87 %** (bei 7,59 % Feldanteil und dem stärksten Aufwärtstrend), Dragapult Blaziken **38,25 %**, Slowking **37,16 %**.
+
+Die Präsenz-Gegenprobe zeigt in dieselbe Richtung (Alakazam 2-17-1, Slowking 2-8-1, Blaziken 4-10-1), ist aber mit 11 bis 27 Partien je Paarung **dünn** und trägt als Zahl nicht.
+
+### 7.5 Day-2-Chance
+
+Die angezeigten **21,58 %** sind exakt nachgerechnet: (8 + 30 · 0,179419) / (32 + 30) = 21,5848 %, aus `data/labs_tournament_decks_TEF-PBL.csv`. **Keine Abweichung.**
+
+Was **nicht** eingeht: die Spielerzahl. Weder 797 noch 2.700 stehen in der Formel. Ebenso wenig Win-Raten, Kartenwahl oder Rundenzahl. Der Anker ist **ein einziges Turnier mit 32 Piloten**, und zwar Worlds — ein eingeladenes Feld, kein offenes Regional.
+
+Die Markov-Kette im Meta Call rechnet anders und kommt mit eigenen, benannten Eingaben auf 14,64 % (8 Runden) bzw. 8,71 % (9 Runden). Der Code benennt die Lücke selbst und rechnet sie nicht weg. Diese Nachrechnung **bestätigt** sie und beziffert sie auf 6,9 Prozentpunkte.
+
+---
+
+## 8. Live-Nachprüfung nach der Auslieferung
+
+Auf `202609080008-33eb397` gemessen, vor der zweiten Auslieferung:
+
+- 16 von 16 Reitern aktivieren, rendern und markieren **genau einen** Menüpunkt (Ausnahme `admin`, benannt).
+- **0 Konsolenfehler**, 0 `NaN`, 0 `undefined`, **0 Querlauf** über alle Reiter.
+- Archetyp-Kachel zeigt `3.138 / ≈ 41.200`; der Hinweis nennt Rechenweg, Intervall und die Abgrenzung zum Meta-Anteil der Startseite.
+- City League: Herkunftssatz **einmal**, „Special Event" als Scraper-Angabe gekennzeichnet, Leerzustand nennt Quelle und Zeitfenster.
+- Meta Call sagt von sich aus: „Runden sind hier eine Eingabe, keine Ableitung aus der Spielerzahl … Vor dem Turnier gegen die Ausschreibung prüfen: 9 statt 8 Runden setzt das Punkteziel auf 19."
+
+---
+
+## 9. Offen — ausdrücklich NICHT als erledigt gezählt
+
+| Punkt | Stand |
 |---|---|
-| Rundenzahl in Frankfurt bei ~2.700 Spielern | die Ausschreibung. 8 ist eine Eingabe, keine Ableitung — steht jetzt auf der Seite |
-| Fehler durch fehlende Swiss-Paarung in `calcDay2` | das Modell zieht jede Runde unabhängig; die Größe der Abweichung ist nicht gemessen |
-| ob zwischen 07. und 26.09. ein Präsenzturnier in TEF–PBL liegt | `labs_tournaments.json` endet bei 0071 |
-| Tera-Anteil im Feld | existiert in keiner Datei |
-| Wirkung jeder Trainerkarte | `card_text` ist für Trainer leer |
-| wie viele Listen labs.limitlesstcg.com für 0071 führt | belegt ≥ 256; mehr braucht einen Abruf |
-| `format_window.json`, Feld `set_addition_only` | keine zweite Quelle im Repo, gegen die es prüfbar wäre |
-| `labs_tournament_matchups.csv` | bewusst ohne Stillstandswache (32-Tage-Lücke im Sommer gemessen) — Stillstand ist dort nicht von Gesundheit zu unterscheiden |
-
-**Formatfrage geklärt:** live an limitlesstcg.com/cards am 07.09.2026 nachgesehen — jüngste englische Hauptserie ist **Pitch Black (PBL), 17.07.2026**; danach ist **kein Set gelistet**. Die rechnerische 56-Tage-Kadenz ergäbe den 25.09., einen Tag vor dem Turnier — dafür gibt es aber keinen angekündigten Titel. TEF–PBL ist am 07.09. der Stand; vor dem Turnier noch einmal prüfen.
+| **Drei Testpartien im Kampftagebuch** („CLAUDE AUDIT TEST — bitte loeschen", 24.08. 17:58 zweimal, 15.08. 22:23) | **NICHT ENTFERNT.** Kontodaten zu löschen liegt außerhalb dessen, was ich selbst tun darf. Im Chat gemeldet, Entscheidung liegt beim Betreiber. |
+| **Rundenzahl bei großen Turnieren** | Vorgabe bleibt 8 Runden / 16 Punkte, unabhängig von der Spielerzahl. Die offizielle Seite der International Championships sagt: „The number of Swiss rounds will be determined by attendance." Die Oberfläche weist ausdrücklich darauf hin und lässt 9 Runden wählen. Ob die Vorgabe der Spielerzahl folgen soll, ist eine Entscheidung des Betreibers und im Chat gestellt. |
+| **Exakte Rundenstaffelung nach Spielerzahl** | **NICHT GEPRÜFT.** Die offizielle Handbuch-PDF ist gegen automatisches Abrufen gesperrt. Eine Sekundärquelle nennt 9 Runden als Normalfall und Tag 2 als Top 32 oder ≥ 19 Punkte; das ist kein Primärbeleg. |
+| **`city-league-tier-title` auf dem Telefon** | Rendert 12 px statt 14,04 px wegen der Pauschalregel `.tab-content [class*="title"]{font-size:12px !important}`. Bewusst nicht mitbehoben — das braucht eine eigene Abnahme, weil die Regel viele Stellen trägt. |
+| **144 verwaiste CSS-Klassen** | Inventarisiert (25 mit Inline-Stil, 45 mit gestyltem Geschwister, 72 ohne Stil). Zwei mit sichtbarer Wirkung behoben, der Rest ist unsichtbar und harmlos. |
 
 ---
 
-## 8. Offene Testdaten
+## 10. Verfahren
 
-| Was | Wo | Warum noch da |
-|---|---|---|
-| 3 Matches unter „CLAUDE AUDIT TEST — bitte loeschen" (Dragapult vs Alakazam Dudunsparce / vs Alakazam / vs Charizard) | Profil → Battle Journal, Filter „Turnier" | Kontoeinträge löschen gehört dem Betreiber, nicht mir. Drei Klicks auf „Del" |
-| Meta-Call-Turniername „QA Testturnier" | Meta Call | ersetzt durch „Frankfurt 26.09.2026 (TEF-PBL)" |
+Jede Behebung ist durch eine **Mutationsprobe** abgesichert: Änderung zurückdrehen → der Test muss rot werden → wiederherstellen. Wo eine Mutation überlebte, wurde der Test nachgeschärft und erneut gemessen; das ist mehrfach vorgekommen und jedes Mal im Bericht des jeweiligen Agenten festgehalten.
 
----
+Bei der Win-%-Benennung fängt der Konventionstest zusätzlich den Fehler **in die andere Richtung** ab: eine S/(S+N)-Zahl „Win %" zu nennen ist genauso falsch wie ein Hausname.
 
-## 9. Live-Nachweis
-
-Ausgeliefert `202609071722-bc9a494`, Service Worker und Cache geleert, alle 16 Reiter durchgeklickt:
-
-| Prüfung | Ergebnis |
-|---|---|
-| Reiter aktivieren | 16 von 16 |
-| Konsolenfehler | 0 |
-| `NaN` im sichtbaren Text | 0 |
-| `undefined` im sichtbaren Text | 0 |
-| waagerechter Bildlauf | 0 |
-| Adresszeile folgt dem Reiter | 16 von 16 |
-
-Einzeln live gegengeprüft: Meta-Call-Frankfurt-Szenario, Rundenhinweis, Gewichtungszeile, Gegnersuche mit Zahlen aus der Quelldatei, Quellenangabe „Used in Top 256", Tier-Grundlagenzeile mit allen Schwellen, Leerzustand der Vergleichstabellen, Kartenabdeckung mit Erhebung und Nenner, Fenstertitel `admin`.
+Keine Änderung an bestehenden Nutzerdaten. Keine erfundene Zahl: jede Zahl in diesem Bericht ist entweder aus einer Datei unter `data/` gerechnet (Datei und Feld genannt) oder live im Browser abgelesen.
