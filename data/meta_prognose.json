@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "erzeugt_am": "2026-09-08T13:18:29Z",
+  "erzeugt_am": "2026-09-08T13:33:38Z",
   "fenster": "TEF-PBL",
   "vorlauf_tage": 14,
   "spitze": 5,
@@ -8,7 +8,7 @@
   "online_bis": "2026-09-08",
   "online_listen": 7399,
   "turnierart": "regional",
-  "hinweis": "Anteile aus Summen, nicht aus Mitteln der share-Spalte. Der Sammeleimer 'other' ist ausgeschlossen. Es wird NICHT ueber Formatgrenzen gerechnet: der Kartenpool wechselt, und record_source ist vollstaendig mit dem Fenster verwechselt (TEF-PBL pairings, TEF-CRI/POR records)."
+  "hinweis": "Anteile aus Summen, nicht aus Mitteln der share-Spalte. Der Sammeleimer 'other' steht im Nenner, bekommt aber keine eigene Zeile — er ist kein Deck, sondern zwanzig. Es wird NICHT ueber Formatgrenzen gerechnet: der Kartenpool wechselt, und record_source ist vollstaendig mit dem Fenster verwechselt (TEF-PBL pairings, TEF-CRI/POR records)."
  },
  "modell": {
   "art": "regional",
