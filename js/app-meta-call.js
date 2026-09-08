@@ -9991,6 +9991,63 @@ window.MetaCall = (function () {
    * welche Folge ihre Aenderung hat. Das Punkteziel dazu kommt aus
    * MAJOR_DAY2_POINTS, steht also nicht als Text hier, sondern wird
    * gelesen. */
+  /* DAS RUNDENABZEICHEN — warum es existiert (08.09.2026).
+
+     Angeordnet vom Betreiber: „ich hab doch gesagt es sind immer 8
+     Runden, gib mir die Option Rundenzahlen zu aendern und dann wird
+     entsprechend alles gerechnet aber Standard ist immer 8!"
+
+     Das Rechnen stimmte schon: live gemessen am 08.09.2026 auf
+     202609080216-87e21e5 zieht ein Wechsel von 8 auf 9 das Punkteziel
+     von 16 auf 19, die erwarteten Siege von 4,80 auf 5,40 und die
+     Day-2-Chance von 47,2 % auf 38,7 % nach — und zurueck auf 8 kommen
+     exakt dieselben Zahlen wieder.
+
+     Was fehlte, war die SICHTBARKEIT. In der Kopfzeile stand die
+     Spielerzahl als Abzeichen, die Rundenzahl nicht. Wer einmal auf 9
+     stellt und es vergisst, liest spaeter eine Day-2-Chance, die auf
+     einer anderen Rundenzahl beruht als der Vorgabe — und nichts auf
+     dem Bildschirm sagt es ihm. Bei 8 steht das Abzeichen ruhig da; bei
+     jeder anderen Zahl traegt es zusaetzlich `is-abweichend` und nennt
+     im Hinweis die Vorgabe.
+
+     STANDARD_RUNDEN ist bewusst eine Konstante und keine Ableitung aus
+     der Spielerzahl: genau das war die Anordnung. */
+  const STANDARD_RUNDEN = 8;
+
+  function _rundenAbzeichenText() {
+    const r = Number(_settings.rounds) || STANDARD_RUNDEN;
+    return `${zahlLokal(r)} ${t('mc.labelRounds')}`;
+  }
+
+  function _rundenAbzeichenTitel() {
+    const r = Number(_settings.rounds) || STANDARD_RUNDEN;
+    const ziel = _settings.day2Points;
+    if (r === STANDARD_RUNDEN) {
+      return _mcIstDeutsch()
+        ? `Vorgabe: ${STANDARD_RUNDEN} Runden, Day-2-Ziel ${ziel} Punkte. `
+          + `Aenderbar unter Turniereinstellungen — alle Zahlen dieser `
+          + `Seite werden dann damit gerechnet.`
+        : `Default: ${STANDARD_RUNDEN} rounds, Day 2 target ${ziel} points. `
+          + `Change it under Tournament settings — every figure on this `
+          + `page is then computed with it.`;
+    }
+    return _mcIstDeutsch()
+      ? `ABWEICHEND von der Vorgabe (${STANDARD_RUNDEN} Runden): gerechnet `
+        + `wird mit ${r} Runden und einem Day-2-Ziel von ${ziel} Punkten. `
+        + `Jede Zahl auf dieser Seite — erwartete Siege, Day-2-Chance, `
+        + `Rangfolge — beruht darauf.`
+      : `DIFFERENT from the default (${STANDARD_RUNDEN} rounds): everything `
+        + `is computed with ${r} rounds and a Day 2 target of ${ziel} `
+        + `points. Every figure on this page — expected wins, Day 2 `
+        + `chance, ranking — rests on it.`;
+  }
+
+  function _rundenAbzeichenKlassen() {
+    const r = Number(_settings.rounds) || STANDARD_RUNDEN;
+    return 'mc-badge mc-runden-badge' + (r === STANDARD_RUNDEN ? '' : ' is-abweichend');
+  }
+
   function _rundenHerkunftHinweis(type) {
     if (!MAJOR_TYPES.includes(type)) return '';
     const r     = Number(_settings.rounds) || 0;
@@ -10611,6 +10668,9 @@ window.MetaCall = (function () {
     <span class="mc-panel-title-text">${t('mc.panelField')}</span>
     <span class="mc-badge">Top ${TOP_N}</span>
     <span class="mc-badge" id="mc-players-badge">${zahlLokal(_settings.totalPlayers)} ${t('mc.labelPlayers')}</span>
+    <span class="${_rundenAbzeichenKlassen()}" id="mc-rounds-badge"
+          title="${esc(_rundenAbzeichenTitel())}"
+          data-hinweis="${esc(_rundenAbzeichenTitel())}">${esc(_rundenAbzeichenText())}</span>
     <button class="mc-collapse-all-btn" onclick="MetaCall._toggleAllDetails()" title="${esc(allBtnLabel)}" aria-label="${esc(allBtnLabel)}">
       <span class="mc-btn-icon">${allBtnIcon}</span>
       <span class="mc-btn-text">${esc(allBtnLabel)}</span>
@@ -12688,6 +12748,17 @@ ${_zweiKonv ? `<p class="mc-wr-konventionen" style="font-size:0.75rem;color:#888
     const playersBadge = container.querySelector('#mc-players-badge');
     if (playersBadge) {
       playersBadge.textContent = `${zahlLokal(_settings.totalPlayers)} ${t('mc.labelPlayers')}`;
+    }
+    /* Dasselbe fuer die Rundenzahl. Ohne diese Zeilen bliebe das
+       Abzeichen auf dem alten Stand stehen, waehrend die Tabelle
+       darunter schon mit der neuen Rundenzahl rechnet — das waere
+       schlimmer als gar kein Abzeichen. */
+    const roundsBadge = container.querySelector('#mc-rounds-badge');
+    if (roundsBadge) {
+      roundsBadge.textContent = _rundenAbzeichenText();
+      roundsBadge.className   = _rundenAbzeichenKlassen();
+      roundsBadge.title       = _rundenAbzeichenTitel();
+      roundsBadge.setAttribute('data-hinweis', _rundenAbzeichenTitel());
     }
     const resultsPanel = container.querySelector('.metacall-results-grid');
     const resultsWrap  = resultsPanel ? resultsPanel.closest('.metacall-panel') : null;
