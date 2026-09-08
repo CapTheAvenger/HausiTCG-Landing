@@ -339,7 +339,8 @@ def baue(datenverzeichnis: str, fenster: Optional[str] = None,
             "turnierart": art,
             "hinweis": (
                 "Anteile aus Summen, nicht aus Mitteln der share-Spalte. "
-                "Der Sammeleimer 'other' ist ausgeschlossen. Es wird NICHT "
+                "Der Sammeleimer 'other' steht im Nenner, bekommt aber keine "
+                "eigene Zeile — er ist kein Deck, sondern zwanzig. Es wird NICHT "
                 "ueber Formatgrenzen gerechnet: der Kartenpool wechselt, und "
                 "record_source ist vollstaendig mit dem Fenster verwechselt "
                 "(TEF-PBL pairings, TEF-CRI/POR records)."
