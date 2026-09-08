@@ -133,10 +133,20 @@ describe('Die vierte Konvention steht nirgends mehr in einer Anzeige', () => {
             + 'gezaehlt" — das ist die vierte, erfundene Konvention, die '
             + 'js/win-rate-konvention.js ausdruecklich nicht auffuehrt. Die '
             + 'Stelle, die den Widerspruch aufloesen soll, beschriebe ihn selbst');
-        const i = q.indexOf("['Win Rate',");
-        assert.ok(i > 0, 'der Glossareintrag zu Win Rate ist verschwunden');
+        /* DER EINTRAG HEISST NICHT MEHR „Win Rate" (08.09.2026).
+           Die Ueberschrift war der letzte Hausname in dieser Datei und
+           steht jetzt als Platzhalter im Inhalt; gefuellt wird sie beim
+           Zeichnen aus js/win-rate-konvention.js (mitQuote in
+           abschnittHtml). Geankert wird deshalb am Platzhalter — dass
+           er auch WIRKLICH gefuellt wird, prueft
+           tests/unit/test-w4-quoten-namen.js an der Aufrufstelle. Der
+           Inhalt des Eintrags wird unveraendert weitergeprueft. */
+        const i = q.indexOf("['{quote} ({formel})',");
+        assert.ok(i > 0, 'der Glossareintrag zu dieser Quote ist verschwunden');
+        assert.ok(!/\['Win Rate',|\['Win rate',/.test(q),
+            'der Glossareintrag traegt wieder den Hausnamen als Ueberschrift');
         const eintrag = q.slice(i, i + 700);
-        assert.ok(/Nenner/.test(eintrag),
+        assert.ok(/Nenner|denominator/.test(eintrag),
             'der Eintrag sagt nicht, dass Unentschieden im Nenner stehen');
     });
 

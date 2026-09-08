@@ -188,6 +188,72 @@
         return typeof getLang === 'function' && getLang() === 'de';
     }
 
+    /* ── DER NAME EINER QUOTE WIRD GEHOLT, NICHT GESCHRIEBEN (08.09.2026)
+     *
+     * ANORDNUNG DES BETREIBERS: „Win-Raten ueberall in der
+     * Limitless-Bezeichnung ‚Win %‘ — keine eigenen Begriffe."
+     * Sie ist KEINE pauschale Umbenennung. js/win-rate-konvention.js
+     * haelt „Win %" der Konvention MATCHPUNKTE (3S+U)/(3·Partien) vor;
+     * so nennt Limitless genau diese Spalte. Eine Zahl, die S/(S+N+U)
+     * oder S/(S+N) rechnet, „Win %" zu nennen, waere derselbe Fehler in
+     * die andere Richtung — und der teurere, weil er der Quelle einen
+     * Namen unterschiebt, den sie fuer etwas anderes benutzt.
+     *
+     * DIESE KARTE ZEIGT ZWEI VERSCHIEDENE KONVENTIONEN, KEINE DAVON
+     * MATCHPUNKTE (nachgerechnet am 08.09.2026 an den Dateien selbst):
+     *
+     *   Kachel „Quote"  MIT_UNENTSCHIEDEN  S/(S+N+U)
+     *       links  win_rate_numeric aus data/limitless_online_decks.csv
+     *              (135 von 136 Zeilen auf 0,01 Punkte genau)
+     *       rechts hier neu gerechnet aus wins/losses/ties der
+     *              Labs-Datei (_majorLaden: „Siege durch ALLE Partien")
+     *
+     *   Spalten „WR" / „Major-WR"  OHNE_UNENTSCHIEDEN  S/(S+N)
+     *       links  win_rate aus data/limitless_online_decks_matchups.csv
+     *              (1.716 von 1.716 Zeilen auf 0,005 Punkte genau)
+     *       rechts hier aus vs_wins/vs_losses gerechnet — NICHT die
+     *              Spalte vs_win_pct der Labs-Datei, die ist
+     *              Matchpunkte (811 von 811 Zeilen auf 0,005 genau).
+     *
+     * Der Name wird deshalb zur Laufzeit aus dem Modul geholt. Faellt
+     * das Modul aus, steht die FORMEL da: die ist kein vierter Name und
+     * nie falsch. Und in dieser Datei darf ohnehin kein deutsches Wort
+     * fuer die Quote stehen (tests/unit/test-sprache-win-rate.js). */
+    function quotenName(id) {
+        const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+        const kurz = K && typeof K.kurz === 'function' ? K.kurz(id) : '';
+        if (kurz) return kurz;
+        return quotenFormel(id) || String(id);
+    }
+
+    function quotenFormel(id) {
+        const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+        const k = K && typeof K.hol === 'function' ? K.hol(id) : null;
+        return k ? k.formel : '';
+    }
+
+    /** {quote} und {formel} in einem Uebersetzungswert fuellen. */
+    function mitQuote(text, id) {
+        return String(text == null ? '' : text)
+            .replace(/\{quote\}/g, quotenName(id))
+            .replace(/\{formel\}/g, quotenFormel(id));
+    }
+
+    /**
+     * Der Hinweis, der eine KURZFORM zulaessig macht.
+     *
+     * „WR" und „Major-WR" sind Hausnamen, solange nichts sie aufloest.
+     * Mit diesem Text am Spaltenkopf tragen sie den vollen Namen und
+     * die Formel — dann sind sie eine Abkuerzung und keine zweite
+     * Bezeichnung. Ohne ihn duerfen sie nicht dastehen.
+     */
+    function quotenHinweis(id) {
+        const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+        const lang = (K && typeof K.hinweis === 'function') ? K.hinweis(id) : '';
+        const name = quotenName(id);
+        return lang ? (name + ' — ' + lang) : (name + ' ' + quotenFormel(id));
+    }
+
     function num(v) {
         return (typeof window.parseLocaleNumber === 'function')
             ? window.parseLocaleNumber(v || '0', 0) : 0;
@@ -935,7 +1001,7 @@
         const wrKi = (m && m.partien > 0) ? 196 * Math.sqrt(0.25 / m.partien) : null;
         const wrDuenn = !!(m && m.partien > 0 && m.partien < MAJOR_DUENN_PARTIEN);
         const wr = d
-            ? tileGeteilt('wr', toneFor(wrDelta), L('arc.wrLabel', 'Win Rate'),
+            ? tileGeteilt('wr', toneFor(wrDelta), mitQuote(L('arc.wrLabel', '{quote}'), 'mitUnentschieden'),
                 `${esc(fmt(d.winRate))} %`,
                 /* Die Matchzahl steht MIT auf der Zeile, nicht nur im
                    Hinweis: sie ist die Zahl, an der man entscheidet, ob man
@@ -972,7 +1038,7 @@
                             : 'No in-person games for this deck in this format yet.'))
                     + _wrKonventionsSatz(de),
                 arrow(wrDelta))
-            : tile('wr', 'tie', L('arc.wrLabel', 'Win Rate'), '–',
+            : tile('wr', 'tie', mitQuote(L('arc.wrLabel', '{quote}'), 'mitUnentschieden'), '–',
                 esc(L('arc.noData', de ? 'keine Daten' : 'no data')));
 
         // The conversion file covers fewer decks than the deck list —
@@ -1047,9 +1113,12 @@
             : tile('conv', 'tie', L('arc.convLabel3', de ? 'Top-8-Quote (online)' : 'Top-8 rate (online)'),
                 '–',
                 esc(L('arc.convMissing', de ? 'zu wenig Daten' : 'not enough data')),
-                L('arc.convMissingTip', de
-                    ? 'Dieses Deck fehlt in der Top-Cut-Datei. Das heißt nicht, dass es nie konvertiert — die Win Rate stammt aus einer anderen Quelle.'
-                    : 'This deck is absent from the top-cut file. That does not mean it never converts — the win rate comes from a different source.'));
+                /* Der Satz zeigt auf die Kachel darueber, und die rechnet
+                   S/(S+N+U) — deshalb traegt er deren Namen, nicht den
+                   Hausnamen. */
+                mitQuote(L('arc.convMissingTip', de
+                    ? 'Dieses Deck fehlt in der Top-Cut-Datei. Das heißt nicht, dass es nie konvertiert — die {quote} stammt aus einer anderen Quelle.'
+                    : 'This deck is absent from the top-cut file. That does not mean it never converts — the {quote} comes from a different source.'), 'mitUnentschieden'));
         /* DIE VIERTE KACHEL: DAY 2, UND SIE HAT KEINE ONLINE-SEITE.
            Die dritte traegt die Top-8-Quote der Online-Turniere, die
            vierte die Day-2-Quote vom Major. Das ist absichtlich KEIN
@@ -1293,9 +1362,9 @@
             return {
                 art: 'ohne-bilanz',
                 inhalt: '–',
-                titel: L('arc.muMajorOhneBilanz', de
-                    ? '{n} Präsenzpartien, aber ohne Bilanz in der Quelle — ohne Siege und Niederlagen lässt sich keine Win Rate bilden. Deshalb steht hier ein Strich statt einer geschätzten Zahl.'
-                    : '{n} in-person games, but the source row carries no record — without wins and losses there is no win rate to show. Hence the dash instead of an estimate.')
+                titel: mitQuote(L('arc.muMajorOhneBilanz', de
+                    ? '{n} Präsenzpartien, aber ohne Bilanz in der Quelle — ohne Siege und Niederlagen lässt sich keine {quote} ({formel}) bilden. Deshalb steht hier ein Strich statt einer geschätzten Zahl.'
+                    : '{n} in-person games, but the source row carries no record — without wins and losses there is no {quote} ({formel}) to show. Hence the dash instead of an estimate.'), 'ohneUnentschieden')
                     .replace('{n}', String(n)) + spiegelSatz,
             };
         }
@@ -1323,9 +1392,9 @@
             return {
                 art: 'nur-remis',
                 inhalt: '–',
-                titel: L('arc.muMajorNurRemis', de
-                    ? '{n} Präsenzpartien, alle unentschieden ({b}). Diese Win Rate zählt Siege gegen entschiedene Partien — entschieden ist hier keine. Ein Wert stünde für nichts.'
-                    : '{n} in-person games, all drawn ({b}). This win rate counts wins against decided games — none here were decided. A number would stand for nothing.')
+                titel: mitQuote(L('arc.muMajorNurRemis', de
+                    ? '{n} Präsenzpartien, alle unentschieden ({b}). Die {quote} ({formel}) zählt Siege gegen entschiedene Partien — entschieden ist hier keine. Ein Wert stünde für nichts.'
+                    : '{n} in-person games, all drawn ({b}). The {quote} ({formel}) counts wins against decided games — none here were decided. A number would stand for nothing.'), 'ohneUnentschieden')
                     .replace('{n}', String(n)).replace('{b}', bilanz) + spiegelSatz,
             };
         }
@@ -1448,9 +1517,12 @@
                 <table class="arc-mu-table">
                     <thead><tr>
                         <th>${esc(L('arc.colOpponent', de ? 'Gegner-Deck' : 'Deck'))}</th>
-                        <th title="${esc(window.WinRateKonvention
-                            ? window.WinRateKonvention.hinweis('ohneUnentschieden')
-                            : '')}">${esc(L('arc.colWinRate', 'WR'))}</th>
+                        <!-- „WR" ist eine Kurzform und darf nur dastehen,
+                             solange der Hinweis den vollen Namen UND die
+                             Formel nennt. quotenHinweis() setzt beides
+                             zusammen; ohne ihn waere „WR" ein Hausname. -->
+                        <th title="${esc(quotenHinweis('ohneUnentschieden'))}"
+                            data-quote-konvention="ohneUnentschieden">${esc(L('arc.colWinRate', 'WR'))}</th>
                         <th title="${esc(L('arc.colGames', de ? 'gespielte Matches' : 'games played'))}">${
                             esc(L('arc.colGamesKurz', 'M'))}</th>
                         <th title="${esc(de ? 'gewonnene Matches' : 'games won')}">W</th>
@@ -1462,8 +1534,9 @@
                              englisch da; ein deutsches U dazwischen war ein
                              Bruch mitten in einer dreispaltigen Bilanz. Die
                              Szene sagt ohnehin Tie. -->
-                        <th title="${esc(de ? 'Unentschieden (Tie) — sie zählen in der Win Rate dieser Tabelle nicht mit'
-                                            : 'ties — they do not count in this table\'s win rate')}">T</th>
+                        <th title="${esc(mitQuote(de
+                            ? 'Unentschieden (Tie) — sie zählen in der {quote} ({formel}) dieser Tabelle nicht mit'
+                            : 'ties — they do not count in this table\'s {quote} ({formel})', 'ohneUnentschieden'))}">T</th>
                         <!-- DIE PRAESENZSPALTE HEISST JETZT AUCH WR, WEIL SIE
                              DASSELBE RECHNET. Bis zum 03.09.2026 hiess sie
                              "Major-P": sie zeigte die Matchpunktquote
@@ -1486,9 +1559,10 @@
                              "Major-Matches" statt "Major-M": ausgeschrieben,
                              wo Platz ist. WR bleibt abgekuerzt, weil es in
                              der Szene der stehende Begriff ist. -->
-                        ${!hatMajor ? '' : `                        <th title="${esc(L('arc.colMajorTip', de
+                        ${!hatMajor ? '' : `                        <th title="${esc(quotenHinweis('ohneUnentschieden') + '  ' + L('arc.colMajorTip', de
                             ? 'Präsenzturniere: Siege ÷ entschiedene Partien (Unentschieden bleiben außen vor) — dieselbe Rechnung und dieselbe Glättung wie die WR-Spalte links, nur auf den Präsenzturnieren statt online.'
-                            : 'In-person events: wins ÷ decided games (ties left out) — the same calculation and the same smoothing as the WR column on the left, just measured at in-person events instead of online.'))}">${
+                            : 'In-person events: wins ÷ decided games (ties left out) — the same calculation and the same smoothing as the WR column on the left, just measured at in-person events instead of online.'))}"
+                            data-quote-konvention="ohneUnentschieden">${
                             esc(L('arc.colMajor', 'Major-WR'))}</th>
                         <th title="${esc(L('arc.colMajorN', de
                             ? 'Präsenzpartien dieser Paarung'
@@ -1499,15 +1573,15 @@
                 </table>
             </div>
             <p class="arc-mu-legende">${esc(hatMajor
-                ? L('arc.muLegende', de
-                    ? 'WR = Win Rate (Siege ÷ entschiedene Partien) · M = Matches · W/L/T = Siege / Niederlagen / Unentschieden · Major-WR = dieselbe Rechnung auf Präsenzturnieren, Major-Matches die Partien dahinter'
-                    : 'WR = win rate (wins ÷ decided games) · M = matches · W/L/T = wins / losses / ties · Major-WR = the same calculation at in-person events, Major matches the games behind it')
+                ? mitQuote(L('arc.muLegende', de
+                    ? 'WR = {quote} ({formel}) · M = Matches · W/L/T = Siege / Niederlagen / Unentschieden · Major-WR = dieselbe Rechnung auf Präsenzturnieren, Major-Matches die Partien dahinter'
+                    : 'WR = {quote} ({formel}) · M = matches · W/L/T = wins / losses / ties · Major-WR = the same calculation at in-person events, Major matches the games behind it'), 'ohneUnentschieden')
                 /* Ohne Praesenzdaten sagt EIN Satz, was zwei leere
                    Spalten nicht gesagt haetten: dass es sie gibt und
                    dass hier keine anfallen. */
-                : L('arc.muLegendeOhneMajor', de
-                    ? 'WR = Win Rate · M = Matches · W/L/T = Siege / Niederlagen / Unentschieden. Präsenzturniere sind hier nicht dabei — für dieses Deck liegen in diesem Format keine vor.'
-                    : 'WR = win rate · M = matches · W/L/T = wins / losses / ties. In-person events are not included — there are none for this deck in this format.'))}</p>${note}${praesenzNote}`;
+                : mitQuote(L('arc.muLegendeOhneMajor', de
+                    ? 'WR = {quote} ({formel}) · M = Matches · W/L/T = Siege / Niederlagen / Unentschieden. Präsenzturniere sind hier nicht dabei — für dieses Deck liegen in diesem Format keine vor.'
+                    : 'WR = {quote} ({formel}) · M = matches · W/L/T = wins / losses / ties. In-person events are not included — there are none for this deck in this format.'), 'ohneUnentschieden'))}</p>${note}${praesenzNote}`;
         if (!collapsed) return table;
         // Closed by default inline: the tiles are the scroll content, the
         // table is a reference you open when you need it. Otherwise a

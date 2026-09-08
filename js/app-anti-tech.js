@@ -51,6 +51,84 @@
         console.log('[AntiTechModal]', ...args);
     }
 
+    /* ── DIE PILLE ZEIGT S/(S+N) — UND SAGT ES JETZT AUCH ────────────
+     *
+     * ANORDNUNG DES BETREIBERS: „Win-Raten ueberall in der
+     * Limitless-Bezeichnung ‚Win %‘ — keine eigenen Begriffe." Das ist
+     * KEINE pauschale Umbenennung: js/win-rate-konvention.js haelt
+     * „Win %" der Konvention MATCHPUNKTE (3S+U)/(3·Partien) vor, weil
+     * Limitless genau diese Spalte so nennt. Eine S/(S+N)-Zahl so zu
+     * nennen waere derselbe Fehler in die andere Richtung.
+     *
+     * WAS HIER GERECHNET WIRD, nachgemessen am 08.09.2026:
+     * `_wrByOpponentForUser()` liest `r.win_rate` aus
+     * `window.currentMetaMatchupData`, und das sind die Zeilen von
+     * data/limitless_online_decks_matchups.csv. Ueber ALLE 1.716 Zeilen
+     * gegen das Feld `record` nachgerechnet:
+     *
+     *     S/(S+N)      groesste Abweichung 0,005 pp, mittlere 0,0019
+     *                  — 1.716 von 1.716 Zeilen
+     *     S/(S+N+U)    groesste Abweichung 16,67 pp
+     *     (3S+U)/(3n)  groesste Abweichung 11,11 pp
+     *
+     * Die Pille ist damit OHNE_UNENTSCHIEDEN. Der Name wird zur
+     * Laufzeit aus dem Modul geholt, nie abgeschrieben; faellt das
+     * Modul aus, steht die FORMEL da — die ist kein vierter Name und
+     * nie falsch. */
+    const ANTI_TECH_KONVENTION = 'ohneUnentschieden';
+
+    function _quotenName(id) {
+        const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+        const kurz = (K && typeof K.kurz === 'function') ? K.kurz(id || ANTI_TECH_KONVENTION) : '';
+        return kurz || _quotenFormel(id) || String(id || ANTI_TECH_KONVENTION);
+    }
+
+    function _quotenFormel(id) {
+        const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+        const k = (K && typeof K.hol === 'function') ? K.hol(id || ANTI_TECH_KONVENTION) : null;
+        return k ? k.formel : '';
+    }
+
+    /** {quote} und {formel} in einem Uebersetzungswert fuellen. */
+    function _mitQuote(text, id) {
+        return String(text == null ? '' : text)
+            .replace(/\{quote\}/g, _quotenName(id))
+            .replace(/\{formel\}/g, _quotenFormel(id));
+    }
+
+    /* Der Hinweis, ohne den die Kurzform „WR" in der Legende ein
+       Hausname waere: voller Name UND Formel. */
+    function _quotenHinweis(id) {
+        const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+        const lang = (K && typeof K.hinweis === 'function') ? K.hinweis(id || ANTI_TECH_KONVENTION) : '';
+        const name = _quotenName(id);
+        return lang ? (name + ' — ' + lang) : (name + ' ' + _quotenFormel(id));
+    }
+
+    /* Die Legende steht als data-i18n in index.html und wird von
+       js/i18n.js gesetzt — dort steht deshalb ein Platzhalter und KEIN
+       Name. Ihn hier zu fuellen ist der einzige Weg, den Namen zur
+       Laufzeit aus js/win-rate-konvention.js zu holen, statt ihn ein
+       zweites Mal hinzuschreiben. Nach jedem Sprachwechsel noch einmal,
+       denn updateTranslationsInDOM() schriebe den Platzhalter zurueck. */
+    function _quotenNamenImDom(wurzel) {
+        const d = wurzel || ((typeof document !== 'undefined') ? document : null);
+        if (!d || typeof d.querySelectorAll !== 'function') return 0;
+        let gesetzt = 0;
+        d.querySelectorAll('[data-i18n="antiTech.legendWr"]').forEach((el) => {
+            const roh = _t('antiTech.legendWr', '');
+            el.textContent = _mitQuote(
+                (roh && roh !== 'antiTech.legendWr') ? roh : '{quote} ({formel})',
+                ANTI_TECH_KONVENTION);
+            if (typeof el.setAttribute === 'function') {
+                el.setAttribute('title', _quotenHinweis(ANTI_TECH_KONVENTION));
+                el.setAttribute('data-quote-konvention', ANTI_TECH_KONVENTION);
+            }
+            gesetzt++;
+        });
+        return gesetzt;
+    }
+
     const QUICK_PICK_LIMIT = 12;
     const TECH_SLOTS_HARD_CAP = 10;
 
@@ -304,13 +382,16 @@
                 <span class="anti-tech-quick-pick-name">${name}</span>
                 <span class="anti-tech-quick-pick-meta">
                     <span class="anti-tech-quick-pick-share" title="${_t('antiTech.fieldShareTooltip', 'Share of the predicted field')}">${sharePct.toFixed(1)}%</span>
-                    <span class="mc-vs-pill ${wrCls} anti-tech-quick-pick-wr" title="${_t('antiTech.wrTooltip', 'Your current win rate against this deck — red means tech priority')}">${wrText}</span>
+                    <span class="mc-vs-pill ${wrCls} anti-tech-quick-pick-wr" data-quote-konvention="${ANTI_TECH_KONVENTION}" title="${_mitQuote(_t('antiTech.wrTooltip', '{quote} ({formel}) against this deck — red means tech priority'), ANTI_TECH_KONVENTION) + ' · ' + _quotenHinweis(ANTI_TECH_KONVENTION)}">${wrText}</span>
                 </span>
             </button>`;
         }).join('');
         wrap.querySelectorAll('.anti-tech-quick-pick').forEach(btn => {
             btn.addEventListener('click', () => _toggleTarget(btn.dataset.target));
         });
+        // Die Legende ueber den Pillen traegt denselben Namen wie die
+        // Pillen selbst — gefuellt aus dem Modul, nicht abgeschrieben.
+        _quotenNamenImDom();
     }
 
     function _renderSuggestions(query) {
@@ -1119,6 +1200,17 @@
         if (modal && !modal.classList.contains('d-none')) closeAntiTechModal();
     });
 
+    /* Nach jedem Sprachwechsel schreibt updateTranslationsInDOM() den
+       Platzhalter aus js/i18n.js zurueck in die Legende. Also danach
+       noch einmal fuellen — sonst stuende dort woertlich „{quote}". */
+    document.addEventListener('languageChanged', () => _quotenNamenImDom());
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => _quotenNamenImDom());
+    } else {
+        _quotenNamenImDom();
+    }
+
+    window.antiTechQuotenNamenImDom = _quotenNamenImDom;
     window.openAntiTechModal     = openAntiTechModal;
     window.closeAntiTechModal    = closeAntiTechModal;
     window.advanceAntiTechModal  = advanceAntiTechModal;

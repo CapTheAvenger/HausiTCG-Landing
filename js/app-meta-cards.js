@@ -1,6 +1,59 @@
 ﻿// app-meta-cards.js — extracted from app.js
 // Part of Hausi's Pokemon TCG Analysis
 
+/* ── DIE PODIUMSKACHEL ZEIGT S/(S+N+U) — UND SAGT ES JETZT AUCH ──────
+ *
+ * ANORDNUNG DES BETREIBERS: „Win-Raten ueberall in der
+ * Limitless-Bezeichnung ‚Win %‘ — keine eigenen Begriffe." Das ist
+ * KEINE pauschale Umbenennung: js/win-rate-konvention.js haelt „Win %"
+ * der Konvention MATCHPUNKTE (3S+U)/(3·Partien) vor, weil Limitless
+ * genau diese Spalte so nennt.
+ *
+ * WAS `patchArchetypeOverview` RECHNET, nachgemessen am 08.09.2026:
+ * die Podiumsliste sortiert nach `row.new_winrate` aus
+ * data/limitless_online_decks_comparison.csv. Diese Spalte wird von
+ * backend/scrapers/limitless_online_scraper.py:674 unveraendert aus
+ * `win_rate_numeric` von data/limitless_online_decks.csv uebernommen.
+ * Ueber alle 136 gemeinsamen Zeilen gegen wins/losses/ties nachgerechnet:
+ *
+ *     S/(S+N+U)    mittlere Abweichung 0,0032 pp — 135 von 136 Zeilen
+ *                  auf 0,01 pp genau (die eine Ausnahme, Wailord, ist
+ *                  ein Datenfehler der Quelle und trifft KEINE der drei
+ *                  Konventionen — siehe js/win-rate-konvention.js)
+ *     S/(S+N)      groesste Abweichung 3,33 pp, nur 45 von 136 Zeilen
+ *     (3S+U)/(3n)  groesste Abweichung 5,55 pp, nur 45 von 136 Zeilen
+ *
+ * Die Kachel ist damit MIT_UNENTSCHIEDEN und darf nicht „Win %"
+ * heissen. Der Name wird zur Laufzeit aus dem Modul geholt; faellt es
+ * aus, steht die FORMEL da — die ist kein vierter Name und nie falsch.
+ *
+ * ACHTUNG BEIM SUCHEN: der `includes('Win Rate')`-Vergleich weiter
+ * unten ist ein SUCHMUSTER gegen fremdes Markup
+ * (data/limitless_online_decks_comparison.html:143, ausserhalb dieser
+ * Datei) und keine Beschriftung. Er bleibt so stehen, sonst findet die
+ * Kachel ihren eigenen Absatz nicht mehr. */
+const _MC_KARTEN_KONVENTION = 'mitUnentschieden';
+
+function _mcKartenQuotenFormel(id) {
+    const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+    const k = (K && typeof K.hol === 'function') ? K.hol(id || _MC_KARTEN_KONVENTION) : null;
+    return k ? k.formel : '';
+}
+
+function _mcKartenQuotenName(id) {
+    const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+    const kurz = (K && typeof K.kurz === 'function') ? K.kurz(id || _MC_KARTEN_KONVENTION) : '';
+    return kurz || _mcKartenQuotenFormel(id) || String(id || _MC_KARTEN_KONVENTION);
+}
+
+/* Voller Name plus Formel — der Hinweis, der an der Kachel haengt. */
+function _mcKartenQuotenHinweis(id) {
+    const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+    const lang = (K && typeof K.hinweis === 'function') ? K.hinweis(id || _MC_KARTEN_KONVENTION) : '';
+    const name = _mcKartenQuotenName(id);
+    return lang ? (name + ' — ' + lang) : (name + ' ' + _mcKartenQuotenFormel(id));
+}
+
         /**
          * Normalize an archetype name for fuzzy matching.
          * Strips apostrophes, "ex" suffix, and known set-code suffixes.
@@ -1643,12 +1696,35 @@
                             ths[0].classList.add('meta-matchup-th-opponent');
                             ths[1].classList.add('meta-matchup-th-winrate');
                             ths[2].classList.add('meta-matchup-th-record');
-                            // Mobile is too narrow for "Win Rate" \u2014 render the
-                            // header as "WR" so the column itself can shrink
-                            // and Record gets the breathing room it needs.
+                            /* Mobil ist zu schmal fuer den ausgeschriebenen
+                               Namen — die Kopfzelle wird deshalb auf das
+                               Kuerzel gekuerzt, damit die Bilanzspalte Platz
+                               bekommt.
+
+                               DAS KUERZEL BRAUCHT SEINEN HINWEIS (08.09.2026).
+                               „WR" allein ist ein Hausname; zulaessig ist es
+                               nur, wenn voller Name UND Formel danebenhaengen.
+                               Diese beiden Tabellen (Best/Worst Matchups)
+                               stammen aus
+                               data/limitless_online_decks_matchups.csv — dort
+                               trifft S/(S+N) alle 1.716 Zeilen gegen das Feld
+                               `record` auf 0,005 Punkte genau, S/(S+N+U)
+                               verfehlt sie um bis zu 16,7 und die Matchpunkte
+                               um bis zu 11,1. Also OHNE_UNENTSCHIEDEN, und
+                               ausdruecklich NICHT das, was Limitless „Win %"
+                               nennt.
+
+                               Der `/^win\s*rate$/`-Vergleich ist ein
+                               SUCHMUSTER gegen den gelieferten Kopftext und
+                               bleibt; geschrieben wird das Kuerzel samt
+                               Hinweis. */
                             const winRateText = (ths[1].textContent || '').trim();
                             if (/^win\s*rate$/i.test(winRateText)) {
                                 ths[1].textContent = 'WR';
+                                ths[1].setAttribute('title',
+                                    _mcKartenQuotenHinweis('ohneUnentschieden'));
+                                ths[1].setAttribute('data-quote-konvention',
+                                    'ohneUnentschieden');
                             }
                         }
                     }
@@ -1763,6 +1839,10 @@
                     const deckIdx = normalizedHeaders.findIndex(h => h.includes('deck') || h.includes('archetype'));
                     const rankIdx = normalizedHeaders.findIndex(h => h === 'rank' || h.includes('rank'));
                     const countIdx = normalizedHeaders.findIndex(h => h.includes('count'));
+                    // SUCHMUSTER gegen die gelieferten Kopftexte, keine
+                    // Beschriftung: es ordnet der Spalte nur ihre CSS-Klasse
+                    // zu. Wird es umgeschrieben, verliert die Spalte ihre
+                    // Breite. Geschrieben wird hier nichts.
                     const winRateIdx = normalizedHeaders.findIndex(h => h.includes('win rate') || h.includes('winrate') || h === 'wr');
 
                     finalHeaderCells.forEach((th, idx) => {
@@ -1866,8 +1946,15 @@
                             const strong = p.querySelector('strong');
                             if (strong && strong.textContent.includes('Top 3 by Count')) {
                                 p.innerHTML = `<strong>Top 3 by Count:</strong><br>${top3ByCountHtml}`;
-                            } else if (strong && strong.textContent.includes('Win Rate')) {
-                                p.innerHTML = `<strong>Top 3 by Win Rate:</strong><br>${top3ByWinRateHtml}`;
+                            } else if (strong && (strong.textContent.includes('Win Rate')
+                                       || strong.hasAttribute('data-quote-konvention'))) {
+                                /* Der Vergleich oben ist ein SUCHMUSTER gegen
+                                   das gelieferte Markup und bleibt; geschrieben
+                                   wird der Name der Konvention, die hier
+                                   wirklich gerechnet wird. */
+                                const _qName = _mcKartenQuotenName(_MC_KARTEN_KONVENTION);
+                                const _qHint = escapeHtmlAttr(_mcKartenQuotenHinweis(_MC_KARTEN_KONVENTION));
+                                p.innerHTML = `<strong title="${_qHint}" data-quote-konvention="${_MC_KARTEN_KONVENTION}">Top 3 – ${escapeHtml(_qName)}:</strong><br>${top3ByWinRateHtml}`;
                             }
                         });
                         

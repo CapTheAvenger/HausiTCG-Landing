@@ -92,6 +92,14 @@ function tabelleMit(zeilen) {
         // Die Praesenzspalten baut seit dem 07.09.2026 eine eigene
         // Funktion — sie traegt die Mindeststichprobe.
         'const MIN_PRAESENZ_PARTIEN = 30;',
+        // Seit dem 08.09.2026 holen Kopfzeile und Legende den Namen der
+        // Konvention zur Laufzeit (quotenHinweis / mitQuote). Ohne Modul
+        // im Sandkasten faellt der Name auf die Formel zurueck — genau so
+        // ist es gebaut, und das reicht fuer die Spaltenzaehlung hier.
+        schneide('quotenFormel'),
+        schneide('quotenName'),
+        schneide('mitQuote'),
+        schneide('quotenHinweis'),
         schneide('praesenzBilanz'),
         schneide('praesenzZelle'),
         schneide('praesenzZellen'),

@@ -341,6 +341,11 @@ function kennzahlSandkasten(sprache) {
     kontext.window = kontext;
     vm.createContext(kontext);
     vm.runInContext(
+        /* Der Fussnotentext holt den Namen der Konvention seit dem
+           08.09.2026 ueber cmaQuotenName() aus js/win-rate-konvention.js.
+           Der Helfer kommt aus DERSELBEN Datei, nicht als Attrappe. */
+        ausCm('function cmaQuotenFormel(id)') + '\n' +
+        ausCm('function cmaQuotenName(id)') + '\n' +
         ausCm('function _cmWinrateFussnote(eintrag)') + '\n' +
         ausCm('function _cmTop20Schnitt(deckStats, matchupData, cleanArch, matchKey)') + '\n' +
         ausCm('function _cmMatchupFussnote(s)') + '\n',

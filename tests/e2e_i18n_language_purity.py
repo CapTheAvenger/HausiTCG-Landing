@@ -217,8 +217,65 @@ def run():
                 };
                 const expectedClean = strip(expected);
                 const actualClean = strip(actual);
+                /* VORLAGEN MIT {quote}/{formel} (08.09.2026).
+
+                   Seit der Umstellung auf die Limitless-Bezeichnung
+                   tragen einige Werte einen
+                   Platzhalter, den die Anzeigestelle zur Laufzeit aus
+                   js/win-rate-konvention.js fuellt — der Name haengt an
+                   der Konvention, die die jeweilige Zahl rechnet, und
+                   darf deshalb nicht fest in der Tabelle stehen.
+
+                   Ein stumpfer Zeichenvergleich meldet das als
+                   Abweichung, obwohl beide Seiten richtig sind. Die
+                   Pruefung wird deshalb NICHT uebersprungen, sondern
+                   umgestellt: die Vorlage wird zu einem Muster, in dem
+                   an der Platzhalterstelle genau einer der drei Namen
+                   bzw. eine der drei Formeln stehen darf. Ein
+                   englischer Name im deutschen Modus faellt damit
+                   weiterhin auf — und genau dafuer gibt es diesen Test.
+
+                   Faellt das Modul aus, bleibt es beim Zeichenvergleich:
+                   dann ist eine Abweichung eine echte. */
+                const K = window.WinRateKonvention;
+                const hatPlatzhalter = expectedClean.indexOf('{quote}') >= 0
+                                    || expectedClean.indexOf('{formel}') >= 0;
+                let match = actualClean === expectedClean;
+                if (!match && hatPlatzhalter && K && K.KONVENTIONEN) {
+                    /* KEINE REGEX HIER. Diese JS-Quelle steckt in einem
+                       gewoehnlichen Python-String; Python frisst dabei
+                       Rueckstriche, und eine Zeichenklasse wie [\]\\]
+                       kommt im Browser kaputt an ("Invalid regular
+                       expression"). Deshalb wird schlicht AUFGEZAEHLT:
+                       drei Konventionen, drei Namen, drei Formeln — die
+                       paar Kombinationen ausrechnen und nachsehen, ob
+                       das Angezeigte darunter ist. Das ist genauso
+                       streng und kann nicht an einer Maskierung
+                       scheitern. */
+                    const ids = Object.keys(K.KONVENTIONEN);
+                    const namen = ids.map(function (id) { return K.kurz(id); });
+                    const formeln = ids.map(function (id) {
+                        return (K.hol(id) || {}).formel;
+                    }).filter(Boolean);
+                    let kandidaten = [expectedClean];
+                    for (const platz of ['{quote}', '{formel}']) {
+                        const werte = (platz === '{quote}') ? namen : formeln;
+                        const naechste = [];
+                        for (const k of kandidaten) {
+                            if (k.indexOf(platz) < 0) { naechste.push(k); continue; }
+                            for (const w of werte) naechste.push(k.split(platz).join(w));
+                        }
+                        kandidaten = naechste;
+                    }
+                    match = kandidaten.indexOf(actualClean) >= 0;
+                    if (match) {
+                        results.push({ key, expected: expectedClean, actual: actualClean,
+                                       match: true, vorlage: true });
+                        return;
+                    }
+                }
                 if (actualClean && expectedClean) {
-                    results.push({ key, expected: expectedClean, actual: actualClean, match: actualClean === expectedClean });
+                    results.push({ key, expected: expectedClean, actual: actualClean, match: match });
                 }
             });
             return results;
@@ -453,8 +510,65 @@ def run():
                 };
                 const expectedClean = strip(expected);
                 const actualClean = strip(actual);
+                /* VORLAGEN MIT {quote}/{formel} (08.09.2026).
+
+                   Seit der Umstellung auf die Limitless-Bezeichnung
+                   tragen einige Werte einen
+                   Platzhalter, den die Anzeigestelle zur Laufzeit aus
+                   js/win-rate-konvention.js fuellt — der Name haengt an
+                   der Konvention, die die jeweilige Zahl rechnet, und
+                   darf deshalb nicht fest in der Tabelle stehen.
+
+                   Ein stumpfer Zeichenvergleich meldet das als
+                   Abweichung, obwohl beide Seiten richtig sind. Die
+                   Pruefung wird deshalb NICHT uebersprungen, sondern
+                   umgestellt: die Vorlage wird zu einem Muster, in dem
+                   an der Platzhalterstelle genau einer der drei Namen
+                   bzw. eine der drei Formeln stehen darf. Ein
+                   englischer Name im deutschen Modus faellt damit
+                   weiterhin auf — und genau dafuer gibt es diesen Test.
+
+                   Faellt das Modul aus, bleibt es beim Zeichenvergleich:
+                   dann ist eine Abweichung eine echte. */
+                const K = window.WinRateKonvention;
+                const hatPlatzhalter = expectedClean.indexOf('{quote}') >= 0
+                                    || expectedClean.indexOf('{formel}') >= 0;
+                let match = actualClean === expectedClean;
+                if (!match && hatPlatzhalter && K && K.KONVENTIONEN) {
+                    /* KEINE REGEX HIER. Diese JS-Quelle steckt in einem
+                       gewoehnlichen Python-String; Python frisst dabei
+                       Rueckstriche, und eine Zeichenklasse wie [\]\\]
+                       kommt im Browser kaputt an ("Invalid regular
+                       expression"). Deshalb wird schlicht AUFGEZAEHLT:
+                       drei Konventionen, drei Namen, drei Formeln — die
+                       paar Kombinationen ausrechnen und nachsehen, ob
+                       das Angezeigte darunter ist. Das ist genauso
+                       streng und kann nicht an einer Maskierung
+                       scheitern. */
+                    const ids = Object.keys(K.KONVENTIONEN);
+                    const namen = ids.map(function (id) { return K.kurz(id); });
+                    const formeln = ids.map(function (id) {
+                        return (K.hol(id) || {}).formel;
+                    }).filter(Boolean);
+                    let kandidaten = [expectedClean];
+                    for (const platz of ['{quote}', '{formel}']) {
+                        const werte = (platz === '{quote}') ? namen : formeln;
+                        const naechste = [];
+                        for (const k of kandidaten) {
+                            if (k.indexOf(platz) < 0) { naechste.push(k); continue; }
+                            for (const w of werte) naechste.push(k.split(platz).join(w));
+                        }
+                        kandidaten = naechste;
+                    }
+                    match = kandidaten.indexOf(actualClean) >= 0;
+                    if (match) {
+                        results.push({ key, expected: expectedClean, actual: actualClean,
+                                       match: true, vorlage: true });
+                        return;
+                    }
+                }
                 if (actualClean && expectedClean) {
-                    results.push({ key, expected: expectedClean, actual: actualClean, match: actualClean === expectedClean });
+                    results.push({ key, expected: expectedClean, actual: actualClean, match: match });
                 }
             });
             return results;

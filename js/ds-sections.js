@@ -79,20 +79,54 @@
         { id: 'tiers',   auf: false, nimm: ['__tiers__'],
           de: ['Tier-Liste', 'alle Archetypen nach Stärke gruppiert'],
           en: ['Tier list', 'all archetypes grouped by strength'] },
+        /* Der Untertitel nennt die Kennzahl so, wie die Spalte darunter
+           sie nennt. Die Spalte liest new_winrate aus
+           data/limitless_online_decks_comparison.csv; das ist
+           S/(S+N+U), also `mitUnentschieden` — NICHT die Matchpunkte,
+           die Limitless „Win %" nennt (js/win-rate-konvention.js). Der
+           Name wird zur Laufzeit geholt, damit hier keine zweite
+           Abschrift entsteht, die stehen bleibt, wenn das Modul sich
+           aendert. Faellt das Modul aus, steht die Formel da statt
+           eines Hausnamens. */
         { id: 'rang',    auf: false, nimm: ['div.cm-rangliste-block'],
-          de: ['Meta-Performance', 'Listen, Win Rate und Top-8-Quote je Deck — sortierbar'],
-          en: ['Meta performance', 'lists, win rate and top-8 rate per deck — sortable'] },
+          de: ['Meta-Performance', 'Listen, {quote:mitUnentschieden} und Top-8-Quote je Deck — sortierbar'],
+          en: ['Meta performance', 'lists, {quote:mitUnentschieden} and top-8 rate per deck — sortable'] },
         // Der Abschnitt "Auf- und Absteiger" stand hier bis zum
         // 01.09.2026. Seine beiden Bloecke werden nicht mehr erzeugt
         // (js/app-tier-meta.js), also gaebe es hier nichts mehr
         // einzusammeln.
     ];
 
+    /* Holt den Namen einer Win-Raten-Konvention zur Laufzeit aus
+       js/win-rate-konvention.js (in index.html vor dieser Datei
+       geladen). Kein zweiter Name als Rueckfall: fehlt das Modul,
+       steht die Formel da — die ist immer richtig. */
+    function quotenName(konvention) {
+        var K = window.WinRateKonvention;
+        if (K && typeof K.kurz === 'function') return K.kurz(konvention);
+        return konvention === 'matchpunkte' ? '(3S + U) / (3n)'
+             : konvention === 'ohneUnentschieden' ? 'S / (S + N)'
+             : 'S / (S + N + U)';
+    }
+
     function de() {
         return (typeof window.getLang === 'function' && window.getLang() === 'de');
     }
 
-    function texte(s) { return de() ? s.de : s.en; }
+    /* {quote:<konvention>} wird ERST HIER ersetzt, nicht schon in der
+       Liste oben: `kurz()` liefert je nach Sprache einen anderen Namen,
+       und die Liste wird nur einmal beim Laden ausgewertet. Eine dort
+       eingesetzte Zeichenkette bliebe beim Sprachwechsel stehen. */
+    function fuelleQuoten(text) {
+        return String(text || '').replace(/\{quote:([A-Za-z]+)\}/g, function (_, k) {
+            return quotenName(k);
+        });
+    }
+
+    function texte(s) {
+        var t = de() ? s.de : s.en;
+        return [fuelleQuoten(t[0]), fuelleQuoten(t[1])];
+    }
 
     function gemerkt() {
         try {

@@ -16,6 +16,68 @@
         return fallback;
     }
 
+    /* ── DAS KAMPFTAGEBUCH RECHNET S/(S+N+U) — UND SAGT ES JETZT AUCH ──
+     *
+     * ANORDNUNG DES BETREIBERS: „Win-Raten ueberall in der
+     * Limitless-Bezeichnung ‚Win %‘ — keine eigenen Begriffe." Das ist
+     * KEINE pauschale Umbenennung: js/win-rate-konvention.js haelt
+     * „Win %" der Konvention MATCHPUNKTE (3S+U)/(3·Partien) vor, weil
+     * Limitless genau diese Spalte so nennt. Eine S/(S+N+U)-Zahl so zu
+     * nennen waere derselbe Fehler in die andere Richtung.
+     *
+     * HIER STEHT KEINE FREMDE DATEI DAHINTER. Diese Datei rechnet ueber
+     * die vom Nutzer selbst eingetragenen Partien; die Konvention ist
+     * deshalb nicht gemessen, sondern IM CODE ABLESBAR — und an allen
+     * vier Zaehlstellen dieselbe: der Nenner ist die Zahl ALLER
+     * Eintraege, Unentschieden eingeschlossen.
+     *
+     *   renderJournalHistory()   total = filtered.length, und
+     *                            filtered enthaelt die 'tie'-Eintraege
+     *                            (sie werden eine Zeile darueber als
+     *                            totalT daraus gezaehlt) -> S/(S+N+U)
+     *   shareTournamentSummary() total = entries.length, ties werden
+     *                            daraus gezaehlt -> S/(S+N+U)
+     *   _renderMASummary()       tot = entries.length, dito
+     *   _renderMARankings()      opp[o].total++ fuer JEDEN Eintrag,
+     *                            der 'else'-Zweig faengt die Ties ab
+     *
+     * Das ist MIT_UNENTSCHIEDEN. Eine Bilanz von 3S-1N-1U ergibt hier
+     * 60 %, nicht 75 % (S/(S+N)) und nicht 66,7 % (Matchpunkte).
+     *
+     * Der Name wird zur Laufzeit aus dem Modul geholt, nie
+     * abgeschrieben; faellt das Modul aus, steht die FORMEL da — die
+     * ist kein vierter Name und nie falsch. Auf der LEINWAND
+     * (shareTournamentSummary) gibt es keine Sprechblase, also muss
+     * Name UND Formel mit aufs Bild. */
+    const BJ_KONVENTION = 'mitUnentschieden';
+
+    function bjQuotenFormel(id) {
+        const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+        const k = (K && typeof K.hol === 'function') ? K.hol(id || BJ_KONVENTION) : null;
+        return k ? k.formel : '';
+    }
+
+    function bjQuotenName(id) {
+        const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+        const kurz = (K && typeof K.kurz === 'function') ? K.kurz(id || BJ_KONVENTION) : '';
+        return kurz || bjQuotenFormel(id) || String(id || BJ_KONVENTION);
+    }
+
+    /** {quote} und {formel} in einem Uebersetzungswert fuellen. */
+    function bjMitQuote(text, id) {
+        return String(text == null ? '' : text)
+            .replace(/\{quote\}/g, bjQuotenName(id))
+            .replace(/\{formel\}/g, bjQuotenFormel(id));
+    }
+
+    /* Voller Name plus Formel — der Hinweis, der an jeder Quote haengt. */
+    function bjQuotenHinweis(id) {
+        const K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+        const lang = (K && typeof K.hinweis === 'function') ? K.hinweis(id || BJ_KONVENTION) : '';
+        const name = bjQuotenName(id);
+        return lang ? (name + ' — ' + lang) : (name + ' ' + bjQuotenFormel(id));
+    }
+
     function battleJournalSafeJsonParse(raw, fallback) {
         try {
             return JSON.parse(raw);
@@ -1338,7 +1400,7 @@
                 <div class="bj-history-stat is-win"><strong>${totalW}</strong><span>${battleJournalText('bj.win', 'Win')}</span></div>
                 <div class="bj-history-stat is-loss"><strong>${totalL}</strong><span>${battleJournalText('bj.loss', 'Loss')}</span></div>
                 <div class="bj-history-stat is-tie"><strong>${totalT}</strong><span>${battleJournalText('bj.tie', 'Tie')}</span></div>
-                <div class="bj-history-stat"><strong>${winRateLabel}</strong><span>${battleJournalText('bj.histWinRate', 'Win Rate')}</span></div>
+                <div class="bj-history-stat" title="${escapeHtml(bjQuotenHinweis(BJ_KONVENTION))}" data-quote-konvention="${BJ_KONVENTION}"><strong>${winRateLabel}</strong><span>${escapeHtml(bjMitQuote(battleJournalText('bj.histWinRate', '{quote}'), BJ_KONVENTION))}</span></div>
             `;
         }
 
@@ -1595,7 +1657,14 @@
         const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
 
         const W = 600;
-        const HEADER_H = 96;
+        /* 96 -> 116: unter der Bilanzzeile steht jetzt die Konvention.
+           Auf einer Leinwand gibt es keinen title — Name UND Formel
+           muessen deshalb sichtbar mit aufs Bild, sonst waere die Zahl
+           dort wieder eine von dreien. Der Zuwachs geht in den Kopf,
+           nicht in die Zeilen: `y = HEADER_H + 4` schiebt die erste
+           Partie mit, ihr Hintergrundrechteck (fillRect bei y-16)
+           beginnt damit unter der neuen Zeile. */
+        const HEADER_H = 116;
         const FOOTER_H = 24;
         const BASE_ROW_H = 44;
         const DETAIL_LINE_H = 18;
@@ -1640,7 +1709,12 @@
         // Record line
         ctx.fillStyle = '#a0aec0';
         ctx.font = '14px system-ui, sans-serif';
-        ctx.fillText(`${wins}W-${losses}L-${ties}T  \u00b7  ${winRate}% Win Rate`, 16, 78);
+        ctx.fillText(`${wins}W-${losses}L-${ties}T  \u00b7  ${winRate} % ${bjQuotenName(BJ_KONVENTION)}`, 16, 78);
+        // Die Formel darunter, kleiner: sie ist der Nenner, ohne den
+        // der Name auf dem geteilten Bild nichts festlegt.
+        ctx.fillStyle = '#8794a8';
+        ctx.font = '11px system-ui, sans-serif';
+        ctx.fillText(bjQuotenFormel(BJ_KONVENTION), 16, 96);
 
         // Match rows
         let y = HEADER_H + 4;
@@ -1815,7 +1889,7 @@
             <div class="ma-stat is-win"><strong>${w}</strong><span>${escapeHtml(battleJournalText('ma.wins', 'Wins'))}</span></div>
             <div class="ma-stat is-loss"><strong>${l}</strong><span>${escapeHtml(battleJournalText('ma.losses', 'Losses'))}</span></div>
             <div class="ma-stat is-tie"><strong>${t}</strong><span>${escapeHtml(battleJournalText('ma.ties', 'Ties'))}</span></div>
-            <div class="ma-stat"><strong>${wr}%</strong><span>${escapeHtml(battleJournalText('ma.winRate', 'Win Rate'))}</span></div>
+            <div class="ma-stat" title="${escapeHtml(bjQuotenHinweis(BJ_KONVENTION))}" data-quote-konvention="${BJ_KONVENTION}"><strong>${wr}%</strong><span>${escapeHtml(bjMitQuote(battleJournalText('ma.winRate', '{quote}'), BJ_KONVENTION))}</span></div>
             <div class="ma-stat"><strong>${uniqueDecks}</strong><span>${escapeHtml(battleJournalText('ma.decks', 'Decks'))}</span></div>
             <div class="ma-stat"><strong>${uniqueOpps}</strong><span>${escapeHtml(battleJournalText('ma.opponents', 'Opponents'))}</span></div>
         `;

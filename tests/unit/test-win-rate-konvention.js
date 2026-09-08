@@ -229,10 +229,17 @@ describe('Die Anzeigen nennen ihre Konvention', () => {
         const CARD = lies('js/app-archetype-card.js');
         assert.match(CARD, /ties: Number\.isFinite\(parts\[2\]\)/);
         assert.match(CARD, /class="arc-mu-u"/);
-        assert.match(CARD, /hinweis\('ohneUnentschieden'\)/);
+        /* 08.09.2026: der Hinweis am Spaltenkopf laeuft jetzt ueber
+           quotenHinweis(), das VOLLEN NAMEN und Formel zusammensetzt —
+           erst damit ist die Kurzform „WR" aufgeloest und kein Hausname. */
+        assert.match(CARD, /[Hh]inweis\('ohneUnentschieden'\)/);
     });
 
     it('die Tier-Karte nennt ihre', () => {
-        assert.match(lies('js/app-tier-meta.js'), /kurzHinweis\('mitUnentschieden'\)/);
+        /* 08.09.2026: statt kurzHinweis() steht hier tierQuotenHinweis() —
+           dieselbe Konvention, aber mit dem vollen Namen davor. Die
+           Plakette schreibt „… % WR", und ohne den Namen im Titel waere
+           das Kuerzel eine zweite Bezeichnung. */
+        assert.match(lies('js/app-tier-meta.js'), /tierQuotenHinweis\('mitUnentschieden'\)/);
     });
 });

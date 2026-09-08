@@ -62,7 +62,19 @@ describe('Meta-Performance — beide Zaehlungen in einer Tabelle', () => {
             assert.match(TIER, new RegExp("k: '" + k + "'"), 'Spalte fehlt: ' + k);
         }
         assert.match(TIER, /de: 'Listen'/);
-        assert.match(TIER, /de: 'Win Rate'/);
+        /* SEIT DEM 08.09.2026 STEHT HIER KEIN FESTER NAME MEHR.
+           Der Kopf der Quotenspalte hiess „Win Rate" — ein Hausname.
+           Die Spalte liest new_winrate aus
+           data/limitless_online_decks_comparison.csv, und das ist
+           S/(S+N+U); Limitless nennt mit „Win %" etwas anderes
+           ((3S+U)/(3·Partien)). Der Name kommt deshalb zur Laufzeit aus
+           js/win-rate-konvention.js. Die Zusage ist damit schaerfer:
+           gefordert ist nicht ein Wortlaut, sondern die Herkunft — und
+           dass die richtige Konvention verlangt wird. Dass sie zu den
+           Daten passt, prueft tests/unit/test-w1-konvention-passt.js. */
+        assert.match(TIER, /de: tierQuotenName\('mitUnentschieden'\)/,
+            'der Kopf der Quotenspalte holt seinen Namen nicht mehr aus '
+            + 'js/win-rate-konvention.js — dann steht dort wieder ein Hausname');
         /* "Antritte" heisst seit dem 01.09.2026 "Turnier-Antritte".
            Gemeldet: "was sind denn bitte 618,5 Antritte? Was ist das
            fuer eine Kennzahl?" Der Fehler war nicht die halbe Zahl,

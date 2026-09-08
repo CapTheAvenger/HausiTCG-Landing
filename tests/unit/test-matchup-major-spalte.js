@@ -78,6 +78,14 @@ const PZ = new Function('MIN_PRAESENZ_PARTIEN', [
     '    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");',
     'const L = (k, d) => d;',
     'const fmt = (n, dp) => Number(n).toFixed(dp == null ? 1 : dp).replace(".", ",");',
+    'const window = { WinRateKonvention: null };',
+    // Seit dem 08.09.2026 holen praesenzZelle() und die Kopfzeile den
+    // Namen der Konvention zur Laufzeit (mitQuote / quotenHinweis).
+    // Ohne Modul faellt der Name auf die Formel zurueck — so gebaut.
+    schneideAus(karte, 'function quotenFormel(id)'),
+    schneideAus(karte, 'function quotenName(id)'),
+    schneideAus(karte, 'function mitQuote(text, id)'),
+    schneideAus(karte, 'function quotenHinweis(id)'),
     schneideAus(karte, 'function praesenzBilanz(m)'),
     schneideAus(karte, 'function praesenzZelle(m, de)'),
     schneideAus(karte, 'function praesenzZellen(m, de)'),
@@ -174,9 +182,23 @@ describe('Beide Spalten heissen WR, weil beide WR rechnen', () => {
         }
         const deL = leg.find(z => /Siege/.test(z));
         assert.ok(deL, 'keine deutsche Legende gefunden');
-        assert.ok(/entschiedene Partien/.test(deL),
-            'die deutsche Legende sagt nicht mehr, WAS die Win Rate rechnet — '
-            + 'ohne das steht "WR" fuer eine von drei Konventionen im Haus');
+        /* SEIT DEM 08.09.2026 STEHT DIE RECHNUNG ALS PLATZHALTER DA.
+           Vorher las die Legende "WR = Win Rate (Siege ÷ entschiedene
+           Partien)" — ein Hausname plus eine ausgeschriebene Formel.
+           „Win Rate" ist als Bezeichnung gestrichen (Anordnung des
+           Betreibers), und die Formel darf nicht ein zweites Mal
+           abgeschrieben werden: beides kommt jetzt zur Laufzeit aus
+           js/win-rate-konvention.js. Die Zusage ist damit SCHAERFER —
+           gefordert ist nicht mehr irgendein Wortlaut, sondern dass
+           Name UND Formel wirklich aus dem Modul kommen. */
+        for (const z of leg) {
+            assert.ok(/\{quote\}/.test(z),
+                'die Legende holt den Namen der Konvention nicht mehr aus '
+                + 'js/win-rate-konvention.js — dann steht dort wieder ein Hausname');
+            assert.ok(/\{formel\}/.test(z),
+                'die Legende sagt nicht mehr, WAS die Quote rechnet — ohne die '
+                + 'Formel steht "WR" fuer eine von drei Konventionen im Haus');
+        }
     });
 
     it('der Spaltenkopf nennt die Rechnung und die Unentschieden', () => {
@@ -858,6 +880,11 @@ describe('Die Schwelle steht sichtbar unter der Tabelle', () => {
             'const shadeFor = () => "";',
             'const barFor = () => ({ pct: 0, cls: "" });',
             'const matchupsFor = () => ZEILEN;',
+            // dieselben vier Helfer wie oben, aus DERSELBEN Datei
+            schneideAus(karte, 'function quotenFormel(id)'),
+            schneideAus(karte, 'function quotenName(id)'),
+            schneideAus(karte, 'function mitQuote(text, id)'),
+            schneideAus(karte, 'function quotenHinweis(id)'),
             schneideAus(karte, 'function praesenzBilanz(m)'),
             schneideAus(karte, 'function praesenzZelle(m, de)'),
             schneideAus(karte, 'function praesenzZellen(m, de)'),

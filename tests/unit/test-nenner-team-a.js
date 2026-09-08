@@ -62,8 +62,26 @@ describe('Die Kacheln der Startseite nennen ihren Nenner', () => {
         assert.ok(anfang >= 0 && ende > anfang, 'die Stelle wurde nicht gefunden');
         const stueck = TIER.slice(anfang, ende);
 
+        /* Seit dem 08.09.2026 traegt der Tooltip den vollen Namen der
+           Konvention, geholt ueber tierQuotenHinweis() aus
+           js/win-rate-konvention.js. Die drei Helfer kommen aus DERSELBEN
+           Datei; ohne Modul im Sandkasten faellt der Name auf die Formel
+           zurueck — so ist der Rueckfall gebaut. */
+        const helferAusTier = (kopf) => {
+            const i = TIER.indexOf(kopf);
+            assert.ok(i >= 0, 'nicht gefunden: ' + kopf);
+            let tiefe = 0;
+            for (let j = TIER.indexOf('{', i); j < TIER.length; j++) {
+                if (TIER[j] === '{') tiefe++;
+                else if (TIER[j] === '}') { tiefe--; if (tiefe === 0) return TIER.slice(i, j + 1); }
+            }
+            assert.fail('Klammern gehen nicht auf: ' + kopf);
+        };
+        const helfer = ['function tierQuotenFormel(id)', 'function tierQuotenName(id)',
+                        'function tierQuotenHinweis(id)'].map(helferAusTier).join('\n');
+
         const bauen = new Function('item', 'fmtHalb', 'getLang',
-            stueck + ' return { nText, wrTitel };');
+            helfer + '\n' + stueck + ' return { nText, wrTitel };');
         const fmtHalb = (n) => Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.', ',');
 
         const de = () => 'de';

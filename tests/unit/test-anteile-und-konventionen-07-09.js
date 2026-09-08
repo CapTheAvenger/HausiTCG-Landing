@@ -401,6 +401,11 @@ describe('B2 — "Win %" nur dort, wo Matchpunkte gerechnet werden', () => {
             'data/limitless_online_decks.csv rechnet nicht mehr S/(S+N+U)');
 
         const s = cmSandkasten({ sprache: 'de' });
+        /* Der Name der Konvention kommt seit dem 08.09.2026 ueber
+           cmaQuotenName() zur Laufzeit aus js/win-rate-konvention.js —
+           die Helfer deshalb aus DERSELBEN Datei mitschneiden. */
+        vm.runInContext(cmStueck('function cmaQuotenFormel(id)'), s.kontext);
+        vm.runInContext(cmStueck('function cmaQuotenName(id)'), s.kontext);
         vm.runInContext(cmStueck('function _cmWinrateFussnote(eintrag)'), s.kontext);
         const zeile = eindeutig[0];
         const text = vm.runInContext('_cmWinrateFussnote(z)',
@@ -442,6 +447,13 @@ describe('B2 — "Win %" nur dort, wo Matchpunkte gerechnet werden', () => {
                          win_rate: zeile.win_rate, record: zeile.record,
                          total_games: zeile.total_games }],
         });
+        /* Der Name der Konvention kommt seit dem 08.09.2026 ueber
+           cmaQuotenName() zur Laufzeit aus js/win-rate-konvention.js —
+           die Helfer deshalb aus DERSELBEN Datei mitschneiden. */
+        vm.runInContext(cmStueck('function cmaQuotenFormel(id)'), s.kontext);
+        vm.runInContext(cmStueck('function cmaQuotenName(id)'), s.kontext);
+        vm.runInContext(cmStueck('function cmaQuotenHinweis(id)'), s.kontext);
+        vm.runInContext(cmStueck('function cmaMitQuote(text, id)'), s.kontext);
         vm.runInContext(cmStueck('function selectCurrentMetaOpponent(optionEl, opponent)'), s.kontext);
         vm.runInContext('selectCurrentMetaOpponent(null, gegner)',
             Object.assign(s.kontext, { gegner: zeile.opponent_deck || zeile.opponent || 'X' }));

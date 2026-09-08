@@ -6982,7 +6982,7 @@ window.MetaCall = (function () {
                   .sort((a, b) => b.share - a.share).slice(0, 6);
                 console.log(
                   `[Predictor 6.2] Mehrmeta-Leistung: Schnitt ${prevFmtKey} = ` +
-                  `${_lastMetaAvgWinRate.toFixed(2)} % Win Rate / ` +
+                  `${_lastMetaAvgWinRate.toFixed(2)} % ${(typeof window !== 'undefined' && window.WinRateKonvention && window.WinRateKonvention.kurz('mitUnentschieden')) || 'S / (S + N + U)'} / ` +
                   `${(_lastMetaAvgDay2Conv * 100).toFixed(1)} % Day 2. ` +
                   `Boden 0.85: ${stark.map(x => x.name).join(', ') || 'keins'}. ` +
                   `Boden 0.55: ${schwach.map(x => x.name).join(', ') || 'keins'}.`
@@ -10769,7 +10769,10 @@ window.MetaCall = (function () {
              onchange="MetaCall._onMyDeckCommit(this)">
       <datalist id="mc-my-deck-options">${options}</datalist>
     </div>
-    <button class="mc-override-toggle" onclick="MetaCall._toggleOverrides()" id="mc-override-btn">
+    <button class="mc-override-toggle" onclick="MetaCall._toggleOverrides()" id="mc-override-btn"
+            title="${esc(_wrZweiKonventionen(
+              'ohneUnentschieden', _wrKurzform(t('mc.colWrBlended')),
+              'mitUnentschieden',  _wrKurzform(t('mc.colManualWr'))))}">
       ${t('mc.adjustWinRates')}
     </button>
     <div class="mc-brick-filter-wrap">
@@ -10795,6 +10798,8 @@ window.MetaCall = (function () {
       return `<p style="color:#aaa;font-size:0.85rem;padding:8px 0">${t('mc.selectDeckFirst')}</p>`;
     }
     const field = buildField().filter(d => d.name !== '_junk');
+    const _titelGemischtZelle = _wrKonventionsTitel('ohneUnentschieden');
+    const _titelManuellZelle  = _wrKonventionsTitel('mitUnentschieden');
     const rows  = field.map(deck => {
       const m   = getMatchup(_settings.myDeck, deck.name);
       const wr  = Math.round(_anzeigeQuote(m));
@@ -10806,23 +10811,52 @@ window.MetaCall = (function () {
       const badge = fromJournal && js
         ? ` <span class="mc-journal-badge-inline" title="${t('mc.personalGames').replace('{n}', js.total)}">📓 ${js.total}</span>`
         : '';
+      /* Jede der beiden Zahlen traegt ihre Konvention selbst — der
+         Spaltenkopf ist auf dem Telefon nicht mehr im Blick, wenn die
+         Zeile gelesen wird. Die Vorbelegung des Eingabefelds bleibt
+         `wr`, weil es keinen besseren Anhaltspunkt gibt; der Hinweis
+         sagt, dass die eingetippte Zahl anders gerechnet wird. */
       return `<tr>
         <td style="font-size:0.85rem;font-weight:600">${esc(deck.name)}${badge}</td>
-        <td><span class="mc-wr-meta">${wr}%</span></td>
+        <td><span class="mc-wr-meta" title="${esc(_titelGemischtZelle)}" data-hinweis="${esc(_titelGemischtZelle)}">${wr}%</span></td>
         <td class="mc-wr-indicator ${ind}">${lbl}</td>
         <td class="mc-wr-override">
           <input type="number" min="0" max="100" placeholder="${wr}"
+                 title="${esc(_titelManuellZelle)}" data-hinweis="${esc(_titelManuellZelle)}"
                  value="${ov !== undefined ? ov : ''}"
                  oninput="MetaCall._onWrOverride('${escJs(deck.name)}', this.value)">
         </td>
       </tr>`;
     }).join('');
 
+    /* ── ZWEI SPALTEN, ZWEI KONVENTIONEN (BEFUND W2, 08.09.2026) ──
+     *
+     * Beide Spalten hiessen „WR" und rechnen NICHT dasselbe:
+     *
+     *   „WR (gemischt)"  ist `_anzeigeQuote(m)` = pWin / (pWin + pLoss),
+     *                    also S/(S+N) — die Unentschieden sind heraus.
+     *   „Manuelle WR"    wird in `getMatchup` als pWin eingesetzt
+     *                    (`const pWin = Math.min(0.98, ov / 100)`, der
+     *                    Rest verteilt sich auf pTie 0,02 und pLoss),
+     *                    ist also S/(S+N+U).
+     *
+     * Wer 55 in das Feld tippt, weil links 55 % steht, verschiebt die
+     * Paarung deshalb um rund einen Punkt nach unten. Beide Koepfe
+     * behalten das Kuerzel — die Spalten sind schmal —, tragen aber
+     * jetzt Namen und Formel als Hinweis, und darueber steht ein Satz,
+     * der sagt, dass es zwei sind. */
+    const _titelGemischt = _wrKonventionsTitel('ohneUnentschieden');
+    const _titelManuell  = _wrKonventionsTitel('mitUnentschieden');
+    const _zweiKonv = _wrZweiKonventionen(
+      'ohneUnentschieden', _wrKurzform(t('mc.colWrBlended')),
+      'mitUnentschieden',  _wrKurzform(t('mc.colManualWr')));
+
     return `
-<p style="font-size:0.78rem;color:#888;margin:10px 0 8px">${t('mc.overrideHint')}</p>
+<p style="font-size:0.78rem;color:#888;margin:10px 0 8px" title="${esc(_titelManuell)}" data-hinweis="${esc(_titelManuell)}">${t('mc.overrideHint')}</p>
+${_zweiKonv ? `<p class="mc-wr-konventionen" style="font-size:0.75rem;color:#888;margin:0 0 8px">${esc(_zweiKonv)}</p>` : ''}
 <table class="mc-override-table">
   <thead>
-    <tr><th>${t('mc.colOpponent')}</th><th>${t('mc.colWrBlended')}</th><th>${t('mc.colIndicator')}</th><th>${t('mc.colManualWr')}</th></tr>
+    <tr><th>${t('mc.colOpponent')}</th><th title="${esc(_titelGemischt)}" data-hinweis="${esc(_titelGemischt)}">${esc(_wrKurzform(t('mc.colWrBlended')))}</th><th>${t('mc.colIndicator')}</th><th title="${esc(_titelManuell)}" data-hinweis="${esc(_titelManuell)}">${esc(_wrKurzform(t('mc.colManualWr')))}</th></tr>
   </thead>
   <tbody>${rows}</tbody>
 </table>`;
@@ -10904,6 +10938,14 @@ window.MetaCall = (function () {
 
     const thresholdPct = _mcNum(_settings.day2Points / maxPts * 100, 1);
 
+    /* Diese Liste zeigt `_anzeigeQuote(m)` = pWin/(pWin+pLoss), also
+       S/(S+N). Das Kuerzel „WR" ist nur zulaessig, solange der Hinweis
+       mit vollem Namen und Formel danebenhaengt (BEFUND W2,
+       08.09.2026) — er haengt jetzt als title UND als data-hinweis
+       dran. Der Nennersatz aus js/i18n.js nannte die Groesse „Win
+       Rate"; dieser Hausname wird durch den Namen ersetzt, den
+       js/win-rate-konvention.js fuer S/(S+N) vergibt. */
+
     const topDecks = [...field].sort((a, b) => b.finalShare - a.finalShare).slice(0, TOP_N);
     const maxEnc   = Math.max(...topDecks.map(d => _settings.rounds * d.finalShare / 100), 0.1);
     const encRows  = topDecks.map(deck => {
@@ -10935,7 +10977,7 @@ window.MetaCall = (function () {
       return `<div class="mc-encounter-row">
         <div>
           <div class="mc-enc-name" title="${esc(deck.name)}">${esc(name)}${jTag}</div>
-          <div class="mc-enc-wr ${wrCls}" title="${esc(t('mc.wrNennerTitel') + ' · ' + _wrKonventionsTitel('ohneUnentschieden'))}">WR ${wrPct}${_mcPz()}${wrN} · P(1×) ${p1.toFixed(0)}${_mcPz()} · P(2×) ${p2.toFixed(0)}${_mcPz()}</div>
+          <div class="mc-enc-wr ${wrCls}" title="${esc(_wrVollname(t('mc.wrNennerTitel'), 'ohneUnentschieden') + ' · ' + _wrKonventionsTitel('ohneUnentschieden'))}" data-hinweis="${esc(_wrKonventionsTitel('ohneUnentschieden'))}">WR ${wrPct}${_mcPz()}${wrN} · P(1×) ${p1.toFixed(0)}${_mcPz()} · P(2×) ${p2.toFixed(0)}${_mcPz()}</div>
         </div>
         <div class="mc-enc-bar-bg"><div class="mc-enc-bar-fill" style="width:${barW}%"></div></div>
         <div class="mc-enc-val">∅ ${_mcNum(lambda, 2)}</div>
@@ -11175,12 +11217,20 @@ window.MetaCall = (function () {
       const reasonId = 'mc-rec-reason-' + normalize(r.name).replace(/[^a-z0-9]/g, '');
       // Reason row HTML — top-3 favourable matchups + the Day-2-odds
       // breakdown. Hidden by default; toggled by the chevron button.
+      /* DIESES „WR" IST EIN ANDERES ALS DAS IN DER BEGEGNUNGSLISTE
+         (BEFUND W2, 08.09.2026). `_topMatchupsVsField` legt hier
+         `wr = m.pWin` ab — den Anteil an ALLEN Partien, also S/(S+N+U).
+         Die Begegnungsliste ein Panel weiter zeigt `_anzeigeQuote(m)`
+         = pWin/(pWin+pLoss), also S/(S+N). Beide standen als „WR" da.
+         Das Kuerzel bleibt (die Zeile ist eng), traegt jetzt aber
+         Namen und Formel als Hinweis. */
+      const _titelReason = _wrKonventionsTitel('mitUnentschieden');
       const matchupRows = (r.topMatchups || []).map(mu => {
         const wrPctStr = (mu.wr * 100).toFixed(0);
         const shareStr = mu.share.toFixed(1).replace('.', ',');
         return `<li>
           <span class="mc-rec-reason-vs">${t('mc.reasonVs')} ${esc(mu.opponent)}</span>
-          <span class="mc-rec-reason-wr">${wrPctStr} % ${t('mc.reasonWr')}</span>
+          <span class="mc-rec-reason-wr" title="${esc(_titelReason)}" data-hinweis="${esc(_titelReason)}">${wrPctStr} % ${esc(_wrKurzform(t('mc.reasonWr')))}</span>
           <span class="mc-rec-reason-share">${t('mc.reasonShare').replace('{n}', shareStr)}</span>
         </li>`;
       }).join('');
@@ -11203,8 +11253,10 @@ window.MetaCall = (function () {
         ? `<div class="mc-rec-d2wr ${r.d2WrPct >= 52 ? 'mc-rec-d2wr-good'
               : r.d2WrPct >= 49 ? 'mc-rec-d2wr-mid'
               : 'mc-rec-d2wr-weak'}"
-             title="${esc(t('mc.d2WrTooltip'))}">
-            <span class="mc-rec-d2wr-label">${esc(t('mc.d2WrLabel'))}:</span>
+             title="${esc(_wrVollname(t('mc.d2WrTooltip'), 'mitUnentschieden')
+                 + '  ' + _wrKonventionsTitel('mitUnentschieden'))}"
+             data-hinweis="${esc(_wrKonventionsTitel('mitUnentschieden'))}">
+            <span class="mc-rec-d2wr-label">${esc(_wrKurzform(t('mc.d2WrLabel')))}:</span>
             <span class="mc-rec-d2wr-value">${r.d2WrPct.toFixed(1).replace('.', ',')} %</span>
             ${d2WrN ? `<span class="mc-rec-d2wr-n">${esc(
                 t('mc.d2WrSample').replace('{n}', String(d2WrN)))}</span>` : ''}
@@ -11293,8 +11345,14 @@ window.MetaCall = (function () {
       if (r.d2WrPct != null) {
         historyParts.push(`${t('mc.histD2Wr')} ${r.d2WrPct.toFixed(1).replace('.', ',')} %`);
       }
+      /* „D2-WR" ist dieselbe Zahl wie in der Zeile darueber und
+         dieselbe Konvention: `_labsDeckWr(r, 'day2_')` rechnet
+         S/(S+N+U). Das Kuerzel bleibt, der Hinweis kommt dazu. */
+      const _titelVerlauf = r.d2WrPct != null
+        ? t('mc.d2ConvTooltip') + '  ' + _wrKonventionsTitel('mitUnentschieden')
+        : t('mc.d2ConvTooltip');
       const historyLine = historyParts.length
-        ? `<span class="mc-rec-history-line" title="${esc(t('mc.d2ConvTooltip'))}">${esc(t('mc.histPrefix'))} ${esc(historyParts.join(' · '))}</span>`
+        ? `<span class="mc-rec-history-line" title="${esc(_titelVerlauf)}" data-hinweis="${esc(_titelVerlauf)}">${esc(t('mc.histPrefix'))} ${esc(historyParts.join(' · '))}</span>`
         : '';
 
       const reasonHtml = matchupRows
@@ -11372,7 +11430,7 @@ window.MetaCall = (function () {
           <th>#</th>
           <th>${t('mc.recDeck')}</th>
           <th>${esc(_zielKurz())}</th>
-          <th>${t('mc.recAvgWr')}</th>
+          <th title="${esc(_wrKonventionsTitel('mitUnentschieden'))}" data-hinweis="${esc(_wrKonventionsTitel('mitUnentschieden'))}">${esc(_wrKurzform(t('mc.recAvgWr')))}</th>
           <th>${t('mc.recExpWins')}</th>
           <th class="mc-rec-toggle-th" aria-label="Why?"></th>
         </tr></thead>
@@ -11722,7 +11780,10 @@ window.MetaCall = (function () {
             .replace('{share}', onlineShareTxt);
         case 'wr': {
           const where = (_lastMajorInfo && _lastMajorInfo.shortName) || t('mc.intelMajorFallback');
-          return t('mc.tipReasonWr')
+          /* Dieser Satz IST schon der Hinweis — er hat keinen zweiten
+             Ort, an dem eine Formel stehen koennte. Also der volle
+             Name: `lm.winPct` ist `_labsDeckWr(r, '')` = S/(S+N+U). */
+          return _wrVollname(t('mc.tipReasonWr'), 'mitUnentschieden')
             .replace('{wr}', fmt(r.value, 0))
             .replace('{share}', `${fmt(r.share, 1)} %`)
             .replace('{where}', where);
@@ -12242,9 +12303,20 @@ window.MetaCall = (function () {
 
     // ── Personal data tiles — only render when the user has data.
     const personals = [];
+    /* BEIDE PERSOENLICHEN KACHELN RECHNEN S/(S+N+U) (BEFUND W2,
+       08.09.2026), und keine sagte es:
+         - der handgesetzte Wert geht in `getMatchup` als pWin ein
+           (`const pWin = Math.min(0.98, Math.max(0, ov / 100))`), zaehlt
+           die Unentschieden also im Nenner mit;
+         - `jStats.winRate` kommt aus getBattleJournalWinRates()
+           (js/battle-journal.js): `Math.round(m.wins / m.total * 100)`,
+           und `total` zaehlt Siege, Niederlagen UND Unentschieden.
+       Die Kacheln sind zu schmal fuer den vollen Namen, tragen ihn
+       aber jetzt als Hinweis. */
+    const _titelPersoenlich = _wrKonventionsTitel('mitUnentschieden');
     const tgVal = _findByNormalized(_winRateOverrides, deckName);
     if (tgVal !== undefined && tgVal !== '' && !isNaN(parseFloat(tgVal))) {
-      personals.push(_intelStatTile(t('mc.intelTgWr'), `${fmt(parseFloat(tgVal), 0)} %`, '', 'mc-intel-tile-personal'));
+      personals.push(_intelStatTile(_wrKurzform(t('mc.intelTgWr')), `${fmt(parseFloat(tgVal), 0)} %`, '', 'mc-intel-tile-personal', _titelPersoenlich));
     }
     const jStats = _findByNormalized(_journalStats, deckName);
     if (jStats && jStats.total > 0) {
@@ -12252,7 +12324,8 @@ window.MetaCall = (function () {
         t('mc.intelJournal'),
         `${jStats.wins}–${jStats.losses}–${jStats.ties}`,
         `${jStats.winRate} %`,
-        'mc-intel-tile-personal'
+        'mc-intel-tile-personal',
+        _titelPersoenlich
       ));
     }
     const rawTgShare = _findByNormalized(_tgFieldShares, deckName) || 0;
@@ -12310,6 +12383,89 @@ window.MetaCall = (function () {
     return W.kurz(konventionId) + ' — ' + W.hinweis(konventionId);
   }
 
+  /* ── DER NAME KOMMT AUS DEM MODUL, AUCH WENN DER TEXT AUS js/i18n.js
+   *    KOMMT (BEFUND W2, 08.09.2026) ────────────────────────────────
+   *
+   * Live gemessen an thedipidis.app (Version 202609080008-33eb397)
+   * standen im Reiter „Turnier / Meta Call" Hausnamen auf Zahlen, die
+   * drei verschiedene Formeln rechnen: „WR 42 % · 1.220" in der
+   * Begegnungsliste (S/(S+N)), „Ø Win Rate" ueber der Empfehlungs-
+   * spalte (S/(S+N+U)) und „WR (gemischt)" neben „Manuelle WR" im
+   * Override-Kasten (S/(S+N) neben S/(S+N+U)). Keiner dieser Namen
+   * gehoert einer Konvention; sie stammen aus js/i18n.js.
+   *
+   * js/i18n.js gehoert in diesem Durchgang einem anderen Arbeitspaket,
+   * wird also nicht angefasst. Der Name wird stattdessen an der
+   * ANZEIGESTELLE gesetzt — aus js/win-rate-konvention.js, zur
+   * Laufzeit, nicht abgeschrieben.
+   *
+   * ZWEI WEGE, JE NACH PLATZ:
+   *   _wrVollname(text, id)  ersetzt den Hausnamen durch den Namen des
+   *                          Moduls. Fuer Fliesstext, Tooltips und die
+   *                          Leinwand — ueberall dort, wo es keinen
+   *                          zweiten Ort fuer einen Hinweis gibt.
+   *   _wrKurzform(text)      laesst „WR" stehen. NUR zulaessig, wenn
+   *                          die Stelle den vollen Namen und die Formel
+   *                          als title bzw. data-hinweis mitfuehrt —
+   *                          sonst waere „WR" wieder ein Hausname.
+   *
+   * „Win %" wird dort NICHT ersetzt, wo wirklich (3S+U)/(3n) gerechnet
+   * wird: das ist der Name, den Limitless vergibt und den das Modul
+   * dafuer reserviert. Im Meta Call rechnet keine angezeigte Zahl so —
+   * deshalb steht der Name hier nirgends. */
+  const _WR_HAUSNAME =
+    /Win[\s-]?Rates?|Winrates?|Win\s?%|Matchup-Win|Matchup win|Siegquoten?|Siegraten?|Gewinnraten?|Siege je Match|Wins per game/gi;
+
+  function _wrVollname(text, konventionId) {
+    const W = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+    const roh = String(text == null ? '' : text);
+    const name = W ? W.kurz(konventionId) : '';
+    return name ? roh.replace(_WR_HAUSNAME, name) : roh;
+  }
+
+  function _wrKurzform(text) {
+    return String(text == null ? '' : text).replace(_WR_HAUSNAME, 'WR');
+  }
+
+  /* Zwei Konventionen NEBENEINANDER — der Satz, der sagt, dass es zwei
+     sind. Auf Papier enden rund 11 % der Partien unentschieden
+     (684 von 6.192 in data/labs_tournament_matchups_TEF-PBL.csv),
+     online rund 1,3 % (2.322 von 180.414 in
+     data/limitless_online_decks.csv). Zwei Quoten nebeneinander, von
+     denen die eine die Unentschieden im Nenner fuehrt und die andere
+     nicht, unterscheiden sich deshalb um mehrere Punkte, ohne dass
+     eines der beiden Decks besser gespielt haette. Ohne diesen Satz
+     liest sich der Abstand als Spielstaerke. */
+  function _wrZweiKonventionen(idA, wasA, idB, wasB) {
+    const W = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+    if (!W) return '';
+    const kA = W.hol(idA), kB = W.hol(idB);
+    if (!kA || !kB) return '';
+    const de = _mcIstDeutsch();
+    return de
+      ? wasA + ': ' + W.kurz(idA) + ' (' + kA.formel + ') · '
+        + wasB + ': ' + W.kurz(idB) + ' (' + kB.formel + '). '
+        + 'Zwei verschiedene Konventionen — der Abstand zwischen ihnen ist '
+        + 'zum Teil eine Einheitenfrage, nicht Spielstaerke.'
+      : wasA + ': ' + W.kurz(idA) + ' (' + kA.formel + ') · '
+        + wasB + ': ' + W.kurz(idB) + ' (' + kB.formel + '). '
+        + 'Two different conventions — part of the gap between them is a '
+        + 'question of units, not of play strength.';
+  }
+
+  /* Dieselbe Aussage als Zeile fuer ein geteiltes Bild: dort gibt es
+     keinen title zum Zeigen, also muss die Konvention sichtbar
+     danebenstehen. */
+  function _wrLegende(paare) {
+    const W = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
+    if (!W) return '';
+    return (paare || []).map(function (p) {
+      const k = W.hol(p.konvention);
+      if (!k) return '';
+      return p.was + ' = ' + W.kurz(p.konvention) + ' (' + k.formel + ')';
+    }).filter(Boolean).join('   ·   ');
+  }
+
   function _wrChip(wert, partien, konventionId) {
     if (wert == null || !(wert > 0)) return '';
     const z = wert.toFixed(0).replace('.', ',');
@@ -12317,15 +12473,26 @@ window.MetaCall = (function () {
       ? ' · ' + window.zahlLokal(partien)
       : '';
     const titel = _wrKonventionsTitel(konventionId || 'mitUnentschieden');
+    /* Der zweite Zweig ist der Fall „js/win-rate-konvention.js ist
+       gar nicht geladen". Er bleibt, weil tests/unit/test-abnahme-
+       2026-09-05.js ihn als Zusage fuehrt (der Nenner muss dran sein,
+       auch ohne Modul). In der ausgelieferten Seite kommt er nicht
+       vor: index.html laedt das Modul vor diesem hier, und die Probe
+       in tests/unit/test-w2-win-prozent-konventionen.js rendert den
+       Chip mit dem ECHTEN Modul und verlangt Name und Formel im
+       title. */
     return titel
-      ? ` (<span class="mc-wr-chip" title="${esc(titel)}">WR ${z} %${n}</span>)`
+      ? ` (<span class="mc-wr-chip" title="${esc(titel)}" data-hinweis="${esc(titel)}">WR ${z} %${n}</span>)`
       : ` (WR ${z} %${n})`;
   }
 
-  function _intelStatTile(label, value, extra, extraCls) {
+  function _intelStatTile(label, value, extra, extraCls, titel) {
     const cls = 'mc-intel-tile' + (extraCls ? ' ' + extraCls : '');
     const extraHtml = extra ? `<span class="mc-intel-tile-extra">${esc(extra)}</span>` : '';
-    return `<div class="${cls}">
+    const titelAttr = titel
+      ? ` title="${esc(titel)}" data-hinweis="${esc(titel)}"`
+      : '';
+    return `<div class="${cls}"${titelAttr}>
       <span class="mc-intel-tile-label">${esc(label)}</span>
       <span class="mc-intel-tile-value">${value}</span>
       ${extraHtml}
@@ -12632,7 +12799,23 @@ window.MetaCall = (function () {
     ctx.fillText(subtitle, 28, 88);
   }
 
-  function _paintFooter(ctx, w, h) {
+  /* EIN GETEILTES BILD HAT KEINEN title (BEFUND W2, 08.09.2026).
+     Auf den PNGs stand „Ø WIN RATE" und in derselben Datei eine
+     Matchup-Spalte, die eine ANDERE Formel rechnet — im Browser haengt
+     an beiden ein Hinweis, im Bild an keinem. Deshalb nimmt der Fuss
+     jetzt eine Legendenzeile: Kuerzel, Name und Formel, sichtbar,
+     ueber dem Trennstrich. Bilder ohne Quote rufen ohne `legende` auf
+     und sehen aus wie bisher. */
+  function _paintFooter(ctx, w, h, legende) {
+    if (legende) {
+      ctx.save();
+      ctx.fillStyle = '#6b7c93';
+      ctx.font = '11px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(legende, 28, h - 52);
+      ctx.restore();
+    }
     ctx.fillStyle = 'rgba(255,255,255,0.06)';
     ctx.fillRect(0, h - 42, w, 1);
 
@@ -12753,7 +12936,11 @@ window.MetaCall = (function () {
     ctx.fillText(t('mc.recDeck').toUpperCase(), originX + padL + 30, originY - 17);
     ctx.textAlign = 'right';
     ctx.fillText(titleLabel.toUpperCase(), originX + columnW - padR - 70, originY - 17);
-    ctx.fillText(t('mc.recAvgWr').toUpperCase(), originX + columnW - padR, originY - 17);
+    /* `r.avgWR` ist `expWin / rounds` = Summe(Anteil · pWin) — der
+       Anteil gewonnener Partien an ALLEN gespielten, also S/(S+N+U).
+       Der Kopf ist 11 px breit und traegt nur das Kuerzel; der volle
+       Name steht in der Legende im Fuss desselben Bildes. */
+    ctx.fillText(_wrKurzform(t('mc.recAvgWr')).toUpperCase(), originX + columnW - padR, originY - 17);
     ctx.textAlign = 'left';
 
     let y = originY;
@@ -13302,7 +13489,9 @@ window.MetaCall = (function () {
       );
     }
 
-    _paintFooter(ctx, W, H);
+    _paintFooter(ctx, W, H, _wrLegende([
+      { was: _wrKurzform(t('mc.recAvgWr')), konvention: 'mitUnentschieden' },
+    ]));
     _showSharePreview(
       canvas,
       `metacall-field-and-recs-${_formatDateFilename()}.png`,
@@ -13422,7 +13611,12 @@ window.MetaCall = (function () {
     ctx.fillText(_mcNum(day1WR, 1) + _mcPz(), rightCx, cardY + 66);
     ctx.font = 'bold 14px system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    ctx.fillText(t('mc.day1WinRate').toUpperCase(), rightCx, cardY + 108);
+    /* ZWEI KONVENTIONEN AUF EINEM BILD (BEFUND W2, 08.09.2026).
+       Diese Kachel zeigt `expWin / rounds` = S/(S+N+U); die
+       Matchup-Spalte darunter zeigt `_anzeigeQuote(m)` = S/(S+N).
+       Beide standen ohne Namen nebeneinander. Die Legende im Fuss
+       nennt jetzt beide. */
+    ctx.fillText(_wrKurzform(t('mc.day1WinRate')).toUpperCase(), rightCx, cardY + 108);
     ctx.font = '13px system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.78)';
     ctx.fillText(t('mc.day1WinRateSub').replace('{r}', _settings.rounds), rightCx, cardY + 132);
@@ -13510,7 +13704,10 @@ window.MetaCall = (function () {
       y += ROW_H;
     });
 
-    _paintFooter(ctx, W, H);
+    _paintFooter(ctx, W, H, _wrLegende([
+      { was: _wrKurzform(t('mc.day1WinRate')), konvention: 'mitUnentschieden' },
+      { was: _mcIstDeutsch() ? 'Matchup-Spalte' : 'matchup column', konvention: 'ohneUnentschieden' },
+    ]));
     _showSharePreview(canvas, `metacall-day2-${_formatDateFilename()}.png`,
       `Meta Call — ${_settings.myDeck}`,
       `Day 2 chance: ${pct}% · ${_settings.myDeck} vs ${zahlLokal(_settings.totalPlayers)} players`);
