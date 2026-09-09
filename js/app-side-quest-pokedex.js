@@ -15,6 +15,9 @@
     const POKEDEX_URL = 'data/champions_pokedex.json';
     const USAGE_URL = 'data/champions_usage.json';
     const NAMES_DE_URL = 'data/champions_names_de.json';
+    const EDITIONEN_URL = 'data/champions_editionen.json';
+    const GO_URL = 'data/pokemon_go_liste.json';
+    const TEAMS_URL = 'data/champions_replica_teams.json';
 
     let _entries = null;
     let _loading = null;
@@ -31,8 +34,14 @@
     let _query = '';
     let _typeFilter = '';            // '' = all, else EN type
     let _formFilter = 'all';         // all | Base | Mega | Regional
-    let _sortKey = 'total';          // total|hp|atk|def|spa|spd|spe|bulkPhys|bulkSpec|dex|name
+    let _sortKey = 'total';          // total|hp|atk|def|spa|spd|spe|bulkPhys|bulkSpec|dex|name|nutzung
     let _sortDir = -1;               // 1 asc, -1 desc
+    let _ansicht = 'raster';         // 'raster' | 'tabelle'
+    let _nurShiny = false;           // Filter: nur was der Nutzer als Shiny hat
+    let _editionen = null;           // { dex: [{schluessel,de,en}] }
+    let _go = null;                  // { basis:[dex], regional:{region:[dex]}, _meta }
+    let _herkunftLaedt = null;
+    let _teamRang = null;            // Map<normName, Auftritte>
 
     const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
     const TYPES_EN = ['Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice', 'Fighting',
@@ -55,6 +64,26 @@
             sTotal: 'Basiswertsumme', sHp: 'KP', sAtk: 'Angriff', sDef: 'Verteidigung',
             sSpa: 'Sp.-Angriff', sSpd: 'Sp.-Vert.', sSpe: 'Initiative',
             sBulkP: 'Physischer Tank', sBulkS: 'Spezieller Tank',
+            sDex: 'Nummer', sNutzung: 'Champions-Nutzung',
+            ansichtLabel: 'Ansicht', ansichtRaster: 'Raster', ansichtTabelle: 'Tabelle',
+            nurShiny: 'nur meine Shinys',
+            nurShinyHint: 'Zeigt nur Pokémon, die du mit dem Stern als Shiny im Besitz markiert hast.',
+            sternAn: 'Als Shiny im Besitz markiert — nochmal tippen zum Entfernen',
+            sternAus: 'Als Shiny im Besitz markieren',
+            auftritte: (n) => n === 1 ? '1 Team-Auftritt' : `${n} Team-Auftritte`,
+            keineAuftritte: 'in keinem der Top-Teams',
+            herkunftTitel: 'Wo gibt es das?',
+            editionenTitel: 'Kommt vor in',
+            editionenLeer: 'Keine Editionsangabe in der Quelle.',
+            editionenHint: 'Die Quelle sagt, in welchen Editionen die Art vorkommt — nicht, ob sie dort auch fangbar ist. Manche sind nur über Tausch oder Entwicklung zu bekommen.',
+            goTitel: 'Pokémon GO',
+            goJa: 'In der GO-Liste geführt',
+            goUnklar: 'Steht nicht in dieser Liste',
+            goUnklarHint: 'Das ist kein Nein: die Liste ist von der Quelle selbst als veraltet markiert, alles ab 2026 fehlt dort.',
+            goMega: 'Mega-Entwicklung — die Liste führt nur Grundformen',
+            goMegaHint: 'Für Mega-Formen macht diese Quelle keine Aussage. Unten steht, ob die Grundform geführt ist.',
+            goGrundform: (n) => `Grundform ${n}:`,
+            quelleLabel: 'Quelle:',
             cMon: 'Pokémon', cT1: 'Typ 1', cT2: 'Typ 2', cHp: 'KP', cAtk: 'Ang',
             cDef: 'Vert', cSpa: 'SAng', cSpd: 'SVert', cSpe: 'Init', cTotal: 'Ges',
             tankHint: (kind) => kind === 'phys'
@@ -118,6 +147,26 @@
             sTotal: 'Base stat total', sHp: 'HP', sAtk: 'Attack', sDef: 'Defense',
             sSpa: 'Sp. Atk', sSpd: 'Sp. Def', sSpe: 'Speed',
             sBulkP: 'Physical tank', sBulkS: 'Special tank',
+            sDex: 'Number', sNutzung: 'Champions usage',
+            ansichtLabel: 'View', ansichtRaster: 'Grid', ansichtTabelle: 'Table',
+            nurShiny: 'my shinies only',
+            nurShinyHint: 'Shows only Pokémon you starred as owned shiny.',
+            sternAn: 'Marked as owned shiny — tap again to remove',
+            sternAus: 'Mark as owned shiny',
+            auftritte: (n) => n === 1 ? '1 team appearance' : `${n} team appearances`,
+            keineAuftritte: 'in none of the top teams',
+            herkunftTitel: 'Where do I get it?',
+            editionenTitel: 'Appears in',
+            editionenLeer: 'No game listed in the source.',
+            editionenHint: 'The source says which games the species appears in — not whether it can be caught there. Some are trade- or evolution-only.',
+            goTitel: 'Pokémon GO',
+            goJa: 'Listed in the GO list',
+            goUnklar: 'Not in this list',
+            goUnklarHint: 'That is not a no: the source marks its own list as outdated, and everything from 2026 on is missing.',
+            goMega: 'Mega evolution — the list only covers base forms',
+            goMegaHint: 'This source says nothing about Mega forms. Below is whether the base form is listed.',
+            goGrundform: (n) => `Base form ${n}:`,
+            quelleLabel: 'Source:',
             cMon: 'Pokémon', cT1: 'Type 1', cT2: 'Type 2', cHp: 'HP', cAtk: 'Atk',
             cDef: 'Def', cSpa: 'SpA', cSpd: 'SpD', cSpe: 'Spe', cTotal: 'Tot',
             tankHint: (kind) => kind === 'phys'
@@ -513,6 +562,105 @@
         return _namesDeLoading;
     }
 
+    /* ── Herkunft: Editionen, Pokémon GO, Team-Auftritte ──────────────
+     *
+     * Drei Dateien, ein Ladevorgang, alle drei fehlertolerant: fehlt eine,
+     * bleibt ihr Abschnitt im Detail leer statt die Ansicht zu kippen.
+     */
+    function loadHerkunft() {
+        if (_herkunftLaedt) return _herkunftLaedt;
+        const hol = (url) => fetch(`${url}?t=${Date.now()}`)
+            .then(r => r.ok ? r.json() : null).catch(() => null);
+        _herkunftLaedt = Promise.all([hol(EDITIONEN_URL), hol(GO_URL), hol(TEAMS_URL)])
+            .then(([ed, go, teams]) => {
+                _editionen = (ed && ed.editionen) ? ed : { editionen: {}, _meta: {} };
+                _go = go || { basis: [], regional: {}, _meta: {} };
+                _teamRang = baueTeamRang(teams);
+                return true;
+            });
+        return _herkunftLaedt;
+    }
+
+    function normName(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+
+    /* Zwei Teamnamen zeigen auf einen Pokédex-Eintrag, der anders heisst.
+     *
+     * GEMESSEN am 09.09.2026 ueber alle 108 Replica-Teams: von 83
+     * verschiedenen Teamnamen fanden 81 ihren Eintrag, zwei nicht —
+     * "Floette-Eternal" (22 Auftritte, damit Rang 8 des ganzen Feldes)
+     * und "Maushold-Four" (5). Der Pokédex fuehrt beide unter der
+     * Grundform. Ohne diese zwei Zeilen stuende bei Floette "0
+     * Team-Auftritte", waehrend es tatsaechlich das achthaeufigste
+     * Pokémon der Top-Teams ist — dieselbe Bauart Fehler, die der
+     * Nutzungs-Reiter am 05.09.2026 schon einmal hatte.
+     */
+    const TEAM_AUSNAHMEN = { floetteeternal: 'Floette', mausholdfour: 'Maushold' };
+    const TEAM_REGION = { alolan: 'Alola', galarian: 'Galar', hisuian: 'Hisui', paldean: 'Paldea' };
+
+    /* Pokédex-Name -> Showdown-Schreibweise der Teamdatei.
+     * "Hisuian Arcanine" -> "Arcanine-Hisui", "Mega Charizard Y" ->
+     * "Charizard-Mega-Y". */
+    function showdownName(en) {
+        const n = String(en || '').trim();
+        let m = n.match(/^(Alolan|Galarian|Hisuian|Paldean)\s+(.+)$/);
+        if (m) return m[2] + '-' + TEAM_REGION[m[1].toLowerCase()];
+        m = n.match(/^Mega\s+(.+?)(?:\s+([XY]))?$/);
+        if (m) return m[1] + '-Mega' + (m[2] ? '-' + m[2] : '');
+        return n;
+    }
+
+    function baueTeamRang(teams) {
+        const map = new Map();
+        const liste = (teams && teams.teams) || [];
+        liste.forEach(t => (t.pokemon || []).forEach(p => {
+            const roh = p && p.name ? String(p.name).trim() : '';
+            if (!roh) return;
+            const schluessel = normName(TEAM_AUSNAHMEN[normName(roh)] || roh);
+            map.set(schluessel, (map.get(schluessel) || 0) + 1);
+        }));
+        return map;
+    }
+
+    function teamAuftritte(e) {
+        if (!_teamRang || !e) return 0;
+        const kandidaten = [showdownName(e.en), e.en];
+        for (const k of kandidaten) {
+            const v = _teamRang.get(normName(k));
+            if (v) return v;
+        }
+        return 0;
+    }
+
+    function regionSchluessel(en) {
+        const n = String(en || '').toLowerCase();
+        if (n.startsWith('alolan ')) return 'alola';
+        if (n.startsWith('galarian ')) return 'galar';
+        if (n.startsWith('hisuian ')) return 'hisui';
+        if (n.startsWith('paldean ')) return 'paldea';
+        return '';
+    }
+
+    /* Steht die Art in der GO-Liste?
+     *
+     * Drei Antworten, nicht zwei. "nein" gibt es NICHT: die Quelle ist von
+     * PokéWiki selbst als veraltet und fehlerhaft markiert, alles ab 2026
+     * fehlt dort. Ein fehlender Eintrag belegt deshalb keine Abwesenheit.
+     * Und fuer Mega-Formen fuehrt die Liste ueberhaupt keine Zeilen —
+     * dort gilt die Angabe der Grundform, mehr nicht.
+     */
+    function goStatus(e) {
+        if (!_go || !e) return 'unbekannt';
+        if (e.form === 'Mega') return 'mega';
+        const r = regionSchluessel(e.en);
+        const menge = r ? ((_go.regional || {})[r] || []) : (_go.basis || []);
+        return menge.indexOf(e.dex) !== -1 ? 'gelistet' : 'nicht-gelistet';
+    }
+
+    function editionenFuer(e) {
+        if (!_editionen || !e) return [];
+        return (_editionen.editionen || {})[String(e.dex)] || [];
+    }
+
     // ── Filtering / sorting ────────────────────────────────────────
     function norm(s) { return String(s || '').toLowerCase(); }
 
@@ -525,6 +673,7 @@
     function sortValue(e) {
         if (_sortKey === 'name') return uiLang() === 'de' ? e.de : e.en;
         if (_sortKey === 'dex') return e.dex || 0;
+        if (_sortKey === 'nutzung') return teamAuftritte(e);
         if (_sortKey === 'total') return e.total || 0;
         if (_sortKey === 'bulkPhys') return e.bulkPhys || 0;
         if (_sortKey === 'bulkSpec') return e.bulkSpec || 0;
@@ -538,6 +687,7 @@
         const list = _entries
             .filter(e => !_typeFilter || e.t1 === _typeFilter || e.t2 === _typeFilter)
             .filter(e => _formFilter === 'all' || e.form === _formFilter)
+            .filter(e => !_nurShiny || (window.ChampionsShiny && window.ChampionsShiny.hat(e)))
             .filter(e => matches(e, q));
         if (_sortKey === 'name') {
             list.sort((a, b) => sortValue(a).localeCompare(sortValue(b), lang) * _sortDir);
@@ -664,6 +814,95 @@
             </tr>`;
     }
 
+    /* ── Raster ────────────────────────────────────────────────────────
+     *
+     * Eine Kachel je Eintrag: Bild, Nummer, Name, Typen, der Stern und —
+     * wenn nach Nutzung sortiert wird — die Team-Auftritte. Bewusst KEINE
+     * Basiswerte: dafuer gibt es die Tabelle daneben, und eine Kachel mit
+     * neun Zahlen ist keine Kachel mehr.
+     */
+    function sternHtml(e) {
+        const l = t();
+        const an = !!(window.ChampionsShiny && window.ChampionsShiny.hat(e));
+        const titel = an ? l.sternAn : l.sternAus;
+        return `<button type="button" class="sqp-stern${an ? ' is-an' : ''}"
+                    data-sqp-stern="${escapeHtml(String(e.dex))}|${escapeHtml(e.form || 'Base')}"
+                    aria-pressed="${an ? 'true' : 'false'}"
+                    title="${escapeHtml(titel)}" aria-label="${escapeHtml(titel)}">★</button>`;
+    }
+
+    function kachelHtml(e) {
+        const l = t();
+        const name = uiLang() === 'de' ? e.de : e.en;
+        const n = teamAuftritte(e);
+        const rang = (_sortKey === 'nutzung')
+            ? `<span class="sqp-kachel-rang">${n ? escapeHtml(l.auftritte(n)) : escapeHtml(l.keineAuftritte)}</span>`
+            : '';
+        return `<button type="button" class="sqp-kachel" data-sqp-open="${escapeHtml(e.en)}">
+                ${spriteImg(e.en, 'sqp-kachel-bild')}
+                <span class="sqp-kachel-nr">#${escapeHtml(String(e.dex))}</span>
+                <span class="sqp-kachel-name">${escapeHtml(name)}</span>
+                <span class="sqp-kachel-typen">${typeBadge(e.t1, e.t1de)}${e.t2 ? typeBadge(e.t2, e.t2de) : ''}</span>
+                ${rang}
+            </button>`;
+    }
+
+    function rasterHtml(results) {
+        const l = t();
+        if (!results.length) return `<p class="sqp-status">${escapeHtml(l.none)}</p>`;
+        return `<div class="sqp-raster">${results.map(e =>
+            `<div class="sqp-kachel-huelle">${kachelHtml(e)}${sternHtml(e)}</div>`).join('')}</div>`;
+    }
+
+    /* ── Herkunft im Detail: Editionen und Pokémon GO ──────────────────
+     *
+     * Beide Angaben tragen ihre Einschraenkung sichtbar mit sich. Bei den
+     * Editionen: "kommt vor in", nicht "zu fangen in". Bei GO: es gibt
+     * kein Nein, nur "gelistet" und "steht nicht in dieser Liste" — die
+     * Quelle ist selbst als veraltet markiert.
+     */
+    function herkunftHtml(e) {
+        const l = t();
+        const ed = editionenFuer(e);
+        const edText = ed.length
+            ? ed.map(v => `<span class="sqp-edition">${escapeHtml(uiLang() === 'de' ? v.de : v.en)}</span>`).join('')
+            : `<span class="sqp-herkunft-leer">${escapeHtml(l.editionenLeer)}</span>`;
+
+        const st = goStatus(e);
+        let goZeile;
+        if (st === 'gelistet') {
+            goZeile = `<span class="sqp-go is-ja">✓ ${escapeHtml(l.goJa)}</span>`;
+        } else if (st === 'mega') {
+            const basis = { dex: e.dex, form: 'Base', en: basisName(e.en) };
+            const bs = goStatus(basis);
+            const bname = escapeHtml(basisName(e.en));
+            const bstext = bs === 'gelistet'
+                ? `<span class="sqp-go is-ja">✓ ${escapeHtml(l.goJa)}</span>`
+                : `<span class="sqp-go is-unklar">${escapeHtml(l.goUnklar)}</span>`;
+            goZeile = `<span class="sqp-go is-mega" title="${escapeHtml(l.goMegaHint)}">${escapeHtml(l.goMega)}</span>`
+                + `<span class="sqp-go-basis">${escapeHtml(l.goGrundform(bname))} ${bstext}</span>`;
+        } else {
+            goZeile = `<span class="sqp-go is-unklar" title="${escapeHtml(l.goUnklarHint)}">${escapeHtml(l.goUnklar)}</span>`;
+        }
+
+        const warn = (_go && _go._meta && _go._meta.warnung) ? _go._meta.warnung : '';
+        const quelle = (_go && _go._meta && _go._meta.quelle) ? _go._meta.quelle : '';
+        return `
+            <section class="sqp-herkunft">
+                <h4 class="sqp-herkunft-titel">${escapeHtml(l.herkunftTitel)}</h4>
+                <div class="sqp-herkunft-block">
+                    <span class="sqp-herkunft-label" title="${escapeHtml(l.editionenHint)}">${escapeHtml(l.editionenTitel)}</span>
+                    <div class="sqp-editionen">${edText}</div>
+                </div>
+                <div class="sqp-herkunft-block">
+                    <span class="sqp-herkunft-label">${escapeHtml(l.goTitel)}</span>
+                    <div class="sqp-go-zeile">${goZeile}</div>
+                    ${warn ? `<p class="sqp-herkunft-warnung">${escapeHtml(warn)}</p>` : ''}
+                    ${quelle ? `<p class="sqp-herkunft-quelle">${escapeHtml(l.quelleLabel)} ${escapeHtml(quelle)}</p>` : ''}
+                </div>
+            </section>`;
+    }
+
     function tableHtml(results) {
         const l = t();
         _lastResults = results;   // so a tapped row maps back to its entry
@@ -689,9 +928,19 @@
             TYPES_EN.map(ty => `<option value="${ty}"${_typeFilter === ty ? ' selected' : ''}>${escapeHtml(uiLang() === 'de' ? deType(ty) : ty)}</option>`).join('');
         const formOpts = [['all', l.allForms], ['Base', l.formBase], ['Mega', l.formMega], ['Regional', l.formRegional]]
             .map(([v, lab]) => `<option value="${v}"${_formFilter === v ? ' selected' : ''}>${escapeHtml(lab)}</option>`).join('');
+        const shinyN = (window.ChampionsShiny && window.ChampionsShiny.anzahl()) || 0;
         return `
+            <div class="sqp-ansicht" role="group" aria-label="${escapeHtml(l.ansichtLabel)}">
+                <button type="button" class="sqp-ansicht-btn${_ansicht === 'raster' ? ' is-active' : ''}" data-sqp-ansicht="raster">${escapeHtml(l.ansichtRaster)}</button>
+                <button type="button" class="sqp-ansicht-btn${_ansicht === 'tabelle' ? ' is-active' : ''}" data-sqp-ansicht="tabelle">${escapeHtml(l.ansichtTabelle)}</button>
+                <span class="sqp-ansicht-spacer"></span>
+                <button type="button" class="sqp-shinyfilter${_nurShiny ? ' is-active' : ''}" data-sqp-nurshiny="1"
+                        title="${escapeHtml(l.nurShinyHint)}">\u2605 ${escapeHtml(l.nurShiny)} <b>${shinyN}</b></button>
+            </div>
             <div class="sqp-presets">
                 <span class="sqp-presets-label">${escapeHtml(l.sortHead)}</span>
+                ${presetBtn('dex', 1, l.sDex)}
+                ${presetBtn('nutzung', -1, l.sNutzung)}
                 ${presetBtn('total', -1, l.sTotal)}
                 ${presetBtn('hp', -1, l.sHp)}
                 ${presetBtn('atk', -1, l.sAtk)}
@@ -1268,6 +1517,7 @@
                     ${speedTierRow(e, topBuildFinal(e, block))}
                 </div>
                 ${viaBaseNote(e)}
+                ${herkunftHtml(e)}
                 ${detailUsageBlock(e, block)}
                 <p class="sqp-attr">${escapeHtml(l.attribution)}</p>
             </div>`;
@@ -1364,7 +1614,7 @@
                        autocomplete="off" spellcheck="false" aria-label="${escapeHtml(l.tab)}">
                 ${controlsHtml()}
                 <p class="sqp-count">${escapeHtml(l.count(results.length))}</p>
-                ${tableHtml(results)}
+                ${_ansicht === 'raster' ? rasterHtml(results) : tableHtml(results)}
                 <p class="sqp-note">${legendHtml()}</p>
                 <p class="sqp-attr">${escapeHtml(l.attribution)}</p>
             </div>`;
@@ -1381,6 +1631,7 @@
         if (countEl) countEl.textContent = l.count(results.length);
         const wrap = host.querySelector('.sqp-table-wrap') || host.querySelector('.sqp-status');
         if (wrap) wrap.outerHTML = tableHtml(results);
+        wireRaster(host);
         wireSortHeaders(host);
         wireRows(host);
     }
@@ -1423,6 +1674,56 @@
         });
     }
 
+    /* Ansicht, Shiny-Filter, Stern und Kachelklick.
+     *
+     * Eigene Funktion, weil ZWEI Stellen neu zeichnen: render()
+     * baut den ganzen Wirt neu, rerenderTableOnly() nur Zaehler und
+     * Liste. Stand das hier nur an einer der beiden, war die Haelfte
+     * der Knoepfe tot — genau so ist es am 09.09.2026 beim ersten
+     * Bauen passiert: der Einschub landete in rerenderTableOnly(),
+     * das beim ersten Zeichnen gar nicht laeuft. Ergebnis: 292
+     * Kacheln, 292 Sterne, kein einziger reagierte. */
+    function wireRaster(host) {
+        host.querySelectorAll('.sqp-ansicht-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const v = btn.getAttribute('data-sqp-ansicht');
+                if (v === _ansicht) return;
+                _ansicht = v;
+                render();
+            });
+        });
+        const shinyBtn = host.querySelector('.sqp-shinyfilter');
+        if (shinyBtn) shinyBtn.addEventListener('click', () => { _nurShiny = !_nurShiny; render(); });
+
+        /* Der Stern sitzt NEBEN der Kachel, nicht darin — ein Knopf im Knopf
+         * ist ungueltiges HTML und faengt den Klick der Kachel mit ab. Beides
+         * liegt deshalb in einer Huelle, und der Stern stoppt die Weitergabe,
+         * damit ein Klick auf ihn nicht zusaetzlich das Detail oeffnet. */
+        host.querySelectorAll('.sqp-stern').forEach(btn => {
+            btn.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                if (!window.ChampionsShiny) return;
+                const [dex, form] = String(btn.getAttribute('data-sqp-stern') || '').split('|');
+                const an = window.ChampionsShiny.umschalten({ dex: parseInt(dex, 10), form: form });
+                btn.classList.toggle('is-an', an);
+                btn.setAttribute('aria-pressed', an ? 'true' : 'false');
+                btn.title = an ? t().sternAn : t().sternAus;
+                const z = host.querySelector('.sqp-shinyfilter b');
+                if (z) z.textContent = String(window.ChampionsShiny.anzahl());
+                // Im Shiny-Filter verschwindet ein abgewaehlter Eintrag sofort.
+                if (_nurShiny && !an) render();
+            });
+        });
+        host.querySelectorAll('.sqp-kachel').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const en = btn.getAttribute('data-sqp-open');
+                const e = (_entries || []).find(x => x.en === en);
+                if (e) openDetail(e);
+            });
+        });
+    }
+
     function wireEvents(host) {
         const search = host.querySelector('#sqpSearch');
         if (search) search.addEventListener('input', () => { _query = search.value; rerenderTableOnly(); });
@@ -1449,16 +1750,25 @@
                 else render();
             });
         });
+        wireRaster(host);
         wireSortHeaders(host);
         wireRows(host);
     }
 
     // Called by the sub-tab controller when the Pokédex view is shown.
     function activate() {
+        // Sterne aus dem Nutzerdokument vereinigen, sobald jemand angemeldet
+        // ist — fail-soft, der lokale Stand steht ohnehin schon.
+        if (window.ChampionsShiny && window.ChampionsShiny.ausWolkeLaden) {
+            window.ChampionsShiny.ausWolkeLaden().catch(() => {});
+        }
         if (!_activated) {
             _activated = true;
             render();                  // loading state
-            loadData().then(render);   // real table
+            // Herkunft und Team-Auftritte gehoeren zum ersten Bild: nach
+            // Nutzung sortieren geht sonst ins Leere, und das Raster zeigt
+            // eine Rangzeile, die es noch nicht gibt.
+            Promise.all([loadData(), loadHerkunft()]).then(render);
         } else {
             render();
         }

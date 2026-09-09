@@ -275,6 +275,29 @@ jobs:
       # Rebuild the Side Quest "Pokémon" Pokédex (roster + base stats +
       # German names + Lv.50 ranges + the in-game "most used" build).
       # Fail-soft: keeps the committed JSON.
+      # Editionen und die GO-Liste (09.09.2026). Beide fail-soft: schlaegt
+      # einer fehl, bleibt die eingecheckte Datei stehen und die Kachel
+      # zeigt weiter den letzten guten Stand.
+      - name: Editionen und Pokemon-GO-Liste
+        run: |
+          set -uo pipefail
+          python -u scripts/build_champions_editionen.py
+          rc=$?
+          if [ $rc -ne 0 ]; then
+            echo "::warning::build_champions_editionen exited with $rc — Datei bleibt wie sie ist"
+            echo "FAIL scripts/build_champions_editionen.py (rc=$rc)" >> "$RUNNER_TEMP/rc_extra.txt"
+          else
+            echo "OK   scripts/build_champions_editionen.py" >> "$RUNNER_TEMP/rc_extra.txt"
+          fi
+          python -u scripts/scrape_pokemon_go_liste.py
+          rc=$?
+          if [ $rc -ne 0 ]; then
+            echo "::warning::scrape_pokemon_go_liste exited with $rc — Datei bleibt wie sie ist"
+            echo "FAIL scripts/scrape_pokemon_go_liste.py (rc=$rc)" >> "$RUNNER_TEMP/rc_extra.txt"
+          else
+            echo "OK   scripts/scrape_pokemon_go_liste.py" >> "$RUNNER_TEMP/rc_extra.txt"
+          fi
+
       - name: Build Champions Pokédex
         run: |
           set +e
@@ -386,7 +409,9 @@ jobs:
                   data/champions_roster_extra.json \
                   data/champions_available_items.json \
                   data/de_name_overrides.json \
-                  data/pokemonproxies_index.json
+                  data/pokemonproxies_index.json \
+                  data/champions_editionen.json \
+                  data/pokemon_go_liste.json
           # BEFUND 05.09.2026: champions_speed_corpus.json wurde in jedem
           # naechtlichen Lauf gebaut, nach data/ kopiert (Schritt "Copy
           # output back to data/") — und dann weggeworfen, weil sie in
