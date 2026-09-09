@@ -1299,8 +1299,18 @@
      *   Status                keine Wirkung ueber den Typ — NICHT als x1
      *                         anzeigen, das waere eine falsche Auskunft
      *   Typ unbekannt         die Quelle fuehrt fuer diese Attacke keinen
-     *                         Typ (gemessen: 6 von 391). Lieber sagen als
-     *                         raten.
+     *                         Typ. Lieber sagen als raten.
+     *
+     * Stand 09.09.2026 trifft der dritte Fall auf keine einzige genutzte
+     * Attacke mehr zu (gemessen: 0 von 391). Vorher waren es 6 — Barb
+     * Barrage, Make It Rain, No Retreat, Rage Fist, Spirit Break,
+     * Topsy-Turvy. Ursache war nicht die Anzeige, sondern der Bauer:
+     * scripts/build_champions_resources.py hat nur Attacken mit
+     * inChampions=true uebernommen, und dieser Schalter steht im
+     * Quelldatensatz bei diesen sechs falsch. Der Bauer traegt sie jetzt
+     * aus den Nutzungsdaten nach. Der Zweig bleibt trotzdem stehen: faellt
+     * der Schalter beim naechsten Quell-Update erneut um, soll die Seite
+     * wieder "Typ unbekannt" sagen statt zu raten.
      */
     function istStatusAttacke(en) {
         const r = _res_move(en);

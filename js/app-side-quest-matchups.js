@@ -8,7 +8,8 @@
 //
 // Woher die Zahlen kommen:
 //   Basiswerte      data/champions_pokedex.json
-//   Attacken/Items  data/champions_resources.json (494 Attacken mit Power)
+//   Attacken/Items  data/champions_resources.json (Staerke, PP,
+//                   Schadensklasse und Ziel je Attacke)
 //   Sets            data/champions_usage.json (meistgenutztes Set je Format)
 //   Typentabelle    data/champions_type_chart.json
 //   Reihenfolge     data/champions_replica_teams.json (Team-Auftritte)
@@ -134,6 +135,12 @@
             zielUnbekanntTitel: 'Für diese Attacke liegt kein Zielfeld vor. Im Doppelkampf '
                         + 'ist deshalb offen, ob der 25-%-Abzug für Flächenattacken gilt — '
                         + 'gerechnet wird ohne ihn.',
+            grundstaerke: 'Grundstärke',
+            grundstaerkeTitel: 'Die Stärke dieser Attacke hängt von der Kampfsituation ab '
+                        + '(Zornesfaust steigt mit jedem Treffer bis 350, Kraftvorrat mit '
+                        + 'jeder Statuserhöhung). Gerechnet wird mit der Grundstärke — der '
+                        + 'kleinstmöglichen. Der wirkliche Schaden liegt darüber, wie weit, '
+                        + 'sagen die Daten nicht.',
             loading: 'Lade Matchup-Daten …',
             pickMon: 'Wähle links ein Pokémon.',
             noUsage: 'Für dieses Pokémon liegt in diesem Format kein Set vor.',
@@ -205,6 +212,12 @@
             zielUnbekanntTitel: 'No target field for this move. In a double battle it is '
                         + 'therefore open whether the 25 % spread reduction applies — '
                         + 'the calculation runs without it.',
+            grundstaerke: 'base power',
+            grundstaerkeTitel: 'This move\'s power depends on the battle situation (Rage '
+                        + 'Fist climbs to 350 with every hit taken, Stored Power with every '
+                        + 'stat boost). The calculation uses the base power — the lowest '
+                        + 'possible one. Real damage is higher; by how much the data does '
+                        + 'not say.',
             loading: 'Loading matchup data …',
             pickMon: 'Pick a Pokémon on the left.',
             noUsage: 'No set for this Pokémon in this format.',
@@ -450,7 +463,7 @@
      * Flaechenattacke ist. Die Attackendaten fuehrten dafuer kein Feld.
      *
      * Sie tun es jetzt: `target` (PokéAPI move_target_id) und das daraus
-     * abgeleitete `spread` stehen in champions_resources.json, 32 der
+     * abgeleitete `spread` stehen in champions_resources.json, 33 der
      * Champions-Schadensattacken sind Flaechenattacken — darunter
      * Erdbeben, Steinhagel, Hitzewelle, Surf und Entladung. Bei einem
      * Erdbeben mit Staerke 100 sind das 25 Schadenspunkte Unterschied
@@ -489,6 +502,28 @@
     // ohne Stärke (Status) und unbekannte Namen fallen raus, statt als 0
     // Schaden zu erscheinen — 0 hieße „trifft für nichts", nicht „greift
     // nicht an".
+    // Attacken mit situationsabhaengiger Staerke.
+    //
+    // BEFUND (09.09.2026, Abnahme): Annihilapes meistgenutzte Attacke ist
+    // Zornesfaust mit 97,3 % — in den Daten steht Staerke 50, wirklich
+    // sind es 50 + 50 je einsteckendem Treffer, bis 350. Der Rechner zeigte
+    // die 50 ohne Vorbehalt. Betroffen sind 23 der 299 Schadensattacken,
+    // darunter Fassade, Meteorologe, Kraftvorrat und Fontraenen.
+    //
+    // Erkannt wird am ENGLISCHEN Effekttext, nicht am deutschen: der
+    // englische ist formelhaft ("Power is equal to 50+(X*50)", "Power
+    // doubles if …"), der deutsche nicht. Dieselbe Begruendung wie bei
+    // den Stufenmarken in tests/unit/test-stufen-im-text.js.
+    //
+    // Gerechnet wird weiter mit der Grundstaerke — das ist die einzige
+    // Zahl, die in den Daten steht. Neu ist nur, dass danebensteht, dass
+    // sie eine Untergrenze ist. Eine Hochrechnung waere geraten.
+    const STAERKE_VARIABEL = /power is equal to|power doubles|power is doubled|this move's power is doubled/i;
+
+    function staerkeVariabel(mv) {
+        return !!(mv && STAERKE_VARIABEL.test(String(mv.en_effect || '')));
+    }
+
     function moveTable(attName, attSet, defName, defSet) {
         const attStats = statsOf(attName, attSet);
         const defStats = statsOf(defName, defSet);
@@ -846,7 +881,9 @@
             return `<div class="sq-calc-row">
                     <span class="sq-calc-mv">${nameHtml(r.name, 'moves')}
                         <i class="sq-calc-meta">${esc(tName(r.move.type))} · ${
-                            esc(r.move.power)}${g.stab > 1 ? ' · STAB' : ''}${
+                            esc(r.move.power)}${staerkeVariabel(r.move)
+                                ? ` <span class="sq-calc-variabel" title="${esc(L().grundstaerkeTitel)}">(${esc(L().grundstaerke)})</span>`
+                                : ''}${g.stab > 1 ? ' · STAB' : ''}${
                             eff ? ` · <span class="sq-mu-eff${effClass(g.effectiveness)}">${eff}</span>` : ''}${
                             flaecheHtml}</i>
                     </span>
@@ -1557,7 +1594,7 @@
     window.sideQuestMatchups = { activate, oeffneTeamRechner };
     window._sqMatchupInternals = {
         setData, topSet, clampSpread, spreadTotal, buildRoster, usageSlug,
-        moveTable, bestMove, koLabel, effLabel, statsOf, matchup,
+        moveTable, bestMove, koLabel, effLabel, statsOf, matchup, staerkeVariabel,
         SP_MAX, SP_BUDGET,
         // Team-Rechner: fuer die Tests einzeln greifbar, damit die
         // Urteilsregel und die Spread-Uebernahme geprueft werden koennen,
