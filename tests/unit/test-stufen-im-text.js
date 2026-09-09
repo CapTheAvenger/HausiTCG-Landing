@@ -454,15 +454,30 @@ describe('Stufen im Text — die zweite Abnahme', () => {
             'Raises the Attack of the user and all allies 1 stage.', 'X'), 1);
     });
 
-    /* Zwoelf Attacken haben keinen deutschen Text; die Seite zeigt dort
+    /* Zwoelf Attacken hatten keinen deutschen Text; die Seite zeigt dort
        den englischen. Nach der OBERFLAECHENSPRACHE zu entscheiden hiess:
        derselbe Satz trug im englischen UI eine Marke und im deutschen
-       keine. */
+       keine.
+
+       09.09.2026: an den echten Daten laesst sich das nicht mehr
+       ausloesen — seit op.gg als zweite Quelle dazugekommen ist, haben
+       ALLE 500 Attacken einen deutschen Text (vorher 45 ohne). Der Test
+       ist deshalb umgestellt: die REGEL wird an gesetzten Eintraegen
+       geprueft, nicht an der Datenlage. Eine Regel, die nur solange
+       geprueft wird, wie eine Luecke besteht, verschwindet genau dann,
+       wenn die Luecke geschlossen wird — und das ist der falsche
+       Zeitpunkt. */
     it('die Marke richtet sich nach der Sprache des TEXTES, nicht der Oberflaeche', () => {
         const de = load('de'), en = load('en');
-        const ohneDe = MOVES.filter(e => !(e.de_effect && e.de_effect.trim())
-                                      && en.stufeAusEnglisch(e.en_effect, e.en) != null);
-        assert.ok(ohneDe.length, 'Testannahme: alle Attacken haben deutschen Text');
+        // Echte Attacken, denen der deutsche Text ABGENOMMEN wurde: die
+        // englischen Saetze und Namen sind damit die echten, nur die
+        // Luecke ist nachgestellt.
+        const ohneDe = MOVES
+            .filter(e => en.stufeAusEnglisch(e.en_effect, e.en) != null)
+            .slice(0, 12)
+            .map(e => Object.assign({}, e, { de_effect: '' }));
+        assert.ok(ohneDe.length >= 5,
+            `nur ${ohneDe.length} Attacken mit Stufenmarke im englischen Text`);
         ohneDe.forEach(e => {
             const d = markeAus(gerendert(de, e, true));
             const g = markeAus(gerendert(en, e, false));
