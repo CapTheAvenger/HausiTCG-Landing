@@ -3606,10 +3606,16 @@ window.MetaCall = (function () {
       + `_clip(t8ConvAvg / 0.25, …) laeuft damit nicht; die Verstaerkung `
       + `kommt vollstaendig aus dem Ersatzpfad d2/d1 `
       + `(${_t8Herkunft.ersatz} Deck(s)), ${_t8Herkunft.ohne} Deck(s) `
-      + `bekommen den neutralen Wert 1,0. Nachgemessen am 07.09.2026: `
-      + `die Spalte steht in allen 4.713 Zeilen von `
-      + `data/labs_tournament_decks.csv auf 0. Faellt diese Meldung `
-      + `weg, fuellt der Scraper sie wieder — dann gilt der andere Zweig.`);
+      + `bekommen den neutralen Wert 1,0. Stand 09.09.2026 ist das `
+      + `ABSICHT und kein Datenmangel mehr: scripts/fuelle_conv_rate.py `
+      + `fuellt die Spalte aus den Platzierungen (812 der 4.713 Zeilen, `
+      + `davon 74 groesser 0; der Rest ist leer statt 0). Der Term `
+      + `oben ist aber auf eine Groesse in der Naehe der `
+      + `Tag1-zu-Tag2-Konversion kalibriert, die Top-Cut-Quote hat `
+      + `Median 0 und Maximum 0,5 — er wuerde ein Deck MIT Top-8-Platz `
+      + `schlechter stellen als eines ohne. Deshalb steht `
+      + `T8_SPALTE_KALIBRIERT auf false. Faellt diese Meldung weg, hat `
+      + `jemand den Term neu kalibriert.`);
   }
 
   // ── Diagnostic: Counter Coverage vs Dominant Family ────────
