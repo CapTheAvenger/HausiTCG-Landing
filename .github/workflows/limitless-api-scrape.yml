@@ -265,7 +265,12 @@ jobs:
                   data/meta_prognose.json
           git add data/online_api_cards_*.csv data/online_api_matchups_*.csv 2>/dev/null || true
           # Die alten flachen Dateien sind in die Chunks uebergegangen.
-          git add -u data/online_api_cards.csv data/online_api_matchups.csv 2>/dev/null || true
+          # 09.09.2026: die beiden ungeteilten Dateien gibt es nicht mehr —
+          # der Lauf schreibt seit dem Umbau nur noch Auszuege je
+          # Formatfenster (online_api_cards_TEF-PBL.csv etc.), und die
+          # werden oben ueber den Glob erfasst. Die Zeile lief durch
+          # `|| true` still ins Leere und las sich, als wuerde hier etwas
+          # gesichert.
           if git diff --cached --quiet; then
             echo "unveraendert — kein Push."
             exit 0

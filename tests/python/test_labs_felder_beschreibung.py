@@ -44,6 +44,9 @@ LABS = os.path.join(DATEN, "labs_tournament_decks.csv")
 BESCHREIBUNG = os.path.join(DATEN, "labs_tournament_decks.felder.md")
 OVERVIEW = os.path.join(DATEN, "tournament_cards_data_overview.csv")
 
+# Frueher "nicht befuellbar"; seit 09.09.2026 aus den Platzierungen
+# gerechnet, wo es welche gibt, und sonst leer. Der Name bleibt,
+# damit die Stellen, die ihn nennen, auffindbar bleiben.
 NICHT_BEFUELLBAR = ("top8_conv_rate", "top16_conv_rate", "top32_conv_rate")
 
 
@@ -133,16 +136,122 @@ def test_die_anwesenheit_liegt_hoeher_und_steht_woanders():
 
 # ── Befund B: die Spalten, die keine Messung sind ────────────────────────────
 
-def test_die_conv_rate_spalten_sind_ueberall_null(zeilen):
-    """Solange das gilt, ist die 0.0 kein Messwert. Faengt die Quelle an
-    zu liefern, faellt dieser Test um — und die Beschriftung gehoert
-    zurueckgenommen."""
+def test_die_conv_rate_spalten_tragen_keine_unechte_null(zeilen):
+    """Frueher stand hier: „die Spalten sind ueberall 0.0".
+
+    Am 09.09.2026 hat dieser Test genau das getan, wofuer er gebaut war
+    — er ist umgefallen, als scripts/fuelle_conv_rate.py die Spalten aus
+    den Platzierungen zu fuellen begann, und hat die Ruecknahme der
+    Kennzeichnung erzwungen. Die Beschreibung in der felder.md ist
+    entsprechend umgeschrieben.
+
+    Was er JETZT haelt, ist die eigentliche Aussage dahinter: es darf
+    keine unechte Null mehr geben. Eine Zeile traegt entweder einen
+    gerechneten Wert oder gar nichts. „0.0" ist nur zulaessig, wo
+    wirklich gemessen wurde, dass kein Spieler dieses Decks den Cut
+    erreicht hat — also nur in Turnieren mit Platzierungen.
+    """
+    mit_plaetzen = _turniere_mit_platzierungen()
+    assert mit_plaetzen, "keine Platzierungsdaten gefunden"
     for spalte in NICHT_BEFUELLBAR:
-        werte = {r[spalte].strip() for r in zeilen}
-        assert werte <= {"0.0", "0", ""}, (
-            f"{spalte} traegt jetzt Werte ({sorted(werte)[:5]}) — die Quelle "
-            "liefert wieder etwas, die Kennzeichnung als nicht befuellbar "
-            "muss weg")
+        for r in zeilen:
+            wert = r[spalte].strip()
+            if r["tournament_id"] in mit_plaetzen:
+                assert wert != "", (
+                    f"{spalte} ist leer, obwohl fuer Turnier "
+                    f"{r['tournament_id']} Platzierungen vorliegen")
+                float(wert)   # muss eine Zahl sein
+            else:
+                assert wert == "", (
+                    f"{spalte} traegt {wert!r} fuer Turnier "
+                    f"{r['tournament_id']}, fuer das es keine "
+                    f"Platzierungen gibt — das waere eine erfundene Zahl")
+
+
+def test_die_conv_rate_stimmt_mit_den_platzierungen_ueberein(zeilen):
+    """Gegenprobe gegen die zweite Datei, nicht gegen sich selbst.
+
+    Wo labs `top8_count` selbst fuehrt, muss die Rate genau
+    top8_count / player_count sein. Faellt das um, ist die Zuordnung
+    zwischen den beiden Dateien kaputt — und die Rate waere eine Zahl
+    ohne Deckung.
+    """
+    geprueft = 0
+    for r in zeilen:
+        roh = r.get("top8_count", "").strip()
+        rate = r["top8_conv_rate"].strip()
+        n = r.get("player_count", "").strip()
+        if not roh or not rate or not n or float(n) == 0:
+            continue
+        erwartet = float(roh) / float(n)
+        assert abs(erwartet - float(rate)) < 1e-6, (
+            f"{r['tournament_id']}/{r['deck_slug']}: top8_count={roh} von "
+            f"{n} ergibt {erwartet:.6f}, in der Datei steht {rate}")
+        geprueft += 1
+    assert geprueft >= 500, (
+        f"nur {geprueft} Zeilen gegengeprueft — zu wenige, um etwas zu "
+        f"sichern")
+
+
+def test_jede_gefuellte_rate_folgt_den_platzierungen(zeilen):
+    """Die harte Gegenprobe: JEDE gefuellte Zelle gegen die Plaetze.
+
+    Die Probe oben deckt nur Zeilen ab, in denen labs `top8_count`
+    selbst fuehrt — das sind 10 der 12 Turniere. Beim Mutationstest am
+    09.09.2026 blieb sie deshalb gruen, als in den Turnieren 0060/0061
+    eine Rate verfaelscht wurde. Diese hier rechnet alle drei Spalten
+    aus player_continuity.csv nach, ohne Ausnahme.
+    """
+    import csv as _csv
+    treffer = {}
+    with open(os.path.join(DATEN, "player_continuity.csv"), encoding="utf-8") as f:
+        for z in _csv.DictReader(f):
+            slug = (z.get("deck_slug") or "").strip()
+            platz = (z.get("place") or "").strip()
+            if not slug or not platz:
+                continue
+            try:
+                p = int(platz)
+            except ValueError:
+                continue
+            k = ((z.get("tournament_id") or "").strip(), slug)
+            e = treffer.setdefault(k, {8: 0, 16: 0, 32: 0})
+            for g in (8, 16, 32):
+                if p <= g:
+                    e[g] += 1
+
+    geprueft, abweichend = 0, []
+    for r in zeilen:
+        n = (r.get("player_count") or "").strip()
+        if not n or float(n) == 0:
+            continue
+        k = (r["tournament_id"].strip(), r["deck_slug"].strip())
+        for spalte, grenze in (("top8_conv_rate", 8), ("top16_conv_rate", 16),
+                               ("top32_conv_rate", 32)):
+            wert = r[spalte].strip()
+            if not wert:
+                continue
+            erwartet = treffer.get(k, {8: 0, 16: 0, 32: 0})[grenze] / float(n)
+            if abs(erwartet - float(wert)) > 1e-6:
+                abweichend.append(f"{k[0]}/{k[1]} {spalte}: "
+                                  f"erwartet {erwartet:.6f}, steht {wert}")
+            geprueft += 1
+    assert not abweichend, ("Raten ohne Deckung in den Platzierungen: "
+                            + "; ".join(abweichend[:6]))
+    assert geprueft >= 2000, (
+        f"nur {geprueft} Zellen gegengeprueft — zu wenige")
+
+
+def _turniere_mit_platzierungen():
+    """Turnier-IDs, fuer die player_continuity.csv Plaetze fuehrt."""
+    import csv as _csv
+    pfad = os.path.join(DATEN, "player_continuity.csv")
+    aus = set()
+    with open(pfad, encoding="utf-8") as f:
+        for z in _csv.DictReader(f):
+            if (z.get("place") or "").strip() and (z.get("deck_slug") or "").strip():
+                aus.add((z.get("tournament_id") or "").strip())
+    return aus
 
 
 def test_die_platzierungszaehler_sind_erst_ab_0062_erhoben(zeilen):

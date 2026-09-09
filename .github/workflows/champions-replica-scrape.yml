@@ -235,6 +235,27 @@ jobs:
           fi
           exit 0
 
+      # Zweite Quelle fuer den Attackenpool: op.gg. Muss VOR dem Bauer
+      # laufen — der liest die Datei, um (a) die deutschen
+      # Beschreibungstexte zu ergaenzen, die PokéAPI fuer neuere
+      # Attacken nicht fuehrt (gemessen 45 Stueck), und (b) den Nachtrag
+      # aus den Nutzungsdaten gegen eine ZWEITE Quelle zu halten. Ohne
+      # sie haengt der Nachtrag an einem einzigen Scraper.
+      # Fail-soft: ohne die Datei baut der Bauer wie vorher.
+      - name: op.gg-Attackenliste holen (zweite Quelle)
+        run: |
+          set +e
+          python -u scripts/scrape_opgg_champions_moves.py
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+              echo "::warning::scrape_opgg_champions_moves exited with $rc — bestehende Datei bleibt"
+              git checkout -- data/opgg_champions_moves.json 2>/dev/null
+              echo "FAIL scripts/scrape_opgg_champions_moves.py (rc=$rc)" >> "$RUNNER_TEMP/rc_extra.txt"
+          else
+              echo "OK   scripts/scrape_opgg_champions_moves.py" >> "$RUNNER_TEMP/rc_extra.txt"
+          fi
+          exit 0
+
       # Rebuild the Side Quest "Look up" reference (items/abilities/moves/
       # field effects) from the Champions dataset + PokéAPI + the scraped
       # German name overrides + the Champions item-availability list.
@@ -429,7 +450,8 @@ jobs:
                   data/pokemonproxies_index.json \
                   data/champions_editionen.json \
                   data/pokemon_go_liste.json \
-                  data/pokemon_go_shiny.json
+                  data/pokemon_go_shiny.json \
+                  data/opgg_champions_moves.json
           # BEFUND 05.09.2026: champions_speed_corpus.json wurde in jedem
           # naechtlichen Lauf gebaut, nach data/ kopiert (Schritt "Copy
           # output back to data/") — und dann weggeworfen, weil sie in

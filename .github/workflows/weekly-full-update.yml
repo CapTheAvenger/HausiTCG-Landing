@@ -677,6 +677,28 @@ jobs:
           shopt -u nullglob
           exit 0
 
+      # Die drei Top-Cut-Quoten stehen im Scraper-Schema, werden von der
+      # Quelle aber nicht geliefert (die Ansicht ?conversion fuehrt sie
+      # nicht mehr). Bis zum 09.09.2026 blieb deshalb in allen 4.713
+      # Zeilen eine 0.0 stehen — eine Zahl, die sich wie eine Messung
+      # liest ("nie in die Top 8"), obwohl nichts gemessen wurde.
+      #
+      # Dieser Schritt rechnet sie aus den Platzierungen in
+      # player_continuity.csv und laesst leer, wo es keine gibt. Er muss
+      # NACH dem player-continuity-Scraper und NACH der Ruecksicherung
+      # nach data/ laufen — beides ist oben der Fall — und vor dem
+      # Commit. Faellt er um, bleibt der committete Stand.
+      - name: Top-Cut-Quoten aus den Platzierungen fuellen
+        run: |
+          set +e
+          python3 -u scripts/fuelle_conv_rate.py
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+              echo "::warning::fuelle_conv_rate exited with $rc — CSVs unveraendert"
+              git checkout -- data/labs_tournament_decks.csv data/labs_tournament_decks_*.csv 2>/dev/null
+          fi
+          exit 0
+
       - name: Labs-Verzeichnis aus data/ neu bauen
         # BEFUND 01.09.2026: der Scraper schreibt das Verzeichnis in seinen
         # eigenen Arbeitsordner (backend/core/data/), die Ruecksicherung

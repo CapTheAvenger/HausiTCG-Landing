@@ -7173,7 +7173,31 @@ window.MetaCall = (function () {
             // downstream. Normalise here so a future scraper fix
             // doesn't silently render "5205 % conversion".
             const t8 = t8raw > 1 ? t8raw / 100 : t8raw;
-            if (t8 > 0) {
+            /* 09.09.2026 — WARUM DIESER ZWEIG WEITER SCHWEIGT.
+               scripts/fuelle_conv_rate.py fuellt die Spalte seit heute
+               echt: 812 der 4.713 Zeilen tragen eine Top-Cut-Quote aus
+               den Platzierungen, der Rest ist LEER statt 0 (leer heisst
+               "nicht gemessen", 0 hiess frueher dasselbe und log).
+
+               Damit waere dieser Zweig zum ersten Mal aktiv — und wuerde
+               den Motor VERSCHLECHTERN. Gemessen ueber die 812 Zeilen:
+               Median 0, p90 0, Maximum 0,5; nur 74 Decks haben ueberhaupt
+               einen Top-8-Platz. Der Divisor 0,25 unten erwartet aber
+               eine Groesse in der Naehe der Tag1->Tag2-Conversion (~25 %).
+               Ein Deck mit einem Top-8-Platz aus 749 Antritten kaeme auf
+               0,0027 -> _clip(0,011) -> 0,5, also den SCHLECHTESTEN
+               Boost — waehrend ein Deck ganz ohne Top-8-Platz ueber den
+               Ersatzpfad bei ~1,0 landet. Das ist verkehrt herum.
+
+               Die Spalte misst also etwas anderes als das, wofuer der
+               Term kalibriert ist. Bis jemand ihn neu kalibriert (die
+               richtige Groesse waere der Top-8-Anteil GETEILT durch den
+               Feldanteil, neutral bei 1,0 — dieselbe Idee wie d2/d1),
+               bleibt der bewaehrte Ersatzpfad der tragende. Die Daten
+               sind trotzdem richtig in der Datei; hier wird nur nichts
+               falsch Kalibriertes verrechnet. */
+            const T8_SPALTE_KALIBRIERT = false;
+            if (T8_SPALTE_KALIBRIERT && t8 > 0) {
               if (!_labsConvByDeck[k]) _labsConvByDeck[k] = { sum: 0, n: 0 };
               _labsConvByDeck[k].sum += t8 * w;
               _labsConvByDeck[k].n += w;
