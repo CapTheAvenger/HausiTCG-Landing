@@ -2841,6 +2841,106 @@ body.sqp-d-open { overflow: hidden; }
     .sqp-kachel-name { font-size: 0.74rem; }
 }
 
+/* ── Item-Nutzung und Attacken-Wirksamkeit (09.09.2026) ────────────── */
+.sqi { display: flex; flex-direction: column; }
+.sqi-intro { font-size: 0.9rem; color: var(--ink-soft, #6b7280); margin: 0 0 0.6rem; }
+.sqi-suche {
+    width: 100%; padding: 0.55rem 0.8rem; font: inherit; font-size: 0.92rem;
+    border: 1px solid #e0e0e0; border-radius: 10px; background: var(--surface-1, #fff);
+    color: var(--ink); margin-bottom: 0.55rem;
+}
+.sqi-leiste { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+.sqi-spacer { flex: 1 1 auto; }
+.sqi-leiste-label {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.03em; color: var(--ink-soft, #6b7280);
+}
+.sqi-sort, .sqi-fmt {
+    appearance: none; border: 1px solid #e0e0e0; background: var(--surface-2);
+    color: var(--ink); font: inherit; font-size: 0.8rem; font-weight: 600;
+    padding: 0.34rem 0.72rem; border-radius: 999px; cursor: pointer;
+}
+.sqi-sort.is-active, .sqi-fmt.is-active {
+    background: #2e70c0; border-color: #5b9cef; color: #fff;
+}
+.sqi-zaehler { font-size: 0.8rem; color: var(--ink-soft, #6b7280); margin: 0 0 0.4rem; }
+.sqi-liste { display: flex; flex-direction: column; gap: 1px; background: #e4e7ec;
+    border: 1px solid #e4e7ec; border-radius: 10px; overflow: hidden; }
+.sqi-item { background: var(--surface-1, #fff); }
+.sqi-item.is-offen { background: var(--surface-2); }
+.sqi-kopf {
+    appearance: none; width: 100%; border: none; background: transparent;
+    display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap;
+    padding: 0.6rem 0.85rem; font: inherit; color: var(--ink); cursor: pointer; text-align: left;
+}
+.sqi-kopf:hover { background: var(--surface-2); }
+.sqi-kopf:focus-visible { outline: 2px solid #2e70c0; outline-offset: -2px; }
+.sqi-name { font-weight: 600; font-size: 0.94rem; }
+.sqi-en { font-size: 0.78rem; color: var(--ink-soft, #6b7280); }
+.sqi-zahl { font-size: 0.78rem; color: var(--ink-soft, #6b7280); margin-left: auto; }
+.sqi-spitze {
+    font-size: 0.86rem; font-weight: 700; color: #2e70c0;
+    font-variant-numeric: tabular-nums; min-width: 3.6rem; text-align: right;
+}
+.sqi-schmal {
+    font-size: 0.7rem; font-weight: 600; color: #1f7a4d;
+    background: #e8f5ee; border: 1px solid #b9e0cb;
+    padding: 0.1rem 0.42rem; border-radius: 999px; cursor: help;
+}
+.sqi-wirkung {
+    margin: 0; padding: 0 0.85rem 0.55rem; font-size: 0.8rem; line-height: 1.45;
+    color: var(--ink-soft, #6b7280);
+}
+.sqi-traeger { padding: 0 0.85rem 0.8rem; }
+.sqi-nenner {
+    margin: 0 0 0.5rem; font-size: 0.74rem; line-height: 1.4; color: #8a6d1f;
+    border-left: 2px solid #e0b84d; padding-left: 0.5rem;
+}
+.sqi-tab { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+/* Der dunkle Kopfbalken kam aus einer fremden th-Regel dieses
+ * Stylesheets — gesehen am 09.09.2026: "POKÉMON" hell, die zwei
+ * Zahlenspalten auf fast schwarzem Grund. Hier wird deshalb alles
+ * ausdruecklich gesetzt statt geerbt. */
+.sqi-tab th {
+    text-align: left; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--ink-soft, #6b7280) !important;
+    background: transparent !important;
+    padding: 0.3rem 0.4rem; border-bottom: 1px solid #e4e7ec;
+}
+.sqi-tab th.sqi-num { text-align: right; }
+.sqi-tab td { padding: 0.32rem 0.4rem; border-bottom: 1px solid #eef1f4; }
+.sqi-tab tr:last-child td { border-bottom: none; }
+.sqi-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sqi-mon { font-weight: 600; }
+.sqi-bar {
+    display: inline-block; width: 54px; height: 4px; background: #e4e7ec;
+    border-radius: 2px; margin-right: 0.45rem; vertical-align: middle; position: relative;
+}
+.sqi-bar i { position: absolute; inset: 0 auto 0 0; background: #2e70c0; border-radius: 2px; }
+.sqi-status { font-size: 0.9rem; color: var(--ink-soft, #6b7280); padding: 0.8rem; }
+.sqi-quelle { font-size: 0.72rem; color: var(--ink-soft, #6b7280); margin: 0.7rem 0 0; }
+
+/* Typwaehler und Wirksamkeitsmarken im Detail */
+.sqp-gegentyp { display: flex; align-items: center; gap: 0.5rem; margin: 0.7rem 0 0.3rem; }
+.sqp-gegentyp-lbl {
+    font-size: 0.74rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.03em; color: var(--ink-soft, #6b7280);
+}
+.sqp-fx {
+    display: inline-block; margin-left: 0.4rem; font-size: 0.74rem; font-weight: 700;
+    padding: 0.05rem 0.36rem; border-radius: 4px; font-variant-numeric: tabular-nums;
+}
+.sqp-fx.is-stark { background: #e8f5ee; color: #1f7a4d; border: 1px solid #b9e0cb; }
+.sqp-fx.is-schwach { background: #fdeceb; color: #a8372a; border: 1px solid #f0c2bc; }
+.sqp-fx.is-null { background: #3a3a3a; color: #fff; border: 1px solid #3a3a3a; }
+.sqp-fx.is-neutral { background: #f0f2f5; color: #6b7280; border: 1px solid #e0e3e8; }
+.sqp-fx.is-status, .sqp-fx.is-unklar {
+    background: transparent; color: var(--ink-soft, #6b7280);
+    border: 1px dashed #cbd2da; font-weight: 600; cursor: help;
+}
+.sqp-go.is-nein { color: var(--ink-soft, #6b7280); }
+
 /* ── Champions "console" ───────────────────────────────────────────
    Ported from champions-layout-prototyp.html. Scoped to .sq-console,
    NOT #side-quest: the four existing subtabs still assume a light
