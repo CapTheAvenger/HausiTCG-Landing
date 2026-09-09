@@ -54,6 +54,7 @@
             count:       (n) => `${n} Einträge`,
             statPower:   'Stärke',
             statAcc:     'Genauigkeit',
+            accImmer:    'trifft immer',
             statPP:      'AP',
             statPrio:    'Prio',
             dmgPhysical: 'Physisch',
@@ -87,6 +88,7 @@
             count:       (n) => `${n} entries`,
             statPower:   'Power',
             statAcc:     'Accuracy',
+            accImmer:    'never misses',
             statPP:      'PP',
             statPrio:    'Prio',
             dmgPhysical: 'Physical',
@@ -170,9 +172,25 @@
     }
 
     // ── Render ─────────────────────────────────────────────────────
+    // Die Attackentypen stehen in den Daten englisch. Bis zum 09.09.2026
+    // standen sie auch auf der deutschen Oberflaeche englisch da —
+    // "Donnerblitz · Thunderbolt · Electric". Die CSS-Klasse bleibt am
+    // ENGLISCHEN Namen haengen, sonst faellt die Typfarbe weg.
+    const TYP_DE = {
+        Normal: 'Normal', Fire: 'Feuer', Water: 'Wasser', Electric: 'Elektro',
+        Grass: 'Pflanze', Ice: 'Eis', Fighting: 'Kampf', Poison: 'Gift',
+        Ground: 'Boden', Flying: 'Flug', Psychic: 'Psycho', Bug: 'Käfer',
+        Rock: 'Gestein', Ghost: 'Geist', Dragon: 'Drache', Dark: 'Unlicht',
+        Steel: 'Stahl', Fairy: 'Fee',
+    };
+
+    function typName(type) {
+        return (uiLang() === 'de' && TYP_DE[type]) ? TYP_DE[type] : type;
+    }
+
     function typeBadge(type) {
         if (!type) return '';
-        return `<span class="sq-res-type sq-play-type-${escapeHtml(type.toLowerCase())}">${escapeHtml(type)}</span>`;
+        return `<span class="sq-res-type sq-play-type-${escapeHtml(type.toLowerCase())}">${escapeHtml(typName(type))}</span>`;
     }
 
     function catLabel(cat) {
@@ -183,6 +201,17 @@
     // Champions-verified move stats line (power / accuracy / PP / damage
     // class). Status moves have no power → "—"; never-miss moves have no
     // accuracy → "—". Only rendered for moves that carry any of these.
+    // Der Quelldatensatz schreibt `accuracy: true` fuer Attacken, die
+    // nicht danebengehen koennen (119 der 900). Bis zum 09.09.2026 war
+    // keine davon in Champions, also fiel nie auf, dass die Zeile
+    // String(true) ausgab: die Seite zeigte "Genauigkeit true". Sichtbar
+    // wurde es an Finalformation und Invertigo, den ersten beiden
+    // nachgetragenen Attacken mit diesem Wert.
+    function genauigkeit(e, l) {
+        if (e.accuracy === true) return l.accImmer;
+        return e.accuracy != null ? String(e.accuracy) : '—';
+    }
+
     function moveStatsHtml(e, l) {
         if (e.cat !== 'move') return '';
         const hasPrio = e.priority != null && Number(e.priority) !== 0;
@@ -197,7 +226,7 @@
         const hasPower = e.power != null && Number(e.power) > 0;
         const parts = [
             `<span class="sq-res-stat"><span class="sq-res-stat-k">${escapeHtml(l.statPower)}</span> <b>${hasPower ? escapeHtml(String(e.power)) : dash}</b></span>`,
-            `<span class="sq-res-stat"><span class="sq-res-stat-k">${escapeHtml(l.statAcc)}</span> <b>${e.accuracy != null ? escapeHtml(String(e.accuracy)) : dash}</b></span>`,
+            `<span class="sq-res-stat"><span class="sq-res-stat-k">${escapeHtml(l.statAcc)}</span> <b>${escapeHtml(genauigkeit(e, l))}</b></span>`,
         ];
         if (e.pp != null) parts.push(`<span class="sq-res-stat"><span class="sq-res-stat-k">${escapeHtml(l.statPP)}</span> <b>${escapeHtml(String(e.pp))}</b></span>`);
         // Only shown when non-zero — a positive/negative priority is the meaningful
@@ -722,6 +751,11 @@
     // (js/app-side-quest-status.js); hier steht nur der Unterreiter.
 
     window.sideQuestResources = { showView, render, loadData };
+    // Fuer die Tests einzeln greifbar — dieselbe Bauart wie
+    // window._sqMatchupInternals. Ohne das laesst sich die Anzeige nur
+    // per Zeichenkettensuche im Quelltext pruefen, und genau die hat am
+    // 09.09.2026 „Genauigkeit true" nicht gefunden.
+    window._sqResInternals = { typName, genauigkeit, moveStatsHtml, typeBadge, t };
     /* Fuer die Tests: die Stufenerkennung einzeln pruefbar, ohne den
        ganzen Renderer und ohne DOM. */
     window._sqResIntern = {
