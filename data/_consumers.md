@@ -265,3 +265,49 @@ for the Champions matchup and damage views.
 
 > Anything absent is neutral (1.0). A missing entry therefore never
 > means "unknown", which is why the file can stay this small.
+
+## `champions_editionen.json` — in welchen Editionen eine Art vorkommt
+
+Gebaut von `scripts/build_champions_editionen.py` aus dem PokeAPI-CSV-Abzug,
+derselben Quelle, aus der schon die deutschen Namen kommen. Gelesen von
+`js/app-side-quest-pokedex.js` (Abschnitt „Wo gibt es das?" im Detail).
+
+* Schluessel ist die **Pokedex-Nummer der Art**, nicht der Form. 292
+  Roster-Eintraege verteilen sich auf 204 Arten; Mega- und Regionalformen
+  teilen sich den Eintrag ihrer Grundform.
+* Die Datei sagt **„kommt vor in"**, nicht **„ist zu fangen in"**. Eine Art
+  kann im Dex einer Edition stehen und dort nur ueber Tausch oder Entwicklung
+  erreichbar sein. Wer die Spalte anders beschriftet, behauptet mehr als die
+  Quelle hergibt.
+* **`legends-za` und `mega-dimension` fehlen mit Absicht.** Der Abzug fuehrt
+  fuer beide exakt dieselbe Menge wie fuer `scarlet` (733 Eintraege, Differenz
+  in beide Richtungen 0). Legends Z-A hat real einen deutlich kleineren
+  Bestand — zwei Editionen mit identischer Menge sind eine kopierte
+  Vorbelegung, keine Messung. Zum Vergleich, wo die Quelle traegt:
+  `sword` 664 gegen `scarlet` 733. Die Sperre steht in `_meta.ausgeschlossen`
+  und wird von `tests/unit/test-champions-raster.js` gehalten.
+* Die japanischen Erstausgaben (`red-japan`, `green-japan`, `blue-japan`)
+  fehlen ebenfalls: sie tragen im Deutschen dieselben Namen wie die
+  internationalen und stuenden sonst doppelt in der Liste.
+
+## `pokemon_go_liste.json` — welche Arten es in Pokemon GO gibt
+
+Geholt von `scripts/scrape_pokemon_go_liste.py` aus der vom Betreiber am
+09.09.2026 benannten Quelle (PokeWiki). Gelesen von
+`js/app-side-quest-pokedex.js`.
+
+**Diese Datei kennt kein Nein.** Die Quelle markiert sich selbst als seit
+Anfang 2026 veraltet und fehlerhaft; der Warnkasten steht woertlich in
+`_meta.warnung` und wird in der Oberflaeche angezeigt. Daraus folgt fuer
+jeden Verbraucher:
+
+| Fall | erlaubte Aussage |
+| --- | --- |
+| Art steht in `basis` bzw. `regional` | „war zum Stand der Quelle in GO verfuegbar" |
+| Art steht nicht drin | „steht nicht in dieser Liste" — **niemals** „gibt es in GO nicht" |
+| Mega-Form | die Liste fuehrt nur Grundformen, also gar keine Aussage |
+
+Gemessen am 09.09.2026: von 217 Roster-Eintraegen ohne Mega sind 195
+gelistet und 22 nicht — darunter Mimigma, Wolwerock und Durengard, die es in
+GO tatsaechlich gibt. Das ist der Beleg dafuer, dass ein fehlender Eintrag
+nichts beweist.
