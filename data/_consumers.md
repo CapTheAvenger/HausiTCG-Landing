@@ -361,3 +361,71 @@ Zwei Sortierungen, beide beschriftet:
 Praesenz ist die Voreinstellung. Nach Bindung sortiert stehen oben
 ausschliesslich Mega-Steine (Floetteonit 99,1 % bei einem Traeger) — richtig
 gerechnet und als erster Bildschirm wertlos.
+
+## `champions_resources.json` traegt Attacken aus den Nutzungsdaten nach
+
+`scripts/build_champions_resources.py` baut das Nachschlagewerk aus dem
+Champions-Datensatz (otterlyclueless/pokemon-champions-data) und uebernimmt
+Attacken normalerweise nur, wenn dort `inChampions: true` steht.
+
+**Dieser Schalter ist unvollstaendig.** Gemessen am 09.09.2026 tragen sechs
+Attacken `inChampions: false`, obwohl `champions_usage.json` belegt, dass
+Pokemon sie in Champions einsetzen:
+
+| Attacke | deutsch | Typ | wer spielt sie |
+| --- | --- | --- | --- |
+| Barb Barrage | Giftstachelregen | Gift | Overqwil, Qwilfish |
+| Make It Rain | Goldrausch | Stahl | Gholdengo (96,6 %) |
+| No Retreat | Finalformation | Kampf | Falinks (83,2 %) |
+| Rage Fist | Zornesfaust | Geist | Annihilape (97,3 %) |
+| Spirit Break | Seelenbruch | Fee | Grimmsnarl (70,4 %) |
+| Topsy-Turvy | Invertigo | Unlicht | Malamar |
+
+Ohne Nachtrag fehlt ihr Eintrag komplett, und die Typwirksamkeit im Pokedex
+(`js/app-side-quest-pokedex.js`) zeigt fuer sie **"Typ unbekannt"** — was
+korrekt war, aber vermeidbar.
+
+**Worauf der Nachtrag sich stuetzt — und worauf nicht.** Die erste Fassung
+dieses Abschnitts nannte zwei Belege; nachgemessen haelt nur einer:
+
+| angeblicher Beleg | gemessen | taugt er? |
+| --- | --- | --- |
+| `championsVerified: true` in der Quelle | steht bei **900 von 900** Attacken auf true, auch bei allen 406 zu Recht ausgeschlossenen | **nein**, trennt nichts |
+| "hat in der Quelle einen Typ" | **alle 900** haben einen Typ | **nein**, greift nie |
+| Vorkommen in `champions_usage.json` | 391 genutzte Attacken, davon 6 ohne Eintrag | **ja**, der einzige |
+
+Der Nachtrag haengt damit an genau einem Scraper. Schriebe
+`scripts/scrape_champions_usage.py` nach einem Layout-Wechsel der Quellseite
+einen falschen Attackennamen, und traefe der einen der 406 ausgeschlossenen
+Namen, landete er hier als Champions-Attacke.
+
+Dagegen steht eine **Obergrenze** (`NACHTRAG_OBERGRENZE = 20`): ein
+systematischer Parse-Fehler erzeugt viele falsche Namen, nicht sechs. Reisst
+die Grenze, wird **nichts** nachgetragen und der Lauf meldet es — lieber
+wieder "Typ unbekannt" als eine erfundene Champions-Attacke. Eine leere,
+aber syntaktisch gueltige Nutzungsdatei bricht den Lauf ab, statt still 494
+Attacken zu schreiben.
+
+Jeder so entstandene Eintrag traegt `nachgetragen: true`;
+`_meta.counts.nachgetragen` fuehrt die Zahl. Die deutschen Namen stammen wie
+ueberall aus `de_name_overrides.json` (PokeWiki) und wurden gegen die
+Wiki-Seiten geprueft — Goldrausch = Stahl, Finalformation = Kampf.
+
+**Was der Nachtrag NICHT schliesst:** drei der sechs (Barb Barrage, Make It
+Rain, Rage Fist) haben kein `de_effect`. PokéAPI fuehrt fuer sie keine
+deutsche Beschreibung — im Reiter "Nachschlagen" steht bei ihnen "Keine
+Beschreibung hinterlegt", wie bei 42 weiteren Attacken schon vorher. Der Typ
+ist da, der deutsche Beschreibungstext nicht.
+
+**Reihenfolge in CI ist Pflicht.** Beide Laeufe, die `champions_usage.json`
+committen (`champions-replica-scrape.yml`, `champions-usage-refresh.yml`),
+muessen das Nachschlagewerk **nach** dem Usage-Scrape neu bauen und
+mitcommitten. Sonst kann eine neu aufgetauchte Attacke ohne Eintrag im Repo
+landen — der Test unten wird rot, der `test`-Job blockt `build` und `deploy`,
+und die Seite haengt auf dem alten Stand, ohne dass jemand einen Fehler
+gemacht hat.
+
+Gehalten von `tests/python/test_attacken_typen_vollstaendig.py`: keine
+genutzte Attacke ohne Eintrag, keine ohne Typ, kein Nachtrag ohne
+Nutzungsbeleg, Obergrenze und Leer-Abbruch im Bauer, und die
+CI-Reihenfolge in beiden Laeufen.

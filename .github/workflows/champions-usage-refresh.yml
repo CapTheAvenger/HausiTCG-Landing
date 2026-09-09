@@ -109,6 +109,33 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           exit 0
 
+      # Das Nachschlagewerk haengt seit dem 09.09.2026 an den Nutzungsdaten:
+      # scripts/build_champions_resources.py traegt Attacken nach, die in
+      # data/champions_usage.json vorkommen, aber im Quelldatensatz hinter
+      # dem falschen inChampions-Schalter stehen (siehe data/_consumers.md).
+      # Wer die Nutzungsdaten committet, ohne das Nachschlagewerk neu zu
+      # bauen, kann deshalb eine genutzte Attacke ohne Eintrag hinterlassen —
+      # tests/python/test_attacken_typen_vollstaendig.py wird rot, der
+      # test-Job im Deploy blockt build und deploy, und die Seite haengt auf
+      # dem alten Stand, ohne dass jemand einen Fehler gemacht hat.
+      # Fail-soft wie nebenan: lieber das alte Nachschlagewerk als ein
+      # halbes.
+      - name: Build Champions resources reference
+        id: resources
+        run: |
+          set +e
+          python -u scripts/build_champions_resources.py
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+              echo "::warning::build_champions_resources exited with $rc — resources JSON kept as-is"
+              git checkout -- data/champions_resources.json 2>/dev/null
+              echo "failed=$rc" >> "$GITHUB_OUTPUT"
+          else
+              echo "failed=0" >> "$GITHUB_OUTPUT"
+          fi
+          echo "- build_champions_resources: rc=$rc" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
       # No bump here. deploy-pages.yml rewrites ?v=, APP_VERSION, the service
       # worker CACHE_NAME, version.json and the _formatWindow snapshot inside
       # _site/ on every deploy (its "Cache-bust asset references" step), so the
@@ -124,7 +151,8 @@ jobs:
           git config --local user.name  "github-actions[bot]"
           git add data/champions_usage.json \
                   data/champions_pokedex.json \
-                  data/champions_names_de.json
+                  data/champions_names_de.json \
+                  data/champions_resources.json
           if git diff --cached --quiet; then
             echo "No usage/pokedex changes — skipping push."
             echo "pushed=false" >> "$GITHUB_OUTPUT"
@@ -175,6 +203,12 @@ jobs:
         if: steps.usage.outputs.failed != '0'
         run: |
           echo "::error::champions usage scrape exited ${{ steps.usage.outputs.failed }} — data/champions_usage.json was NOT refreshed."
+          exit 1
+
+      - name: Fail the run if the resources build died
+        if: steps.resources.outputs.failed != '0'
+        run: |
+          echo "::error::build_champions_resources exited ${{ steps.resources.outputs.failed }} — data/champions_resources.json wurde NICHT neu gebaut. Eine neu aufgetauchte Attacke kann jetzt ohne Eintrag dastehen."
           exit 1
 
       - name: Fail the run if the Pokédex build died

@@ -28,7 +28,7 @@
  * ENGLISCHEN Text, der formelhaft ist („by 2 stages"); der deutsche Text
  * dient nur noch dazu, die Marke zu platzieren.
  *
- * Diese Datei prueft deshalb an den ECHTEN 1268 Eintraegen und ruft
+ * Diese Datei prueft deshalb an ALLEN echten Eintraegen der Datei und ruft
  * mitStufenzahl() wirklich auf, statt im Quelltext nach Zeichenketten zu
  * suchen.
  */
@@ -281,7 +281,7 @@ describe('Stufen im Text — was gerendert wird', () => {
     });
 });
 
-describe('Stufen im Text — an allen 1268 Eintraegen', () => {
+describe('Stufen im Text — an allen Eintraegen der Datei', () => {
     it('KEIN Eintrag ausser einer Attacke traegt eine Marke', () => {
         const de = load('de'), en = load('en');
         const falsch = [];

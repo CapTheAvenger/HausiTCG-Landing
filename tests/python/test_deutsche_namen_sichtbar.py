@@ -360,8 +360,8 @@ def test_alle_vier_namensquellen_sind_sich_einig():
     """Die entscheidende Zusicherung dieser Runde.
 
     Es gibt VIER Quellen deutscher Namen: die drei Referenzdateien, die
-    Namenstabelle — und champions_resources.json mit 1.268 Eintraegen,
-    mehr als jede andere. Die vierte stand bis zum 03.09.2026 in keinem
+    Namenstabelle — und champions_resources.json, mit Abstand die
+    groesste von allen. Die vierte stand bis zum 03.09.2026 in keinem
     Vergleich; gemessen widersprach sie der Tabelle an 18 Stellen.
 
     Hier wird jede Quelle gegen jede gehalten, nicht drei gegen eine.

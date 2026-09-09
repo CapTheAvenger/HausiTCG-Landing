@@ -6,7 +6,8 @@
 // other OHKO for the same pair.
 //
 // Nothing here is scraped. Base powers, PP and damage classes come from
-// data/champions_resources.json (494 moves), base stats from
+// data/champions_resources.json (every move's power, PP and damage
+// class), base stats from
 // champions_pokedex.json, spreads and natures from champions_usage.json,
 // and the type chart is public rules knowledge in
 // data/champions_type_chart.json.

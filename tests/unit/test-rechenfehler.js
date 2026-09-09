@@ -15,7 +15,9 @@
  *     sind 93,8 %.
  *   * 332 von 21.336 Kombinationen meldeten "5+HKO 0 %", obwohl schon
  *     der niedrigste Wurf fuenfmal toetet.
- *   * 32 Schadensattacken im Champions-Pool sind Flaechenattacken.
+ *   * 33 Schadensattacken im Champions-Pool sind Flaechenattacken
+ *     (32 bei der Messung, +1 seit dem Attacken-Nachtrag vom
+ *     09.09.2026: Make It Rain / Goldrausch, target 11).
  *   * Mulligan-Regel: senkt eine Kombo-Wahrscheinlichkeit um 1,4 bis
  *     3,0 Prozentpunkte — in die Richtung, die niemand erwartet.
  */
@@ -224,11 +226,27 @@ describe('Doppelmodus: der 0,75-Abzug fuer Flaechenattacken', () => {
             'die Begruendung der Ausnahme steht nicht mehr in den Daten');
     });
 
-    it('32 Schadensattacken sind Flaechenattacken', () => {
+    it('33 Schadensattacken sind Flaechenattacken', () => {
+        // 09.09.2026: von 32 auf 33. Dazugekommen ist Make It Rain
+        // (Goldrausch, target 11 = alle Gegner) — eine von sechs
+        // Attacken, die der Bauer seit diesem Tag aus den
+        // Nutzungsdaten nachtraegt, weil der inChampions-Schalter der
+        // Quelle bei ihnen falsch steht. Siehe
+        // tests/python/test_attacken_typen_vollstaendig.py.
+        //
+        // Die feste Zahl ist Absicht: sie faellt um, wenn sich die
+        // Ziel-Zuordnung still aendert. Wer sie anpasst, muss vorher
+        // wissen, welche Attacke dazugekommen oder weggefallen ist.
         const n = attacken.filter(m => m.power && m.spread).length;
-        assert.equal(n, 32);
-        assert.equal(RES._meta.counts.spread, 32, 'die Zaehlung im _meta passt nicht dazu');
+        assert.equal(n, 33);
+        assert.equal(RES._meta.counts.spread, 33, 'die Zaehlung im _meta passt nicht dazu');
         assert.equal(RES._meta.counts.target_unknown, 0);
+        const mir = attacken.find(m => m.en === 'Make It Rain');
+        assert.ok(mir, 'Make It Rain fehlt in den Attackendaten');
+        assert.equal(mir.spread, true);
+        assert.equal(mir.type, 'Steel');
+        assert.equal(mir.nachgetragen, true,
+            'Make It Rain muss als nachgetragen markiert bleiben');
     });
 
     it('damageRange zieht bei spread genau ein Viertel ab', () => {

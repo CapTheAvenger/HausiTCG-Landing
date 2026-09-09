@@ -72,9 +72,10 @@ const REGISTER = {
     'test-champions-damage.js':          'Rechenwege am Schadensmodell; Baender sind physikalisch (Chance zwischen 0 und 1)',
     'test-champions-matchups.js':        'Struktur der Matchup-Datei, Rechnung an gesetzten Werten',
     'test-hub-gezaehlte-antritte.js':    'Gezaehlte Antritte: ruft answerModel() und answerHtml() mit den echten Zeilen auf und rechnet jede angezeigte Zahl gegen die CSV nach — Anteil, Quote, Feldschnitt und Nenner muessen aus denselben zwei Zahlen folgen, die daneben stehen. Das sind GLEICHUNGEN gegen die Datei, keine Behauptungen ueber Wochenwerte: welche Zahlen dort stehen, ist der Pruefung egal, sie muessen nur zueinander passen. Dazu Eigenschaften der Spalten (ganze Zahlen, keine Top 8 ueber den Antritten), das Alles-oder-nichts-Tor gegen kaputte Werte und seit dem 02.09.2026 die Probe, dass das Vielfache im Satz und auf jeder Kachel aus den beiden Zahlen folgt, die daneben stehen.',
-    'test-stufen-im-text.js':            'Stufen im Attackentext: liest die 494 Attacken aus champions_resources.json und die Stufentabelle aus champions_statuszustaende.json. Geprueft werden EIGENSCHAFTEN, keine Wochenwerte: dass keine Marke auf Genauigkeit, Fluchtwert oder Volltreffer sitzt (die folgen laut den Daten selbst einer anderen Tabelle), dass jede Stufe eine der sechs bekannten ist, dass benannte Attacken ihre Marke tragen, und dass Tabelle und Formel uebereinstimmen. Attackenbeschreibungen sind gepflegter Text, keine Wochenzahlen.',
+    'test-stufen-im-text.js':            'Stufen im Attackentext: liest alle Attacken aus champions_resources.json und die Stufentabelle aus champions_statuszustaende.json. Geprueft werden EIGENSCHAFTEN, keine Wochenwerte: dass keine Marke auf Genauigkeit, Fluchtwert oder Volltreffer sitzt (die folgen laut den Daten selbst einer anderen Tabelle), dass jede Stufe eine der sechs bekannten ist, dass benannte Attacken ihre Marke tragen, und dass Tabelle und Formel uebereinstimmen. Attackenbeschreibungen sind gepflegter Text, keine Wochenzahlen.',
     'test-vier-ansichten-eine-quote.js': 'Vier Ansichten, eine Quote: liest online_tournament_top8_decks.csv, um die vier Rechenwege GEGENEINANDER zu pruefen — nicht gegen Wochenwerte. Die fuenf Ungleichungen sind Eigenschaften der Datei, keine Behauptungen ueber diese Woche: dass sie ueberhaupt Zeilen hat (>20), und dass sich gewichtete und gezaehlte Spalte bei genug Zeilen unterscheiden (>5) — ohne diesen Unterschied wuerde der Vergleich stillschweigend nichts pruefen, was genau der Fehler war, den die Abnahme am 02.09.2026 gefunden hat. Welche Zahlen dort stehen, ist der Pruefung egal; alle Vergleiche sind Gleichungen zwischen zwei Rechenwegen auf denselben Zeilen.',
     'test-team-rechner.js':              'Team-Rechner: liest data/, um echte Paare zu bilden — welche, ist der Pruefung egal. Verglichen wird die Matrixzelle mit bestMove() auf denselben Daten (Gleichheit zweier Rechenwege), der Spiegelkampf (gilt fuer jedes Pokemon) und die Namensaufloesung ueber den Slug (eine Eigenschaft der Zuordnung). Die EINE Ungleichung ist eine Eigenschaft der Urteilsregel, kein Wochenwert: unter 5 % der farbigen Zellen duerfen sich auf einen K.O. unter 50 % Chance stuetzen. Vor der Korrektur am 02.09.2026 waren es 30 %; die Schranke haelt, solange die Regel ueber den Durchschnittswurf wertet, und faellt, wenn jemand sie auf ko.hits zurueckdreht.',
+    'test-variable-staerke.js':          'Attacken mit situationsabhaengiger Staerke: liest champions_resources.json und prueft die REGEL, nicht Wochenwerte. Die Listen benannter Attacken (Zornesfaust, Kraftvorrat, Fassade / Donnerblitz, Nahkampf, Erdbeben) sind Eigenschaften des englischen Effekttextes, der gepflegter Text ist und keine Wochenzahl. DREI UNGLEICHUNGEN, alle Vorpruefungen gegen ein leeres Bestehen: mindestens 200 Schadensattacken ueberhaupt, mindestens 10 als variabel erkannt, und der Index der Staerke im Quelltext > 0. Ohne die erste beiden koennte die Regel zu "immer falsch" verkommen und die Datei bliebe gruen — genau der Fehler, den dieser Wachhund verhindern soll. Die dritte liest gar keine Daten, sondern den eigenen Quelltext. Die Schranke nach oben (hoechstens ein Viertel aller Schadensattacken) faengt den umgekehrten Fall "immer wahr"; sie zaehlt der Zaehler nicht mit, weil rechts kein Literal steht.',
     'test-champions-speed-tiers.js':     'Sortierlogik an gesetzten Werten; die letzte Zusicherung an der Datenlage ist am 31.08.2026 entfallen',
     'test-champions-sprites.js':         'nur Existenz von Sprite-Eintraegen, keine Ungleichung',
     'test-comparison-csv-comma-parse.js':'Parsebarkeit des Komma-Formats, Struktur',
@@ -310,7 +311,15 @@ const REGISTER = {
  *
  * Der offene Befund vom 03.09.2026 gilt weiter: dieser Wachhund sieht
  * nur ein Viertel dessen, was er zu bewachen behauptet. */
-const OBERGRENZE = 98;
+/* 09.09.2026: 98 -> 101. Dazugekommen ist test-variable-staerke.js mit
+   drei Ungleichungen. Alle drei sind Vorpruefungen gegen ein leeres
+   Bestehen, keine abgelesenen Wochenwerte: "es gibt ueberhaupt
+   Schadensattacken" (>200 von 299), "die Regel greift ueberhaupt"
+   (>=10 von 23) und ein Index im eigenen Quelltext. Die beiden
+   Datenschranken haben rund das Zehnfache Luft nach unten und stimmen
+   auch in vier Wochen noch — die Zahl der Attacken in Champions
+   aendert sich um Einzelstuecke, nicht um Zehnerpotenzen. */
+const OBERGRENZE = 101;
 
 describe('kein Unit-Test behauptet etwas ueber die Daten dieser Woche', () => {
 
