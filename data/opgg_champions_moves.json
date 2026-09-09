@@ -1,0 +1,4078 @@
+{
+ "_meta": {
+  "quelle": "https://op.gg/de/pokemon-champions/moves",
+  "beschreibung": "Champions-Attackenliste von op.gg — zweite Quelle neben otterlyclueless/pokemon-champions-data. Liefert die deutschen Beschreibungstexte, die PokéAPI fuer neuere Attacken nicht fuehrt, und belegt unabhaengig, welche Attacken zum Champions-Pool gehoeren.",
+  "attacken": 581,
+  "mit_deutschem_text": 581,
+  "hinweis": "Der Schluessel ist der englische Slug aus der URL (make-it-rain). Er laesst sich ueber norm() gegen den englischen Attackennamen halten."
+ },
+ "attacken": {
+  "absorb": {
+   "de": "Absorber",
+   "text": "Attacke, die die Hälfte des Schadens absorbiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "accelerock": {
+   "de": "Turbofelsen",
+   "text": "Bei dieser Erstschlag-Attacke prallt der Anwender mit großer Geschwindigkeit auf das Ziel.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "acid": {
+   "de": "Säure",
+   "text": "Versprüht ätzende Flüssigkeit, die eventuell die Spezial-Verteidigung der gegnerischen Pokémon senkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "acid-armor": {
+   "de": "Säurepanzer",
+   "text": "Verflüssigt Körperzellen des Anwenders. Erhöht den Verteidigungs-Wert stark.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "acid-spray": {
+   "de": "Säurespeier",
+   "text": "Anwender greift an, indem er eine ätzende Flüssigkeit auf das Ziel speit. Senkt dessen Spezial-Verteidigung stark.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "acrobatics": {
+   "de": "Akrobatik",
+   "text": "Ein graziler Angriff auf das Ziel. Trägt der Anwender kein Item bei sich, richtet die Attacke großen Schaden an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "acupressure": {
+   "de": "Akupressur",
+   "text": "Anwender übt Druck auf Stresspunkte aus und erhöht einen Statuswert stark.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "aerial-ace": {
+   "de": "Aero-Ass",
+   "text": "Eine extrem schnelle Attacke, der das Ziel nicht ausweichen kann.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "after-you": {
+   "de": "Galanterie",
+   "text": "Anwender ermöglicht dem Ziel direkt nach ihm zu handeln, solange der Anwender als Erstes zum Zug kommt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "agility": {
+   "de": "Agilität",
+   "text": "Entspannt den Körper, um den Initiative-Wert stark zu erhöhen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "air-cutter": {
+   "de": "Windschnitt",
+   "text": "Greift gegnerische Pokémon mit rasierklingenartigem Wind an. Hohe Volltrefferquote.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "air-slash": {
+   "de": "Luftschnitt",
+   "text": "Das Ziel wird mit einer Luftklinge angegriffen. Ziel schreckt eventuell zurück.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "alluring-voice": {
+   "de": "Lockstimme",
+   "text": "Der Anwender greift das Ziel mit engelsgleicher Stimme an. Wurden dessen Werte in dieser Runde erhöht, wird es außerdem verwirrt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "ally-switch": {
+   "de": "Seitentausch",
+   "text": "Wundersame Kräfte teleportieren den Anwender an den Platz eines Mitstreiters.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "amnesia": {
+   "de": "Amnesie",
+   "text": "Gedächtnisverlust, der die Spezial-Verteidigung stark erhöht.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "ancient-power": {
+   "de": "Antik-Kraft",
+   "text": "Angriff mit antiker Kraft, der alle Statuswerte erhöhen kann.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "apple-acid": {
+   "de": "Apfelsäure",
+   "text": "Der Anwender greift mit einer aus einem sauren Apfel hergestellten säurehaltigen Flüssigkeit an. Dabei wird die Spezial-Verteidigung des Zieles gesenkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "aqua-cutter": {
+   "de": "Aquaschnitt",
+   "text": "Der Anwender stößt Druckwasser aus, um das Ziel wie mit einer Klinge zu schneiden. Volltreffer landen leichter.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "aqua-jet": {
+   "de": "Wasserdüse",
+   "text": "Bei dieser Erstschlag-Attacke stürzt sich der Anwender so schnell auf das Ziel, dass er quasi unsichtbar wird.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "aqua-ring": {
+   "de": "Wasserring",
+   "text": "Anwender umgibt sich mit einem Schleier aus Wasser. Dabei regeneriert er einige KP pro Runde.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "aqua-step": {
+   "de": "Wogentanz",
+   "text": "Der Anwender narrt das Ziel und greift mit leichten, fließenden Tanzschritten an. Dadurch steigt seine Initiative.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "aqua-tail": {
+   "de": "Nassschweif",
+   "text": "Anwender attackiert mit dem Schweif, als ob dieser eine brutale Welle in einem tosenden Sturm sei.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "armor-cannon": {
+   "de": "Rüstungskanone",
+   "text": "Der Anwender schießt seine eigene Rüstung als lodernde Geschosse ab. Dabei sinken seine Verteidigung und Spezial-Verteidigung.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "aromatic-mist": {
+   "de": "Duftwolke",
+   "text": "Der Anwender erhöht mithilfe eines mysteriösen Duftes die Spezial-Verteidigung eines Mitstreiters.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "assurance": {
+   "de": "Gewissheit",
+   "text": "Hat das Ziel während der Runde schon Schaden genommen, wird die Stärke der Attacke verdoppelt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "attract": {
+   "de": "Anziehung",
+   "text": "Wenn das Ziel nicht dem Geschlecht des Anwenders angehört, fühlt es sich zu ihm hingezogen und greift eventuell nicht an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "aura-sphere": {
+   "de": "Aurasphäre",
+   "text": "Tief aus dem Inneren des Anwenders löst sich ein kraftvoller Stoß Aura-Energie. Diese Attacke trifft garantiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "aura-wheel": {
+   "de": "Aura-Rad",
+   "text": "Mithilfe der in den Backentaschen gespeicherten Energie greift der Anwender an und erhöht seine Initiative. Der Typ der Attacke hängt von Morpekos Form ab.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "aurora-veil": {
+   "de": "Auroraschleier",
+   "text": "Diese Attacke schwächt fünf Runden lang den durch physische sowie durch Spezial-Attacken erhaltenen Schaden. Kann nur bei Hagel eingesetzt werden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "avalanche": {
+   "de": "Lawine",
+   "text": "Wurde der Anwender in dieser Runde vom Ziel getroffen, verdoppelt sich die Stärke der Attacke bei Angriffen auf dieses Ziel.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "axe-kick": {
+   "de": "Fersenkick",
+   "text": "Der Anwender tritt hoch in die Luft und lässt seine Ferse auf das Ziel niedersausen. Das Ziel kann verwirrt werden. Verfehlt die Attacke, nimmt der Anwender Schaden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "baby-doll-eyes": {
+   "de": "Kulleraugen",
+   "text": "Bei dieser Erstschlag-Attacke erobert der Anwender das Herz des Zieles, indem er es mit Kulleraugen ansieht, und senkt dabei dessen Angriffs-Wert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "baneful-bunker": {
+   "de": "Bunker",
+   "text": "Der Anwender wird vor Angriffen geschützt. Gleichzeitig werden alle Pokémon, die mit ihm in Berührung kommen, vergiftet.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "barb-barrage": {
+   "de": "Giftstachelregen",
+   "text": "Der Anwender schleudert zahllose giftige Stacheln. Das Ziel kann vergiftet werden. Ist das Ziel bereits vergiftet, verdoppelt sich die Stärke.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "baton-pass": {
+   "de": "Stafette",
+   "text": "Tauscht den Anwender aus und überträgt alle Statusveränderungen auf das eingewechselte Pokémon.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "beak-blast": {
+   "de": "Schnabelkanone",
+   "text": "Der Anwender erhitzt zuerst seinen Schnabel und greift dann an. Pokémon, die ihn während des Erhitzens berühren, erleiden Verbrennungen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "beat-up": {
+   "de": "Prügler",
+   "text": "Der Anwender greift zusammen mit allen Mitgliedern seines Teams das Ziel an. Je mehr Pokémon sich im Team befinden, desto höher die Anzahl der Angriffe.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "belch": {
+   "de": "Rülpser",
+   "text": "Der Anwender fügt dem Ziel Schaden zu, indem er es anrülpst. Diese Attacke gelingt nur nach dem Konsum einer getragenen Beere.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "belly-drum": {
+   "de": "Bauchtrommel",
+   "text": "Der Anwender maximiert den Angriffs-Wert auf Kosten der Hälfte seiner maximalen KP.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "bind": {
+   "de": "Klammergriff",
+   "text": "Umklammert und quetscht das Ziel über vier bis fünf Runden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "bite": {
+   "de": "Biss",
+   "text": "Beißt zu und lässt das Ziel eventuell zurückschrecken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "bitter-blade": {
+   "de": "Reueschwert",
+   "text": "Der Anwender bündelt bittere Gefühle gegenüber der Welt der Lebenden in einem Hieb. Seine KP werden um bis zur Hälfte des Schadens wiederhergestellt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "bitter-malice": {
+   "de": "Niedertracht",
+   "text": "Der Anwender greift mit schaurigem Groll an. Dabei sinkt der Angriff des Ziels.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "blast-burn": {
+   "de": "Lohekanonade",
+   "text": "Das Ziel wird von einer starken Explosion getroffen. Anwender setzt eine Runde aus.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "blaze-kick": {
+   "de": "Feuerfeger",
+   "text": "Starker Tritt mit hoher Volltrefferquote. Verursacht eventuell Verbrennungen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "blizzard": {
+   "de": "Blizzard",
+   "text": "Ein Schneesturm wütet, der gegnerische Pokémon einfrieren kann.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "block": {
+   "de": "Rückentzug",
+   "text": "Anwender versperrt den Fluchtweg des Zieles.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "body-press": {
+   "de": "Body Press",
+   "text": "Der Anwender greift mit seinem ganzen Körper an. Je höher seine Verteidigung ist, desto mehr Schaden richtet er an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "body-slam": {
+   "de": "Bodyslam",
+   "text": "Trifft das Ziel mit vollem Körpereinsatz. Bewirkt eventuell Paralyse.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "bone-rush": {
+   "de": "Knochenhatz",
+   "text": "Greift Ziel zwei- bis fünfmal in Folge mit einem harten Knochen an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "boomburst": {
+   "de": "Überschallknall",
+   "text": "Der Anwender greift alle Pokémon im Umkreis mit einem gewaltigen Knall an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "bounce": {
+   "de": "Sprungfeder",
+   "text": "Anwender springt und landet in der nächsten Runde auf dem Ziel. Das Ziel wird eventuell paralysiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "branch-poke": {
+   "de": "Zweigstoß",
+   "text": "Der Anwender attackiert das Ziel mit einem spitzen Zweig.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "brave-bird": {
+   "de": "Sturzflug",
+   "text": "Anwender greift aus niedriger Höhe an. Er erleidet bei dieser Attacke selbst großen Schaden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "breaking-swipe": {
+   "de": "Breitseite",
+   "text": "Der Anwender schwingt heftig seinen robusten Schweif, um damit gegnerische Pokémon anzugreifen und ihren Angriffs-Wert zu senken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "brick-break": {
+   "de": "Durchbruch",
+   "text": "Ein beherzter Handkantenschlag. Durchbricht Barrieren wie Lichtschild und Reflektor.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "brine": {
+   "de": "Lake",
+   "text": "Hat das Ziel die Hälfte oder weniger seiner maximalen KP, trifft diese Attacke mit doppelter Kraft.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "brutal-swing": {
+   "de": "Wirbler",
+   "text": "Der Anwender dreht schwungvoll seinen Körper und fügt allen Pokémon im Umkreis dabei Schaden zu.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "bubble-beam": {
+   "de": "Blubbstrahl",
+   "text": "Versprüht Blasen, die eventuell den Initiative-Wert des Zieles senken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "bug-bite": {
+   "de": "Käferbiss",
+   "text": "Anwender beißt das Ziel. Trägt dieses eine Beere, isst der Anwender sie und erhält ihren Effekt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "bug-buzz": {
+   "de": "Käfergebrumm",
+   "text": "Anwender erzeugt Schallwellen, die beim Ziel Schaden verursachen und eventuell dessen Spezial-Verteidigung senken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "bulk-up": {
+   "de": "Protzer",
+   "text": "Der Anwender spannt seine Muskeln an, um den Angriff und die Verteidigung zu erhöhen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "bulldoze": {
+   "de": "Dampfwalze",
+   "text": "Anwender walzt den Boden platt und greift dabei alle Pokémon im Umkreis an. Die Initiative aller betroffenen Pokémon sinkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "bullet-punch": {
+   "de": "Patronenhieb",
+   "text": "Erstschlag-Attacke, bei der das Ziel von ultraschnellen Hieben getroffen wird.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "bullet-seed": {
+   "de": "Kugelsaat",
+   "text": "Der Anwender wirft zwei- bis fünfmal in rascher Folge Samen auf das Ziel.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "burn-up": {
+   "de": "Ausbrennen",
+   "text": "Der Anwender nutzt das gesamte Feuer in seinem Körper, um großen Schaden auszuteilen. Die restliche Kampfdauer gehört er nicht mehr dem Typ Feuer an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "burning-jealousy": {
+   "de": "Neidflammen",
+   "text": "Der Anwender greift mit der Energie seines Neids an und fügt allen gegnerischen Pokémon, deren Statuswerte in dieser Runde erhöht wurden, Verbrennungen zu.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "calm-mind": {
+   "de": "Gedankengut",
+   "text": "Erhöht Spezial-Angriff und Spezial-Verteidigung durch Konzentration.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "ceaseless-edge": {
+   "de": "Klingenschwall",
+   "text": "Der Anwender schneidet mit seiner Muschelklinge zu. Zurückbleibende Splitter bleiben als Stacheln unter dem Ziel liegen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "charge": {
+   "de": "Ladevorgang",
+   "text": "Hebt die Stärke für die kommende Elektro-Attacke an und erhöht die Spezial-Verteidigung.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "charge-beam": {
+   "de": "Ladestrahl",
+   "text": "Ziel wird von einem Elektrostrahl getroffen. Erhöht eventuell Spezial-Angriff des Anwenders.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "charm": {
+   "de": "Charme",
+   "text": "Betört das Ziel und reduziert dessen Angriffs-Wert stark.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "chilling-water": {
+   "de": "Kalte Dusche",
+   "text": "Der Anwender überschüttet das Ziel mit so kaltem Wasser, dass dessen Kraft schwindet. Dadurch sinkt der Angriff des Ziels.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "chilly-reception": {
+   "de": "Eisige Stimmung",
+   "text": "Der Anwender erzählt einen frostig schlechten Witz und tauscht dann mit einem wartenden Team-Pokémon den Platz. Dadurch entsteht ein fünf Runden anhaltender Schneesturm.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "circle-throw": {
+   "de": "Überkopfwurf",
+   "text": "Schleudert das Ziel davon und bewirkt damit, dass ein anderes Pokémon eingewechselt wird. Beendet Kämpfe gegen wilde Pokémon.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "clanging-scales": {
+   "de": "Schuppenrasseln",
+   "text": "Der Anwender erzeugt durch das Rasseln mit seinen Schuppen ein lautes Geräusch und greift gegnerische Pokémon an. Anschließend sinkt seine Verteidigung.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "clangorous-soul": {
+   "de": "Seelentanz",
+   "text": "Der Anwender setzt eine kleine Menge an KP ein, um alle seine Statuswerte zu erhöhen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "clear-smog": {
+   "de": "Klärsmog",
+   "text": "Anwender greift das Ziel mit spezialgefertigtem Smog an. Setzt dessen Statusveränderungen zurück.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "close-combat": {
+   "de": "Nahkampf",
+   "text": "Nahkampf-Attacke ohne Rücksicht auf Verluste. Senkt Verteidigung und Spezial-Verteidigung des Anwenders.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "coaching": {
+   "de": "Coaching",
+   "text": "Der Anwender sorgt durch geschickte Anweisungen dafür, dass der Angriff und die Verteidigung seiner Mitstreiter steigen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "coil": {
+   "de": "Einrollen",
+   "text": "Anwender rollt sich zusammen und sammelt sich. Dabei werden Angriff, Verteidigung und Genauigkeit erhöht.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "comeuppance": {
+   "de": "Vendetta",
+   "text": "Der Anwender schlägt mit deutlich größerer Kraft gegen den Gegner zurück, der ihm zuletzt Schaden zugefügt hat.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "confuse-ray": {
+   "de": "Konfusstrahl",
+   "text": "Ein fieser Strahl, der das Ziel verwirrt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "confusion": {
+   "de": "Konfusion",
+   "text": "Das Ziel wird von schwacher telekinetischer Energie getroffen und eventuell verwirrt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "copycat": {
+   "de": "Imitator",
+   "text": "Anwender imitiert die gerade verwendete Attacke. Dies schlägt fehl, falls zuvor keine Attacke verwendet wurde.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "corrosive-gas": {
+   "de": "Korrosionsgas",
+   "text": "Der Anwender greift alle Pokémon im Umkreis mit einem ätzenden Gas an. Getragene Items werden dadurch zersetzt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "cosmic-power": {
+   "de": "Kosmik-Kraft",
+   "text": "Erhöht Verteidigung und Spezial-Verteidigung durch eine mystische Kraft.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "cotton-guard": {
+   "de": "Watteschild",
+   "text": "Anwender schützt sich, indem er sich in einen luftigen Flaum hüllt. Erhöht die Verteidigung drastisch.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "cotton-spore": {
+   "de": "Baumwollsaat",
+   "text": "Senkt die Initiative der Ziele um zwei Stufen. Pokémon vom Typ Pflanze sind immun.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "counter": {
+   "de": "Konter",
+   "text": "Kontert physische Treffer und fügt dem Ziel das Doppelte des Schadens zu, den der Anwender erlitten hat.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "court-change": {
+   "de": "Seitenwechsel",
+   "text": "Tauscht die Zustände auf der eigenen Seite des Kampffeldes mit denen auf der gegnerischen Seite.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "covet": {
+   "de": "Bezirzer",
+   "text": "Der Anwender schmeichelt sich beim Ziel ein und stiehlt dann das von ihm getragene Item.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "crabhammer": {
+   "de": "Krabbhammer",
+   "text": "Schlägt mit Schere zu. Hohe Volltrefferquote.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "cross-chop": {
+   "de": "Kreuzhieb",
+   "text": "Doppelter Hieb mit den Unterarmen. Hohe Volltrefferquote.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "cross-poison": {
+   "de": "Giftstreich",
+   "text": "Ein schneidender Hieb, der das Ziel eventuell vergiftet. Hat eine hohe Volltrefferquote.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "crunch": {
+   "de": "Knirscher",
+   "text": "Beißt mit scharfen Reißzähnen zu und senkt eventuell die Verteidigung.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "crush-claw": {
+   "de": "Zermalmklaue",
+   "text": "Angriff mit scharfen Klauen. Senkt eventuell den Verteidigungs-Wert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "curse": {
+   "de": "Fluch",
+   "text": "Attacke, deren Wirkung davon abhängt, ob der Anwender ein Geister-Pokémon ist.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "cut": {
+   "de": "Zerschneider",
+   "text": "Ein Basisangriff mit Schere oder Klaue.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dark-pulse": {
+   "de": "Finsteraura",
+   "text": "Anwender greift mit fürchterlicher Aura schlechter Gedanken an. Ziel schreckt eventuell zurück.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "darkest-lariat": {
+   "de": "Dark Lariat",
+   "text": "Der Anwender wirbelt mit beiden Armen und prallt so auf das Ziel. Richtet unabhängig von den Statusveränderungen des Zieles Schaden an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dazzling-gleam": {
+   "de": "Zauberschein",
+   "text": "Der Anwender feuert einen mächtigen Lichtblitz ab, der gegnerischen Pokémon Schaden zufügt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "decorate": {
+   "de": "Verzierung",
+   "text": "Durch Verzierungen werden der Angriff und Spezial-Angriff des Zieles stark erhöht.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "defense-curl": {
+   "de": "Einigler",
+   "text": "Verbirgt Schwächen durch Einrollen und hebt gleichzeitig den Verteidigungs-Wert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "defog": {
+   "de": "Auflockern",
+   "text": "Starker Wind hebt Attacken wie Reflektor und Lichtschild des Zieles auf. Senkt außerdem den Ausweichwert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "destiny-bond": {
+   "de": "Abgangsbund",
+   "text": "Wird der Anwender nach Einsatz dieser Attacke kampfunfähig, führt dies auch beim Pokémon, das ihn besiegt hat, zum K.O. Scheitert bei Wiederholung.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "detect": {
+   "de": "Scanner",
+   "text": "Anwender wehrt jede Attacke ab. Scheitert eventuell bei Wiederholung.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dig": {
+   "de": "Schaufler",
+   "text": "In Runde 1 gräbt sich der Anwender ein und in Runde 2 greift er an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dire-claw": {
+   "de": "Unheilsklauen",
+   "text": "Der Anwender schlägt mit verhängnisvollen Klauen zu. Das Ziel kann vergiftet, paralysiert oder eingeschläfert werden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "disable": {
+   "de": "Aussetzer",
+   "text": "Die zuletzt eingesetzte Attacke des Zieles wird für vier Runden blockiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "disarming-voice": {
+   "de": "Säuselstimme",
+   "text": "Der Anwender stößt einen bezirzenden Ruf aus, mit dem er gegnerische Pokémon in seinen Bann schlägt und ihnen mentalen Schaden zufügt. Trifft garantiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "discharge": {
+   "de": "Ladungsstoß",
+   "text": "Anwender greift alle Pokémon im Umkreis mit Elektrizität an. Diese werden eventuell auch paralysiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dive": {
+   "de": "Taucher",
+   "text": "Anwender taucht in Runde 1 ab und greift in Runde 2 aus der Tiefe an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "double-edge": {
+   "de": "Risikotackle",
+   "text": "Lebensgefährlicher Angriff, bei dem sich der Anwender selbst verletzt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "double-hit": {
+   "de": "Doppelschlag",
+   "text": "Anwender trifft das Ziel mit dem Schweif oder Ähnlichem. Ziel wird doppelt getroffen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "double-kick": {
+   "de": "Doppelkick",
+   "text": "Der Anwender tritt in einer Runde zweimal schnell zu.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "double-shock": {
+   "de": "Zweifachladung",
+   "text": "Der Anwender entlädt die gesamte Elektrizität seines Körpers für einen starken Angriff. Danach ist er nicht mehr vom Typ Elektro.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "double-team": {
+   "de": "Doppelteam",
+   "text": "Erzeugt durch schnelle Bewegungen Ebenbilder, um den Ausweichwert zu erhöhen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "draco-meteor": {
+   "de": "Draco Meteor",
+   "text": "Kometen werden heraufbeschworen. Der Rückstoß reduziert den Spezial-Angriff des Anwenders stark.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dragon-breath": {
+   "de": "Feuerodem",
+   "text": "Fegt das Ziel mit zerstörerisch heißem Atem weg. Paralysiert das Ziel eventuell.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dragon-cheer": {
+   "de": "Drachenschrei",
+   "text": "Der Anwender hebt die Moral seiner Mitstreiter mit einem Drachenruf, sodass ihre künftigen Angriffe leichter Volltreffer landen. Drachen-Pokémon werden stärker angespornt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dragon-claw": {
+   "de": "Drachenklaue",
+   "text": "Der Anwender greift das Ziel mit riesigen, scharfen Klauen an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dragon-dance": {
+   "de": "Drachentanz",
+   "text": "Ein mystischer Tanz, der den Angriffs- und Initiative-Wert erhöht.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dragon-darts": {
+   "de": "Drachenpfeile",
+   "text": "Der Anwender greift zweimal mit Grolldra an. Bei zwei Zielen werden beide jeweils einmal angegriffen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dragon-pulse": {
+   "de": "Drachenpuls",
+   "text": "Das Ziel wird mit einer Schockwelle angegriffen, die aus dem offenen Maul des Anwenders kommt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dragon-rush": {
+   "de": "Drachenstoß",
+   "text": "Anwender führt einen furchteinflößenden Angriff aus. Das Ziel schreckt eventuell zurück.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dragon-tail": {
+   "de": "Drachenrute",
+   "text": "Putzt das Ziel vom Feld und wechselt es mit einem anderen Pokémon aus. Beendet Kämpfe gegen wilde Pokémon.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "drain-punch": {
+   "de": "Ableithieb",
+   "text": "Entzieht dem Ziel Energie. Die Hälfte des Schadens wird den KP des Anwenders zugerechnet.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "draining-kiss": {
+   "de": "Diebeskuss",
+   "text": "Der Anwender stiehlt dem Ziel mit einem Kuss KP. Die Höhe der Heilung beträgt mehr als die Hälfte des beim Ziel angerichteten Schadens.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dream-eater": {
+   "de": "Traumfresser",
+   "text": "Frisst die Träume eines schlafenden Zieles. Anwender wird um die Hälfte des zugefügten Schadens geheilt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "drill-peck": {
+   "de": "Bohrschnabel",
+   "text": "Korkenzieherangriff, bei dem der Schnabel als Bohrer dient.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "drill-run": {
+   "de": "Schlagbohrer",
+   "text": "Anwender rammt das Ziel, während er seinen Körper wie einen Bohrer dreht. Hohe Volltrefferquote.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "drum-beating": {
+   "de": "Trommelschläge",
+   "text": "Senkt die Initiative des Zieles um eine Stufe.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dual-chop": {
+   "de": "Doppelhieb",
+   "text": "Versetzt dem Ziel mit massiven Extremitäten Hiebe. Angriff erfolgt zweimal hintereinander.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dual-wingbeat": {
+   "de": "Doppelflügel",
+   "text": "Der Anwender trifft das Ziel zweimal hintereinander mit seinen Flügeln und fügt ihm so Schaden zu.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "dynamic-punch": {
+   "de": "Wuchtschlag",
+   "text": "Kräftiger Schlag, der das Ziel bei Erfolg verwirrt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "earth-power": {
+   "de": "Erdkräfte",
+   "text": "Der Boden unter dem Ziel erzittert durch die Kraft der Erde. Senkt eventuell Spezial-Verteidigung.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "earthquake": {
+   "de": "Erdbeben",
+   "text": "Ein mächtiges Beben, das alle Pokémon im Umkreis trifft.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "echoed-voice": {
+   "de": "Widerhall",
+   "text": "Angriff mit widerhallender Stimme. Wenn in jeder Runde ein Teilnehmer wiederholt die Attacke einsetzt, steigt die Stärke.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "eerie-impulse": {
+   "de": "Mystowellen",
+   "text": "Der Körper des Anwenders erzeugt mysteriöse Wellen und senkt den Spezial-Angriff des Zieles dadurch stark.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "eerie-spell": {
+   "de": "Schauderspruch",
+   "text": "Der Anwender greift mit gewaltigen Psycho-Kräften an. Die AP der letzten Attacke des Zieles werden um 3 Punkte gesenkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "electric-terrain": {
+   "de": "Elektrofeld",
+   "text": "Hindert fünf Runden lang alle Pokémon, die den Boden berühren, am Einschlafen. Erhöht die Stärke von Elektro-Attacken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "electrify": {
+   "de": "Elektrifizierung",
+   "text": "Kommt die Attacke zum Einsatz, bevor das Ziel seine Attacke ausführt, nimmt diese für die Dauer dieser Runde den Typ Elektro an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "electro-ball": {
+   "de": "Elektroball",
+   "text": "Je höher die Initiative des Anwenders im Vergleich zum Ziel ist, desto stärker trifft dieses eine geballte Ladung Strom.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "electro-shot": {
+   "de": "Stromstrahl",
+   "text": "Der Anwender lädt in der ersten Runde Elektrizität auf und erhöht seinen Spezial-Angriff. In der nächsten Runde feuert er einen Hochspannungsstrahl ab. Bei Regen wird der Strahl sofort abgefeuert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "electroweb": {
+   "de": "Elektronetz",
+   "text": "Fängt gegnerische Pokémon mit einem elektrischen Netz und senkt deren Initiative.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "ember": {
+   "de": "Glut",
+   "text": "Schwache Feuer-Attacke, durch die das Ziel eventuell Verbrennungen erleidet.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "encore": {
+   "de": "Zugabe",
+   "text": "Das Ziel wiederholt die letzte Attacke drei Runden lang.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "endeavor": {
+   "de": "Notsituation",
+   "text": "Trifft nur, wenn KP des Anwenders geringer als KP des Zieles sind. Senkt dessen KP auf die Höhe der KP des Anwenders.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "endure": {
+   "de": "Ausdauer",
+   "text": "Nach fatalen Attacken bleibt stets 1 KP übrig. Misserfolg bei Wiederholung möglich.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "energy-ball": {
+   "de": "Energieball",
+   "text": "Anwender zieht Kraft aus der Natur und feuert sie auf das Ziel. Senkt eventuell Spezial-Verteidigung des Zieles.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "entrainment": {
+   "de": "Zwango",
+   "text": "Anwender tanzt zu einem seltsamen Rhythmus und zwingt das Ziel mitzumachen. Dieses nimmt dabei die Fähigkeit des Anwenders an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "eruption": {
+   "de": "Eruption",
+   "text": "Explosiver Angriff gegen gegnerische Pokémon. Je höher die KP des Anwenders sind, desto mehr Schaden wird angerichtet.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "expanding-force": {
+   "de": "Flächenmacht",
+   "text": "Der Anwender greift das Ziel mit Psycho-Kräften an. Wenn ein Psychofeld aktiv ist, steigt die Stärke und es wird allen gegnerischen Pokémon Schaden zugefügt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "explosion": {
+   "de": "Explosion",
+   "text": "Anwender explodiert, richtet bei allen Pokémon im Umkreis großen Schaden an und wird selbst kampfunfähig.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "extrasensory": {
+   "de": "Sondersensor",
+   "text": "Besonderer Angriff mit einer unsichtbaren Kraft, die das Ziel eventuell zurückschrecken lässt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "extreme-speed": {
+   "de": "Turbotempo",
+   "text": "Extrem schnelle und kraftvolle Erstschlag-Attacke.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "facade": {
+   "de": "Fassade",
+   "text": "Ist der Anwender vergiftet, paralysiert oder leidet er unter Verbrennungen, verdoppelt sich die Kraft der Attacke.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fairy-lock": {
+   "de": "Feenschloss",
+   "text": "Der Anwender sperrt alle Pokémon ein und hindert sie damit in der nächsten Runde an der Flucht.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fake-out": {
+   "de": "Mogelhieb",
+   "text": "Erstschlag-Attacke, die das Ziel zurückschrecken lässt. Gelingt nur, wenn sie sofort eingesetzt wird, nachdem der Anwender das Kampffeld betreten hat.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fake-tears": {
+   "de": "Trugträne",
+   "text": "Täuscht Weinen vor, um die Spezial-Verteidigung des Zieles stark zu senken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "false-swipe": {
+   "de": "Trugschlag",
+   "text": "Ein Angriff, der dem Ziel zumindest 1 KP lässt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "feather-dance": {
+   "de": "Daunenreigen",
+   "text": "Hüllt das Ziel in Daunen und senkt dessen Angriffs-Wert stark.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "feint": {
+   "de": "Offenlegung",
+   "text": "Ziele, die Attacken wie Schutzschild oder Scanner eingesetzt haben, werden getroffen. Entfernt Effekte dieser Attacken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fell-stinger": {
+   "de": "Stachelfinale",
+   "text": "Gelingt es dem Anwender, das Ziel mit dieser Attacke zu besiegen, steigt sein Angriffs-Wert drastisch.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fickle-beam": {
+   "de": "Launenlaser",
+   "text": "Der Anwender schießt einen Lichtstrahl ab. Manchmal feuern alle seine Köpfe gemeinsam Strahlen ab, wodurch sich die Stärke verdoppelt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fiery-dance": {
+   "de": "Feuerreigen",
+   "text": "Hüllt das Ziel mit einer Feuerhose in Flammen. Kann den Spezial-Angriff des Anwenders erhöhen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "final-gambit": {
+   "de": "Wagemut",
+   "text": "Ein Angriff, der dem Ziel Schaden in Höhe der aktuellen KP des Anwenders zufügt. Letzterer wird dadurch selbst besiegt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fire-blast": {
+   "de": "Feuersturm",
+   "text": "Feuersbrunst, die das Ziel versengt und ihm eventuell eine Verbrennung zufügt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fire-fang": {
+   "de": "Feuerzahn",
+   "text": "Anwender beißt mit flammenden Reißzähnen zu. Ziel schreckt eventuell zurück oder erleidet Verbrennungen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fire-lash": {
+   "de": "Feuerpeitsche",
+   "text": "Der Anwender greift das Ziel mit einer brennenden Peitsche an und senkt dabei zusätzlich dessen Verteidigungs-Wert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fire-pledge": {
+   "de": "Feuersäulen",
+   "text": "Ein Angriff mit Feuersäulen. Mit Pflanzensäulen kombiniert steigt die Wirkung und die Umgebung wird zu einem Meer aus Feuer.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fire-punch": {
+   "de": "Feuerschlag",
+   "text": "Ein feuriger Schlag, der dem Ziel eventuell Verbrennungen zufügt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fire-spin": {
+   "de": "Feuerwirbel",
+   "text": "Das Ziel wird für vier bis fünf Runden in einem Feuerkreis gefangen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "first-impression": {
+   "de": "Überrumpler",
+   "text": "Eine sehr starke Attacke, die jedoch nur erfolgreich ist, wenn sie sofort eingesetzt wird, nachdem der Anwender das Kampffeld betreten hat.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fissure": {
+   "de": "Geofissur",
+   "text": "Das Ziel wird in eine Erdspalte geworfen. Ist die Attacke erfolgreich, führt sie zu einem K.O.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "flail": {
+   "de": "Dreschflegel",
+   "text": "Attacke richtet mehr Schaden an, wenn eigene KP niedrig sind.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "flame-charge": {
+   "de": "Nitroladung",
+   "text": "Anwender hüllt sich in Flammen und greift das Ziel an. Sammelt seine Energie und erhöht dadurch die eigene Initiative.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "flamethrower": {
+   "de": "Flammenwurf",
+   "text": "Starke Feuer-Attacke, durch die das Ziel eventuell Verbrennungen erleidet.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "flare-blitz": {
+   "de": "Flammenblitz",
+   "text": "Anwender hüllt sich in Flammen und stürmt auf das Ziel zu, das dadurch eventuell Verbrennungen erleidet. Anwender nimmt selbst großen Schaden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "flash": {
+   "de": "Blitz",
+   "text": "Diese Attacke kann nicht eingesetzt werden. Du solltest dein Pokémon sie vergessen lassen. Beachte aber, dass es sich danach nicht wieder an sie erinnern kann.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "flash-cannon": {
+   "de": "Lichtkanone",
+   "text": "Anwender sammelt Lichtenergie und feuert sie auf einmal ab. Senkt eventuell Spezial-Verteidigung des Zieles.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "flatter": {
+   "de": "Schmeichler",
+   "text": "Schmeichelt dem Ziel, um es zu verwirren. Erhöht dessen Spezial-Angriff.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fling": {
+   "de": "Schleuder",
+   "text": "Anwender schleudert sein Item auf das Ziel. Stärke und Effekt der Attacke hängen vom Item ab.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "flip-turn": {
+   "de": "Rollwende",
+   "text": "Nach der Attacke eilt der Anwender zurück und tauscht den Platz mit einem anderen Pokémon.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "flower-trick": {
+   "de": "Blumentrick",
+   "text": "Der Anwender wirft einen präparierten Blumenstrauß auf das Ziel. Die Attacke trifft immer und landet stets einen Volltreffer.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fly": {
+   "de": "Fliegen",
+   "text": "Steigt in Runde 1 empor und trifft das Ziel in Runde 2.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "flying-press": {
+   "de": "Flying Press",
+   "text": "Der Anwender stürzt sich aus der Luft auf das Ziel. Die Attacke gehört sowohl dem Typ Kampf als auch dem Typ Flug an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "focus-blast": {
+   "de": "Fokusstoß",
+   "text": "Anwender erhöht seinen mentalen Fokus und greift dann an. Senkt eventuell Spezial-Verteidigung des Zieles.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "focus-energy": {
+   "de": "Energiefokus",
+   "text": "Anwender atmet ein und bündelt Kraft. Die Volltrefferquote steigt dadurch.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "focus-punch": {
+   "de": "Power-Punch",
+   "text": "Anwender konzentriert sich, bevor er angreift. Wird er vorher getroffen, ist die Attacke erfolglos.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "follow-me": {
+   "de": "Spotlight",
+   "text": "Zieht Aufmerksamkeit auf sich. Gegner greifen nur den Anwender an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "forests-curse": {
+   "de": "Waldesfluch",
+   "text": "Der Anwender belegt das Ziel mit einem Waldesfluch, durch den dieses zusätzlich den Typ Pflanze annimmt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "foul-play": {
+   "de": "Schmarotzer",
+   "text": "Anwender macht sich die Kraft des Zieles zunutze. Je höher dessen Angriff, desto mehr Schaden richtet die Attacke an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "freeze-dry": {
+   "de": "Gefriertrockner",
+   "text": "Das Ziel wird stark abgekühlt und manchmal sogar eingefroren. Die Attacke ist sehr effektiv gegen Wasser-Pokémon.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "frenzy-plant": {
+   "de": "Flora-Statue",
+   "text": "Mächtiger Angriff mit Ästen. Der Anwender muss eine Runde aussetzen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "frost-breath": {
+   "de": "Eisesodem",
+   "text": "Anwender greift an, indem er dem Ziel eisigen Atem entgegenhaucht. Volltreffergarantie.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fury-attack": {
+   "de": "Furienschlag",
+   "text": "Spießt das Ziel zwei- bis fünfmal mit spitzem Horn oder Schnabel auf.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fury-cutter": {
+   "de": "Zornklinge",
+   "text": "Eine Attacke mit Scheren oder Klauen, deren Härte bei aufeinanderfolgenden Treffern zunimmt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "fury-swipes": {
+   "de": "Kratzfurie",
+   "text": "Beharkt das Ziel zwei- bis fünfmal mit scharfen Klauen oder Sicheln.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "future-sight": {
+   "de": "Seher",
+   "text": "Zwei Runden, nachdem Seher eingesetzt wurde, erfolgt ein Angriff mit Psycho-Energie.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "gastro-acid": {
+   "de": "Magensäfte",
+   "text": "Anwender greift das Ziel mit eigenen Magensäften an. Entfernt Effekte von dessen Fähigkeit.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "giga-drain": {
+   "de": "Gigasauger",
+   "text": "Das Ziel wird angegriffen und die Hälfte des zugefügten Schadens dem Anwender als KP gutgeschrieben.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "giga-impact": {
+   "de": "Gigastoß",
+   "text": "Anwender rennt mit seiner ganzen Kraft gegen das Ziel an und muss dann eine Runde ruhen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "gigaton-hammer": {
+   "de": "Riesenhammer",
+   "text": "Der Anwender schwingt seinen riesigen Hammer mit dem ganzen Körper. Diese Attacke kann nicht zweimal hintereinander eingesetzt werden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "glaive-rush": {
+   "de": "Großklingenstoß",
+   "text": "Der Anwender ist bis zu seiner nächsten Aktion ungeschützt. In dieser Zeit treffen Angriffe auf ihn immer und verursachen doppelten Schaden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "glare": {
+   "de": "Schlangenblick",
+   "text": "Schüchtert Ziel ein, sodass dieses paralysiert wird.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "grass-knot": {
+   "de": "Strauchler",
+   "text": "Ziel wird durch Gras ins Straucheln gebracht. Je schwerer das Ziel, desto mehr Schaden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "grass-pledge": {
+   "de": "Pflanzensäulen",
+   "text": "Ein Angriff mit Pflanzensäulen. Mit Wassersäulen kombiniert steigt die Wirkung und die Umgebung wird zu einem Sumpf.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "grassy-glide": {
+   "de": "Grasrutsche",
+   "text": "Der Anwender rutscht über den Boden und greift das Ziel an. Ermöglicht den Erstschlag, wenn ein Grasfeld aktiv ist.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "grassy-terrain": {
+   "de": "Grasfeld",
+   "text": "Regeneriert fünf Runden lang in jeder neuen Runde ein paar KP aller Pokémon, die den Boden berühren. Erhöht die Stärke von Pflanzen-Attacken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "grav-apple": {
+   "de": "Gravitation",
+   "text": "Ein Apfel fällt aus großer Höhe herab und richtet Schaden an. Dabei wird die Verteidigung des Zieles gesenkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "gravity": {
+   "de": "Erdanziehung",
+   "text": "Ermöglicht es, Flug-Pokémon oder Pokémon mit der Fähigkeit Schwebe mit Boden-Attacken zu treffen. Verhindert Attacken, bei denen der Anwender fliegt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "growl": {
+   "de": "Heuler",
+   "text": "Der Anwender heult herzzerreißend, um gegnerische Pokémon nachlässig werden zu lassen und deren Angriffs-Wert zu senken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "growth": {
+   "de": "Wachstum",
+   "text": "Der Körper wächst. Dadurch steigen Angriff und Spezial-Angriff.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "guard-split": {
+   "de": "Schutzteiler",
+   "text": "Durch Psycho-Kräfte werden Verteidigung und Spezial-Verteidigung des Anwenders und des Zieles addiert und in zwei gleiche Hälften geteilt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "guard-swap": {
+   "de": "Schutztausch",
+   "text": "Psychische Kräfte tauschen Änderungen an Verteidigung und Spezial-Verteidigung mit denen des Zieles.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "guillotine": {
+   "de": "Guillotine",
+   "text": "Ein Angriff mit einer großen Schere. Trifft die Attacke, führt sie beim Ziel sofort zum K.O.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "gunk-shot": {
+   "de": "Mülltreffer",
+   "text": "Anwender schießt mit Müll auf das Ziel. Vergiftet dieses eventuell.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "gust": {
+   "de": "Windstoß",
+   "text": "Trifft das Ziel mit einem Windstoß, den es mit seinen Flügeln erzeugt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "gyro-ball": {
+   "de": "Gyroball",
+   "text": "Angriff mit hoher Geschwindigkeit. Je niedriger die Initiative des Anwenders im Vergleich zum Ziel ist, desto höher der Schaden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "hammer-arm": {
+   "de": "Hammerarm",
+   "text": "Anwender trifft mit einem starken Hieb. Senkt Initiative des Anwenders.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "hard-press": {
+   "de": "Stahlpresse",
+   "text": "Das Ziel wird mit einem Arm, einer Klaue oder Ähnlichem zerdrückt. Je mehr KP das Ziel übrig hat, desto stärker ist die Attacke.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "harden": {
+   "de": "Härtner",
+   "text": "Stärkt die Muskulatur und erhöht den Verteidigungs-Wert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "haze": {
+   "de": "Dunkelnebel",
+   "text": "Erzeugt einen dunklen Nebel. Alle Veränderungen der Statuswerte der Kampfteilnehmer werden annulliert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "head-smash": {
+   "de": "Kopfstoß",
+   "text": "Anwender greift unter Einsatz seines Lebens mit einem Kopfstoß an und nimmt dabei selbst jede Menge Schaden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "headbutt": {
+   "de": "Kopfnuss",
+   "text": "Rammt das Ziel mit einer Kopfnuss. Ziel schreckt eventuell zurück.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "headlong-rush": {
+   "de": "Schmetterramme",
+   "text": "Der Anwender rammt das Ziel mit vollem Körpereinsatz. Dabei sinken seine Verteidigung und Spezial-Verteidigung.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "heal-bell": {
+   "de": "Vitalglocke",
+   "text": "Läutet beruhigend und heilt alle Statusprobleme im Team.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "heal-pulse": {
+   "de": "Heilwoge",
+   "text": "Anwender löst eine Schmerzen lindernde Welle aus und heilt dabei das Ziel mit der Hälfte von dessen maximalen KP.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "healing-wish": {
+   "de": "Heilopfer",
+   "text": "Anwender geht K.O. Das an seine Stelle tretende Pokémon hat volle KP. Statusprobleme werden geheilt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "heat-crash": {
+   "de": "Brandstempel",
+   "text": "Rempelattacke mit brennendem Körper. Je schwerer der Anwender im Vergleich zum Ziel ist, desto stärker die Attacke.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "heat-wave": {
+   "de": "Hitzewelle",
+   "text": "Gegnerische Pokémon werden von einem Sturm aus heißer Luft getroffen und erleiden eventuell Verbrennungen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "heavy-slam": {
+   "de": "Rammboss",
+   "text": "Anwender rammt das Ziel mit massivem Körper. Je schwerer er im Vergleich zum Ziel ist, desto stärker die Attacke.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "helping-hand": {
+   "de": "Rechte Hand",
+   "text": "Anwender steigert die Stärke der Attacke eines Mitstreiters.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "hex": {
+   "de": "Bürde",
+   "text": "Eine Attacke, bei der der Anwender das Ziel bedrängt. Fügt Zielen mit Statusproblemen hohen Schaden zu.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "high-horsepower": {
+   "de": "Pferdestärke",
+   "text": "Der Anwender greift das Ziel mit einer heftigen Ganzkörper-Attacke an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "high-jump-kick": {
+   "de": "Turmkick",
+   "text": "Sprungtritt mit Knie. Bei Misserfolg verletzt sich der Anwender selbst.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "hone-claws": {
+   "de": "Klauenwetzer",
+   "text": "Wetzt seine Klauen, um sie zu schärfen. Erhöht Angriff und Genauigkeit des Anwenders.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "horn-drill": {
+   "de": "Hornbohrer",
+   "text": "Attacke, bei der ein Horn als Bohrer eingesetzt wird. Ist sie erfolgreich, führt sie zu einem K.O.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "horn-leech": {
+   "de": "Holzgeweih",
+   "text": "Greift Ziel mit einem Astgeweih an und zapft diesem Energie ab. Anwender wird um die Hälfte des zugefügten Schadens geheilt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "howl": {
+   "de": "Jauler",
+   "text": "Der Kampfgeist sowie der Angriffs-Wert des Anwenders und seiner Mitstreiter werden durch lautes Jaulen erhöht.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "hurricane": {
+   "de": "Orkan",
+   "text": "Verwirrt das Ziel mit einer Wahrscheinlichkeit von 30 %. Bei Regen trifft die Attacke immer. Bei starkem Sonnenlicht beträgt ihre Genauigkeit 50 %. Sie trifft auch Ziele im Zustand Abgehoben.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "hydro-cannon": {
+   "de": "Aquahaubitze",
+   "text": "Das Ziel wird von einer Wasserkanone getroffen. Anwender setzt eine Runde aus.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "hydro-pump": {
+   "de": "Hydropumpe",
+   "text": "Spritzt eine Menge Wasser mit Hochdruck auf das Ziel.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "hyper-beam": {
+   "de": "Hyperstrahl",
+   "text": "Starke Attacke, die den Anwender zwingt, eine Runde auszusetzen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "hyper-voice": {
+   "de": "Schallwelle",
+   "text": "Eine laute Attacke, bei der gegnerische Pokémon mit Schallwellen angegriffen werden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "hypnosis": {
+   "de": "Hypnose",
+   "text": "Hypnose-Attacke, die das Ziel in Schlaf versetzt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "ice-beam": {
+   "de": "Eisstrahl",
+   "text": "Das Ziel wird von einem Eisstrahl getroffen und friert eventuell ein.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "ice-fang": {
+   "de": "Eiszahn",
+   "text": "Anwender beißt mit eiskalten Reißzähnen zu. Ziel schreckt eventuell zurück oder friert ein.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "ice-hammer": {
+   "de": "Eishammer",
+   "text": "Anwender trifft mit einem starken Hieb. Senkt Initiative des Anwenders.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "ice-punch": {
+   "de": "Eishieb",
+   "text": "Ein eisiger Schlag, der das Ziel eventuell einfriert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "ice-shard": {
+   "de": "Eissplitter",
+   "text": "Erstschlag-Attacke, bei der das Ziel mit Eisklumpen beworfen wird.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "ice-spinner": {
+   "de": "Eiskreisel",
+   "text": "Der Anwender bedeckt seine Füße mit dünnem Eis und wirbelt herum, um in das Ziel zu krachen. Die Drehbewegung zerstört auch das Gelände.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "icicle-crash": {
+   "de": "Eiszapfhagel",
+   "text": "Lässt große, schwere Eiszapfen auf das Ziel herabregnen. Ziel schreckt eventuell zurück.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "icicle-spear": {
+   "de": "Eisspeer",
+   "text": "Feuert zwei bis fünf Eiszapfen auf das Ziel.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "icy-wind": {
+   "de": "Eissturm",
+   "text": "Eis-Attacke, die gegnerischen Pokémon Schaden zufügt und ihren Initiative-Wert senkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "imprison": {
+   "de": "Begrenzer",
+   "text": "Hindert Gegner am Einsatz von Attacken, die der Anwender selbst auch kennt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "infernal-parade": {
+   "de": "Phantomparade",
+   "text": "Der Anwender greift mit zahllosen Feuerbällen an. Das Ziel kann verbrennen. Hat das Ziel ein Statusproblem, verdoppelt sich die Stärke.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "inferno": {
+   "de": "Inferno",
+   "text": "Anwender greift das Ziel an, indem er es mit dichten Flammen umhüllt. Ziel erleidet Verbrennungen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "infestation": {
+   "de": "Plage",
+   "text": "Der Anwender fällt vier bis fünf Runden lang wie eine Plage über das Ziel her und greift es an. In diesem Zeitraum kann es nicht fliehen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "ingrain": {
+   "de": "Verwurzler",
+   "text": "Verwurzelung füllt jede Runde KP auf. Austausch und Flucht sind unmöglich.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "instruct": {
+   "de": "Kommando",
+   "text": "Der Anwender befiehlt dem Ziel, dessen zuletzt ausgeführte Attacke sofort wieder einzusetzen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "iron-defense": {
+   "de": "Eisenabwehr",
+   "text": "Anwender stärkt den Körper, um den Verteidigungs-Wert stark zu erhöhen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "iron-head": {
+   "de": "Eisenschädel",
+   "text": "Ziel wird durch stahlharten Kopf des Anwenders getroffen und schreckt eventuell zurück.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "iron-tail": {
+   "de": "Eisenschweif",
+   "text": "Attacke mit hartem Eisenschweif. Senkt eventuell den Verteidigungs-Wert des Zieles.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "jaw-lock": {
+   "de": "Fesselbiss",
+   "text": "Versetzt den Anwender und das Ziel in einen Zustand, in dem sie einander am Auswechseln hindern.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "jet-punch": {
+   "de": "Düsenhieb",
+   "text": "Der Anwender umhüllt seine Faust mit einem Wasserstrom und schlägt mit blendender Geschwindigkeit zu. Diese Attacke hat erhöhte Priorität.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "kings-shield": {
+   "de": "Königsschild",
+   "text": "Der Anwender geht in die Defensive und wird vor Angriffen geschützt. Berührt ihn nun ein Pokémon, sinkt dessen Angriffs-Wert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "knock-off": {
+   "de": "Abschlag",
+   "text": "Schlägt das Item des Zieles weg und vereitelt so dessen Gebrauch während des Kampfes. Mehr Schaden gegen Ziele, die ein Item bei sich tragen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "kowtow-cleave": {
+   "de": "Kniefallspalter",
+   "text": "Der Anwender verbeugt sich tief, um das Ziel unachtsam zu machen, und schlägt dann zu. Diese Attacke trifft immer.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "lash-out": {
+   "de": "Frustventil",
+   "text": "Der Anwender entlädt seinen Frust in einem Angriff. Die Stärke der Attacke wird verdoppelt, wenn seine Statuswerte in dieser Runde gesenkt wurden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "last-resort": {
+   "de": "Zuflucht",
+   "text": "Diese Attacke kann nur eingesetzt werden, nachdem alle verfügbaren Attacken ausgeführt worden sind.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "last-respects": {
+   "de": "Letzte Ehre",
+   "text": "Der Anwender rächt seine Mitstreiter. Je mehr besiegte Mitstreiter im Team sind, desto stärker wird die Attacke.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "lava-plume": {
+   "de": "Flammensturm",
+   "text": "Anwender greift alle Pokémon im Umkreis mit tiefroten Flammen an. Ziele erleiden eventuell Verbrennungen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "leaf-blade": {
+   "de": "Laubklinge",
+   "text": "Hieb mit scharfkantigem Blatt. Hohe Volltrefferquote.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "leaf-storm": {
+   "de": "Blättersturm",
+   "text": "Anwender erzeugt einen Sturm aus scharfen Blättern. Rückstoß senkt Spezial-Angriff des Anwenders stark.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "leech-life": {
+   "de": "Blutsauger",
+   "text": "Die Hälfte des zugefügten Schadens wird dem Anwender gutgeschrieben.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "leech-seed": {
+   "de": "Egelsamen",
+   "text": "Ziel wird bepflanzt und verliert jede Runde KP, die ein Pokémon aus dem Team des Anwenders heilen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "leer": {
+   "de": "Silberblick",
+   "text": "Der Verteidigungs-Wert gegnerischer Pokémon wird durch einen angsteinflößenden Blick gesenkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "lick": {
+   "de": "Schlecker",
+   "text": "Leck-Attacke mit langer Zunge. Das Ziel wird eventuell paralysiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "life-dew": {
+   "de": "Lebenstropfen",
+   "text": "Wundersames Wasser heilt die KP des Anwenders und seiner am Kampf beteiligten Mitstreiter.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "light-of-ruin": {
+   "de": "Lux Calamitatis",
+   "text": "Die Attacke basiert auf der Kraft des Ewigblütlers, die als mächtiger Lichtstrahl abgefeuert wird. Der Anwender nimmt dabei selbst großen Schaden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "light-screen": {
+   "de": "Lichtschild",
+   "text": "Erzeugt eine Lichtwand und senkt den Schaden durch Spezial-Attacken für fünf Runden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "liquidation": {
+   "de": "Aquadurchstoß",
+   "text": "Der Anwender greift das Ziel mit der Kraft des Wassers an. Senkt eventuell die Verteidigung des Zieles.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "lock-on": {
+   "de": "Zielschuss",
+   "text": "Visiert das Ziel an und trifft in der nächsten Runde garantiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "low-kick": {
+   "de": "Fußkick",
+   "text": "Ein Tritt, der das Ziel umwirft. Je schwerer das Ziel ist, desto mehr Schaden fügt ihm die Attacke zu.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "low-sweep": {
+   "de": "Fußtritt",
+   "text": "Anwender greift mit blitzschnellen Bewegungen die Beine des Zieles an und senkt dessen Initiative.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "lumina-crash": {
+   "de": "Lichteinschlag",
+   "text": "Der Anwender entfesselt ein sonderbares Licht, das selbst den Geist beeinflusst. Die Spezial-Verteidigung des Ziels sinkt stark.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "lunge": {
+   "de": "Anfallen",
+   "text": "Der Anwender greift das Ziel mit ganzer Kraft an, wodurch auch der Angriffs-Wert des Zieles sinkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "mach-punch": {
+   "de": "Tempohieb",
+   "text": "Bei dieser Erstschlag-Attacke greift der Anwender mit einem extrem schnellen Hieb an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "magic-powder": {
+   "de": "Magiepuder",
+   "text": "Ändert den Typ des Zieles zu Psycho. Pokémon vom Typ Pflanze sind immun.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "magic-room": {
+   "de": "Magieraum",
+   "text": "Anwender erzeugt einen bizarren Raum, in dem über fünf Runden die Wirkung aller von Pokémon getragenen Items aufgehoben ist.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "magical-leaf": {
+   "de": "Zauberblatt",
+   "text": "Magischer Blattangriff, dem nicht auszuweichen ist.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "magnet-rise": {
+   "de": "Magnetflug",
+   "text": "Anwender schwebt für fünf Runden durch elektrisch erzeugten Magnetismus.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "magnetic-flux": {
+   "de": "Magnetregler",
+   "text": "Das Magnetfeld wird so manipuliert, dass Spezial- Verteidigung und Verteidigung von Team-Pokémon mit der Fähigkeit Plus oder Minus steigen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "make-it-rain": {
+   "de": "Goldrausch",
+   "text": "Der Anwender wirft eine Menge Münzen auf das Ziel. Dadurch sinkt sein Spezial-Angriff. Nach dem Kampf wird Geld verdient.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "matcha-gotcha": {
+   "de": "Quirlschuss",
+   "text": "Der Anwender feuert einen Strahl aus angerührtem Tee ab. Seine KP werden um bis zur Hälfte des am Ziel verursachten Schadens wiederhergestellt. Das Ziel kann verbrennen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "mean-look": {
+   "de": "Horrorblick",
+   "text": "Böser Blick, der die Flucht des Zieles vereitelt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "mega-drain": {
+   "de": "Megasauger",
+   "text": "Attacke, die die Hälfte des Schadens absorbiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "mega-kick": {
+   "de": "Megakick",
+   "text": "Das Ziel wird mit einem extrem heftigen Tritt angegriffen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "mega-punch": {
+   "de": "Megahieb",
+   "text": "Ein unglaublich kräftiger Hieb.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "megahorn": {
+   "de": "Vielender",
+   "text": "Brutaler Ramm-Angriff mit spitzem, beeindruckendem Horn.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "memento": {
+   "de": "Memento-Mori",
+   "text": "Der Anwender wird besiegt. Gleichzeitig werden der Angriff und Spezial-Angriff des Zieles stark gesenkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "metal-burst": {
+   "de": "Metallstoß",
+   "text": "Attacke mit großer Kraft gegen den Gegner, der dem Anwender in derselben Runde zuletzt Schaden zufügte.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "metal-claw": {
+   "de": "Metallklaue",
+   "text": "Klauen-Attacke, die eventuell den Angriffs-Wert des Anwenders erhöht.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "metal-sound": {
+   "de": "Metallsound",
+   "text": "Stößt einen spitzen Schrei aus, der die Spezial-Verteidigung des Zieles stark senkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "meteor-assault": {
+   "de": "Sternensturm",
+   "text": "Versetzt den Anwender in der folgenden Runde in den Zustand Handlungsunfähig.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "meteor-beam": {
+   "de": "Meteorstrahl",
+   "text": "Der Anwender sammelt in Runde 1 kosmische Kräfte und erhöht damit seinen Spezial-Angriff, bevor er in Runde 2 das Ziel angreift.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "meteor-mash": {
+   "de": "Sternenhieb",
+   "text": "Angriff mit einem harten, schnellen Schlag. Erhöht eventuell Angriffs-Wert des Anwenders.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "metronome": {
+   "de": "Metronom",
+   "text": "Bewegt Finger, um das Gehirn zu stimulieren. Wählt zufällig eine Attacke aus.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "milk-drink": {
+   "de": "Milchgetränk",
+   "text": "Stellt beim Anwender oder einem Mitstreiter 1/2 der jeweiligen maximalen KP wieder her. Heilt auch einen Mitstreiter, der durch eine Schutzattacke geschützt ist.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "mimic": {
+   "de": "Mimikry",
+   "text": "Kopiert die zuvor ausgeführte Attacke des Zieles. Diese kann im Kampf bis zur Auswechslung verwendet werden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "minimize": {
+   "de": "Komprimator",
+   "text": "Anwender schrumpft, um seinen Ausweichwert stark zu erhöhen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "mirror-coat": {
+   "de": "Spiegelcape",
+   "text": "Kontert die Spezial-Attacke des Gegners mit doppeltem Schaden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "mist": {
+   "de": "Weißnebel",
+   "text": "Anwender schützt das Team mit einem Nebel. Verhindert Statussenkungen für fünf Runden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "misty-explosion": {
+   "de": "Nebelexplosion",
+   "text": "Der Anwender greift alle Pokémon im Umkreis an und wird danach kampfunfähig. Die Stärke dieser Attacke steigt, wenn ein Nebelfeld aktiv ist.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "misty-terrain": {
+   "de": "Nebelfeld",
+   "text": "Schützt fünf Runden lang alle Pokémon, die den Boden berühren, vor Statusproblemen. Der erlittene Schaden durch Drachen-Attacken wird halbiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "moonblast": {
+   "de": "Mondgewalt",
+   "text": "Der Anwender macht sich die Kraft des Mondes zunutze, um anzugreifen. Gelegentlich wird dabei der Spezial-Angriff des Zieles gesenkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "moonlight": {
+   "de": "Mondschein",
+   "text": "Füllt KP des Anwenders auf. Die Menge hängt vom Wetter ab.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "morning-sun": {
+   "de": "Morgengrauen",
+   "text": "Füllt KP des Anwenders auf. Die Menge hängt vom Wetter ab.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "mortal-spin": {
+   "de": "Letalwirbler",
+   "text": "Der Anwender führt einen Drehangriff aus, der auch Effekte wie Klammergriff, Wickel und Egelsamen entfernen kann. Gegnerische Pokémon werden außerdem vergiftet.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "mountain-gale": {
+   "de": "Frostfallwind",
+   "text": "Der Anwender schleudert riesige Eisbrocken auf das Ziel. Das Ziel kann zurückschrecken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "mud-shot": {
+   "de": "Lehmschuss",
+   "text": "Angriff mit Lehm, der den Initiative-Wert des Zieles senkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "mud-slap": {
+   "de": "Lehmschelle",
+   "text": "Schadet dem Ziel durch Matsch. Dessen Genauigkeit sinkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "muddy-water": {
+   "de": "Lehmbrühe",
+   "text": "Greift mit Matsch an und senkt eventuell die Genauigkeit der gegnerischen Pokémon.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "mystical-fire": {
+   "de": "Magieflamme",
+   "text": "Der Anwender greift das Ziel an, indem er ihm eine besondere, heiße Flamme entgegenbläst. Der Spezial-Angriff des Zieles sinkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "nasty-plot": {
+   "de": "Ränkeschmied",
+   "text": "Anwender stimuliert sein Gehirn und hat finstere Gedanken. Erhöht Spezial-Angriff stark.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "night-daze": {
+   "de": "Nachtflut",
+   "text": "Anwender greift das Ziel mit finsteren Schockwellen an. Senkt eventuell die Genauigkeit des Zieles.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "night-shade": {
+   "de": "Nachtnebel",
+   "text": "Das Ziel sieht eine Illusion. Richtet Schaden gemäß dem Level des Anwenders an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "night-slash": {
+   "de": "Nachthieb",
+   "text": "Anwender greift bei der ersten Gelegenheit mit scharfen Klauen an. Hohe Volltrefferquote.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "no-retreat": {
+   "de": "Finalformation",
+   "text": "Alle Statuswerte des Anwenders werden erhöht, aber dafür kann er weder ausgewechselt werden noch fliehen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "noble-roar": {
+   "de": "Kampfgebrüll",
+   "text": "Der Anwender stößt ein Kampfgebrüll aus, das das Ziel einschüchtert und zugleich seinen Angriffs- und Spezial-Angriffs-Wert senkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "nuzzle": {
+   "de": "Wangenrubbler",
+   "text": "Der Anwender lädt seine Wangen elektrisch auf und greift an, indem er sich damit am Ziel reibt. Das Ziel wird paralysiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "octazooka": {
+   "de": "Octazooka",
+   "text": "Senkt die Genauigkeit des Zieles mit einer Wahrscheinlichkeit von 50 % um eine Stufe.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "octolock": {
+   "de": "Octoklammer",
+   "text": "Versetzt das Ziel in die Zustände Octoklammer und Wechselsperre. Es kann nicht ausgewechselt werden. Am Ende jeder Runde sinken seine Verteidigung und Spezial-Verteidigung um jeweils eine Stufe.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "outrage": {
+   "de": "Wutanfall",
+   "text": "Attacke über zwei bis drei Runden, die den Anwender danach verwirrt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "overdrive": {
+   "de": "Overdrive",
+   "text": "Der Anwender haut in die Saiten seiner Gitarre oder seines Basses und erzeugt dröhnende, kraftvolle Vibrationen, die gegnerischen Pokémon schaden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "overheat": {
+   "de": "Hitzekoller",
+   "text": "Angriff mit voller Kraft, der den Spezial-Angriff des Anwenders durch den Rückstoß stark senkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "pain-split": {
+   "de": "Leidteiler",
+   "text": "Addiert KP von Anwender und Ziel. Teilt sie gerecht auf.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "parabolic-charge": {
+   "de": "Parabolladung",
+   "text": "Fügt allen Pokémon im Umkreis Schaden zu. Der Anwender wird um die Hälfte des insgesamt angerichteten Schadens geheilt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "parting-shot": {
+   "de": "Abgangstirade",
+   "text": "Schüchtert das Ziel mit einer Abgangstirade ein, sodass dessen Angriffs- und Spezial-Angriffs-Wert sinken. Danach wird der Anwender ausgewechselt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "pay-day": {
+   "de": "Zahltag",
+   "text": "Das Ziel wird mit Münzen beworfen. Das Geld wird nach dem Kampf aufgesammelt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "payback": {
+   "de": "Gegenstoß",
+   "text": "Der Anwender lädt die Attacke auf. Handelt das Ziel vor dem Anwender, verdoppelt sich die Stärke der Attacke.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "peck": {
+   "de": "Pikser",
+   "text": "Greift das Ziel mit dem Schnabel oder Horn an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "perish-song": {
+   "de": "Abgesang",
+   "text": "Wer diese Musik hört, wird nach drei Runden besiegt. Rettung ist durch den Eintausch eines neuen Pokémon möglich.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "petal-blizzard": {
+   "de": "Blütenwirbel",
+   "text": "Der Anwender erzeugt einen turbulenten Blütenwirbel, der alle Pokémon im Umkreis erfasst und ihnen Schaden zufügt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "petal-dance": {
+   "de": "Blättertanz",
+   "text": "Angriff mit Blütenblättern für zwei bis drei Runden. Danach wird der Angreifer verwirrt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "phantom-force": {
+   "de": "Phantomkraft",
+   "text": "Der Anwender verschwindet in Runde 1, um seine Kraft zu sammeln, und attackiert in Runde 2. Trifft auch, wenn sich das Ziel selbst schützt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "pin-missile": {
+   "de": "Nadelrakete",
+   "text": "Spitze Nadeln treffen das Ziel zwei- bis fünfmal hintereinander.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "play-nice": {
+   "de": "Kameradschaft",
+   "text": "Der Anwender schließt mit dem Ziel Freundschaft und nimmt ihm seine Angriffslust. Der Angriffs-Wert des Zieles sinkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "play-rough": {
+   "de": "Knuddler",
+   "text": "Der Anwender knuddelt das Ziel und greift es an. Senkt eventuell den Angriffs-Wert des Zieles.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "pluck": {
+   "de": "Pflücker",
+   "text": "Anwender pickt das Ziel, nimmt die Beere, falls das Ziel eine trägt, und erhält ihren Effekt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "poison-fang": {
+   "de": "Giftzahn",
+   "text": "Angriff mit giftigen Reißzähnen. Das Ziel wird eventuell schwer vergiftet.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "poison-gas": {
+   "de": "Giftwolke",
+   "text": "Hüllt gegnerische Pokémon in ein Gas ein, das sie vergiftet.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "poison-jab": {
+   "de": "Gifthieb",
+   "text": "Der Anwender greift mit giftigen Gliedmaßen wie Tentakeln oder Armen an. Das Ziel wird dabei eventuell vergiftet.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "poison-powder": {
+   "de": "Giftpuder",
+   "text": "Vergiftet das Ziel. Pokémon vom Typ Pflanze sind immun.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "poison-tail": {
+   "de": "Giftschweif",
+   "text": "Angriff mit hoher Volltrefferquote. Diese Schweifattacke vergiftet das Ziel eventuell.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "pollen-puff": {
+   "de": "Pollenknödel",
+   "text": "Der Anwender greift mit einem Ball aus Pollen an, der beim Ziel explodiert. Mitstreiter werden von einem Ball getroffen, der ihre KP auffüllt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "poltergeist": {
+   "de": "Poltergeist",
+   "text": "Der Anwender greift das Ziel mit dessen getragenem Item an. Die Attacke schlägt fehl, wenn das Ziel kein Item trägt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "population-bomb": {
+   "de": "Mäuseplage",
+   "text": "Die Gefährten des Anwenders sammeln sich in Scharen und führen eine Kombinationsattacke aus, die ein- bis zehnmal trifft.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "pounce": {
+   "de": "Anspringen",
+   "text": "Der Anwender springt das Ziel an. Dadurch sinkt die Initiative des Ziels.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "pound": {
+   "de": "Klaps",
+   "text": "Ein Hieb mit den Vorderbeinen oder dem Schweif.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "power-gem": {
+   "de": "Juwelenkraft",
+   "text": "Anwender attackiert mit einem Lichtstrahl, der funkelt, als sei er aus Juwelen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "power-shift": {
+   "de": "Kraftwechsel",
+   "text": "Der Anwender vertauscht seinen Angriff und seine Verteidigung.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "power-split": {
+   "de": "Kraftteiler",
+   "text": "Durch Psycho-Kräfte werden Angriff und Spezial-Angriff des Anwenders und des Zieles addiert und in zwei gleiche Hälften geteilt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "power-swap": {
+   "de": "Krafttausch",
+   "text": "Psychische Kräfte tauschen Änderungen an Angriff und Spezial-Angriff mit denen des Zieles.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "power-trick": {
+   "de": "Krafttrick",
+   "text": "Anwender setzt Psycho-Kräfte ein, um eigenen Angriffs- mit Verteidigungs-Wert auszutauschen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "power-trip": {
+   "de": "Überheblichkeit",
+   "text": "Der Anwender prahlt mit seiner Stärke und greift das Ziel an. Dieser Angriff ist umso stärker, je weiter die Statuswerte des Anwenders erhöht sind.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "power-whip": {
+   "de": "Blattgeißel",
+   "text": "Anwender wirbelt seine Ranken oder Tentakel peitschenartig gegen das Ziel.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "protect": {
+   "de": "Schutzschild",
+   "text": "Anwender wehrt jede Attacke ab. Scheitert eventuell bei Wiederholung.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "psybeam": {
+   "de": "Psystrahl",
+   "text": "Feuert einen Strahl ab, der das Ziel verwirren kann.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "psych-up": {
+   "de": "Psycho-Plus",
+   "text": "Der Anwender hypnotisiert sich selbst, um die Statusveränderungen des Zieles zu kopieren.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "psychic": {
+   "de": "Psychokinese",
+   "text": "Starke Psycho-Attacke, die eventuell die Spezial-Verteidigung des Zieles senkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "psychic-fangs": {
+   "de": "Psychobeißer",
+   "text": "Der Anwender beißt das Ziel mithilfe von Psycho-Kräften. Die Attacke durchbricht auch Barrieren wie Lichtschild und Reflektor.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "psychic-noise": {
+   "de": "Psycholärm",
+   "text": "Der Anwender greift mit unangenehmen Schallwellen an. Zwei Runden lang kann das Ziel keine KP durch Attacken, Fähigkeiten oder getragene Items wiederherstellen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "psychic-terrain": {
+   "de": "Psychofeld",
+   "text": "Verhindert für fünf Runden, dass Pokémon am Boden von Erstschlag-Attacken getroffen werden. Erhöht die Stärke von Psycho-Attacken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "psycho-cut": {
+   "de": "Psychoklinge",
+   "text": "Das Ziel wird mit Klingen attackiert, die aus Psycho-Energie bestehen. Hohe Volltrefferquote.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "psyshield-bash": {
+   "de": "Barrierenstoß",
+   "text": "Der Anwender hüllt sich in Psycho-Kraft und rammt das Ziel. Dadurch steigt seine Verteidigung.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "psyshock": {
+   "de": "Psychoschock",
+   "text": "Anwender erzeugt eine seltsame Energiewelle, die dem Ziel physischen Schaden zufügt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "pyro-ball": {
+   "de": "Feuerball",
+   "text": "Verbrennt das Ziel mit einer Wahrscheinlichkeit von 10 %. Taut den Anwender auf, falls dieser eingefroren ist.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "quash": {
+   "de": "Verzögerung",
+   "text": "Anwender stemmt sich gegen das Ziel und bewirkt, dass dieses erst als Letztes angreift.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "quick-attack": {
+   "de": "Ruckzuckhieb",
+   "text": "Bei dieser Erstschlag-Attacke stürzt sich der Anwender so schnell auf das Ziel, dass er quasi unsichtbar wird.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "quick-guard": {
+   "de": "Rapidschutz",
+   "text": "Schützt Anwender und Mitstreiter vor Erstschlag-Attacken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "quiver-dance": {
+   "de": "Falterreigen",
+   "text": "Anwender legt behände einen mystischen, formvollendeten Tanz aufs Parkett. Spezial-Angriff, Spezial-Verteidigung und Initiative steigen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "rage-fist": {
+   "de": "Zornesfaust",
+   "text": "Der Anwender wandelt seinen Zorn in Energie um. Je öfter er von Attacken getroffen wurde, desto stärker wird die Attacke.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "rage-powder": {
+   "de": "Wutpulver",
+   "text": "Lenkt gegnerische Attacken auf den Anwender um. Wirkt nur auf Attacken mit einem einzelnen Ziel. Pokémon vom Typ Pflanze sind immun.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "raging-bull": {
+   "de": "Rasender Stier",
+   "text": "Der Anwender rammt das Ziel wie ein rasender Stier. Der Typ der Attacke hängt von seiner Form ab. Sie kann Barrieren wie Lichtschild und Reflektor durchbrechen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "raging-fury": {
+   "de": "Flammenwut",
+   "text": "Der Anwender tobt zwei bis drei Runden lang und speit Flammen. Danach wird er verwirrt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "rain-dance": {
+   "de": "Regentanz",
+   "text": "Anwender erzeugt starken Regen. Die Stärke von Wasser-Attacken erhöht sich fünf Runden lang, während die Stärke von Feuer-Attacken sinkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "rapid-spin": {
+   "de": "Turbodreher",
+   "text": "Trifft das Ziel mit einer Dreh-Attacke. Befreit den Anwender unter anderem von Wickel, Klammergriff und Egelsamen. Erhöht die Initiative des Anwenders.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "razor-leaf": {
+   "de": "Rasierblatt",
+   "text": "Greift gegnerische Pokémon mithilfe von Blättern an. Hohe Volltrefferquote.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "razor-shell": {
+   "de": "Kalkklinge",
+   "text": "Schneideangriff mit einer scharfen Muschelschale. Senkt eventuell die Verteidigung des Zieles.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "recover": {
+   "de": "Genesung",
+   "text": "Eine Selbstheilung. KP des Anwenders werden um 50 % des maximalen Wertes aufgefüllt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "recycle": {
+   "de": "Aufbereitung",
+   "text": "Recycling eines getragenen Items, das zuvor im Kampf verwendet wurde.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "reflect": {
+   "de": "Reflektor",
+   "text": "Eine mysteriöse Wand, die für fünf Runden den Schaden von physischen gegnerischen Treffern reduziert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "reflect-type": {
+   "de": "Typenspiegel",
+   "text": "Anwender ahmt das Ziel nach und nimmt dabei dessen Typ an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "rest": {
+   "de": "Erholung",
+   "text": "Anwender wird vollkommen geheilt, von allen Statusproblemen befreit und schläft die folgenden zwei Runden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "retaliate": {
+   "de": "Heimzahlung",
+   "text": "Anwender nimmt Rache für einen besiegten Mitstreiter. Wurde in der vorigen Runde ein Mitstreiter besiegt, steigt die Stärke.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "revenge": {
+   "de": "Vergeltung",
+   "text": "Schaden verdoppelt sich, wenn der Anwender in der Runde bereits Schaden durch das Ziel erlitten hat.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "reversal": {
+   "de": "Gegenschlag",
+   "text": "Richtet mehr Schaden an, wenn eigene KP niedrig sind.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "revival-blessing": {
+   "de": "Vitalsegen",
+   "text": "Der Anwender spendet einen liebevollen Segen, der ein kampfunfähiges Pokémon im Team mit der Hälfte seiner maximalen KP wiederbelebt. Hat das wiederbelebte Pokémon eine Mega-Entwicklung vollzogen, kehrt es in seiner Mega-Form zurück.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "rising-voltage": {
+   "de": "Hochspannung",
+   "text": "Der Anwender greift mit aus dem Boden aufsteigender Elektrizität an. Die Stärke der Attacke wird verdoppelt, wenn beim Gegner ein Elektrofeld aktiv ist.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "roar": {
+   "de": "Brüller",
+   "text": "Verjagt das Ziel und ersetzt es durch ein anderes Pokémon. Beendet den Kampf in der Wildnis.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "rock-blast": {
+   "de": "Felswurf",
+   "text": "Wirft zwei- bis fünfmal in Folge Felsblöcke auf das Ziel.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "rock-polish": {
+   "de": "Steinpolitur",
+   "text": "Anwender reduziert so gut wie möglich den Luftwiderstand. Erhöht den Initiative-Wert stark.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "rock-slide": {
+   "de": "Steinhagel",
+   "text": "Schleudert riesige Felsen auf gegnerische Pokémon, die eventuell zurückschrecken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "rock-smash": {
+   "de": "Zertrümmerer",
+   "text": "Diese steinbrechende Attacke kann den Verteidigungs-Wert des Zieles senken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "rock-tomb": {
+   "de": "Felsgrab",
+   "text": "Angriff mit Felsen. Bei Erfolg wird der Initiative-Wert des Zieles gesenkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "rock-wrecker": {
+   "de": "Felswerfer",
+   "text": "Anwender wirft einen riesigen Felsen auf das Ziel. In der nächsten Runde muss der Anwender ruhen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "role-play": {
+   "de": "Rollenspiel",
+   "text": "Ahmt das Ziel nach und kopiert seine Fähigkeit.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "rollout": {
+   "de": "Walzer",
+   "text": "Attacke, die fünf Runden dauert. Mit jedem Treffer steigt die Stärke.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "roost": {
+   "de": "Ruheort",
+   "text": "Anwender landet und ruht sich aus. KP des Anwenders werden um 50 % der maximalen KP aufgefüllt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "round": {
+   "de": "Kanon",
+   "text": "Angriff mit Gesang. Singt der Anwender mit allen im Kanon, steigt die Stärke.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sacred-sword": {
+   "de": "Sanctoklinge",
+   "text": "Schneideangriff mit langem Horn. Richtet unabhängig von den Statusveränderungen des Zieles Schaden an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "safeguard": {
+   "de": "Bodyguard",
+   "text": "Team des Anwenders ist fünf Runden lang vor Statusproblemen geschützt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "salt-cure": {
+   "de": "Pökelsalz",
+   "text": "Der Anwender pökelt das Ziel ein und fügt ihm jede Runde Schaden zu. Stahl- und Wasser-Pokémon sind stärker betroffen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sand-attack": {
+   "de": "Sandwirbel",
+   "text": "Senkt Genauigkeit des Zieles, indem ihm Sand ins Gesicht geworfen wird.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sand-tomb": {
+   "de": "Sandgrab",
+   "text": "Das Ziel leidet für vier bis fünf Runden in einer Sandhose.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sandstorm": {
+   "de": "Sandsturm",
+   "text": "Sandsturm für fünf Runden. Schadet Pokémon aller Typen außer Gestein, Boden und Stahl. Erhöht die Spezial-Verteidigung von Gesteins-Pokémon.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "scald": {
+   "de": "Siedewasser",
+   "text": "Heizt dem Ziel mit einem Schwall siedend heißen Kochwassers ein. Das Ziel erleidet dabei eventuell Verbrennungen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "scale-shot": {
+   "de": "Schuppenschuss",
+   "text": "Der Anwender greift das Ziel zwei- bis fünfmal hintereinander mit Schuppen-Geschossen an. Erhöht die eigene Initiative, aber senkt die Verteidigung.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "scary-face": {
+   "de": "Grimasse",
+   "text": "Jagt dem Ziel mit einer Grimasse Angst ein. Dessen Initiative-Wert sinkt stark.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "scorching-sands": {
+   "de": "Brandsand",
+   "text": "Der Anwender greift das Ziel mit brennend heißem Sand an und fügt ihm eventuell Verbrennungen zu.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "scratch": {
+   "de": "Kratzer",
+   "text": "Das Ziel wird mit scharfen Klauen zerkratzt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "screech": {
+   "de": "Kreideschrei",
+   "text": "Stößt einen Schrei aus, um die Verteidigung des Zieles stark zu senken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "seed-bomb": {
+   "de": "Samenbomben",
+   "text": "Anwender lässt eine Menge Samen mit harter Schale von oben auf das Ziel fallen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "seismic-toss": {
+   "de": "Geowurf",
+   "text": "Ziel wird mit der Kraft der Gravitation umgeworfen. Richtet Schaden gemäß dem Level des Anwenders an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "self-destruct": {
+   "de": "Finale",
+   "text": "Der Anwender verursacht eine Explosion, mit der er bei allen Pokémon im Umkreis Riesenschaden anrichtet und selbst kampfunfähig wird.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "shadow-ball": {
+   "de": "Spukball",
+   "text": "Bewirft das Ziel mit einem gruseligen Ball und senkt eventuell dessen Spezial-Verteidigung.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "shadow-claw": {
+   "de": "Dunkelklaue",
+   "text": "Greift das Ziel mit einer scharfen Klaue aus Schatten an. Hohe Volltrefferquote.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "shadow-punch": {
+   "de": "Finsterfaust",
+   "text": "Angriff mit der Faust aus dem Schattenreich. Ausweichen unmöglich.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "shadow-sneak": {
+   "de": "Schattenstoß",
+   "text": "Bei dieser Erstschlag-Attacke erweitert der Anwender seinen Schatten und greift das Ziel von hinten an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "shed-tail": {
+   "de": "Schwanzabwurf",
+   "text": "Der Anwender erstellt mit eigenen KP einen Delegator und tauscht dann mit einem wartenden Team-Pokémon den Platz.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sheer-cold": {
+   "de": "Eiseskälte",
+   "text": "Diese Attacke führt beim Ziel sofort zum K.O. Wird sie von einem Pokémon eingesetzt, das nicht dem Typ Eis angehört, trifft sie seltener.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "shell-side-arm": {
+   "de": "Muschelwaffe",
+   "text": "Je nachdem, was höher ausfällt, richtet diese Attacke entweder physischen oder Spezial-Schaden an. Das Ziel wird eventuell vergiftet.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "shell-smash": {
+   "de": "Hausbruch",
+   "text": "Anwender zerbricht seine Schale und senkt seine Verteidigung und Spezial-Verteidigung, aber dafür steigen Angriff, Spezial-Angriff und Initiative stark.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "shelter": {
+   "de": "Refugium",
+   "text": "Der Anwender härtet seine Haut wie einen Eisenschild und erhöht seine Verteidigung stark.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "shift-gear": {
+   "de": "Gangwechsel",
+   "text": "Erhöht den Angriff des Anwenders um eine Stufe und seine Initiative um zwei Stufen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "shock-wave": {
+   "de": "Schockwelle",
+   "text": "Angriff mit schnellem Elektro-Schlag. Ausweichen nicht möglich.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "simple-beam": {
+   "de": "Wankelstrahl",
+   "text": "Bestrahlt das Ziel mit mysteriösen Energiewellen. Bei einem Treffer wird dessen Fähigkeit zu Wankelmut.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sing": {
+   "de": "Gesang",
+   "text": "Ein Lied, das das Ziel in tiefen Schlaf versetzt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "skill-swap": {
+   "de": "Fähigkeitstausch",
+   "text": "Anwender tauscht seine Fähigkeit mit der des Zieles.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "skitter-smack": {
+   "de": "Krabbelkracher",
+   "text": "Der Anwender kriecht hinter das Ziel, greift es an und senkt dabei dessen Spezial-Angriff.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sky-attack": {
+   "de": "Himmelsfeger",
+   "text": "Anwender greift in der zweiten Runde mit hoher Volltrefferquote an. Ziel schreckt eventuell zurück.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "slack-off": {
+   "de": "Tagedieb",
+   "text": "Durch Müßiggang werden KP des Anwenders um 50 % der maximalen KP aufgefüllt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "slam": {
+   "de": "Slam",
+   "text": "Schlag mit einem langen Schweif, einer Ranke oder Ähnlichem.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "slash": {
+   "de": "Schlitzer",
+   "text": "Diese Attacke hat eine um eine Stufe erhöhte Volltrefferquote.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sleep-powder": {
+   "de": "Schlafpuder",
+   "text": "Versetzt das Ziel in Schlaf. Pokémon vom Typ Pflanze sind immun.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sleep-talk": {
+   "de": "Schlafrede",
+   "text": "Anwender setzt per Zufall eine ihm bekannte Attacke ein. Klappt nur, wenn der Anwender gerade schläft.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sludge": {
+   "de": "Schlammbad",
+   "text": "Wirft Schlamm auf das Ziel. Dieses wird eventuell vergiftet.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sludge-bomb": {
+   "de": "Matschbombe",
+   "text": "Wirft Schlamm auf das Ziel. Dieses wird eventuell vergiftet.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sludge-wave": {
+   "de": "Schlammwoge",
+   "text": "Greift alle Pokémon im Umkreis mit einer Schlammwelle an. Diese werden eventuell auch vergiftet.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "smack-down": {
+   "de": "Katapult",
+   "text": "Greift das Ziel mit Steinen und Wurfgeschossen an. Fliegende Ziele fallen dabei vom Himmel und landen auf dem Boden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "smart-strike": {
+   "de": "Schmalhorn",
+   "text": "Der Anwender durchbohrt das Ziel mit seinem spitzen Horn. Diese Attacke trifft immer.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "snap-trap": {
+   "de": "Fangeisen",
+   "text": "Das Ziel wird vier bis fünf Runden lang in einem Fangeisen festgehalten und angegriffen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "snarl": {
+   "de": "Standpauke",
+   "text": "Wäscht gegnerischen Pokémon mit einer ausführlichen Standpauke den Kopf und senkt dabei deren Spezial-Angriff.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "snipe-shot": {
+   "de": "Präzisionsschuss",
+   "text": "Ignoriert die Wirkung von Fähigkeiten und Attacken, die Attacken auf sich ziehen. Diese Attacke hat eine um eine Stufe erhöhte Volltrefferquote.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "snore": {
+   "de": "Schnarcher",
+   "text": "Attacke nur im Schlaf möglich. Ziel schreckt eventuell zurück.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "snowscape": {
+   "de": "Schneelandschaft",
+   "text": "Der Anwender ruft einen Schneesturm hervor, der fünf Runden anhält. Die Verteidigung von Eis-Pokémon steigt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "soak": {
+   "de": "Überflutung",
+   "text": "Überschüttet das Ziel mit Unmengen an Wasser und ändert den Typ damit in Wasser um.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "soft-boiled": {
+   "de": "Weichei",
+   "text": "KP des Anwenders werden um 50 % der maximalen KP aufgefüllt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "solar-beam": {
+   "de": "Solarstrahl",
+   "text": "Absorbiert Licht in Runde 1. In Runde 2 erfolgt der Angriff.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "solar-blade": {
+   "de": "Solarklinge",
+   "text": "In Runde 1 absorbiert der Anwender Licht, das er in Runde 2 zu einem Schwert formt, mit dem er dann angreift.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "spark": {
+   "de": "Funkensprung",
+   "text": "Eine Elektro-Attacke, die das Ziel paralysieren kann.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sparkling-aria": {
+   "de": "Schaumserenade",
+   "text": "Durch Gesang erzeugte Blasen werden auf das Ziel geschleudert. Alle Pokémon, die dadurch Schaden erleiden, werden auch von Verbrennungen geheilt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "speed-swap": {
+   "de": "Initiativetausch",
+   "text": "Der Anwender tauscht seinen Initiative-Wert mit dem des Zieles.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "spicy-extract": {
+   "de": "Chili-Essenz",
+   "text": "Der Anwender sondert einen extrem scharfen Extrakt ab, der den Angriff des Ziels stark erhöht und seine Verteidigung stark senkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "spikes": {
+   "de": "Stachler",
+   "text": "Der Anwender legt Stacheln aus, die gegnerische Pokémon verletzen, die in den Kampf gerufen werden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "spiky-shield": {
+   "de": "Schutzstacheln",
+   "text": "Der Anwender wird vor Angriffen geschützt. Gleichzeitig nehmen alle Pokémon, die mit ihm in Berührung kommen, Schaden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "spirit-break": {
+   "de": "Seelenbruch",
+   "text": "Die Attacke trifft das Ziel mit so viel Wucht, dass es den Mut verliert. Dabei wird sein Spezial-Angriff gesenkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "spirit-shackle": {
+   "de": "Schattenfessel",
+   "text": "Der Anwender greift das Ziel an und näht zugleich dessen Schatten am Boden fest, sodass es nicht entkommen kann.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "spit-up": {
+   "de": "Entfessler",
+   "text": "Entlädt die Kraft, die während des Einsatzes von Horter gesammelt wurde. Je mehr Energie gehortet wurde, desto stärker der Angriff.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "spite": {
+   "de": "Groll",
+   "text": "AP der letzten Attacke des Zieles werden um 4 gesenkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "spore": {
+   "de": "Pilzspore",
+   "text": "Versetzt das Ziel in Schlaf. Pokémon vom Typ Pflanze sind immun.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "stealth-rock": {
+   "de": "Tarnsteine",
+   "text": "Der Anwender legt eine Falle aus schwebenden Steinen aus, die gegnerische Pokémon verletzen, die in den Kampf gerufen werden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "steel-beam": {
+   "de": "Stahlstrahl",
+   "text": "Der Anwender schießt Stahl, den er in seinem ganzen Körper angesammelt hat, in Form eines mächtigen Strahls ab. Dabei verletzt er sich auch selbst.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "steel-roller": {
+   "de": "Eisenwalze",
+   "text": "Der Anwender greift an und zerstört dabei etwaige Felder. Ist kein Feld aktiv, schlägt die Attacke fehl.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "steel-wing": {
+   "de": "Stahlflügel",
+   "text": "Trifft das Ziel mit Stahlflügeln. Verteidigungs-Wert des Anwenders steigt eventuell.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sticky-web": {
+   "de": "Klebenetz",
+   "text": "Der Anwender spinnt in der Umgebung des gegnerischen Teams ein klebriges Netz und senkt so die Initiative neu eingewechselter Pokémon.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "stockpile": {
+   "de": "Horter",
+   "text": "Lädt Kraft für später auf. Erhöht Verteidigung und Spezial-Verteidigung. Kann bis zu dreimal eingesetzt werden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "stomping-tantrum": {
+   "de": "Fruststampfer",
+   "text": "Von Frust getrieben greift der Anwender an. Wenn seine vorige Attacke fehlgeschlagen ist, verdoppelt sich die Stärke der Attacke.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "stone-axe": {
+   "de": "Felsaxt",
+   "text": "Der Anwender greift das Ziel mit steinernen Äxten an. Zurückbleibende Steinsplitter schweben um das Ziel.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "stone-edge": {
+   "de": "Steinkante",
+   "text": "Anwender schleudert scharfe Steine auf das Ziel. Hohe Volltrefferquote.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "stored-power": {
+   "de": "Kraftvorrat",
+   "text": "Angriff mit angesparter Energie. Je stärker die Statuswerte des Anwenders erhöht wurden, desto mehr Schaden richtet diese Attacke an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "storm-throw": {
+   "de": "Bergsturm",
+   "text": "Ein Angriff mit voller Wucht und Volltreffergarantie.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "strength": {
+   "de": "Stärke",
+   "text": "Das Ziel wird extrem stark getroffen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "strength-sap": {
+   "de": "Kraftabsorber",
+   "text": "Ein Angriff, der die KP des Anwenders um die Höhe des Angriffs-Werts des Zieles heilt. Anschließend wird der Angriff des Zieles gesenkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "string-shot": {
+   "de": "Fadenschuss",
+   "text": "Umwickelt gegnerische Pokémon mit Fäden aus dem Mund und senkt ihren Initiative-Wert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "struggle": {
+   "de": "Verzweifler",
+   "text": "Angriff nur bei verbrauchten AP. Anwender verletzt sich selbst leicht.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "struggle-bug": {
+   "de": "Käfertrutz",
+   "text": "Anwender leistet Widerstand und greift an. Der Spezial-Angriff der gegnerischen Pokémon sinkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "stuff-cheeks": {
+   "de": "Backenstopfer",
+   "text": "Der Anwender frisst die Beere, die er trägt, wodurch seine Verteidigung stark erhöht wird.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "stun-spore": {
+   "de": "Stachelspore",
+   "text": "Paralysiert das Ziel. Pokémon vom Typ Pflanze sind immun.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "submission": {
+   "de": "Überroller",
+   "text": "Harte Körperattacke, bei der sich der Anwender selbst leicht verletzt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "substitute": {
+   "de": "Delegator",
+   "text": "Der Anwender opfert 1/4 seiner maximalen KP, um einen Delegator zu erzeugen. Dieser wird anstelle des Anwenders von Attacken getroffen und verschwindet, sobald er Schaden in Höhe von 1/4 der maximalen KP des Anwenders erlitten hat. Geräuschbasierte Attacken treffen den Anwender durch den Delegator hindurch.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sucker-punch": {
+   "de": "Tiefschlag",
+   "text": "Erstschlag-Attacke, die aber nur gelingt, wenn das Ziel gerade eine Attacke vorbereitet, die KP-Schaden zufügen würde.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sunny-day": {
+   "de": "Sonnentag",
+   "text": "Die Sonne brennt unbarmherzig fünf Runden lang. Dadurch werden Attacken vom Typ Feuer verstärkt, während Wasser-Attacken abgeschwächt werden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "super-fang": {
+   "de": "Superzahn",
+   "text": "Greift mit scharfen Reißzähnen an. KP des Zieles werden halbiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "supercell-slam": {
+   "de": "Donnerstoß",
+   "text": "Der Anwender elektrisiert seinen Körper und stürzt sich auf das Ziel. Verfehlt die Attacke, nimmt der Anwender Schaden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "superpower": {
+   "de": "Kraftkoloss",
+   "text": "Starke Attacke, die jedoch auch den Angriff und die Verteidigung des Anwenders senkt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "surf": {
+   "de": "Surfer",
+   "text": "Anwender greift mit einer gewaltigen Welle alle Pokémon im Umkreis an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "swagger": {
+   "de": "Angeberei",
+   "text": "Verwirrt das Ziel und erhöht dessen Angriffs-Wert stark.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "swallow": {
+   "de": "Verzehrer",
+   "text": "Absorbiert die gehortete Kraft, um KP aufzufüllen. Je mehr Energie gehortet wurde, desto mehr KP werden aufgefüllt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sweet-kiss": {
+   "de": "Bitterkuss",
+   "text": "Anwender küsst das Ziel, das durch diese Niedlichkeit verwirrt wird.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "sweet-scent": {
+   "de": "Lockduft",
+   "text": "Senkt den Ausweichwert der gegnerischen Pokémon stark.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "swift": {
+   "de": "Sternschauer",
+   "text": "Verschießt sternförmige Strahlen, die stets treffen, auf gegnerische Pokémon.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "switcheroo": {
+   "de": "Wechseldich",
+   "text": "Anwender tauscht in Windeseile sein getragenes Item mit dem des Zieles.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "swords-dance": {
+   "de": "Schwerttanz",
+   "text": "Ein wilder Tanz, der den Kampfgeist wecken soll. Der Angriffs-Wert des Anwenders wird stark erhöht.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "synthesis": {
+   "de": "Synthese",
+   "text": "Füllt KP des Anwenders auf. Die Menge hängt vom Wetter ab.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "syrup-bomb": {
+   "de": "Sirupbombe",
+   "text": "Der Anwender lässt klebrigen Zuckersirup explodieren. Dieser überzieht das Ziel und lässt seine Initiative drei Runden lang jede Runde sinken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "tackle": {
+   "de": "Tackle",
+   "text": "Trifft das Ziel mit vollem Körpereinsatz.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "tail-slap": {
+   "de": "Kehrschelle",
+   "text": "Anwender greift das Ziel mit seiner schlagfesten Rute zwei- bis fünfmal hintereinander an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "tail-whip": {
+   "de": "Rutenschlag",
+   "text": "Der Anwender wedelt niedlich mit dem Schweif und veranlasst Gegner dadurch, nachlässig zu werden. Senkt die Verteidigung der gegnerischen Pokémon.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "tailwind": {
+   "de": "Rückenwind",
+   "text": "Anwender erzeugt einen Wirbelwind, der die Initiative aller Pokémon im Team für vier Runden erhöht.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "take-down": {
+   "de": "Bodycheck",
+   "text": "Rücksichtslose Attacke, bei der sich der Anwender selbst leicht verletzt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "taunt": {
+   "de": "Verhöhner",
+   "text": "Bringt das Ziel in Rage. Dieses kann über drei Runden hinweg nur noch angreifen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "tearful-look": {
+   "de": "Tränendrüse",
+   "text": "Dem Anwender stehen Tränen in den Augen, wodurch das Ziel seinen Kampfeswillen verliert. Angriff und Spezial-Angriff des Zieles sinken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "teatime": {
+   "de": "Teatime",
+   "text": "Der Anwender lädt alle am Kampf beteiligten Pokémon zu einem Teekränzchen ein, woraufhin diese die Beeren essen, die sie bei sich tragen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "teeter-dance": {
+   "de": "Taumeltanz",
+   "text": "Ein Wackeltanz, der alle Pokémon im Umkreis verwirrt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "temper-flare": {
+   "de": "Frustflamme",
+   "text": "Von Verzweiflung angetrieben greift der Anwender das Ziel an. Die Stärke verdoppelt sich, wenn seine vorherige Attacke fehlgeschlagen ist.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "tera-blast": {
+   "de": "Tera-Ausbruch",
+   "text": "Ist der Anwender terakristallisiert, setzt er Energie seines Tera-Typs frei. Schaden wird mit Angriff oder Spezial-Angriff berechnet, je nachdem, welcher Wert höher ist.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "terrain-pulse": {
+   "de": "Feldimpuls",
+   "text": "Der Anwender nutzt die Kraft des aktiven Feldes für seinen Angriff. Der Typ und die Stärke der Attacke ändern sich je nach Art des aktiven Feldes.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "thief": {
+   "de": "Raub",
+   "text": "Ermöglicht es, das Item des Zieles zu stehlen, solang der Anwender selbst keins bei sich trägt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "thrash": {
+   "de": "Fuchtler",
+   "text": "Attacke über zwei bis drei Runden, die den Anwender danach verwirrt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "throat-chop": {
+   "de": "Neck Strike",
+   "text": "Das Pokémon, das von dieser Attacke getroffen wird, erleidet starke Schmerzen und kann deswegen zwei Runden lang keine Lärm-Attacken mehr einsetzen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "thunder": {
+   "de": "Donner",
+   "text": "Paralysiert das Ziel mit einer Wahrscheinlichkeit von 30 %. Bei Regen trifft die Attacke immer. Bei starkem Sonnenlicht beträgt ihre Genauigkeit 50 %. Sie trifft auch Ziele im Zustand Abgehoben.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "thunder-fang": {
+   "de": "Donnerzahn",
+   "text": "Anwender beißt mit elektrifizierten Reißzähnen zu. Ziel schreckt eventuell zurück oder wird paralysiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "thunder-punch": {
+   "de": "Donnerschlag",
+   "text": "Ein elektrischer Schlag, der das Ziel eventuell paralysiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "thunder-shock": {
+   "de": "Donnerschock",
+   "text": "Eine Elektro-Attacke, die das Ziel eventuell paralysiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "thunder-wave": {
+   "de": "Donnerwelle",
+   "text": "Paralysiert das Ziel. Pokémon vom Typ Boden sind immun.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "thunderbolt": {
+   "de": "Donnerblitz",
+   "text": "Eine starke Elektro-Attacke, die das Ziel eventuell paralysiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "tickle": {
+   "de": "Spaßkanone",
+   "text": "Bringt das Ziel zum Lachen und senkt dadurch dessen Angriff und Verteidigung.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "tidy-up": {
+   "de": "Aufräumen",
+   "text": "Der Anwender räumt auf und entfernt Stachler, Tarnsteine, Klebenetz, Giftspitzen und Delegator. Außerdem steigen Angriff und Initiative.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "topsy-turvy": {
+   "de": "Invertigo",
+   "text": "Invertiert alle Statusveränderungen des Zieles.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "torch-song": {
+   "de": "Loderlied",
+   "text": "Der Anwender stößt lodernde Flammen aus, als würde er singen, und versengt das Ziel. Dadurch steigt sein Spezial-Angriff.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "torment": {
+   "de": "Folterknecht",
+   "text": "Erzürnt das Ziel, um wiederholten Einsatz derselben Attacke zu verhindern.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "toxic": {
+   "de": "Toxin",
+   "text": "Vergiftet das Ziel mit einem potenten Toxin schwer. Die Vergiftung wird von Runde zu Runde stärker.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "toxic-spikes": {
+   "de": "Giftspitzen",
+   "text": "Anwender legt eine Falle mit Giftdornen aus. In den Kampf eingewechselte gegnerische Pokémon werden vergiftet.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "toxic-thread": {
+   "de": "Giftfaden",
+   "text": "Der Anwender schießt giftige Fäden auf das Ziel, das dadurch vergiftet wird. Außerdem sinkt seine Initiative.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "trailblaze": {
+   "de": "Wegbereiter",
+   "text": "Der Anwender greift plötzlich an, als würde er aus hohem Gras hervorspringen. Seine flinke Beinarbeit erhöht seine Initiative.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "transform": {
+   "de": "Wandler",
+   "text": "Anwender verwandelt sich in ein Abbild des Zieles und kann so auf die gleichen Attacken zugreifen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "tri-attack": {
+   "de": "Triplette",
+   "text": "Feuert drei Strahlen ab. Verursacht eventuell Paralyse, Verbrennung oder Einfrieren.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "trick": {
+   "de": "Trickbetrug",
+   "text": "Der Anwender überrumpelt das Ziel und tauscht mit ihm die getragenen Items.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "trick-or-treat": {
+   "de": "Halloween",
+   "text": "Der Anwender lehrt das Ziel das Fürchten. Dieses nimmt dadurch zusätzlich den Typ Geist an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "trick-room": {
+   "de": "Bizarroraum",
+   "text": "Anwender erzeugt einen bizarren Raum, in dem langsame Pokémon fünf Runden lang zuerst agieren.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "triple-arrows": {
+   "de": "Drillingspfeile",
+   "text": "Der Anwender tritt zu und schießt anschließend drei Pfeile ab. Volltreffer landen leichter; zudem kann die Verteidigung des Ziels sinken oder es kann zurückschrecken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "triple-axel": {
+   "de": "Dreifach-Axel",
+   "text": "Tritt das Ziel ein- bis dreimal nacheinander. Die Härte der Tritte nimmt von Treffer zu Treffer zu.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "trop-kick": {
+   "de": "Tropenkick",
+   "text": "Der Anwender greift das Ziel mit einem heftigen Tritt tropischer Herkunft an. Dabei sinkt auch der Angriffs-Wert des Zieles.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "twin-beam": {
+   "de": "Doppelstrahl",
+   "text": "Der Anwender schießt geheimnisvolle Strahlen aus seinen Augen. Das Ziel wird zweimal hintereinander getroffen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "u-turn": {
+   "de": "Kehrtwende",
+   "text": "Nach der Attacke eilt der Anwender zurück und tauscht den Platz mit einem anderen Pokémon.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "upper-hand": {
+   "de": "Schnellkonter",
+   "text": "Lässt das Ziel zurückschrecken. Die Attacke schlägt fehl, wenn das Ziel nicht gerade eine offensive Prioritäts-Attacke vorbereitet.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "uproar": {
+   "de": "Aufruhr",
+   "text": "Anwender greift an, indem er über drei Runden hinweg einen Aufruhr erzeugt. Verhindert Schlaf.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "vacuum-wave": {
+   "de": "Vakuumwelle",
+   "text": "Erstschlag-Attacke, bei der ein Faustwirbel eine Vakuumwelle auf das Ziel sendet.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "venoshock": {
+   "de": "Giftschock",
+   "text": "Überschüttet das Ziel mit einer speziellen toxischen Flüssigkeit. Doppelt so stark gegen vergiftete Ziele.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "vine-whip": {
+   "de": "Rankenhieb",
+   "text": "Peitschenähnlicher Schlag mit Ranken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "volt-switch": {
+   "de": "Voltwechsel",
+   "text": "Nach der Attacke eilt der Anwender zurück und tauscht den Platz mit einem anderen Pokémon.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "volt-tackle": {
+   "de": "Volttackle",
+   "text": "Angriff mit Elektro-Tackle. Der Anwender nimmt dabei selbst großen Schaden. Das Ziel wird eventuell paralysiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "water-gun": {
+   "de": "Aquaknarre",
+   "text": "Das Ziel wird mit Wasser bespritzt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "water-pledge": {
+   "de": "Wassersäulen",
+   "text": "Ein Angriff mit Wassersäulen. Mit Feuersäulen kombiniert steigt die Wirkung und ein Regenbogen erscheint.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "water-pulse": {
+   "de": "Aquawelle",
+   "text": "Angriff mit Wasserwelle, die das Ziel eventuell verwirren kann.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "water-shuriken": {
+   "de": "Wasser-Shuriken",
+   "text": "Der Anwender schleudert dem Ziel Wurfsterne aus einem verdickten Sekret entgegen. Diese Erstschlag-Attacke trifft zwei- bis fünfmal.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "water-spout": {
+   "de": "Fontränen",
+   "text": "Eine Wasser-Attacke gegen gegnerische Pokémon. Je höher die KP des Anwenders sind, desto mehr Schaden richtet sie an.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "waterfall": {
+   "de": "Kaskade",
+   "text": "Eine mächtige Attacke, durch die das Ziel eventuell zurückschreckt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "wave-crash": {
+   "de": "Wellentackle",
+   "text": "Der Anwender hüllt sich in Wasser und rammt das Ziel mit dem ganzen Körper. Dabei nimmt er selbst beträchtlichen Schaden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "weather-ball": {
+   "de": "Meteorologe",
+   "text": "Typ und Stärke der Attacke sind vom Wetter zum Zeitpunkt der Anwendung abhängig.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "whirlpool": {
+   "de": "Whirlpool",
+   "text": "Das Ziel wird für vier bis fünf Runden in einer Wasserhose gefangen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "whirlwind": {
+   "de": "Wirbelwind",
+   "text": "Weht das Ziel weg und ersetzt es durch ein anderes Pokémon. In der Wildnis endet der Kampf.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "wide-guard": {
+   "de": "Rundumschutz",
+   "text": "Schützt eine Runde lang vor Angriffen, die alle Pokémon auf der Seite des Anwenders treffen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "wild-charge": {
+   "de": "Stromstoß",
+   "text": "Anwender erzeugt Spannung und greift an, indem er auf Kollisionskurs geht. Er erleidet selbst leichten Schaden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "will-o-wisp": {
+   "de": "Irrlicht",
+   "text": "Anwender feuert unheimliche Flammen ab, die beim Ziel Verbrennungen verursachen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "wish": {
+   "de": "Wunschtraum",
+   "text": "Ein Wunsch füllt in der nächsten Runde 50 % der KP des Anwenders bei diesem oder einem eingewechselten Pokémon auf.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "wonder-room": {
+   "de": "Wunderraum",
+   "text": "Anwender erzeugt einen bizarren Raum, in dem über fünf Runden die Verteidigung aller Pokémon mit ihrer Spezial-Verteidigung getauscht wird.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "wood-hammer": {
+   "de": "Holzhammer",
+   "text": "Anwender attackiert mit seinem robusten Körper. Er erleidet dabei auch selbst großen Schaden.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "work-up": {
+   "de": "Kraftschub",
+   "text": "Anwender erhält einen Kraftschub, der seinen Angriff und Spezial-Angriff erhöht.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "worry-seed": {
+   "de": "Sorgensamen",
+   "text": "Ziel wird bepflanzt. Seine Fähigkeit wandelt sich zu Insomnia und hindert es daran, einzuschlafen.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "wrap": {
+   "de": "Wickel",
+   "text": "Umwickelt das Ziel über vier bis fünf Runden mit Ranken oder Ähnlichem und fügt ihm Schaden zu.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "x-scissor": {
+   "de": "Kreuzschere",
+   "text": "Der Anwender führt eine Attacke aus, die einer Scherenbewegung ähnelt.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "yawn": {
+   "de": "Gähner",
+   "text": "Anwender gähnt und das Ziel schläft in der nächsten Runde ein.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "zap-cannon": {
+   "de": "Blitzkanone",
+   "text": "Kanonenähnlicher Elektro-Schuss, der schadet und paralysiert.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "zen-headbutt": {
+   "de": "Zen-Kopfstoß",
+   "text": "Anwender konzentriert seinen Willen und rammt das Ziel. Dieses schreckt eventuell zurück.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  },
+  "zing-zap": {
+   "de": "Elektropikser",
+   "text": "Lässt das Ziel mit einer Wahrscheinlichkeit von 30 % zurückschrecken.",
+   "power": null,
+   "accuracy": null,
+   "pp": null
+  }
+ }
+}
