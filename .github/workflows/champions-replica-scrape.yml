@@ -297,6 +297,14 @@ jobs:
           else
             echo "OK   scripts/scrape_pokemon_go_liste.py" >> "$RUNNER_TEMP/rc_extra.txt"
           fi
+          python -u scripts/scrape_pokemon_go_shiny.py
+          rc=$?
+          if [ $rc -ne 0 ]; then
+            echo "::warning::scrape_pokemon_go_shiny exited with $rc — Datei bleibt wie sie ist"
+            echo "FAIL scripts/scrape_pokemon_go_shiny.py (rc=$rc)" >> "$RUNNER_TEMP/rc_extra.txt"
+          else
+            echo "OK   scripts/scrape_pokemon_go_shiny.py" >> "$RUNNER_TEMP/rc_extra.txt"
+          fi
 
       - name: Build Champions Pokédex
         run: |
@@ -411,7 +419,8 @@ jobs:
                   data/de_name_overrides.json \
                   data/pokemonproxies_index.json \
                   data/champions_editionen.json \
-                  data/pokemon_go_liste.json
+                  data/pokemon_go_liste.json \
+                  data/pokemon_go_shiny.json
           # BEFUND 05.09.2026: champions_speed_corpus.json wurde in jedem
           # naechtlichen Lauf gebaut, nach data/ kopiert (Schritt "Copy
           # output back to data/") — und dann weggeworfen, weil sie in
