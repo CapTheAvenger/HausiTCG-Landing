@@ -198,24 +198,6 @@ jobs:
           fi
           exit 0
 
-      # Rebuild the Side Quest "Look up" reference (items/abilities/moves/
-      # field effects) from the Champions dataset + PokéAPI + the scraped
-      # German name overrides + the Champions item-availability list.
-      # Fail-soft: keeps the committed JSON.
-      - name: Build Champions resources reference
-        run: |
-          set +e
-          python -u scripts/build_champions_resources.py
-          rc=$?
-          if [ "$rc" -ne 0 ]; then
-              echo "::warning::build_champions_resources exited with $rc — resources JSON kept as-is"
-              git checkout -- data/champions_resources.json 2>/dev/null
-              echo "FAIL scripts/build_champions_resources.py (rc=$rc)" >> "$RUNNER_TEMP/rc_extra.txt"
-          else
-              echo "OK   scripts/build_champions_resources.py" >> "$RUNNER_TEMP/rc_extra.txt"
-          fi
-          exit 0
-
       # Refresh the Champions roster additions (M-B+ Pokémon/megas not in
       # the M-A dataset) from pokebase + Smogon. Fail-soft: keeps committed.
       - name: Scrape Champions roster additions
@@ -250,6 +232,33 @@ jobs:
               echo "FAIL scripts/scrape_champions_usage.py (rc=$rc)" >> "$RUNNER_TEMP/rc_extra.txt"
           else
               echo "OK   scripts/scrape_champions_usage.py" >> "$RUNNER_TEMP/rc_extra.txt"
+          fi
+          exit 0
+
+      # Rebuild the Side Quest "Look up" reference (items/abilities/moves/
+      # field effects) from the Champions dataset + PokéAPI + the scraped
+      # German name overrides + the Champions item-availability list.
+      #
+      # MUSS NACH dem Usage-Scraper laufen. Der Bauer traegt Attacken aus
+      # data/champions_usage.json nach (der inChampions-Schalter der Quelle
+      # steht bei sechs Attacken falsch, siehe data/_consumers.md). Lief er
+      # davor, arbeitete er mit dem Vortagesstand: eine im heutigen Scrape
+      # neu aufgetauchte Attacke waere committet worden, ohne Eintrag im
+      # Nachschlagewerk — und tests/python/test_attacken_typen_vollstaendig.py
+      # haette den naechsten Deploy blockiert, ohne dass jemand einen Fehler
+      # gemacht hat. Gefunden bei der Abnahme am 09.09.2026.
+      # Fail-soft: keeps the committed JSON.
+      - name: Build Champions resources reference
+        run: |
+          set +e
+          python -u scripts/build_champions_resources.py
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+              echo "::warning::build_champions_resources exited with $rc — resources JSON kept as-is"
+              git checkout -- data/champions_resources.json 2>/dev/null
+              echo "FAIL scripts/build_champions_resources.py (rc=$rc)" >> "$RUNNER_TEMP/rc_extra.txt"
+          else
+              echo "OK   scripts/build_champions_resources.py" >> "$RUNNER_TEMP/rc_extra.txt"
           fi
           exit 0
 
