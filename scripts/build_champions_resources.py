@@ -323,7 +323,7 @@ def main():
             conflicts.append((cat, en, {"PokeWiki": ov, "PokeAPI": pa, "verified": vf}))
         return pa or ov or vf or supp.get(key) or en
 
-    def build(cat, en, en_eff, demap, mtype="", stats=None):
+    def build(cat, en, en_eff, demap, mtype="", stats=None, nachgetragen=False):
         key = norm(en)
         v = verified.get(key)
         pk = demap.get(key, {})
@@ -365,25 +365,143 @@ def main():
             entry["champ"] = (key in champ_avail_items) if champ_avail_items else True
         else:
             entry["champ"] = True             # abilities/moves already restricted
+        if nachgetragen:
+            # Nicht aus dem inChampions-Filter, sondern nachtraeglich
+            # ergaenzt, weil die Champions-Nutzungsdaten die Attacke
+            # belegen. Bleibt sichtbar, damit niemand den Eintrag fuer
+            # eine Dubletten-Bereinigung haelt.
+            entry["nachgetragen"] = True
         entries.append(entry)
 
     for it in champ_items:
         build("item", it["name"], it.get("description", ""), de_item)
     for ab in champ_abil:
         build("ability", ab["name"], ab.get("description", ""), de_abil)
+    def move_stats(mv):
+        return {"power": mv.get("power"), "accuracy": mv.get("accuracy"),
+                "pp": mv.get("pp"), "damage_class": mv.get("category"),
+                "priority": prio_move.get(norm(mv["name"])),
+                "target": ziel_move.get(norm(mv["name"]))}
+
+    gebaute_attacken = set()
     for mv in champ_moves:
         if not mv.get("inChampions"):
             continue  # restrict to the actual Champions movepool
+        gebaute_attacken.add(norm(mv["name"]))
         build("move", mv["name"], mv.get("description", ""), de_move,
-              mtype=mv.get("type", ""),
-              stats={"power": mv.get("power"), "accuracy": mv.get("accuracy"),
-                     "pp": mv.get("pp"), "damage_class": mv.get("category"),
-                     "priority": prio_move.get(norm(mv["name"])),
-                     "target": ziel_move.get(norm(mv["name"]))})
+              mtype=mv.get("type", ""), stats=move_stats(mv))
+
+    # ── Nachtrag aus den Nutzungsdaten ───────────────────────────────
+    # Der inChampions-Schalter im Quelldatensatz ist unvollstaendig: es
+    # gibt Attacken, die Pokémon in Champions nachweislich einsetzen
+    # (sie stehen in data/champions_usage.json, gescrapet von der
+    # Champions-Nutzungsstatistik) und die trotzdem inChampions=false
+    # tragen. Ohne Nachtrag fehlt ihr Eintrag komplett und die Seite
+    # zeigt "Typ unbekannt".
+    #
+    # WIE STARK DER BELEG WIRKLICH IST — nachgemessen 09.09.2026, weil
+    # die erste Fassung dieses Kommentars mehr behauptet hat, als der
+    # Code haelt:
+    #
+    #   * `championsVerified` taugt NICHT als zweiter Beleg. Das Flag
+    #     steht in der Quelle bei 900 von 900 Attacken auf true, auch
+    #     bei allen 406, die zu Recht draussen bleiben. Es trennt
+    #     nichts.
+    #   * Die Typ-Pruefung unten taugt ebenfalls nicht als zweiter
+    #     Beleg. Alle 900 Quellattacken haben einen Typ. Sie bleibt als
+    #     Netz stehen, greift heute aber nie.
+    #
+    # Der einzig wirksame Beleg ist also die Nutzungsdatei. Damit haengt
+    # der Nachtrag an genau einem Scraper: schriebe
+    # scripts/scrape_champions_usage.py nach einem Layout-Wechsel der
+    # Quellseite einen falschen Attackennamen, und traefe der einen der
+    # 406 ausgeschlossenen Namen, landete er hier als Champions-Attacke.
+    #
+    # Dagegen steht die Obergrenze. Ein systematischer Parse-Fehler
+    # erzeugt viele falsche Namen, nicht sechs; sechs Ausreisser sind
+    # ein Quellfehler, sechzig sind unser Fehler. Reisst die Grenze,
+    # wird NICHTS nachgetragen und der Lauf meldet es — lieber wieder
+    # "Typ unbekannt" als eine erfundene Champions-Attacke.
+    NACHTRAG_OBERGRENZE = 20
+
+    def nutzungs_attacken(nutzung):
+        """norm(EN) -> Anzeigename, aus den Nutzungsdaten.
+
+        Defensiv, weil die Datei von einem Scraper kommt: jede Ebene
+        wird auf ihren Typ geprueft, statt sich auf .get() zu
+        verlassen. Vorher warf eine Liste statt eines Dicts einen
+        AttributeError mitten im Lauf — in CI fail-soft abgefangen,
+        aber die Meldung war ein Stacktrace statt eines Befunds.
+        """
+        if not isinstance(nutzung, dict):
+            raise ValueError("champions_usage.json: Wurzel ist kein Objekt")
+        pokemon = nutzung.get("pokemon")
+        if not isinstance(pokemon, dict):
+            raise ValueError("champions_usage.json: 'pokemon' ist kein Objekt")
+        out = {}
+        for eintrag in pokemon.values():
+            if not isinstance(eintrag, dict):
+                continue
+            for modus in ("doubles", "singles"):
+                block = eintrag.get(modus)
+                if not isinstance(block, dict):
+                    continue
+                for m in (block.get("move") or []):
+                    if isinstance(m, dict) and m.get("name"):
+                        out[norm(m["name"])] = m["name"]
+        return out
+
+    nutzung_pfad = os.path.join(DATA, "champions_usage.json")
+    nachgetragen_n, ohne_quelle = 0, []
+    if os.path.exists(nutzung_pfad):
+        genutzt = nutzungs_attacken(
+            json.load(open(nutzung_pfad, encoding="utf-8")))
+
+        # Eine syntaktisch gueltige, aber leere Nutzungsdatei sah vorher
+        # aus wie ein normaler Lauf: keine Meldung, 494 Attacken, rc 0,
+        # committet — und die Nachtraege still wieder weg. Das ist ein
+        # kaputter Eingang, kein Ergebnis.
+        if not genutzt:
+            raise ValueError(
+                "champions_usage.json enthaelt keine einzige Attacke. "
+                "Das ist ein kaputter Eingang, kein leeres Ergebnis — "
+                "Abbruch, damit der committete Stand erhalten bleibt.")
+
+        nach_name = {norm(m["name"]): m for m in champ_moves}
+        kandidaten = []
+        for key in sorted(genutzt):
+            if key in gebaute_attacken:
+                continue
+            mv = nach_name.get(key)
+            if not mv or not mv.get("type"):
+                ohne_quelle.append(genutzt[key])
+                continue
+            kandidaten.append(mv)
+
+        if len(kandidaten) > NACHTRAG_OBERGRENZE:
+            print(f"  ! {len(kandidaten)} Nachtragskandidaten - ueber der "
+                  f"Grenze von {NACHTRAG_OBERGRENZE}. Das sieht nach einem "
+                  f"Fehler in den Nutzungsdaten aus, nicht nach einer "
+                  f"Luecke im inChampions-Schalter. Es wird NICHTS "
+                  f"nachgetragen: "
+                  + ", ".join(m["name"] for m in kandidaten[:12])
+                  + (" …" if len(kandidaten) > 12 else ""))
+            kandidaten = []
+
+        for mv in kandidaten:
+            build("move", mv["name"], mv.get("description", ""), de_move,
+                  mtype=mv["type"], stats=move_stats(mv), nachgetragen=True)
+            nachgetragen_n += 1
+            print(f"  + nachgetragen aus Nutzungsdaten: {mv['name']} ({mv['type']})")
+        if ohne_quelle:
+            print("  ! genutzte Attacken ohne Quelleintrag (NICHT ergaenzt): "
+                  + ", ".join(sorted(ohne_quelle)))
+    else:
+        print("  ! champions_usage.json fehlt - kein Nachtrag moeglich")
 
     entries.sort(key=lambda e: (e["cat"], e["de"].lower()))
     counts = {"item": 0, "ability": 0, "move": 0, "field": 0, "de_effect": 0,
-              "spread": 0, "target_unknown": 0}
+              "spread": 0, "target_unknown": 0, "nachgetragen": nachgetragen_n}
     for e in entries:
         counts[e["cat"]] += 1
         if e["field"]:
@@ -404,6 +522,13 @@ def main():
     _flaeche_prosa = _re.compile(r"[Tt]rifft (beide|alle)")
     for e in entries:
         if e["cat"] != "move" or not e.get("power"):
+            continue
+        # Fehlender deutscher Text ist kein Widerspruch. 45 Attacken
+        # haben keinen (PokéAPI fuehrt fuer sie keine deutsche
+        # Beschreibung), und ohne diese Zeile meldete der Lauf sie als
+        # "Prosa sagt Einzelziel" — eine Aussage, die niemand getroffen
+        # hat. Aufgefallen 09.09.2026 an Make It Rain.
+        if not (e.get("de_effect") or "").strip():
             continue
         prosa = bool(_flaeche_prosa.search(e.get("de_effect") or ""))
         if "spread" in e and prosa != e["spread"] and norm(e["en"]) not in SPREAD_OVERRIDE:
