@@ -3324,6 +3324,10 @@ body.sqp-d-open { overflow: hidden; }
 /* Und wo das Zielfeld fehlt, steht das ebenfalls da — gerechnet wird ohne
    Abzug, aber nicht stillschweigend. */
 .sq-console .sq-calc-unklar { color: var(--vorbehalt, #92700e); font-style: italic; }
+/* Und wo die Staerke von der Kampfsituation abhaengt (Zornesfaust 50 bis
+   350), steht die Grundstaerke da — mit dem Hinweis, dass sie eine
+   Untergrenze ist. Ohne den sieht eine 50 aus wie die ganze Wahrheit. */
+.sq-console .sq-calc-variabel { color: var(--vorbehalt, #92700e); font-style: italic; }
 .sq-console .sq-calc-num,
 .sq-console .sq-calc-pct { font-family: var(--sq-num); font-size: 11px; }
 .sq-console .sq-calc-pct { color: var(--sq-dim); }
