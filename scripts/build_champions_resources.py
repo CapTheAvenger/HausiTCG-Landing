@@ -413,6 +413,7 @@ def main():
         # (Strength Sap, Wish), und welche Quelle dort recht hat, ist
         # nicht belegt.
         if nachgetragen and op:
+            uebernommen = 0
             for feld, quelle in (("pp", "pp"), ("accuracy", "accuracy")):
                 wert = op.get(quelle)
                 if wert is None:
@@ -421,7 +422,15 @@ def main():
                 if alt_wert != wert:
                     print(f"    {en}: {feld} {alt_wert} -> {wert} (op.gg)")
                     entry[feld] = wert
-            entry["stats_quelle"] = "opgg"
+                uebernommen += 1
+            # Die Marke NUR setzen, wenn wirklich etwas uebernommen wurde.
+            # Beim ersten CI-Lauf am 09.09.2026 stand sie an allen sechs
+            # Eintraegen, obwohl op.gg keine einzige Zahl geliefert hatte —
+            # eine Herkunftsangabe, die nichts belegt, ist schlimmer als
+            # keine. Siehe die Fussnote im Scraper: die Statistikfelder
+            # stehen nicht im server-gerenderten HTML.
+            if uebernommen:
+                entry["stats_quelle"] = "opgg"
         if de_quelle:
             # Sichtbar machen, woher der deutsche Text kommt. Ohne die
             # Marke laesst sich spaeter nicht mehr sagen, welche Texte

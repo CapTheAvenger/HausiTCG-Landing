@@ -34,6 +34,22 @@ die otterlyclueless hinter dem falschen Schalter fuehrt und dort
 offenbar mit Mainline-Werten stehen laesst (Goldrausch: wir 5 AP /
 Genauigkeit 100, op.gg 8 AP / 95 — die Mainline-Werte sind 5/100).
 
+WAS AUS DEM HTML KOMMT — UND WAS NICHT (gemessen im ersten CI-Lauf)
+------------------------------------------------------------------
+Der deutsche Beschreibungstext steht server-gerendert im HTML: 581 von
+581 Eintraegen tragen ihn. **Staerke, Genauigkeit und AP nicht.** Im
+Browser sind sie sichtbar, im ausgelieferten HTML stehen sie im Umkreis
+der Attackenkarte nicht — sie werden clientseitig nachgerendert. Die
+drei Felder bleiben deshalb `null`, und der Bauer traegt an dieser
+Stelle NICHTS nach.
+
+Das ist kein stiller Verlust: der Bauer setzt seine Herkunftsmarke
+`stats_quelle` nur, wenn wirklich ein Wert uebernommen wurde. Wer die
+Zahlen will, braucht einen Scraper, der die Seite ausfuehrt (Playwright)
+— das ist ein eigener Schritt und keine Nebenbei-Aenderung. Der Nutzen
+dieser Datei liegt ohnehin woanders: an den deutschen Texten und daran,
+dass sie den Attackenpool ein zweites Mal belegt.
+
 WAS DIESE DATEI NICHT TUT
 -------------------------
 Sie loest keinen Konflikt still auf. Der Bauer entscheidet, welche

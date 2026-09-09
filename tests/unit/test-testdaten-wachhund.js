@@ -330,7 +330,15 @@ const REGISTER = {
    bringt vier Vorpruefungen gegen ein leeres Bestehen mit. Sie haengen an
    abgeschlossenen Turnieren (0069, 0071) und an der Groesse der
    Brueckendatei, nicht an Wochenwerten. */
-const OBERGRENZE = 107;
+/* 09.09.2026, vierter Schritt: 107 -> 108. test-stufen-im-text.js hat
+   eine Vorpruefung dazubekommen: „mindestens 5 Attacken mit Stufenmarke
+   im englischen Text". Sie ist noetig geworden, weil die Luecke, an der
+   der Test frueher haftete (Attacken ohne deutschen Text), seit der
+   op.gg-Zweitquelle geschlossen ist — die Regel wird jetzt an gesetzten
+   Eintraegen geprueft, und die Vorpruefung stellt sicher, dass es
+   ueberhaupt welche gibt. Kein Wochenwert: die Zahl der Attacken mit
+   Stufenangabe im englischen Text liegt bei ueber hundert. */
+const OBERGRENZE = 108;
 
 describe('kein Unit-Test behauptet etwas ueber die Daten dieser Woche', () => {
 
