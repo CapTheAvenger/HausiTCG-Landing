@@ -46,5 +46,16 @@
       "vermutet": null,
       "grund": "Keine erkennbare Entsprechung auf der Ladder-Seite. 13,0 Antritte aus 17 Turnieren."
     }
-  ]
+  ],
+  "decklisten_zu_labs": {
+    "_hinweis": "Decklisten-Datei (tournament_decklists_per_player.csv, Spalte deck_archetype) -> labs (labs_tournament_decks.csv, Spalte deck_name). Zwei verschiedene Vokabulare fuer dasselbe Deck. Ein Join ueber deck_slug ist unmoeglich: die Decklisten-Datei fuehrt dort eine Decklisten-ID (28752, …), Schnittmenge mit den labs-Slugs ist 0. Der Name ist der einzige Schluessel. Gemessen am 09.09.2026: 52 von 53 Decklisten-Namen haben ein labs-Gegenstueck; 42 von 1.201 Listen (3,5 %) verloren an drei Paaren die Pilotenzahl.",
+    "Ogerpon Box": {
+      "labs": "Basic Box",
+      "beleg": "Turnier 0071: 18 Tag-2-Listen unter 'Ogerpon Box'; labs fuehrt fuer dasselbe Turnier 'Basic Box' mit 74 Piloten und kein 'Ogerpon Box'."
+    },
+    "Hydrapple": {
+      "labs": "Ogerpon Meganium Hydrapple",
+      "beleg": "Turniere 0069 (23 Listen) und 0071 (1 Liste) unter 'Hydrapple'; labs fuehrt dort ausschliesslich 'Ogerpon Meganium Hydrapple' (114 bzw. 12 Piloten) und kein blosses 'Hydrapple'. ACHTUNG: in TEF-CRI gibt es 'Hydrapple' in BEIDEN Dateien — die Bruecke gilt deshalb nur, wenn der labs-Name fehlt."
+    }
+  }
 }

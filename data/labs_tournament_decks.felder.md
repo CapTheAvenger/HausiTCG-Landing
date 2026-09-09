@@ -51,19 +51,42 @@ Ueber alle 69 zugeordneten Turniere gemessen: die Anwesenheit liegt in 66
 Faellen ueber der Decksumme (Abstand 1 bis 40 Spieler), in 3 Faellen gleichauf,
 **nie** darunter.
 
-### Falle 2 — drei Spalten sind nicht befuellbar
+### Falle 2 — drei Spalten: leer heisst „nicht gemessen"
 
-`top8_conv_rate`, `top16_conv_rate` und `top32_conv_rate` sind aus dieser
-Quelle **nicht befuellbar**. Sie stehen in **allen 4.713 Zeilen auf `0.0`**,
-und das ist **keine gemessene Null**, sondern der Vorgabewert einer Spalte,
-die nie gefuellt wird: die Quellansicht `?conversion` fuehrt nur
-noch `Day 1`, `Day 2` und `Conversion`, keine Top-Cut-Konversion. Siehe
-`_CONV_HEADER_KEYS` in `labs_tournament_scraper.py`.
+`top8_conv_rate`, `top16_conv_rate` und `top32_conv_rate` sind aus der
+Quellansicht `?conversion` **nicht befuellbar** — sie fuehrt nur `Day 1`,
+`Day 2` und `Conversion`, keine Top-Cut-Konversion (siehe
+`_CONV_HEADER_KEYS` in `labs_tournament_scraper.py`).
 
-Die Spalten bleiben im Schema, damit vorhandene Leser nicht brechen. Wer sie
-auswertet, bekommt fuer jedes Deck dieselbe Null und damit kein Signal.
-`js/app-meta-call.js` weiss das und weicht auf `day2_share_pct / day1_share_pct`
-aus.
+**Stand 09.09.2026 werden sie trotzdem gefuellt — aus den Platzierungen.**
+`scripts/fuelle_conv_rate.py` rechnet je (`tournament_id`, `deck_slug`):
+
+    Zaehler  Zahl der Spieler mit `place` <= 8 / 16 / 32
+             aus data/player_continuity.csv
+    Nenner   `player_count` aus dieser Datei
+
+Belegt, nicht angenommen: fuer alle 12 Turniere in `player_continuity.csv`
+stimmen Deckmenge und Antrittszahl mit dieser Datei exakt ueberein (0
+Abweichungen), und wo `top8_count` selbst gefuehrt wird, ist es
+deckungsgleich mit COUNT(`place` <= 8). Beide Wege bestaetigen einander.
+
+**Reichweite: 812 der 4.713 Zeilen.** Fuer die uebrigen 3.901 gibt es in
+keiner Datei des Projekts Platzierungen. Die stehen jetzt **leer** — nicht
+mehr auf `0.0`. Das ist der eigentliche Fix: eine `0.0` las sich wie „dieses
+Deck kam nie in die Top 8", obwohl gar nicht gemessen wurde. Leer heisst
+„nicht gemessen", 0 heisst „gemessen: keine". Von den 812 gefuellten tragen
+**74** einen Wert groesser 0; die uebrigen 738 Decks hatten tatsaechlich
+keinen Top-8-Platz.
+
+**Der Motor rechnet trotzdem nicht damit** — bewusst. `js/app-meta-call.js`
+teilt an dieser Stelle durch 0,25, ist also auf eine Groesse in der Naehe
+der Tag1→Tag2-Konversion (~25 %) kalibriert. Die Top-Cut-Quote hat aber
+Median 0 und Maximum 0,5: ein Deck mit einem Top-8-Platz aus 749 Antritten
+kaeme auf 0,0027 und damit auf den **schlechtesten** Boost, waehrend ein
+Deck ganz ohne Top-8-Platz ueber den Ersatzpfad bei 1,0 landet — verkehrt
+herum. Der Schalter `T8_SPALTE_KALIBRIERT` steht deshalb auf `false`, mit
+Begruendung im Quelltext. `day2_share_pct / day1_share_pct` bleibt das
+tragende Signal.
 
 ---
 
@@ -195,12 +218,15 @@ tragen sollte.
 
 ## Konversion und Platzierungen
 
-* `top8_conv_rate` — **nicht befuellbar** aus dieser Quelle.
-* `top16_conv_rate` — **nicht befuellbar** aus dieser Quelle.
-* `top32_conv_rate` — **nicht befuellbar** aus dieser Quelle.
+* `top8_conv_rate` — Anteil der Antritte dieses Decks, die Platz <= 8 belegten.
+* `top16_conv_rate` — dasselbe fuer Platz <= 16.
+* `top32_conv_rate` — dasselbe fuer Platz <= 32.
 
-  Alle drei: siehe **Falle 2**. Die `0.0` bedeutet „nicht erhebbar", nicht
-  „gemessen: keine".
+  Alle drei: siehe **Falle 2**. Gefuellt aus den Platzierungen in
+  `player_continuity.csv` (812 von 4.713 Zeilen). **Leer** heisst „fuer
+  dieses Turnier liegen keine Platzierungen vor" — nicht „gemessen: keine".
+  Die frueheren `0.0` in allen Zeilen waren der Vorgabewert des Scrapers
+  und sind entfallen.
 * `top1_count`, `top4_count`, `top8_count` — wie oft dieses Deck Platz 1, die
   Top 4, die Top 8 belegte. Aus `/standings` gezaehlt.
 
