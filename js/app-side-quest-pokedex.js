@@ -18,6 +18,8 @@
     const EDITIONEN_URL = 'data/champions_editionen.json';
     const GO_URL = 'data/pokemon_go_liste.json';
     const TEAMS_URL = 'data/champions_replica_teams.json';
+    const SHINY_URL = 'data/pokemon_go_shiny.json';
+    const RES_URL = 'data/champions_resources.json';
 
     let _entries = null;
     let _loading = null;
@@ -42,6 +44,10 @@
     let _go = null;                  // { basis:[dex], regional:{region:[dex]}, _meta }
     let _herkunftLaedt = null;
     let _teamRang = null;            // Map<normName, Auftritte>
+    let _shiny = null;               // { basis, mega, regional } aus GO
+    let _moveTyp = null;             // Map<EN-Attacke, Typ>
+    let _moveRoh = null;             // Map<EN-Attacke, voller Eintrag aus resources>
+    let _gegenTyp = '';              // '' = aus, sonst EN-Typ der Verteidigung
 
     const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
     const TYPES_EN = ['Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice', 'Fighting',
@@ -83,7 +89,18 @@
             goMega: 'Mega-Entwicklung — die Liste führt nur Grundformen',
             goMegaHint: 'Für Mega-Formen macht diese Quelle keine Aussage. Unten steht, ob die Grundform geführt ist.',
             goGrundform: (n) => `Grundform ${n}:`,
+            goDurchShiny: 'In GO — belegt durch das veröffentlichte Shiny',
+            shinyTitel: 'Shiny in GO',
+            shinyJa: 'Shiny ist veröffentlicht',
+            shinyNein: 'Kein veröffentlichtes Shiny',
             quelleLabel: 'Quelle:',
+            gegenTypLabel: 'Effektiv gegen:',
+            gegenTypAus: 'kein Typ gewählt',
+            gegenTypHint: 'Wählt einen Verteidiger-Typ. Die Attackenliste zeigt dann je Attacke, wie sie gegen diesen Typ wirkt.',
+            statusAttacke: 'Status',
+            statusAttackeHint: 'Statusattacke — richtet keinen typabhängigen Schaden an.',
+            typUnbekannt: 'Typ unbekannt',
+            typUnbekanntHint: 'Für diese Attacke führt die Quelle keinen Typ.',
             cMon: 'Pokémon', cT1: 'Typ 1', cT2: 'Typ 2', cHp: 'KP', cAtk: 'Ang',
             cDef: 'Vert', cSpa: 'SAng', cSpd: 'SVert', cSpe: 'Init', cTotal: 'Ges',
             tankHint: (kind) => kind === 'phys'
@@ -166,7 +183,18 @@
             goMega: 'Mega evolution — the list only covers base forms',
             goMegaHint: 'This source says nothing about Mega forms. Below is whether the base form is listed.',
             goGrundform: (n) => `Base form ${n}:`,
+            goDurchShiny: 'In GO — proven by the released shiny',
+            shinyTitel: 'Shiny in GO',
+            shinyJa: 'Shiny is released',
+            shinyNein: 'No released shiny',
             quelleLabel: 'Source:',
+            gegenTypLabel: 'Effective against:',
+            gegenTypAus: 'no type chosen',
+            gegenTypHint: 'Pick a defending type. The move list then shows how each move fares against it.',
+            statusAttacke: 'Status',
+            statusAttackeHint: 'Status move — deals no type-dependent damage.',
+            typUnbekannt: 'type unknown',
+            typUnbekanntHint: 'The source lists no type for this move.',
             cMon: 'Pokémon', cT1: 'Type 1', cT2: 'Type 2', cHp: 'HP', cAtk: 'Atk',
             cDef: 'Def', cSpa: 'SpA', cSpd: 'SpD', cSpe: 'Spe', cTotal: 'Tot',
             tankHint: (kind) => kind === 'phys'
@@ -571,11 +599,20 @@
         if (_herkunftLaedt) return _herkunftLaedt;
         const hol = (url) => fetch(`${url}?t=${Date.now()}`)
             .then(r => r.ok ? r.json() : null).catch(() => null);
-        _herkunftLaedt = Promise.all([hol(EDITIONEN_URL), hol(GO_URL), hol(TEAMS_URL)])
-            .then(([ed, go, teams]) => {
+        _herkunftLaedt = Promise.all([hol(EDITIONEN_URL), hol(GO_URL), hol(TEAMS_URL),
+                                      hol(SHINY_URL), hol(RES_URL)])
+            .then(([ed, go, teams, sh, res]) => {
                 _editionen = (ed && ed.editionen) ? ed : { editionen: {}, _meta: {} };
                 _go = go || { basis: [], regional: {}, _meta: {} };
                 _teamRang = baueTeamRang(teams);
+                _shiny = sh || { basis: [], mega: [], regional: {}, _meta: {} };
+                _moveTyp = new Map();
+                _moveRoh = new Map();
+                ((res && res.entries) || []).forEach(x => {
+                    if (!x || x.cat !== 'move' || !x.en) return;
+                    _moveRoh.set(x.en, x);
+                    if (x.type) _moveTyp.set(x.en, x.type);
+                });
                 return true;
             });
         return _herkunftLaedt;
@@ -654,6 +691,21 @@
         const r = regionSchluessel(e.en);
         const menge = r ? ((_go.regional || {})[r] || []) : (_go.basis || []);
         return menge.indexOf(e.dex) !== -1 ? 'gelistet' : 'nicht-gelistet';
+    }
+
+    /* Ist fuer diese Art/Form in GO ein Shiny veroeffentlicht?
+     *
+     * Anders als bei der Artenliste ist ein fehlender Eintrag hier eine
+     * belastbare Aussage: die Quelle traegt je Eintrag ein Datum und wird
+     * gepflegt. Angekuendigte Veroeffentlichungen sind beim Bau der Datei
+     * bereits herausgefiltert.
+     */
+    function shinyStatus(e) {
+        if (!_shiny || !e) return 'unbekannt';
+        if (e.form === 'Mega') return (_shiny.mega || []).indexOf(e.dex) !== -1 ? 'ja' : 'nein';
+        const r = regionSchluessel(e.en);
+        const menge = r ? ((_shiny.regional || {})[r] || []) : (_shiny.basis || []);
+        return menge.indexOf(e.dex) !== -1 ? 'ja' : 'nein';
     }
 
     function editionenFuer(e) {
@@ -885,6 +937,30 @@
             goZeile = `<span class="sqp-go is-unklar" title="${escapeHtml(l.goUnklarHint)}">${escapeHtml(l.goUnklar)}</span>`;
         }
 
+        /* Ein veroeffentlichtes Shiny BEWEIST, dass es die Art in GO gibt.
+         *
+         * Damit schliesst die Shiny-Liste Luecken der veralteten
+         * Artenliste. Gemessen am 09.09.2026: drei Roster-Eintraege
+         * (Arktilas (Hisui), Schlurm, Psiaugon) fehlen dort, haben aber ein
+         * Shiny. Ohne diese Zeile stuende bei ihnen "steht nicht in dieser
+         * Liste", obwohl daneben ein Shiny gemeldet wird — ein Widerspruch
+         * auf demselben Bildschirm. */
+        const sh = shinyStatus(e);
+        const belegtDurchShiny = (sh === 'ja' && st === 'nicht-gelistet');
+        if (belegtDurchShiny) {
+            goZeile = `<span class="sqp-go is-ja">✓ ${escapeHtml(l.goDurchShiny)}</span>`;
+        }
+        const shinyZeile = (sh === 'unbekannt') ? '' : `
+            <div class="sqp-herkunft-block">
+                <span class="sqp-herkunft-label">${escapeHtml(l.shinyTitel)}</span>
+                <div class="sqp-go-zeile">${sh === 'ja'
+                    ? `<span class="sqp-go is-ja">✨ ${escapeHtml(l.shinyJa)}</span>`
+                    : `<span class="sqp-go is-nein">${escapeHtml(l.shinyNein)}</span>`}</div>
+                ${(_shiny && _shiny._meta && _shiny._meta.quelle)
+                    ? `<p class="sqp-herkunft-quelle">${escapeHtml(l.quelleLabel)} ${escapeHtml(_shiny._meta.quelle)}</p>`
+                    : ''}
+            </div>`;
+
         const warn = (_go && _go._meta && _go._meta.warnung) ? _go._meta.warnung : '';
         const quelle = (_go && _go._meta && _go._meta.quelle) ? _go._meta.quelle : '';
         return `
@@ -897,9 +973,10 @@
                 <div class="sqp-herkunft-block">
                     <span class="sqp-herkunft-label">${escapeHtml(l.goTitel)}</span>
                     <div class="sqp-go-zeile">${goZeile}</div>
-                    ${warn ? `<p class="sqp-herkunft-warnung">${escapeHtml(warn)}</p>` : ''}
+                    ${(warn && !belegtDurchShiny) ? `<p class="sqp-herkunft-warnung">${escapeHtml(warn)}</p>` : ''}
                     ${quelle ? `<p class="sqp-herkunft-quelle">${escapeHtml(l.quelleLabel)} ${escapeHtml(quelle)}</p>` : ''}
                 </div>
+                ${shinyZeile}
             </section>`;
     }
 
@@ -1211,6 +1288,66 @@
     // as 100 − Σ of the other items). It renders identically to every other
     // row — same blue/bold, no "≈" — and keeps only an invisible hover tooltip
     // noting it's computed, so the table stays visually consistent.
+    /* ── "Effektiv gegen Typ X" ────────────────────────────────────────
+     *
+     * Am 09.09.2026 bestellt, nach dem Vorbild von Pokémon Showdown: Typ
+     * waehlen, und die Attackenliste sagt je Attacke, wie sie gegen diesen
+     * Typ wirkt.
+     *
+     * Drei Faelle, und alle drei stehen bewusst da:
+     *   x0 / x1/2 / x1 / x2   die Attacke richtet typabhaengigen Schaden an
+     *   Status                keine Wirkung ueber den Typ — NICHT als x1
+     *                         anzeigen, das waere eine falsche Auskunft
+     *   Typ unbekannt         die Quelle fuehrt fuer diese Attacke keinen
+     *                         Typ (gemessen: 6 von 391). Lieber sagen als
+     *                         raten.
+     */
+    function istStatusAttacke(en) {
+        const r = _res_move(en);
+        // Die Quelle schreibt "Status", nicht "status" — beim ersten Bauen
+        // am 09.09.2026 hat der Kleinbuchstabenvergleich alle 174
+        // Statusattacken durchgelassen, und sie waeren als "x1" erschienen.
+        return !!(r && String(r.damage_class || '').toLowerCase() === 'status');
+    }
+    function _res_move(en) {
+        if (!_moveRoh) return null;
+        return _moveRoh.get(en) || null;
+    }
+    function wirksamkeit(moveEn, gegenTyp) {
+        if (!gegenTyp) return null;
+        if (istStatusAttacke(moveEn)) return { art: 'status' };
+        const typ = _moveTyp && _moveTyp.get(moveEn);
+        if (!typ) return { art: 'unbekannt' };
+        const tab = _TYPE_FX[typ] || {};
+        const m = (tab[gegenTyp] == null) ? 1 : tab[gegenTyp];
+        return { art: 'wert', typ, m };
+    }
+    function wirksamkeitHtml(moveEn) {
+        const w = wirksamkeit(moveEn, _gegenTyp);
+        if (!w) return '';
+        const l = t();
+        if (w.art === 'status') {
+            return `<span class="sqp-fx is-status" title="${escapeHtml(l.statusAttackeHint)}">${escapeHtml(l.statusAttacke)}</span>`;
+        }
+        if (w.art === 'unbekannt') {
+            return `<span class="sqp-fx is-unklar" title="${escapeHtml(l.typUnbekanntHint)}">${escapeHtml(l.typUnbekannt)}</span>`;
+        }
+        const k = w.m === 0 ? 'null' : w.m > 1 ? 'stark' : w.m < 1 ? 'schwach' : 'neutral';
+        return `<span class="sqp-fx is-${k}">${escapeHtml(multLabel(w.m))}</span>`;
+    }
+
+    function gegenTypWaehlerHtml() {
+        const l = t();
+        const opts = [`<option value="">${escapeHtml(l.gegenTypAus)}</option>`]
+            .concat(TYPES_EN.map(ty =>
+                `<option value="${ty}"${_gegenTyp === ty ? ' selected' : ''}>${escapeHtml(uiLang() === 'de' ? deType(ty) : ty)}</option>`))
+            .join('');
+        return `<div class="sqp-gegentyp" title="${escapeHtml(l.gegenTypHint)}">
+                <label class="sqp-gegentyp-lbl" for="sqpGegenTyp">${escapeHtml(l.gegenTypLabel)}</label>
+                <select id="sqpGegenTyp" class="sqp-select">${opts}</select>
+            </div>`;
+    }
+
     function usageRow(nameHtml, pct, extra, approx) {
         const width = pct != null ? Math.max(2, Math.min(100, pct)) : 0;
         const pctTxt = pct != null ? escapeHtml(fmtPct(pct)) : '';
@@ -1381,7 +1518,8 @@
         const spreadRows = (block.stat_points || [])
             .map(s => spreadRow(s)).join('');
 
-        const moveRows = (block.move || []).map(m => usageRow(nmHtml(m.name, 'moves'), m.pct)).join('');
+        const moveRows = (block.move || []).map(m =>
+            usageRow(nmHtml(m.name, 'moves') + wirksamkeitHtml(m.name), m.pct)).join('');
         const itemRows = (block.held_item || []).map(i => usageRow(nmHtml(i.name, 'items'), i.pct, null, i.derived)).join('');
         const abilRows = (block.ability || []).map(a => abilityRow(a)).join('');
         // Teammates have no percentage in-game — just a ranked list. Render
@@ -1401,6 +1539,7 @@
             <div class="sqp-d-grid">
                 ${usageSection(l.secNature, natRows, belowCut(block.nature, (block.nature || []).filter(x => (x.pct == null || x.pct >= 1)).length))}
                 ${usageSection(l.secSpread, spreadRows, belowCut(block.stat_points, (block.stat_points || []).filter(x => (x.pct == null || x.pct >= 1)).length))}
+                ${gegenTypWaehlerHtml()}
                 ${usageSection(l.secMoves, moveRows, belowCut(block.move, (block.move || []).filter(x => (x.pct == null || x.pct >= 1)).length))}
                 ${usageSection(l.secItem, itemRows, belowCut(block.held_item, (block.held_item || []).filter(x => (x.pct == null || x.pct >= 1)).length))}
                 ${usageSection(l.secAbility, abilRows, belowCut(block.ability, (block.ability || []).filter(x => (x.pct == null || x.pct >= 1)).length))}
@@ -1551,6 +1690,15 @@
     }
 
     function wireDetailEvents(ov) {
+        const gt = ov.querySelector('#sqpGegenTyp');
+        if (gt) gt.addEventListener('change', () => {
+            _gegenTyp = gt.value;
+            renderDetailOverlay();
+            // Nach dem Neuzeichnen liegt der Fokus sonst am Seitenanfang;
+            // wer gerade Typen durchprobiert, will im Waehler bleiben.
+            const n = document.getElementById('sqpGegenTyp');
+            if (n) n.focus();
+        });
         ov.querySelectorAll('.sqp-d-fmt').forEach(btn => {
             if (btn.disabled) return;
             btn.addEventListener('click', () => {

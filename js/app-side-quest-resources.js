@@ -624,6 +624,9 @@
         // und zwei aehnliche Namen nebeneinander sind der Fehler, den
         // man erst beim Debuggen bemerkt.
         status: 'sideQuestZustaendeHost',
+        // Item-Nutzung seit dem 09.09.2026: dieselben Nutzungsdaten,
+        // andersherum gelesen (welche Pokémon spielen dieses Item).
+        items: 'sideQuestItemsHost',
     };
     function showView(view) {
         if (!VIEW_HOSTS[view]) view = 'teams';
@@ -670,6 +673,8 @@
             window.sideQuestMatchups.activate();
         } else if (view === 'status' && window.sideQuestStatus) {
             window.sideQuestStatus.activate();
+        } else if (view === 'items' && window.sideQuestItems) {
+            window.sideQuestItems.activate();
         }
     }
 
@@ -680,6 +685,7 @@
         document.querySelectorAll('.side-quest-subtab').forEach(b => {
             const v = b.getAttribute('data-sq-view');
             b.textContent = v === 'usage' ? (uiLang() === 'de' ? 'Nutzung' : 'Usage')
+                          : v === 'items' ? (uiLang() === 'de' ? 'Items' : 'Items')
                           : v === 'matchups' ? 'Matchups'
                           : v === 'status' ? 'Status'
                           : v === 'resources' ? l.tabResources

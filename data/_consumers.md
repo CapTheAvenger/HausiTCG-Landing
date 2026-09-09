@@ -311,3 +311,53 @@ Gemessen am 09.09.2026: von 217 Roster-Eintraegen ohne Mega sind 195
 gelistet und 22 nicht — darunter Mimigma, Wolwerock und Durengard, die es in
 GO tatsaechlich gibt. Das ist der Beleg dafuer, dass ein fehlender Eintrag
 nichts beweist.
+
+## `pokemon_go_shiny.json` — wo ein Shiny in GO veroeffentlicht ist
+
+Geholt von `scripts/scrape_pokemon_go_shiny.py` aus
+`https://leekduck.com/shiny/pms.json` — der Datei, aus der die
+LeekDuck-Checkliste ihre Seite baut. Vom Betreiber am 09.09.2026 benannt.
+Gelesen von `js/app-side-quest-pokedex.js`.
+
+**Diese Datei darf ein Nein sagen** — anders als `pokemon_go_liste.json`.
+Jeder Eintrag traegt ein Veroeffentlichungsdatum, und die Quelle wird
+gepflegt. Ein fehlender Eintrag heisst deshalb tatsaechlich "kein
+veroeffentlichtes Shiny".
+
+**Der Datumsfilter ist Pflicht.** Die Quelle fuehrt auch ANGEKUENDIGTE
+Veroeffentlichungen: gemessen am 09.09.2026 sind 12 der 1.475 Eintraege in
+der Zukunft datiert (bis 2027/02/13), durchweg Kostuemformen aus geplanten
+Events. Wer ungefiltert liest, behauptet, ein Shiny sei fangbar, das es noch
+nicht gibt. Der Scraper filtert auf `released_date <= heute` und legt die
+Zahl der uebersprungenen in `_meta.angekuendigt_uebersprungen` ab.
+
+**Nebenwirkung, die zaehlt:** ein veroeffentlichtes Shiny BEWEIST, dass es die
+Art in GO gibt. Damit schliesst diese Datei Luecken der veralteten Artenliste.
+Gemessen: drei Roster-Eintraege (Arktilas (Hisui), Schlurm, Psiaugon) fehlen
+dort, haben aber ein Shiny — die Oberflaeche zeigt bei ihnen deshalb "In GO —
+belegt durch das veroeffentlichte Shiny" statt eines Widerspruchs.
+
+## Item-Nutzung liest `champions_usage.json` andersherum
+
+`js/app-side-quest-items.js` dreht die Nutzungsdaten um: statt "welches Item
+spielt dieses Pokemon" beantwortet die Ansicht "welche Pokemon spielen dieses
+Item".
+
+**Der Nenner aendert sich dabei NICHT, und das ist der Fallstrick.** Der
+Prozentwert in `held_item` ist der Anteil an den Bauten **eines** Pokemon. Er
+ist NICHT dessen Anteil an allen Traegern des Items — diese Zahl steht
+nirgends und laesst sich aus der ersten nicht herleiten, weil jeder Wert einen
+anderen Nenner hat. Die Ansicht schreibt das ueber jede Traegerliste und
+rechnet die verbotene Zahl nicht aus; `tests/unit/test-item-nutzung.js` haelt
+fest, dass es in `itemTabelle()` genau eine Summe gibt.
+
+Zwei Sortierungen, beide beschriftet:
+
+| Sortierung | Rechnung | Frage |
+| --- | --- | --- |
+| Bindung | roher Hoechstwert | wer spielt das Item fast immer? |
+| Praesenz | Σ (Anteil × Team-Auftritte) | wo begegnet es mir am ehesten? |
+
+Praesenz ist die Voreinstellung. Nach Bindung sortiert stehen oben
+ausschliesslich Mega-Steine (Floetteonit 99,1 % bei einem Traeger) — richtig
+gerechnet und als erster Bildschirm wertlos.
