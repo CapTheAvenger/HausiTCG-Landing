@@ -276,6 +276,7 @@
                                  // (tournament_id, player_name, place)
   let _tournamentSizes = null;  // Map(tournament_id → total_players)
   let _archetypPiloten = null;  // Map("tid|archetyp" → player_count)
+  let _archetypBruecke = null;  // Map(Decklisten-Name → labs-Name)
                                  // aus labs_tournament_decks.csv. Das ist
                                  // die Zahl der SPIELER dieses Archetyps im
                                  // ganzen Feld — nicht die Zahl der Listen.
@@ -415,6 +416,29 @@
        und taugt dafuer nicht. Findet sich kein Paar, bleibt die Zahl
        LEER — geraten wird nichts. */
     const piloten = new Map();
+
+    /* NAMENSBRUECKE (09.09.2026).
+       Die Decklisten-Datei und labs fuehren zwei Vokabulare fuer
+       dasselbe Deck. Gemessen ueber alle 1.201 Listen: 1.159 fanden ihr
+       labs-Gegenstueck, 42 nicht — an genau drei Paaren:
+           tid 0069  'Hydrapple'   23 Listen  -> 'Ogerpon Meganium Hydrapple'
+           tid 0071  'Ogerpon Box' 18 Listen  -> 'Basic Box'
+           tid 0071  'Hydrapple'    1 Liste   -> 'Ogerpon Meganium Hydrapple'
+       Die Folge war keine falsche Zahl, sondern eine fehlende: die
+       Kachel schrieb "18 Tag-2-Listen" statt "18 von 74 Piloten".
+       Die Zuordnung steht belegt in data/archetype_aliases.json und
+       wird NUR benutzt, wenn der Name selbst nichts trifft — in TEF-CRI
+       gibt es 'Hydrapple' in beiden Dateien und meint dort dasselbe. */
+    const bruecke = new Map();
+    try {
+      const al = await fetch('data/archetype_aliases.json?t=' + Date.now())
+                       .then(r => r.json());
+      for (const [von, eintrag] of Object.entries(al.decklisten_zu_labs || {})) {
+        if (von.startsWith('_') || !eintrag || !eintrag.labs) continue;
+        bruecke.set(_norm(von), _norm(eintrag.labs));
+      }
+    } catch (e) { /* ohne Bruecke bleibt es beim alten Verhalten */ }
+
     try {
       const rows = await _loadCsv('data/labs_tournament_decks.csv');
       for (const r of rows) {
@@ -471,7 +495,7 @@
     } catch (e) {
       console.warn('[MostConsistencyBuilder] could not load labs sizes:', e);
     }
-    return { sizes, piloten };
+    return { sizes, piloten, bruecke };
   }
 
   async function _loadAll() {
@@ -486,6 +510,7 @@
       _allRows         = rows;
       _tournamentSizes = (labsGroessen && labsGroessen.sizes) || new Map();
       _archetypPiloten = (labsGroessen && labsGroessen.piloten) || new Map();
+      _archetypBruecke = (labsGroessen && labsGroessen.bruecke) || new Map();
       _aceSpecNames    = aceSpecs;
 
       _byArchetype = new Map();
@@ -1855,7 +1880,11 @@
     const tid = String(tournamentId || '').trim();
     const a = _norm(archetyp);
     const tp = _tournamentSizes ? _tournamentSizes.get(tid) : undefined;
-    const pc = (_archetypPiloten && a) ? _archetypPiloten.get(tid + '|' + a) : undefined;
+    let pc = (_archetypPiloten && a) ? _archetypPiloten.get(tid + '|' + a) : undefined;
+    if (pc === undefined && _archetypBruecke && a && _archetypBruecke.has(a)) {
+      // Erst der eigene Name, dann die Bruecke. Nie umgekehrt.
+      pc = _archetypPiloten.get(tid + '|' + _archetypBruecke.get(a));
+    }
     return {
       feldgroesse: Number.isFinite(tp) && tp > 0 ? tp : null,
       n_piloten:   Number.isFinite(pc) && pc > 0 ? pc : null,
