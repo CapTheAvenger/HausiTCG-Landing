@@ -50,6 +50,54 @@ INTENTIONALLY_UNORDERED_SETS = {"M3"}
 # -readable source of truth the schema check runs against. Adding a column is
 # safe; removing/renaming one breaks a consumer, so it is reported loudly.
 CONSUMERS = {
+    # ── Limitless-API-Auszuege ────────────────────────────────────────
+    # BEFUND 09.09.2026: data/_consumers.md behauptet, der Spaltenvertrag
+    # dieser Dateien werde taeglich durchgesetzt. Tatsaechlich stand hier
+    # keine einzige von ihnen — `grep -c "online_api" scripts/data_guardian.py`
+    # ergab 0. Sie sind nicht harmlos: online_api_cards_*.csv traegt ueber
+    # backend/core/update_sets.py den Riegel, der data/format_window.json
+    # und damit den Formatschluessel der GANZEN Seite bestimmt. Faellt die
+    # Spalte `set` oder `number` weg, faellt der Riegel, und die naechste
+    # Rotation kann die Seite auf ein Set schalten, fuer das es keine
+    # Kartendaten gibt.
+    #
+    # ACHTUNG, gemessen beim Eintragen: diese vier Dateien sind
+    # SEMIKOLON-getrennt, der Spaltenpruefer dieses Waechters liest
+    # Komma. Mit einer required-Liste meldete er prompt "Pflichtspalten
+    # in JEDER Zeile leer" — fuer Dateien, die vollstaendig gefuellt
+    # sind. Deshalb hier bewusst OHNE Spaltenvertrag: geprueft werden
+    # Vorhandensein und Nicht-Leere, und das ist genau das, was gefehlt
+    # hat. Wer den Vertrag will, muss dem Pruefer erst das Trennzeichen
+    # beibringen — das ist ein eigener Eingriff, kein Nebenbei.
+    "online_api_tournaments.csv": {
+        "required": [],
+        "purpose": ("Gedaechtnis des inkrementellen Scrapers "
+                    "(bekannte_turniere) und Quelle der Turnier-Metadaten. "
+                    "Semikolon-getrennt."),
+    },
+    "online_api_archetypes.csv": {
+        "required": [],
+        "purpose": ("Feld-Siegquoten je Turnier und Archetyp; Grundlage von "
+                    "scripts/build_meta_prognose.py. Semikolon-getrennt."),
+    },
+    # ── Champions-Nachtlaeufe ─────────────────────────────────────────
+    # BEFUND 09.09.2026: diese Dateien stehen in data/_consumers.md als
+    # oeffentliche Schnittstelle, standen aber in keinem Waechter. Wenn
+    # ein Nachtlauf sie kaputtschreibt, merkt es nichts.
+    "champions_editionen.json": {
+        "required": [],
+        "purpose": ("Welche Edition welches Pokemon fuehrt — Grundlage der "
+                    "Herkunftszeile im Pokedex."),
+    },
+    "pokemon_go_shiny.json": {
+        "required": [],
+        "purpose": ("Veroeffentlichte Shinys in Pokemon GO (leekduck.com). "
+                    "Belegt zugleich, dass es die Art in GO gibt."),
+    },
+    # opgg_champions_moves.json gehoert hier ebenfalls hin — sie wird
+    # aber erst im ersten CI-Lauf erzeugt (op.gg ist aus dem
+    # Bausandkasten nicht erreichbar). Eintragen, sobald sie da ist;
+    # vorher meldet der Waechter zu Recht "consumer file missing".
     "cardmarket_id_mapping.csv": {
         "required": ["set", "number", "cardmarket_product_id", "match_method", "base_name"],
         "purpose": "(set, number) -> Cardmarket idProduct. The join key for prices.",
@@ -2149,8 +2197,14 @@ def tote_spalten():
     vorhanden. GEMESSEN am 29.08.2026: cardmarket_card_images.csv fuehrt
     `number` und `name_de` im Kopf, beide sind in allen 1295 Zeilen leer —
     und `number` ist eine der beiden Spalten, ueber die die Hausregel das
-    Verknuepfen ueberhaupt erlaubt. Ebenso: top8/top16/top32_conv_rate sind
-    in allen 14 labs_tournament_decks*.csv durchgehend 0.
+    Verknuepfen ueberhaupt erlaubt.
+
+    Frueher stand hier auch: top8/top16/top32_conv_rate seien in allen 14
+    labs_tournament_decks*.csv durchgehend 0. Das gilt seit dem
+    09.09.2026 nicht mehr — scripts/fuelle_conv_rate.py rechnet sie aus
+    den Platzierungen in player_continuity.csv (812 der 4.713 Zeilen) und
+    laesst leer, wo es keine gibt. Eine leere Zelle ist hier die ehrliche
+    Kodierung; die alte 0.0 war es nicht.
 
     Grundlinien-Vergleich, nicht absolute Schwelle: eine Spalte, die seit
     jeher leer ist, ist ein bekannter Zustand. Neu leer geworden ist ein

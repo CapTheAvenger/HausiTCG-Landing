@@ -113,6 +113,23 @@ DATEIEN = [
     # sondern ein Fenster in `_meta` — deshalb steht sie unten in
     # INHALT_AUS_NEBENDATEI und nicht in INHALT_BIS.
     "meta_prognose.json",
+    # 09.09.2026 dazu: beide sind Grundlage sichtbarer Ansichten
+    # (Deck Builder, Typical Build, Turnierbestand) und tragen ein
+    # Turnierdatum je Zeile — siehe INHALT_BIS unten.
+    "tournament_decklists_per_player.csv",
+    "player_continuity.csv",
+    # 09.09.2026 dazu: die drei Dateien der Champions-Nachtlaeufe. Sie
+    # stehen in data/_consumers.md als oeffentliche Schnittstelle, waren
+    # aber in keinem Datenstand gefuehrt — eine Datei, die niemand
+    # datiert, kann beliebig alt werden, ohne dass es auffaellt.
+    "champions_editionen.json",
+    "pokemon_go_liste.json",
+    "pokemon_go_shiny.json",
+    "opgg_champions_moves.json",
+    # Ebenso: die Nutzungsdaten selbst. Sie werden taeglich frisch
+    # committet, standen hier aber nicht — data_stand.json wies deshalb
+    # den 30.08. aus, waehrend der Reiter korrekt den 09.09. zeigte.
+    "champions_usage.json",
 ]
 
 # Dateien, die je Formatfenster aufgeteilt sind: mit jeder Rotation kommt
@@ -121,6 +138,21 @@ DATEIEN = [
 DATEIEN_GLOB = (
     "online_api_cards_*.csv",
     "online_api_matchups_*.csv",
+    # 09.09.2026 dazu: die Labs-Auszuege und die Turnierkarten je
+    # Formatfenster. Das Frontend liest GENAU DIESE Auszuege (js/app-core.js
+    # waehlt sie ueber format_window.json), nicht die Monolithen daneben —
+    # und fuer sie stand bis heute kein Stand in der Datei. Sie rotieren
+    # nach demselben Muster wie die API-Auszuege und gehoeren deshalb in
+    # denselben Glob statt in eine Liste, die niemand pflegt.
+    # labs_tournament_matchups_* bleibt bewusst draussen: die Bilanz ist
+    # ueber mehrere Turniere aggregiert und fuehrt kein Turnierdatum je
+    # Zeile. Sie waere nur mit "wann zuletzt geschaut" fuehrbar, und das
+    # steht schon im Monolithen daneben.
+    # tournament_cards_data_cards_* bleibt draussen: nur die Auszuege des
+    # laufenden Fensters fuehren ueberhaupt ein tournament_date, die
+    # aelteren nicht — sie wuerden die Liste "ohne Stand" fuellen, ohne
+    # dass jemand etwas davon haette.
+    "labs_tournament_decks_*.csv",
 )
 
 
@@ -169,6 +201,12 @@ INHALT_BIS = {
     # gehoeren hin.
     "online_api_tournaments.csv": "date",
     "online_api_archetypes.csv": "date",
+    # 09.09.2026 dazu. Beide sind Grundlage sichtbarer Ansichten
+    # (Deck Builder, Typical Build, Turnierbestand) und tragen ein
+    # Turnierdatum je Zeile — es gab keinen Grund, sie auszulassen
+    # ausser dem, dass sie niemand nachgetragen hat.
+    "tournament_decklists_per_player.csv": "tournament_date",
+    "player_continuity.csv": "tournament_date",
 }
 
 
@@ -178,6 +216,8 @@ def inhalt_bis_tabelle():
     for name in gefuehrte_dateien():
         if name.startswith(("online_api_cards_", "online_api_matchups_")):
             heraus[name] = "date"
+        elif name.startswith("labs_tournament_decks_"):
+            heraus[name] = "tournament_date"
     return heraus
 
 # Dateien, deren Inhaltsdatum in einer NEBENDATEI steht statt in einer Spalte:

@@ -278,6 +278,29 @@ def main():
         ov_item = {norm(k): v for k, v in (ov.get("items") or {}).items()}
         print(f"Loaded de_name_overrides: {len(ov_move)} moves, {len(ov_item)} items")
 
+    # ── op.gg als zweite Quelle ───────────────────────────────────────
+    # Gebaut von scripts/scrape_opgg_champions_moves.py. Zwei Aufgaben:
+    #
+    #   1. Deutsche Beschreibungstexte, die PokéAPI nicht fuehrt.
+    #      Gemessen am 09.09.2026: 45 unserer Attacken hatten kein
+    #      de_effect, op.gg deckt alle 45 ab.
+    #   2. Zweiter Beleg fuer den Attackenpool. Bis heute hing der
+    #      Nachtrag an einem einzigen Scraper; op.gg fuehrt 581
+    #      Attacken und enthaelt alle 500 unserer — eine echte
+    #      Obermenge, also als Gegenprobe brauchbar.
+    #
+    # Fehlt die Datei, laeuft alles wie vorher weiter (nur mit den
+    # bekannten Luecken). Eine fehlende Zweitquelle darf keinen Bau
+    # verhindern.
+    opgg = {}
+    opgg_pfad = os.path.join(DATA, "opgg_champions_moves.json")
+    if os.path.exists(opgg_pfad):
+        roh = json.load(open(opgg_pfad, encoding="utf-8"))
+        opgg = {norm(k): v for k, v in (roh.get("attacken") or {}).items()}
+        print(f"Loaded opgg_champions_moves: {len(opgg)} Attacken")
+    else:
+        print("  ! opgg_champions_moves.json fehlt - keine Zweitquelle")
+
     # Items actually available in Pokémon Champions (Serebii's Champions
     # items list, scraped by scripts/scrape_champions_items.py). The
     # otterlyclueless item list is the *full* held-item set, but Champions
@@ -331,6 +354,15 @@ def main():
         # German effect: hand-verified (Champions-correct) wins, else
         # PokéAPI's official German text, else fall back to English in UI.
         de_eff = (v or {}).get("effect") or pk.get("de_eff") or ""
+        op = opgg.get(key) if cat == "move" else None
+        de_quelle = ""
+        if not de_eff.strip() and op and (op.get("text") or "").strip():
+            # Dritte Stufe der Kette: hand-geprueft -> PokéAPI -> op.gg.
+            # op.gg steht bewusst HINTEN. Es ist die juengste und am
+            # wenigsten gepruefte der drei Quellen; sie soll Luecken
+            # schliessen, nicht bestehende Texte ersetzen.
+            de_eff = op["text"]
+            de_quelle = "opgg"
         if v and cat == "move" and v.get("type"):
             mtype = v["type"]
         entry = {
@@ -365,6 +397,36 @@ def main():
             entry["champ"] = (key in champ_avail_items) if champ_avail_items else True
         else:
             entry["champ"] = True             # abilities/moves already restricted
+        # Nachgetragene Attacken: AP und Genauigkeit von op.gg.
+        #
+        # BELEG (gemessen 09.09.2026 ueber alle 500 Attacken): Staerke
+        # stimmt zwischen beiden Quellen in 500 von 500 Faellen ueberein.
+        # Bei den AP gibt es sieben Abweichungen — FUENF davon sind
+        # nachgetragene Attacken. Und wo sie abweichen, traegt
+        # otterlyclueless genau den Mainline-Wert (Goldrausch 5 AP /
+        # Genauigkeit 100; in Champions 8 / 95). Der Datensatz pflegt
+        # hinter inChampions=false offenbar keine Champions-Werte.
+        #
+        # Deshalb: NUR fuer nachgetragene Attacken gewinnt op.gg bei
+        # diesen zwei Feldern. Bei den 494 regulaeren Attacken wird ein
+        # Konflikt gemeldet und NICHTS geaendert — zwei Faelle
+        # (Strength Sap, Wish), und welche Quelle dort recht hat, ist
+        # nicht belegt.
+        if nachgetragen and op:
+            for feld, quelle in (("pp", "pp"), ("accuracy", "accuracy")):
+                wert = op.get(quelle)
+                if wert is None:
+                    continue
+                alt_wert = entry.get(feld)
+                if alt_wert != wert:
+                    print(f"    {en}: {feld} {alt_wert} -> {wert} (op.gg)")
+                    entry[feld] = wert
+            entry["stats_quelle"] = "opgg"
+        if de_quelle:
+            # Sichtbar machen, woher der deutsche Text kommt. Ohne die
+            # Marke laesst sich spaeter nicht mehr sagen, welche Texte
+            # von der Zweitquelle stammen.
+            entry["de_effect_quelle"] = de_quelle
         if nachgetragen:
             # Nicht aus dem inChampions-Filter, sondern nachtraeglich
             # ergaenzt, weil die Champions-Nutzungsdaten die Attacke
@@ -468,7 +530,7 @@ def main():
                 "Abbruch, damit der committete Stand erhalten bleibt.")
 
         nach_name = {norm(m["name"]): m for m in champ_moves}
-        kandidaten = []
+        kandidaten, ohne_zweitbeleg = [], []
         for key in sorted(genutzt):
             if key in gebaute_attacken:
                 continue
@@ -476,7 +538,19 @@ def main():
             if not mv or not mv.get("type"):
                 ohne_quelle.append(genutzt[key])
                 continue
+            # ZWEITER BELEG (seit 09.09.2026): die Attacke muss auch in
+            # der Champions-Attackenliste von op.gg stehen. Vorher hing
+            # der Nachtrag an genau einem Scraper — meldete der einmal
+            # einen falschen Namen, waere eine Nicht-Champions-Attacke
+            # ins Nachschlagewerk gerutscht. Liegt keine Zweitquelle
+            # vor, gilt weiter der einfache Beleg plus Obergrenze.
+            if opgg and key not in opgg:
+                ohne_zweitbeleg.append(mv["name"])
+                continue
             kandidaten.append(mv)
+        if ohne_zweitbeleg:
+            print("  ! in den Nutzungsdaten, aber NICHT bei op.gg gelistet "
+                  "(nicht nachgetragen): " + ", ".join(sorted(ohne_zweitbeleg)))
 
         if len(kandidaten) > NACHTRAG_OBERGRENZE:
             print(f"  ! {len(kandidaten)} Nachtragskandidaten - ueber der "
@@ -501,18 +575,50 @@ def main():
 
     entries.sort(key=lambda e: (e["cat"], e["de"].lower()))
     counts = {"item": 0, "ability": 0, "move": 0, "field": 0, "de_effect": 0,
-              "spread": 0, "target_unknown": 0, "nachgetragen": nachgetragen_n}
+              "spread": 0, "target_unknown": 0, "nachgetragen": nachgetragen_n,
+              "de_effect_opgg": 0}
     for e in entries:
         counts[e["cat"]] += 1
         if e["field"]:
             counts["field"] += 1
         if e["de_effect"].strip():
             counts["de_effect"] += 1
+        if e.get("de_effect_quelle") == "opgg":
+            counts["de_effect_opgg"] += 1
         if e["cat"] == "move" and e.get("power"):
             if e.get("spread"):
                 counts["spread"] += 1
             if "spread" not in e:
                 counts["target_unknown"] += 1
+
+    # ── Gegenprobe gegen op.gg ───────────────────────────────────────
+    # Melden, nicht aufloesen. Wo die beiden Quellen sich widersprechen
+    # und die Attacke NICHT nachgetragen ist, bleibt unser Wert stehen
+    # und der Widerspruch geht in den Lauf-Bericht. Gemessen am
+    # 09.09.2026: Staerke 0 Abweichungen, AP 2, Genauigkeit 0 (nach
+    # Abzug der nachgetragenen).
+    opgg_konflikte = 0
+    if opgg:
+        for e in entries:
+            if e["cat"] != "move" or e.get("nachgetragen"):
+                continue
+            o = opgg.get(norm(e["en"]))
+            if not o:
+                continue
+            for feld, oschl in (("power", "power"), ("pp", "pp"),
+                                ("accuracy", "accuracy")):
+                unser, ihrer = e.get(feld), o.get(oschl)
+                if unser is None or ihrer is None or unser is True:
+                    continue
+                if int(unser) != int(ihrer):
+                    opgg_konflikte += 1
+                    print(f"  ! op.gg-Abweichung {e['en']}: {feld} "
+                          f"unser={unser} opgg={ihrer} (nicht geaendert)")
+        fehlt_bei_opgg = [e["en"] for e in entries
+                          if e["cat"] == "move" and norm(e["en"]) not in opgg]
+        if fehlt_bei_opgg:
+            print(f"  ! {len(fehlt_bei_opgg)} unserer Attacken stehen NICHT "
+                  f"in der op.gg-Liste: " + ", ".join(sorted(fehlt_bei_opgg)[:10]))
 
     # Melden, nicht stillschweigend aufloesen: wo die hand-geprüfte
     # deutsche Prosa eine Flaechenwirkung nennt, das PokéAPI-Ziel aber
