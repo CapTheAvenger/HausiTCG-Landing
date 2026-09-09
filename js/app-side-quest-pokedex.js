@@ -1629,8 +1629,18 @@
         const results = currentResults();
         const countEl = host.querySelector('.sqp-count');
         if (countEl) countEl.textContent = l.count(results.length);
-        const wrap = host.querySelector('.sqp-table-wrap') || host.querySelector('.sqp-status');
-        if (wrap) wrap.outerHTML = tableHtml(results);
+        /* Im Raster gibt es keine .sqp-table-wrap.
+         *
+         * GEMESSEN am 09.09.2026 auf der Live-Seite: die Suche nach
+         * "Vulnona" liess alle 292 Kacheln stehen. Diese Zeile fand ihren
+         * Behaelter nicht und tat deshalb gar nichts — der Zaehler oben
+         * zaehlte richtig, die Liste darunter nicht. Ein Filter, der
+         * aussieht, als haette er nicht getroffen, ist schlimmer als
+         * einer, der fehlt. */
+        const wrap = host.querySelector('.sqp-raster')
+                  || host.querySelector('.sqp-table-wrap')
+                  || host.querySelector('.sqp-status');
+        if (wrap) wrap.outerHTML = (_ansicht === 'raster') ? rasterHtml(results) : tableHtml(results);
         wireRaster(host);
         wireSortHeaders(host);
         wireRows(host);

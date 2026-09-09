@@ -191,6 +191,19 @@ describe('Raster', () => {
             'ohne stopPropagation oeffnet der Sternklick zusaetzlich das Detail');
     });
 
+    it('Suche und Filter zeichnen AUCH das Raster neu', () => {
+        /* Live gefunden am 09.09.2026: die Suche nach "Vulnona" liess alle
+         * 292 Kacheln stehen. rerenderTableOnly() suchte nur nach
+         * .sqp-table-wrap — die es im Raster nicht gibt — und tat deshalb
+         * nichts. Der Zaehler daneben zaehlte richtig mit, was den Fehler
+         * erst recht verschleierte. */
+        const fn = JS.match(/function rerenderTableOnly\(\)[\s\S]*?\n    \}/)[0];
+        assert.match(fn, /\.sqp-raster/,
+            'rerenderTableOnly() muss den Rasterbehaelter kennen, sonst filtert die Suche dort nicht');
+        assert.match(fn, /_ansicht === 'raster'/,
+            'und es muss die passende Zeichenfunktion waehlen, nicht immer die Tabelle');
+    });
+
     it('beide Sprachen kennen jede neue Beschriftung', () => {
         const neu = ['sDex', 'sNutzung', 'ansichtRaster', 'ansichtTabelle', 'nurShiny',
                      'sternAn', 'sternAus', 'herkunftTitel', 'editionenTitel',
