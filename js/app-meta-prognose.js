@@ -132,7 +132,30 @@
         if (_geladen) return _daten;
         _geladen = true;
         const v = (typeof window.APP_VERSION === 'string') ? window.APP_VERSION : Date.now();
-        const antwort = await fetch(`${QUELLE}?v=${encodeURIComponent(v)}`);
+        /* Der Parameter heisst `stand`, NICHT `v` — und das ist kein
+           Geschmack.
+
+           GEMESSEN am 10.09.2026 an der live ausgelieferten Datei: der
+           Deploy laesst in deploy-pages.yml (Schritt "Cache-bust asset
+           references") ein sed ueber JEDE Datei in js/ laufen, das jede
+           Zeichenfolge "Fragezeichen v Gleichheitszeichen" bis zum
+           naechsten Anfuehrungszeichen durch die Deploy-Version
+           ersetzt.
+
+           Steht das Muster in einem normalen String, endet die
+           Ersetzung sofort am schliessenden Anfuehrungszeichen und
+           alles bleibt heil — so machen es archetype-icons.js und
+           draw-simulator.js. In einem TEMPLATE-Literal gibt es dort
+           kein Anfuehrungszeichen: die Regex frass den halben Rest der
+           Zeile. Die ausgelieferte Datei war 6.161 statt 12.173 Bytes
+           gross und warf "SyntaxError: missing ) after argument list".
+           Der Reiter blieb leer, waehrend Datei und Tests auf main
+           einwandfrei waren — das Modul war das einzige im Projekt mit
+           diesem Muster in einem Template-Literal.
+
+           Ein anderer Parametername umgeht die Ersetzung vollstaendig.
+           tests/unit/test-meta-prognose.js haelt das fest. */
+        const antwort = await fetch(QUELLE + '?stand=' + encodeURIComponent(v));
         if (!antwort.ok) throw new Error(`HTTP ${antwort.status}`);
         _daten = await antwort.json();
         return _daten;

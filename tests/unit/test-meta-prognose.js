@@ -189,6 +189,47 @@ describe('die Einbettung', () => {
             'die Ruecknahme des thead-Verlaufs fehlt');
     });
 
+    it('kein Cache-Parameter in einem Template-Literal', () => {
+        /* DER TEUERSTE FEHLER DIESER RUNDE (10.09.2026).
+           Der Deploy laesst ein sed ueber jede Datei in js/ laufen, das
+           den Cache-Parameter durch die Deploy-Version ersetzt — bis
+           zum naechsten Anfuehrungszeichen. In einem Template-Literal
+           gibt es dort keins, also frisst die Ersetzung den halben Rest
+           der Zeile. Die ausgelieferte Datei war 6.161 statt 12.173
+           Bytes und warf einen SyntaxError; auf main war alles heil,
+           die Tests gruen, der Reiter live leer.
+
+           Geprueft wird die REGEL fuer alle Module, nicht nur fuer
+           dieses: ein Template-Literal darf das Muster nicht
+           enthalten. */
+        const muster = '?' + 'v=';
+        const dateien = fs.readdirSync(path.join(ROOT, 'js'))
+            .filter(f => f.endsWith('.js'));
+        const treffer = [];
+        for (const f of dateien) {
+            const text = fs.readFileSync(path.join(ROOT, 'js', f), 'utf8');
+            // Nur Zeilen, in denen das Muster INNERHALB eines
+            // Backtick-Abschnitts steht.
+            text.split('\n').forEach((zeile, i) => {
+                const roh = zeile.replace(/\/\/.*$/, '').replace(/\/\*.*$/, '');
+                if (roh.indexOf('`') === -1 || roh.indexOf(muster) === -1) return;
+                const nachBacktick = roh.slice(roh.indexOf('`'));
+                if (nachBacktick.indexOf(muster) !== -1) {
+                    treffer.push(`${f}:${i + 1}`);
+                }
+            });
+        }
+        assert.deepEqual(treffer, [],
+            'Cache-Parameter in einem Template-Literal — das zerlegt der '
+            + 'Deploy: ' + treffer.join(', '));
+    });
+
+    it('das Modul laedt mit einem Parameter, den der Deploy nicht anfasst', () => {
+        assert.match(SRC, /\?stand='/,
+            'der Cache-Parameter heisst wieder `v` — der Deploy zerlegt '
+            + 'die Datei dann beim naechsten Mal erneut');
+    });
+
     it('alle Farben kommen aus den Tokens', () => {
         // Ein eigener Farbwert waere die Stelle, an der die
         // Aufraeumbrille spaeter auffaellt.
