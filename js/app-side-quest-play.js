@@ -22,11 +22,21 @@
     'use strict';
 
     const DATA_URL = 'data/pokemon_battle_data.json';
-    // Wider per-mon EV/nature corpus pulled from the full VGCPastes
-    // sheet within a 14-day window (~80-100 teams vs the top-20 we
-    // render for the UI). Used to compute the typical opponent Speed
-    // — user-flagged 2026-06-15: top-20 sample was too narrow per
-    // species to read as "what does the opponent actually play".
+    /* Wider per-mon EV/nature corpus pulled from the full VGCPastes
+       sheet (~80-100 teams vs the top-20 we render for the UI). Used to
+       compute the typical opponent Speed — user-flagged 2026-06-15:
+       top-20 sample was too narrow per species to read as "what does
+       the opponent actually play".
+
+       NICHT "die letzten 14 Tage", auch wenn hier bis zum 10.09.2026
+       genau das stand. GEMESSEN an der Datei: 190 der 644 Proben
+       (29,5 %) liegen ausserhalb des Fensters, die aelteste 68 Tage
+       davor. Der Grund ist Absicht — der Korpus ist der Fenster-Pool
+       VEREINIGT mit den ranggewaehlten Spitzenteams, und die tragen
+       keine Datumsschranke. Das Fenster gilt der Auswahl, nicht dem
+       Inhalt. Die Datei sagt das seit dem 10.09. selbst: `_meta`
+       fuehrt `window_applies_to` und daneben `content_from` /
+       `content_to`. */
     const SPEED_CORPUS_URL = 'data/champions_speed_corpus.json';
     // German species names so search "Knakrack" / "Vulnona" / "Eis"
     // finds the right Showdown entry. User-flagged 2026-06-15: typing
@@ -202,8 +212,10 @@
     }
 
     // Mirror of aggregateLegalPool but for the flat samples shape the
-    // 14-day Speed corpus carries. Same output contract so the picker
-    // doesn't care which source built the pool.
+    // Speed corpus carries. Same output contract so the picker doesn't
+    // care which source built the pool. (Zum "14-Tage"-Fenster siehe
+    // die Anmerkung an SPEED_CORPUS_URL oben — es gilt der Auswahl,
+    // nicht dem Inhalt.)
     function aggregateLegalPoolFromSamples(samples) {
         const pool = new Set();
         const counts = new Map();
@@ -324,8 +336,8 @@
 
     function rebuildTypicalSpeeds() {
         if (!_pokedex) return;
-        // Prefer the wider Speed corpus (14-day window across the full
-        // sheet) when loaded. Fall back to the top-20 team list — keeps
+        // Prefer the wider Speed corpus (full sheet, breiter als die
+        // Top-20) when loaded. Fall back to the top-20 team list — keeps
         // the panel functional on deploys before the corpus file lands.
         if (_speedCorpus && Array.isArray(_speedCorpus.samples) && _speedCorpus.samples.length > 0) {
             _typicalSpeeds = buildTypicalSpeedsFromSamples(

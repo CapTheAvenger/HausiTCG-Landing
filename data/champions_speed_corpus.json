@@ -4,7 +4,12 @@
     "window_days": 14,
     "window_start": "2026-08-26",
     "window_end": "2026-09-09",
+    "window_applies_to": "the recency pool only. The corpus is that pool UNION the rank-selected top teams, which carry no date bound — so samples outside this window are expected, not a defect. For what the file actually covers, read content_from / content_to.",
+    "content_from": "2026-06-19",
+    "content_to": "2026-09-04",
+    "samples_outside_window": 190,
     "team_count": 108,
+    "teams_with_samples": 107,
     "sample_count": 644,
     "species_count": 83,
     "source": "VGCPastes Champions M-A spreadsheet (gid=791705272)"

@@ -797,14 +797,56 @@ def main():
     species_counts: Dict[str, int] = {}
     for s in samples:
         species_counts[s['species']] = species_counts.get(s['species'], 0) + 1
+    # WAS DAS FENSTER IST — UND WAS NICHT.
+    #
+    # BEFUND (10.09.2026): _meta trug window_start/window_end als 14-Tage-
+    # Fenster, und 190 der 644 Proben (29,5 %) lagen ausserhalb; die
+    # aelteste 68 Tage vor window_start. Wer _meta las und "das sind die
+    # letzten 14 Tage" schloss, lag bei knapp einem Drittel der Daten
+    # falsch.
+    #
+    # Der Grund steht ein paar Zeilen weiter oben und ist ABSICHT:
+    # corpus_teams ist `chosen` (Top-N nach Rang, ohne Datumsschranke)
+    # VEREINIGT mit corpus_pool (im Fenster). Das Fenster beschreibt also
+    # den einen der beiden Zufluesse, nicht den Inhalt der Datei.
+    #
+    # Die Absicht bleibt. Was sich aendert: die Datei sagt jetzt selbst,
+    # worauf das Fenster sich bezieht, und nennt daneben den Bereich, den
+    # ihr Inhalt WIRKLICH abdeckt. Beides ist wahr; nur eins davon stand
+    # bisher da.
+    # Dieselbe Lesefunktion wie fuer die Auswahl — die Probendaten sind
+    # woertlich die Zellen aus dem Blatt.
+    korpus_tage = [parse_date_shared(x.get('date')) for x in samples]
+    korpus_tage = sorted(t for t in korpus_tage if t)
+    fenster_ab = ((today - timedelta(days=args.speed_window_days))
+                  if args.speed_window_days > 0 else None)
+    ausserhalb = (len([t for t in korpus_tage if not (fenster_ab <= t <= today)])
+                  if fenster_ab else 0)
+    mit_proben = len({x.get('replica') for x in samples if x.get('replica')})
+
     corpus_output = {
         '_meta': {
             'last_updated':  datetime.utcnow().strftime('%Y-%m-%d'),
+            # Das Fenster gilt fuer die Auswahl, nicht fuer den Inhalt.
             'window_days':   args.speed_window_days,
-            'window_start':  (today - timedelta(days=args.speed_window_days)).isoformat()
-                              if args.speed_window_days > 0 else None,
+            'window_start':  fenster_ab.isoformat() if fenster_ab else None,
             'window_end':    today.isoformat(),
+            'window_applies_to':
+                'the recency pool only. The corpus is that pool UNION the '
+                'rank-selected top teams, which carry no date bound — so '
+                'samples outside this window are expected, not a defect. '
+                'For what the file actually covers, read content_from / '
+                'content_to.',
+            # Was WIRKLICH drinsteht.
+            'content_from':  korpus_tage[0].isoformat() if korpus_tage else None,
+            'content_to':    korpus_tage[-1].isoformat() if korpus_tage else None,
+            'samples_outside_window': ausserhalb,
+            # team_count hiess bisher "geholte Teams" und stand neben den
+            # Proben, als waere es "Teams in dieser Datei". Es sind zwei
+            # Zahlen, und sie sind nicht gleich: ein geholtes Team kann
+            # null Proben liefern.
             'team_count':    len(corpus_teams),
+            'teams_with_samples': mit_proben,
             'sample_count':  len(samples),
             'species_count': len(species_counts),
             'source':        'VGCPastes Champions M-A spreadsheet (gid=791705272)',
