@@ -40,6 +40,7 @@ import argparse
 import glob
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -207,6 +208,12 @@ INHALT_BIS = {
     # ausser dem, dass sie niemand nachgetragen hat.
     "tournament_decklists_per_player.csv": "tournament_date",
     "player_continuity.csv": "tournament_date",
+    # 10.09.2026 dazu. Beide Kartendateien der City League fuehren je
+    # Zeile ein Turnierdatum; nur die Archetypdateien standen bisher hier.
+    # Der Chip des Reiters "Deck-Analyse" zeigte deshalb ein Schreibdatum
+    # ohne Gegenstueck.
+    "city_league_analysis.csv": "tournament_date",
+    "city_league_analysis_past.csv": "tournament_date",
 }
 
 
@@ -297,12 +304,61 @@ def _ohne_datenzeilen(datei):
         return False
 
 
+# Datumsschreibweisen, die in den Datendateien wirklich vorkommen.
+#
+# GEMESSEN am 10.09.2026: city_league_archetypes_past.csv fuehrt in der
+# Spalte `date` den einen Wert "6th June 2026". Der alte Leser nahm
+# ausschliesslich ISO — er gab also fuer eine Datei, die HIER als
+# Inhaltsquelle EINGETRAGEN war, still nichts zurueck. Ergebnis:
+# data_stand.json trug fuer keine einzige City-League-Datei ein
+# Inhaltsdatum, und der Frischechip haette dort das SCHREIBdatum
+# (22.08.2026) neben Inhalt vom 06.06.2026 gestellt — 77 Tage Abstand,
+# und die falsche der beiden Zahlen sichtbar.
+#
+# Die Regel stammt nicht von hier: backend/core/card_scraper_shared.py
+# `parse_tournament_date` kennt genau diese beiden Schreibweisen, weil
+# der Scraper sie von der Quelle uebernimmt. Sie steht hier nachgebaut
+# statt importiert, damit der Deploy-Lauf nicht an der Scraper-Kette
+# haengt; tests/python/test_datumsformate_datenstand.py haelt beide
+# Umsetzungen aneinander.
+def _als_iso_tag(roh):
+    """Ein Datum aus einer Datenzeile als ISO-Tag, oder None."""
+    v = (roh or "").strip()
+    if not v:
+        return None
+    # 1. ISO, wie die meisten Dateien es fuehren.
+    kurz = v[:10]
+    if len(kurz) == 10 and kurz[4] == "-" and kurz[7] == "-":
+        try:
+            datetime.strptime(kurz, "%Y-%m-%d")
+            return kurz
+        except ValueError:
+            return None
+    # 2. "06 Jun 26"
+    for muster in ("%d %b %y",):
+        try:
+            return datetime.strptime(v, muster).strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+    # 3. "6th June 2026" — die Ordnungszahl-Endung faellt weg.
+    ohne = re.sub(r"(\d+)(st|nd|rd|th)", r"\1", v, flags=re.IGNORECASE).strip()
+    try:
+        return datetime.strptime(ohne, "%d %B %Y").strftime("%Y-%m-%d")
+    except ValueError:
+        return None
+
+
 def inhalt_bis(datei, spalte):
     """Juengstes Datum IM Inhalt, als ISO-Tag. None, wenn nicht lesbar.
 
-    Bewusst tolerant: findet die Spalte nicht statt, gibt es eben keine
-    Angabe. Ein geratenes Inhaltsdatum waere derselbe Fehler wie das
-    geratene Dateidatum, nur eine Ebene tiefer."""
+    Bewusst tolerant gegenueber einer FEHLENDEN Spalte: dann gibt es eben
+    keine Angabe. NICHT tolerant gegenueber einer Spalte, die da ist und
+    nur unlesbare Werte fuehrt — das meldet unlesbare_inhaltsspalten()
+    unten, damit ein stiller Ausfall wie der vom 10.09.2026 nicht wieder
+    monatelang unbemerkt bleibt.
+
+    Ein geratenes Inhaltsdatum waere derselbe Fehler wie das geratene
+    Dateidatum, nur eine Ebene tiefer."""
     pfad = os.path.join(WURZEL, "data", datei)
     if not os.path.exists(pfad):
         return None
@@ -314,12 +370,49 @@ def inhalt_bis(datei, spalte):
             fh.seek(0)
             werte = set()
             for r in _csv.DictReader(fh, delimiter=trenn):
-                v = (r.get(spalte) or "").strip()[:10]
-                if len(v) == 10 and v[4] == "-" and v[7] == "-":
-                    werte.add(v)
+                iso = _als_iso_tag(r.get(spalte))
+                if iso:
+                    werte.add(iso)
         return max(werte) if werte else None
     except (OSError, ValueError, UnicodeDecodeError):
         return None
+
+
+def unlesbare_inhaltsspalten(tabelle):
+    """Dateien, deren Inhaltsspalte DA ist, aber kein lesbares Datum ergibt.
+
+    Der Unterschied zaehlt: eine fehlende Spalte ist eine Aussage ueber
+    die Datei, eine unlesbare Spalte ist ein Ausfall dieses Skripts. Bis
+    zum 10.09.2026 sahen beide gleich aus — naemlich nach nichts."""
+    heraus = []
+    import csv as _csv
+    for datei, spalte in sorted(tabelle.items()):
+        pfad = os.path.join(WURZEL, "data", datei)
+        if not os.path.exists(pfad):
+            continue
+        try:
+            with open(pfad, newline="", encoding="utf-8-sig") as fh:
+                kopf = fh.readline()
+                trenn = ";" if kopf.count(";") > kopf.count(",") else ","
+                fh.seek(0)
+                leser = _csv.DictReader(fh, delimiter=trenn)
+                if spalte not in (leser.fieldnames or []):
+                    continue          # Spalte fehlt — kein Ausfall.
+                belegt = unlesbar = 0
+                beispiel = ""
+                for r in leser:
+                    roh = (r.get(spalte) or "").strip()
+                    if not roh:
+                        continue
+                    belegt += 1
+                    if not _als_iso_tag(roh):
+                        unlesbar += 1
+                        beispiel = beispiel or roh
+        except (OSError, ValueError, UnicodeDecodeError):
+            continue
+        if belegt and unlesbar == belegt:
+            heraus.append((datei, spalte, beispiel))
+    return heraus
 
 
 def _git(*args):
@@ -451,12 +544,27 @@ def main():
                         if f not in stand
                         and os.path.exists(os.path.join(WURZEL, "data", f)))
 
+    # Fuenfte Ebene: eine Inhaltsspalte, die DA ist und trotzdem nichts
+    # hergibt. Das ist kein Zustand der Daten, sondern ein Ausfall dieses
+    # Skripts — und bis zum 10.09.2026 war er von "Spalte fehlt eben"
+    # nicht zu unterscheiden. Die Liste kommt in die Datei, damit ein
+    # Leser (und der Waechter) sie sehen kann, und in die Ausgabe des
+    # Laufs, damit sie beim naechsten Mal auffaellt.
+    unlesbar = [{"datei": d, "spalte": sp, "beispiel": bsp}
+                for d, sp, bsp in unlesbare_inhaltsspalten(inhalt_bis_tabelle())]
+
     with open(ZIEL, "w", encoding="utf-8") as fh:
         json.dump({"erzeugt_am": jetzt, "quelle": quelle,
                    "dateien": stand, "inhalt_bis": inhalt, "leer": leer,
-                   "ohne_stand": ohne_stand},
+                   "ohne_stand": ohne_stand,
+                   "inhaltsspalte_unlesbar": unlesbar},
                   fh, indent=2, ensure_ascii=False)
         fh.write("\n")
+    if unlesbar:
+        print("Inhaltsspalte vorhanden, aber kein Wert lesbar — das ist ein "
+              "Ausfall dieses Skripts, keine Aussage ueber die Daten:")
+        for e in unlesbar:
+            print("  %s / %s   Beispiel: %r" % (e["datei"], e["spalte"], e["beispiel"]))
     if leer:
         print("ohne Datenzeilen: " + ", ".join(leer))
     if ohne_stand:
