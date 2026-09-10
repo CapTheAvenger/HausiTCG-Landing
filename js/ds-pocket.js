@@ -439,6 +439,125 @@
                '</div>';
     }
 
+    /* ── Der Code zum Mitnehmen ──────────────────────────────────────
+     *
+     * Das Muster ist der Hauptweg: zweites Geraet scannt. Das setzt ein
+     * zweites Geraet voraus. Wer Pocket auf DEMSELBEN Telefon offen hat,
+     * hat nichts zum Scannen — er braucht den Code als Text. Der Knopf
+     * ist dieser zweite Weg; vom Betreiber am 10.09.2026 angeordnet.
+     *
+     * ZWEI WEGE, WEIL EINER NICHT REICHT
+     * ----------------------------------
+     * `navigator.clipboard` gibt es nur im sicheren Kontext. Die Seite
+     * laeuft auch anderswo — lokal ueber http beim Entwickeln, in einem
+     * eingebetteten Rahmen ohne die Berechtigung. Dort ist die
+     * Schnittstelle schlicht nicht da, und ein Knopf, der wortlos
+     * nichts tut, ist schlimmer als kein Knopf. Der Rueckfall ueber ein
+     * kurzlebiges <textarea> und document.execCommand('copy') ist der
+     * einzige Weg, den es dort noch gibt. Er greift auch, wenn
+     * writeText zwar existiert, aber ABLEHNT (fehlende Berechtigung,
+     * Dokument nicht im Vordergrund) — deshalb haengt er im
+     * Fehlerzweig des Versprechens, nicht nur am fehlenden Objekt.
+     */
+    var KOPIER_RUECKMELDUNG_MS = 1500;
+    var kopierUhr = null;
+
+    function kopierText() { return t('Code kopieren', 'Copy code'); }
+    function kopierLabel() {
+        return t('Deck-Code in die Zwischenablage kopieren',
+                 'Copy deck code to clipboard');
+    }
+
+    /** Der Rueckfall. Gibt zurueck, ob es geklappt hat. */
+    function ersatzKopie(text) {
+        var feld = null;
+        try {
+            feld = document.createElement('textarea');
+            feld.value = text;
+            feld.setAttribute('readonly', '');
+            /* NICHT display:none und nicht hidden: ein Feld, das nicht
+               dargestellt wird, laesst sich nicht markieren, und ohne
+               Markierung kopiert execCommand nichts. Also aus dem Bild
+               schieben statt entfernen. */
+            feld.style.position = 'fixed';
+            feld.style.top = '-1000px';
+            feld.style.opacity = '0';
+            document.body.appendChild(feld);
+            feld.select();
+            if (typeof feld.setSelectionRange === 'function') {
+                // iOS beachtet select() auf einem readonly-Feld nicht.
+                feld.setSelectionRange(0, String(text).length);
+            }
+            var ok = !!(document.execCommand && document.execCommand('copy'));
+            return ok;
+        } catch (e) {
+            return false;
+        } finally {
+            try { if (feld && feld.parentNode) feld.parentNode.removeChild(feld); }
+            catch (e2) { /* dann bleibt ein unsichtbares Feld stehen */ }
+        }
+    }
+
+    /** Gibt ein Versprechen auf `true`/`false` — nie einen Fehler. */
+    function inZwischenablage(text) {
+        var api = null;
+        try { api = navigator && navigator.clipboard; } catch (e) { api = null; }
+        if (api && typeof api.writeText === 'function') {
+            try {
+                return Promise.resolve(api.writeText(text)).then(
+                    function () { return true; },
+                    function () { return ersatzKopie(text); });
+            } catch (e) { /* faellt unten auf den Ersatz */ }
+        }
+        return Promise.resolve(ersatzKopie(text));
+    }
+
+    /* Die Rueckmeldung sitzt AM KNOPF, nicht daneben: der Daumen steht
+       beim Tippen genau dort, und eine Meldung am anderen Ende des
+       Bildschirms sieht am Telefon niemand. `aria-live` steht fest im
+       Markup, damit eine Vorlesehilfe den Wechsel ansagt; das
+       aria-label wandert mit, sonst hoerte sie weiter den Ruhetext. */
+    function kopierRueckmeldung(knopf, ok) {
+        if (!knopf) return;
+        var neu = ok ? t('Kopiert!', 'Copied!')
+                     : t('Kopieren klappte nicht', 'Copy failed');
+        if (kopierUhr) { clearTimeout(kopierUhr); kopierUhr = null; }
+        knopf.textContent = neu;
+        if (knopf.setAttribute) knopf.setAttribute('aria-label', neu);
+        if (knopf.classList) {
+            if (ok) knopf.classList.remove('is-fehler');
+            else knopf.classList.add('is-fehler');
+        }
+        kopierUhr = setTimeout(function () {
+            kopierUhr = null;
+            knopf.textContent = kopierText();
+            if (knopf.setAttribute) knopf.setAttribute('aria-label', kopierLabel());
+            if (knopf.classList) knopf.classList.remove('is-fehler');
+        }, KOPIER_RUECKMELDUNG_MS);
+    }
+
+    function kopiere(knopf, code) {
+        return inZwischenablage(code).then(function (ok) {
+            kopierRueckmeldung(knopf, ok);
+            return ok;
+        });
+    }
+
+    /* Der Code steht IM Knopf, nicht in einer Modulvariablen: das
+       Vollbild kann jederzeit ein anderes Deck tragen, und eine
+       Variable daneben waere die zweite Wahrheit. */
+    function kopierzeile(d) {
+        if (!d.code) return '';
+        return '<div class="pk-kopierzeile">' +
+               '<button type="button" class="pk-kopieren" data-pk-kopieren="' +
+               esc(d.code) + '" aria-live="polite" aria-label="' +
+               esc(kopierLabel()) + '">' + esc(kopierText()) + '</button>' +
+               '<span class="pk-kopier-hinweis">' +
+               esc(t('Kein zweites Gerät? Code kopieren und in Pocket einfügen.',
+                     'No second device? Copy the code and paste it in Pocket.')) +
+               '</span></div>';
+    }
+
     function oeffne(index) {
         var d = (daten.decks || [])[index];
         var host = document.getElementById('pocketOverlay');
@@ -486,6 +605,7 @@
         s += '<p class="pk-hell">' + esc(
             t('Bildschirm hell stellen und in Pocket abscannen.',
               'Turn the screen brightness up and scan it in Pocket.')) + '</p>';
+        s += kopierzeile(d);
         s += kartenliste(d);
 
         host.innerHTML = s;
@@ -642,6 +762,8 @@
             }
             var z = ev.target.closest('[data-pk-deck]');
             if (z) { oeffne(Number(z.getAttribute('data-pk-deck'))); return; }
+            var k = ev.target.closest('[data-pk-kopieren]');
+            if (k) { kopiere(k, k.getAttribute('data-pk-kopieren')); return; }
             var zu = ev.target.closest('[data-pk-zu]');
             if (zu) schliesse();
         });

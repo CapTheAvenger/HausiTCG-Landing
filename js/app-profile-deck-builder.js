@@ -915,9 +915,27 @@
         const jp = card.is_japanese
             ? `<span class="pdb-jp-badge">${escapeHtml(labels.jpBadge)}</span>` : '';
         // Card text — preserve newlines + the Limitless ' || ' separator.
+        //
+        // KENNZEICHNUNG (10.09.2026): `card_text` gibt es in der Quelle
+        // NUR auf Englisch — anders als beim Namen (name_en/name_de)
+        // fuehrt weder data/all_cards_database.csv noch ein
+        // data/cards_chunk_*.json ein deutsches Gegenstueck. Der
+        // Betreiber hat entschieden: "Englisch zeigen, sichtbar
+        // gekennzeichnet". Das Abzeichen kommt aus
+        // js/kartentext-hinweis.js — EINE Quelle fuer alle
+        // Anzeigestellen; tests/unit/test-kartentext-kennzeichnung.js
+        // verlangt den Aufruf von jeder von ihnen.
+        //
+        // Kein `window.KartentextHinweis &&`-Rueckfall: ein stiller
+        // Rueckfall wuerde genau das weglassen, was hier zugesichert
+        // wird. index.html laedt kartentext-hinweis.js vor dieser
+        // Datei (beide `defer`, Reihenfolge damit garantiert), und der
+        // Unit-Test prueft diese Reihenfolge mit.
         const textBlocks = (card.card_text || '').trim();
         const textHtml = textBlocks
-            ? textBlocks.split(/\s*\|\|\s*/).map(t => `<p>${escapeHtml(t)}</p>`).join('')
+            ? window.KartentextHinweis.umhuellen(
+                  textBlocks.split(/\s*\|\|\s*/).map(t => `<p>${escapeHtml(t)}</p>`).join(''),
+                  lang)
             : `<p class="pdb-zoom-empty">${escapeHtml(labels.zoomNoText)}</p>`;
 
         const overlay = document.createElement('div');
