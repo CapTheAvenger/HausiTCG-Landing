@@ -1884,7 +1884,7 @@ const translations = {
     // ── Tab 1: City League Meta ──────────────────────────────
     'cl.cityLeagueDev':         'City League Development',
     'cl.seasonClosedTitle':     '📅 Season pause:',
-    'cl.seasonClosed':          'The current City League season has concluded. New events resume in September.',
+    'cl.seasonClosed':          'limitlesstcg.com/jp states that the current City League season has concluded and that events resume in September. The date below is the newest tournament actually in the data.',
     'cl.seasonClosedHint':      'The historical filters and deck-analysis tools below still work against the last available snapshot.',
     'mc.recCounterPickLabel':   'Counter-Pick',
     'mc.recCounterPickTooltip': 'Low field share but strong matchups against the dominant decks — high reward, but tournament results vary more than for mainstream picks.',
@@ -4541,7 +4541,7 @@ const translations = {
     // ── Tab 1: City League Meta ──────────────────────────────
     'cl.cityLeagueDev':         'City League Entwicklung',
     'cl.seasonClosedTitle':     '📅 Saison-Pause:',
-    'cl.seasonClosed':          'Die aktuelle City-League-Saison ist beendet. Neue Events starten im September.',
+    'cl.seasonClosed':          'limitlesstcg.com/jp meldet, die aktuelle City-League-Saison sei beendet und neue Events starteten im September. Das Datum unten ist das juengste Turnier, das wirklich in den Daten steht.',
     'cl.seasonClosedHint':      'Die historischen Filter und Deck-Analyse-Tools unten arbeiten weiterhin mit dem letzten verfügbaren Snapshot.',
     'mc.recCounterPickLabel':   'Counter-Pick',
     'mc.recCounterPickTooltip': 'Niedriger Field-Anteil aber starke Matchups gegen die dominanten Decks — hohes Reward, aber Turnierergebnisse streuen mehr als bei Mainstream-Picks.',
