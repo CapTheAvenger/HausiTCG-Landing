@@ -146,6 +146,54 @@
     border: 1.5px solid rgba(0,0,0,0.15) !important;
 }
 
+/* DAS TIPPZIEL IST GROESSER ALS DER KNOPF (10.09.2026).
+   ------------------------------------------------------------------
+   BEFUND, live an thedipidis.app nachgemessen: auf dem Reiter Karten
+   sind 463 von 483 klickbaren Flaechen kleiner als die 44x44 px, die
+   als Mindestgroesse fuer einen Finger gelten. Die kleinsten sind
+   diese vier Abzeichen je Kartenkachel: 26x26 px, 3 px auseinander,
+   Kachelbreite 134 px.
+
+   WARUM SIE NICHT EINFACH GROESSER WERDEN:
+   Der Kommentar oben rechnet es vor, und die Rechnung stimmt weiter.
+   Vier Knoepfe zu 44 px plus drei Luecken zu 3 px brauchen
+   4*44 + 3*3 = 185 px. Das Kartenbild ist bei 390 px Bildschirmbreite
+   173,5 px breit. 44x44 px sichtbar passt hier NICHT — nicht, weil es
+   niemand wollte, sondern weil der Platz fehlt.
+
+   WAS STATTDESSEN GEHT: die sichtbare Groesse bleibt, das TIPPZIEL
+   waechst. Ein ::after ohne eigene Farbe legt sich ueber den Knopf
+   hinaus; der Finger trifft die groessere Flaeche, das Auge sieht den
+   kleinen Knopf.
+
+   UND WIE WEIT ES GEHT — das ist der Punkt, an dem man sich selbst
+   betruegen koennte:
+     * SENKRECHT ist Platz. Ueber und unter der Leiste liegt das
+       Kartenbild, kein anderes Ziel. 44 px ganz.
+     * WAAGERECHT nicht. Die Nachbarn stehen 3 px entfernt. Ein
+       44 px breites Ziel wuerde jeden Nachbarn um (44-26-3)/2 = 7,5 px
+       ueberlappen — dann trifft der Finger den FALSCHEN Knopf, und das
+       ist schlimmer als ein kleines Ziel. Die Erweiterung geht deshalb
+       nur bis zur Mitte der Luecke: 1,5 px je Seite, macht 29 px.
+
+   ERGEBNIS: 29 x 44 px statt 26 x 26 px. Das ist die groesste Flaeche,
+   die sich hier ohne Ueberlappung erreichen laesst — und es ist
+   ausdruecklich NICHT die empfohlene Mindestgroesse. Wer sie erreichen
+   will, muss die Leiste umbauen (zwei Reihen zu zwei Knoepfen, oder
+   die Aktionen hinter ein Menue). Das ist eine Gestaltungsfrage und
+   keine, die eine CSS-Regel beantwortet.
+
+   Gehalten von tests/unit/test-tippziele-kartenkacheln.js. */
+#cards .card-database-top-actions .card-badge::after {
+    content: "" !important;
+    position: absolute !important;
+    top: -9px !important;
+    bottom: -9px !important;
+    left: -1.5px !important;
+    right: -1.5px !important;
+    /* Keine Farbe, kein Rand — die Flaeche ist unsichtbar. */
+}
+
 #cards .card-database-top-actions .btn-green.card-badge {
     background: #1f8035 !important;
     color: #fff !important;
