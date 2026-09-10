@@ -17,11 +17,25 @@
  *   Spec rule 3 — placement weight is step-function B:
  *     Top-4 = 1.0, Top-8 = 0.7, Top-16 = 0.5, Top-32 = 0.3,
  *     uebriger Top Cut = 0.1. _placementWeight() below.
- *     ACHTUNG: die Grundgesamtheit dieser Datei IST der Top Cut —
- *     limitlesstcg.com veroeffentlicht Decklisten erst ab Tag 2, und
- *     die CSV fuehrt je Turnier genau diese Spieler (nachgezaehlt bei
- *     PLACEMENT_WEIGHT_BANDS). Das letzte Band heisst deshalb NICHT
- *     "Day-1-only"; eine Day-1-only-Liste gibt es hier nicht.
+ *     ACHTUNG: fuer die PAPIERZEILEN (quelle='papier') IST die
+ *     Grundgesamtheit der Top Cut — limitlesstcg.com veroeffentlicht
+ *     Decklisten erst ab Tag 2, und die CSV fuehrt je Turnier genau
+ *     diese Spieler (nachgezaehlt bei PLACEMENT_WEIGHT_BANDS). Das
+ *     letzte Band heisst deshalb NICHT "Day-1-only"; eine
+ *     Day-1-only-Liste gibt es dort nicht.
+ *
+ *     SEIT DEM 10.09.2026 GILT DAS NICHT MEHR FUER DIE GANZE DATEI.
+ *     Der Wochenlauf #135 hat erstmals Online-Zeilen (quelle='online',
+ *     play.limitlesstcg.com) in dieselbe CSV geschrieben — dort ist
+ *     JEDE Liste des Feldes veroeffentlicht, nicht nur der Cut.
+ *     Gemessen: 14 Turniere, 1.319 Listen, Plaetze 1 bis zur vollen
+ *     Feldgroesse (z. B. 128 von 128 bei REFINE Autumn Series).
+ *     Fuer diese Zeilen traegt NICHT das absolute Band, sondern das
+ *     Quantilsband (PLACEMENT_PERCENTILE_BANDS) — genau dafuer wurde
+ *     es am 05.09.2026 gebaut: Platz 100 von 104 ergibt q = 0,96 und
+ *     damit 0,1, waehrend Platz 3 von 3.743 auf 1,0 kommt. Das
+ *     funktioniert aber nur mit einer BEKANNTEN Feldgroesse; Zeilen
+ *     ohne sie werden in _loadAll gezaehlt und weggelassen.
  *
  *   Spec rule 4 — tournament size weight = log(players)/log(2000):
  *     Capped at 1.0 for ≥ 2000-player events. _sizeWeight() below.
@@ -293,6 +307,11 @@
                                  // wird — der Namensweg bleibt also die
                                  // Quelle, nicht der Rueckfall.
   let _loadPromise     = null;
+  // Was der Filter oben weggelassen hat — als Zahl abrufbar, damit
+  // ein Test das gegen einen Grundstand halten kann statt gegen
+  // eine absolute Schwelle (CLAUDE.md: Veraenderung messen).
+  let _ausgelasseneOnlineZeilen   = 0;
+  let _ausgelasseneOnlineTurniere = [];
 
   function _norm(s) {
     return String(s || '').trim().toLowerCase();
@@ -492,6 +511,40 @@
       } catch (e) {
         console.warn('[MostConsistencyBuilder] keine Turnier-Bruecke:', e);
       }
+
+      // ── Die Feldgroessen der ONLINE-Turniere ────────────────────
+      //
+      // WARUM DAS SEIT DEM 10.09.2026 HIER STEHT: der Wochenlauf
+      // #135 hat zum ersten Mal Online-Zeilen in DIESELBE CSV
+      // geschrieben (backend/scrapers/limitless_online_decklist_
+      // scraper.py, quelle='online'). Die haben keine Labs-Nummer —
+      // `sizes` kannte sie also nicht, `_sizeWeight(0)` vergab still
+      // den Notwert 0,5.
+      //
+      // GEMESSEN an data/tournament_decklists_per_player.csv,
+      // Stand c86c3494: 64.368 Zeilen, davon 33.909 online
+      // (14 Turniere, 32-166 Listen je Turnier). Als Listen: 1.319
+      // online gegen 1.201 Papier — und die Online-Listen trugen zum
+      // Notwert 24,6 % der gesamten Gewichtsmasse.
+      //
+      // Die Zahl gibt es gemessen an zwei Stellen:
+      //   1. Spalte `spielerzahl` der Zeile selbst. Der Online-
+      //      Scraper liest sie aus `data-players` der Turnierliste.
+      //   2. data/online_api_tournaments.csv, Spalte `players`
+      //      (Semikolon-getrennt), ueber `tournament_id`.
+      // Punkt 1 ist der Normalweg; Punkt 2 faengt den Bestand ab,
+      // der vor dem 10.09.2026 ohne die Spalte geschrieben wurde.
+      try {
+        const onl = await _loadCsv('data/online_api_tournaments.csv');
+        for (const r of onl) {
+          const tid = String(r.tournament_id || '').trim();
+          const n   = parseInt(String(r.players || '').trim(), 10);
+          if (!tid || !Number.isFinite(n) || n <= 0) continue;
+          if (!sizes.has(tid) || sizes.get(tid) < n) sizes.set(tid, n);
+        }
+      } catch (e) {
+        console.warn('[MostConsistencyBuilder] keine Online-Feldgroessen:', e);
+      }
     } catch (e) {
       console.warn('[MostConsistencyBuilder] could not load labs sizes:', e);
     }
@@ -515,12 +568,36 @@
 
       _byArchetype = new Map();
       _byList      = new Map();
+      /* Online-Zeilen OHNE bekannte Feldgroesse werden gezaehlt und
+         weggelassen — nicht zum Notwert 0,5 mitgewogen.
+         Begruendung im Block bei den Online-Feldgroessen oben:
+         `_sizeWeight(0)` ist keine gemessene Zahl, und 0,5 stellt ein
+         Wochenturnier mit 39 Leuten neben ein Regional mit 2.143. Eine
+         weggelassene Liste ist nachweisbar weg; eine falsch gewichtete
+         faellt niemandem auf. Sobald der naechste Lauf die Spalte
+         `spielerzahl` fuellt, kommen sie von selbst zurueck. */
+      let _ohneFeld = 0;
+      const _ohneFeldTurniere = new Set();
       for (const r of rows) {
         const arch = (r.deck_archetype || '').trim();
         if (!arch) continue;
         const tid  = (r.tournament_id || r.limitless_tournament_id || '').trim();
         const ply  = (r.player_name || '').trim();
         const place = parseInt(r.place || '999', 10) || 999;
+        if ((r.quelle || '').trim() === 'online') {
+          // Erst die Zahl aus der Zeile selbst, dann die aus
+          // data/online_api_tournaments.csv. Beide sind gemessen.
+          const ausZeile = parseInt(String(r.spielerzahl || '').trim(), 10);
+          const feld = (Number.isFinite(ausZeile) && ausZeile > 0)
+            ? ausZeile
+            : (_tournamentSizes.get(tid) || 0);
+          if (feld <= 0) {
+            _ohneFeld++;
+            _ohneFeldTurniere.add(tid);
+            continue;
+          }
+          if (!_tournamentSizes.has(tid)) _tournamentSizes.set(tid, feld);
+        }
         const listKey = `${tid}|${ply}|${place}`;
         if (!_byList.has(listKey)) {
           const listObj = {
@@ -532,6 +609,10 @@
             player_name:      ply,
             deck_archetype:   arch,
             deck_slug:        r.deck_slug || '',
+            // Woher die Liste stammt. Ohne dieses Feld koennte dq
+            // nicht sagen, ob "Tag 2" fuer den Satz darunter noch
+            // stimmt — Online-Turniere veroeffentlichen JEDE Liste.
+            quelle:           (r.quelle || '').trim(),
             wins:             parseInt(r.wins  || '0', 10) || 0,
             losses:           parseInt(r.losses || '0', 10) || 0,
             ties:             parseInt(r.ties  || '0', 10) || 0,
@@ -559,6 +640,16 @@
           type:          r.type || '',
         });
       }
+      if (_ohneFeld > 0) {
+        console.warn('[MostConsistencyBuilder] ' + _ohneFeld
+          + ' Online-Zeile(n) aus ' + _ohneFeldTurniere.size
+          + ' Turnier(en) ohne bekannte Feldgroesse weggelassen — '
+          + 'weder Spalte `spielerzahl` noch '
+          + 'data/online_api_tournaments.csv fuehren eine Spielerzahl. '
+          + 'Kennungen: ' + Array.from(_ohneFeldTurniere).join(', '));
+      }
+      _ausgelasseneOnlineZeilen  = _ohneFeld;
+      _ausgelasseneOnlineTurniere = Array.from(_ohneFeldTurniere);
       _loadPromise = null;
     })();
     return _loadPromise;
@@ -1504,6 +1595,7 @@
        eine halb summierte Feldgroesse waere eine erfundene Zahl. */
     const _arch = _norm((lists[0] && lists[0].deck_archetype) || '');
     let _piloten = 0, _feld = 0;
+    const _online = lists.filter(l => (l.quelle || '') === 'online').length;
     let _pilotenVollstaendig = !!_arch, _feldVollstaendig = _turnierIds.size > 0;
     for (const tid of _turnierIds) {
       const pc = _archetypPiloten ? _archetypPiloten.get(tid + '|' + _arch) : undefined;
@@ -1522,8 +1614,15 @@
       juengstes_turnier:     _juengstes,
       platz_von:             _platzMin,
       platz_bis:             _platzMax,
-      // Die Grundgesamtheit dieser Datei ist immer der Tag-2-Cut.
-      nur_tag2:              true,
+      /* Ob die Grundgesamtheit noch der Tag-2-Cut IST — gemessen,
+         nicht behauptet.
+         Bis zum 10.09.2026 stand hier fest `true`. Das war richtig,
+         solange nur der Papier-Scraper in die CSV schrieb. Seit
+         Wochenlauf #135 stehen dort auch Online-Listen, und dort ist
+         JEDE Liste des Feldes veroeffentlicht. Ein Bau, der beide
+         mischt, darf sich nicht "Tag 2" nennen. */
+      nur_tag2:              _online === 0,
+      n_online:              _online,
       n_piloten:             _pilotenVollstaendig ? _piloten : null,
       feldgroesse:           _feldVollstaendig ? _feld : null,
     };
@@ -1826,9 +1925,21 @@
     const n = Number(d.n_lists || 0);
     const de = _istDeutsch(lang);
     const zahl = (x) => de ? String(x).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : String(x);
-    const kopf = de
-      ? `${zahl(n)} Tag-2-${n === 1 ? 'Liste' : 'Listen'}`
-      : `${zahl(n)} day-2 ${n === 1 ? 'list' : 'lists'}`;
+    /* "Tag-2-Listen" nur, solange es wirklich nur Tag-2-Listen sind.
+       Mischt der Bau Online-Listen dazu (dq.nur_tag2 === false), waere
+       das Wort falsch — dann steht die nackte Listenzahl und der
+       Online-Anteil daneben. */
+    const online = Number(d.n_online || 0);
+    const gemischt = d.nur_tag2 === false || online > 0;
+    const kopf = gemischt
+      ? (de
+        ? `${zahl(n)} ${n === 1 ? 'Liste' : 'Listen'}`
+          + (online > 0 ? ` (davon ${zahl(online)} online)` : '')
+        : `${zahl(n)} ${n === 1 ? 'list' : 'lists'}`
+          + (online > 0 ? ` (${zahl(online)} online)` : ''))
+      : (de
+        ? `${zahl(n)} Tag-2-${n === 1 ? 'Liste' : 'Listen'}`
+        : `${zahl(n)} day-2 ${n === 1 ? 'list' : 'lists'}`);
     const piloten = Number.isFinite(d.n_piloten) && d.n_piloten > 0 ? d.n_piloten : null;
     const feld    = Number.isFinite(d.feldgroesse) && d.feldgroesse > 0 ? d.feldgroesse : null;
     let satz = kopf;
@@ -1851,9 +1962,15 @@
     // der Kachel "6.572" und im Tooltip "6572".
     const zahl = (x) => de ? String(x).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : String(x);
     const nL = zahl(Number(d.n_lists || 0));
+    const online = Number(d.n_online || 0);
     if (de) {
-      let t = 'Limitless veroeffentlicht Decklisten erst ab Tag 2. Der Bau steht '
-            + 'deshalb auf dem Top Cut, nicht auf dem ganzen Feld';
+      let t = online > 0
+        ? `Gemischte Grundlage: ${zahl(online)} der ${nL} Listen kommen aus `
+          + 'Online-Turnieren, wo JEDE Liste des Feldes veroeffentlicht wird. '
+          + 'Der Rest kommt von limitlesstcg.com, das Decklisten erst ab '
+          + 'Tag 2 zeigt'
+        : 'Limitless veroeffentlicht Decklisten erst ab Tag 2. Der Bau steht '
+          + 'deshalb auf dem Top Cut, nicht auf dem ganzen Feld';
       if (piloten !== null) {
         t += ` — ${zahl(piloten)} Spieler haben diesen Archetyp gespielt, `
            + `veroeffentlicht sind ${nL} ihrer Listen`;
@@ -1861,8 +1978,12 @@
       if (feld !== null) t += `, bei ${zahl(feld)} Spielern im Feld`;
       return t + '.';
     }
-    let t = 'Limitless publishes decklists from day 2 onward, so this build rests '
-          + 'on the top cut, not the whole field';
+    let t = online > 0
+      ? `Mixed basis: ${online} of ${nL} lists come from online tournaments, `
+        + 'where every list in the field is published. The rest come from '
+        + 'limitlesstcg.com, which shows decklists from day 2 onward'
+      : 'Limitless publishes decklists from day 2 onward, so this build rests '
+        + 'on the top cut, not the whole field';
     if (piloten !== null) {
       t += ` — ${piloten} players ran this archetype, `
          + `${nL} of their lists are published`;
@@ -1975,6 +2096,8 @@
     _internals: {
       placementWeight:  _placementWeight,
       sizeWeight:       _sizeWeight,
+      ausgelasseneOnlineZeilen:   () => _ausgelasseneOnlineZeilen,
+      ausgelasseneOnlineTurniere: () => _ausgelasseneOnlineTurniere.slice(),
       isBasicEnergy:    _isBasicEnergy,
       isEnergy:         _isEnergy,
       isAceSpec:        _isAceSpec,

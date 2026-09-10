@@ -182,6 +182,19 @@ jobs:
           cp -r js _site/js
           cp -r images _site/images 2>/dev/null || true
           cp -r data _site/data
+          # data/_archive wird NICHT ausgeliefert (10.09.2026). Gemessen:
+          # 21 MB, 14 Dateien (soft-delete-2026-03-31/), reiner Altbestand.
+          # `grep -rn "_archive" js/ data/*.json data/*.md tests/` findet
+          # ausserhalb dieses Ordners keine Datei, die daraus liest — die
+          # einzigen Treffer sind ein unabhaengiges "archive" in CSV-
+          # Dateinamen eines anderen Tests. Der eigene Audit
+          # (docs/audit/infrastructure/02-data-sources.md, 2.3.4) bestaetigt
+          # den Ordner als sauber archivierten Soft-Delete-Rest, und
+          # scripts/generate-offline-manifest.py schliesst ihn schon aus
+          # dem Offline-Prefetch aus. .gitignore fuehrt _archive/ ebenfalls
+          # schon als ignoriert (AUDIT_GITHUB.md F-08). rm statt --exclude
+          # beim cp, weil `cp -r` kein --exclude kennt.
+          rm -rf _site/data/_archive
           # Die Anleitung. Seit dem 18.08.2026 laedt js/ds-tutorial.js sie
           # aus tutorial/ nach, statt sie in index.html mitzuschleppen —
           # ohne diese Zeile fehlt sie im Deploy und der Tab zeigt seinen

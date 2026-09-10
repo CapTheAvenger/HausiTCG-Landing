@@ -57,19 +57,54 @@ def test_beide_dateien_haben_ueberhaupt_zeilen():
     assert len(LABS) > 100, f"nur {len(LABS)} Labs-Zeilen"
 
 
-def test_die_gleichnamigen_spalten_ueberschneiden_sich_nicht():
-    a = _menge(DECKLISTEN, "deck_slug")
-    b = _menge(LABS, "deck_slug")
-    assert a and b, "eine der beiden deck_slug-Spalten ist leer"
-    gemeinsam = a & b
-    assert not gemeinsam, (
-        f"die beiden deck_slug-Spalten ueberschneiden sich jetzt in "
-        f"{len(gemeinsam)} Werten. Das ist KEIN Fehler, den man repariert: "
-        f"eine der Quellen hat ihre Schreibweise geaendert. Die Warnung in "
-        f"data/_consumers.md gehoert dann ueberdacht — und moeglicherweise "
-        f"ist der Verbund ueber deck_slug jetzt der richtige. "
-        f"Beispiele: {sorted(gemeinsam)[:3]}"
-    )
+def _nach_quelle(quelle):
+    return _menge([z for z in DECKLISTEN
+                   if (z.get("quelle") or "").strip() == quelle], "deck_slug")
+
+
+def test_papierzeilen_fuehren_zahlen_online_zeilen_namen():
+    """SEIT DEM 10.09.2026 SIND ES DREI BEDEUTUNGEN, NICHT ZWEI.
+
+    Der Wochenlauf #135 hat Online-Zeilen dazugeschrieben, und deren
+    `deck_slug` ist ein NAMENSSCHLUESSEL ("alakazam-dusknoir") — dieselbe
+    Bauart wie in labs_tournament_decks.csv, waehrend die Papierzeilen
+    eine Zahlenkennung fuehren ("28752").
+
+    Geprueft wird die FORM je Herkunft. Eine Vermischung innerhalb einer
+    Herkunft waere der eigentliche Befund: dann hat eine Quelle ihre
+    Schreibweise geaendert, und data/_consumers.md gehoert nachgezogen.
+    """
+    papier = _nach_quelle("papier")
+    online = _nach_quelle("online")
+    assert papier, "keine Papier-deck_slugs"
+    keine_zahl = sorted(w for w in papier if not w.isdigit())
+    assert not keine_zahl, (
+        f"{len(keine_zahl)} Papier-deck_slug(s) sind keine Zahl: "
+        f"{keine_zahl[:5]}")
+    if online:
+        zahlen = sorted(w for w in online if w.isdigit())
+        assert not zahlen, (
+            f"{len(zahlen)} Online-deck_slug(s) sind eine Zahl: {zahlen[:5]}")
+
+
+def test_eine_ueberschneidung_kommt_nur_ueber_online_zustande():
+    """Die Papierhaelfte darf die Labs-Werte weiterhin NICHT treffen.
+
+    Genau das war der urspruengliche Befund: ein Verbund ueber
+    `deck_slug` ergab 0 Treffer und sah aus wie "diese Woche nichts
+    gefunden". Fuer die Papierhaelfte gilt das unveraendert; die
+    Online-Haelfte trifft jetzt (gemessen 10.09.2026: 79 Werte), und
+    genau deshalb ist der Verbund ueber die NAMEN der richtige — er
+    gilt fuer beide Herkuenfte.
+    """
+    labs = _menge(LABS, "deck_slug")
+    assert labs, "labs deck_slug ist leer"
+    gemeinsam_papier = _nach_quelle("papier") & labs
+    assert not gemeinsam_papier, (
+        f"die Papierzeilen ueberschneiden sich jetzt mit den Labs-Werten "
+        f"in {len(gemeinsam_papier)} Faellen. Eine Quelle hat ihre "
+        f"Schreibweise geaendert — data/_consumers.md gehoert ueberdacht. "
+        f"Beispiele: {sorted(gemeinsam_papier)[:3]}")
 
 
 def test_der_namensverbund_traegt():

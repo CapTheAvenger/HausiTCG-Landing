@@ -457,7 +457,34 @@ Ein Umbenennen der Spalten waere die saubere Loesung und ist genau das, was
 diese Datei oben verbietet: die Namen sind veroeffentlicht, und ein anderes
 Projekt liest sie. Deshalb steht hier die Warnung statt einer Umbenennung.
 
-Gehalten von `tests/python/test_deck_slug_kein_verbund.py`: dass die beiden
-Spalten weiterhin nicht ueberlappen (taeten sie es ploetzlich, hat sich eine
-Quelle geaendert und diese Warnung gehoert ueberdacht), und dass der
-Namensverbund weiterhin die grosse Mehrheit trifft.
+### NACHTRAG 10.09.2026: jetzt sind es DREI Bedeutungen, nicht zwei
+
+Der Wochenlauf #135 hat erstmals Online-Zeilen in
+`tournament_decklists_per_player.csv` geschrieben (`quelle` = `online`,
+Quelle: play.limitlesstcg.com). Deren `deck_slug` ist **kein** Zahlenschluessel,
+sondern ein Namensschluessel derselben Bauart wie in
+`labs_tournament_decks.csv`:
+
+| Zeilen | `deck_slug` | Beispiel |
+| --- | --- | --- |
+| `quelle` = `papier` | Zahlenkennung von limitlesstcg.com | `28752` |
+| `quelle` = `online` | Namensschluessel von play.limitlesstcg.com | `alakazam-dusknoir` |
+| `labs_tournament_decks.csv` | Namensschluessel der Labs-Daten | `alakazam-dudunsparce` |
+
+Gemessen am selben Tag: **79 Werte** ueberschneiden sich jetzt zwischen der
+Decklisten- und der Labs-Datei — ausschliesslich ueber die Online-Zeilen.
+
+**Was das fuer einen Verbund heisst:** ein `JOIN` ueber `deck_slug` trifft
+jetzt etwas, aber nur die Online-Haelfte, und still. Wer die ganze Datei
+verbindet, bekommt ein Ergebnis, das nach "teilweise gefunden" aussieht und in
+Wahrheit "nur eine Herkunft gefunden" heisst. Der Verbund ueber
+`deck_archetype` == `deck_name` bleibt deshalb der richtige — er gilt fuer
+beide Herkuenfte.
+
+Umbenannt wird weiterhin nichts: die Spaltennamen sind veroeffentlicht.
+
+Gehalten von `tests/python/test_deck_slug_kein_verbund.py`: dass die
+Papierzeilen weiterhin Zahlen fuehren und die Online-Zeilen Namen (eine
+Vermischung INNERHALB einer Herkunft waere der Befund), dass eine
+Ueberschneidung mit den Labs-Werten nur ueber Online-Zeilen zustande kommt,
+und dass der Namensverbund weiterhin die grosse Mehrheit trifft.

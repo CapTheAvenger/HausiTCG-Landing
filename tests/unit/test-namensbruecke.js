@@ -165,9 +165,29 @@ describe('Die Namensbrücke ist gepflegt, nicht geraten', () => {
 // 2. Was bewusst offen bleibt
 // ───────────────────────────────────────────────────────────────────
 describe('Was nicht verbunden wird, bleibt sichtbar unverbunden', () => {
-    it('jeder offene Eintrag ist ein echter Turniername ohne Ladder-Entsprechung', () => {
+    it('jeder offene Eintrag traegt einen Grund und trifft nicht direkt', () => {
+        /* NICHT geprueft: ob der Name gerade in der Turnierdatei steht.
+         *
+         * Genau das stand hier bis zum 10.09.2026 — und es widersprach dem
+         * Kommentar drei Zusicherungen weiter unten, der dieselbe Falle
+         * fuer die Gegenrichtung schon beschreibt: die Turnierdatei ist ein
+         * ROLLENDES FENSTER.
+         *
+         * GEMESSEN am 10.09.2026: "Roaring Moon Flutter Mane" kam am
+         * 09.09. mit EINEM Antritt herein, wurde vormittags als bewusst
+         * unverbunden eingetragen — und war nach dem Wochenlauf um 11:37
+         * schon wieder aus der Datei gefallen. Der Test stand rot, ohne
+         * dass sich irgendetwas verschlechtert haette.
+         *
+         * Ein ausgewiesener Eintrag ohne aktuellen Treffer ist wirkungslos,
+         * nicht falsch — und beim naechsten Auftreten des Decks sofort
+         * wieder richtig. Genau derselbe Satz steht unten fuer die
+         * Gegenrichtung; jetzt gilt er in beide Richtungen.
+         *
+         * Was hier bleibt, ist das, was wirklich schaedlich waere: ein
+         * Eintrag, der die Ladder DOCH direkt trifft (dann gehoert er
+         * verbrueckt, nicht offengelassen), und ein Eintrag ohne Grund. */
         for (const e of ALIAS.bewusst_nicht_verbunden) {
-            assert.ok(turnierNamen.has(e.turnier), `"${e.turnier}" gibt es gar nicht`);
             assert.ok(!ladderNamen.has(e.turnier),
                 `"${e.turnier}" trifft direkt und gehört nicht in diese Liste`);
             assert.ok(e.grund && e.grund.length > 30,
