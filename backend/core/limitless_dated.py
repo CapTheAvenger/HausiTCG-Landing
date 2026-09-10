@@ -19,9 +19,9 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 try:  # als Paket (backend.core) ...
-    from .ace_spec_regel import entscheide_zeile, lade_ace_liste
+    from .ace_spec_regel import entscheide, lade_ace_liste, belege_aus_bestand
 except ImportError:  # ... oder als Einzelmodul, wie die Scraper es laden
-    from ace_spec_regel import entscheide_zeile, lade_ace_liste
+    from ace_spec_regel import entscheide, lade_ace_liste, belege_aus_bestand
 
 try:
     from zoneinfo import ZoneInfo  # Python 3.9+
@@ -360,11 +360,16 @@ def aggregate_tournament_archetype(
             "type": type_,
             "image_url": image_url,
             # Drei Werte, jeder mit Beleg — siehe
-            # backend/core/ace_spec_regel.py. Frueher stand hier fest "";
-            # type_ und max_count liegen aber vor, und damit ist ein Teil
-            # der Zeilen belegbar statt unbekannt.
-            "is_ace_spec": entscheide_zeile(
-                name, lade_ace_liste(), agg["max_count"], type_),
+            # backend/core/ace_spec_regel.py.
+            #
+            # `entscheide` statt `entscheide_zeile` (10.09.2026): diese
+            # Datei wird je (Turnier, Archetyp) vollstaendig neu
+            # geschrieben, also feiner geschnitten als jede andere. Die
+            # zeilenweise Form sah dabei nie, dass dieselbe Karte in einem
+            # anderen Turnier zweimal lag — 4506 von 29153 Zeilen wichen
+            # deshalb am 10.09.2026 vom Bestandsabgleich ab.
+            "is_ace_spec": entscheide(
+                name, lade_ace_liste(), *belege_aus_bestand()),
             "total_players": int(total_players or 0),
         })
     return out
