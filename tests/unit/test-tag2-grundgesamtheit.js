@@ -95,6 +95,27 @@ function erhebe(tid) {
 
 const ERHEBUNG = TURNIERE.map(erhebe);
 
+/* Feldgroessen der Online-Turniere, aus derselben Datei, die auch der
+   Motor liest. Semikolon-getrennt und ohne BOM. */
+const ONLINE_FELD = (() => {
+    const m = new Map();
+    try {
+        const txt = fs.readFileSync(D('online_api_tournaments.csv'), 'utf8');
+        const zeilen = txt.split('\n');
+        const kopf = zeilen[0].replace(/^﻿/, '').split(';');
+        const iId = kopf.indexOf('tournament_id');
+        const iPl = kopf.indexOf('players');
+        if (iId < 0 || iPl < 0) return m;
+        for (const z of zeilen.slice(1)) {
+            if (!z.trim()) continue;
+            const f = z.split(';');
+            const n = parseInt(f[iPl], 10);
+            if (f[iId] && Number.isFinite(n) && n > 0) m.set(f[iId].trim(), n);
+        }
+    } catch (_) { /* Datei fehlt: dann bleibt die Karte leer */ }
+    return m;
+})();
+
 // ── Module laden (ohne jsdom) ───────────────────────────────────────
 function ladeMotor(ersatz) {
     // `ersatz` ist eine Zuordnung Dateiname -> CSV-Text. Damit laesst
@@ -277,13 +298,31 @@ describe('dataQuality traegt Piloten und Feldgroesse aus den Labs-Dateien', () =
             const res = await MCB.build(arch);
             const dq = res && res.dataQuality;
             if (!dq || !dq.sufficient) continue;
-            assert.equal(dq.nur_tag2, true,
-                `${arch}: dataQuality kennzeichnet die Quelle nicht als Tag 2`);
+            /* `nur_tag2` ist seit dem 10.09.2026 GEMESSEN, nicht fest.
+               Der Wochenlauf #135 hat Online-Listen in dieselbe CSV
+               geschrieben; dort ist jede Liste des Feldes
+               veroeffentlicht, nicht nur der Cut. Ein Bau, der beide
+               mischt, darf sich nicht "Tag 2" nennen — die Zusicherung
+               prueft deshalb den ZUSAMMENHANG, nicht den festen Wert. */
+            assert.equal(dq.nur_tag2, Number(dq.n_online || 0) === 0,
+                `${arch}: nur_tag2=${dq.nur_tag2} passt nicht zu `
+                + `n_online=${dq.n_online}`);
+            const listen = MCB.listsForArchetype(arch);
+            const sollOnline = listen.filter(
+                l => String(l.quelle || '') === 'online').length;
+            assert.equal(Number(dq.n_online || 0), sollOnline,
+                `${arch}: n_online weicht von den Listen ab`);
 
             // Sollwerte aus denselben Dateien rechnen.
             const tids = [...new Set(
                 MCB.listsForArchetype(arch).map(l => String(l.tournament_id || '').trim()))]
                 .filter(Boolean);
+            /* Die Feldgroesse eines ONLINE-Turniers steht nicht in den
+               Labs-Dateien, sondern in data/online_api_tournaments.csv
+               (Spalte `players`, Semikolon-getrennt) bzw. in der Spalte
+               `spielerzahl` der Zeile selbst. Beides sind gemessene
+               Zahlen; der Sollwert hier muss sie deshalb kennen, sonst
+               prueft der Test die Papierwelt gegen eine gemischte. */
             let sollPiloten = 0, sollFeld = 0, pOk = true, fOk = tids.length > 0;
             for (const tid of tids) {
                 const zeile = LABS.find(r => String(r.tournament_id || '').trim() === tid
@@ -291,7 +330,9 @@ describe('dataQuality traegt Piloten und Feldgroesse aus den Labs-Dateien', () =
                 if (zeile && zahl(zeile.player_count) > 0) sollPiloten += zahl(zeile.player_count);
                 else pOk = false;
                 const e = ERHEBUNG.find(x => x.tid === tid);
-                if (e && e.feld > 0) sollFeld += e.feld; else fOk = false;
+                if (e && e.feld > 0) { sollFeld += e.feld; continue; }
+                const onl = ONLINE_FELD.get(tid);
+                if (onl > 0) sollFeld += onl; else fOk = false;
             }
             assert.equal(dq.n_piloten, pOk ? sollPiloten : null,
                 `${arch}: n_piloten weicht von labs player_count ab`);

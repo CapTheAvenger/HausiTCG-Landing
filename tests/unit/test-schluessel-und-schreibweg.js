@@ -232,17 +232,46 @@ describe('Deck-Builder: die Turniergroesse wird auch unter der Limitless-ID gefu
         // Die Bruecke in app-deck-builder.js bleibt: sie kostet nichts,
         // wenn die Kennungen stimmen, und faengt genau diesen Rueckfall
         // ab. Die Zusicherung darauf steht oben und ist unveraendert.
+        /* GEPRUEFT WIRD DER PAPIERZWEIG, NICHT DIE GANZE DATEI.
+         *
+         * Bis zum 10.09.2026 stand hier "keine einzige Zeile ohne
+         * tournament_id". Das war richtig, solange nur der
+         * Papier-Scraper in diese Datei schrieb. Der Wochenlauf #135
+         * hat am 10.09.2026 erstmals Online-Zeilen dazugeschrieben
+         * (quelle='online', play.limitlesstcg.com) — die haben
+         * KONSTRUKTIONSBEDINGT keine Labs-Nummer, das steht so im Kopf
+         * von backend/scrapers/limitless_online_decklist_scraper.py.
+         *
+         * GEMESSEN am Stand c86c3494: 64.368 Zeilen, davon
+         * 30.459 quelle='papier' — alle mit tournament_id, keine
+         * einzige leer — und 33.909 quelle='online', keine einzige
+         * mit. Der Schnitt ist sauber, nicht ungefaehr.
+         *
+         * Die Zusicherung gilt deshalb je Herkunft: Papier MUSS eine
+         * Kennung tragen (das war der NAIC-Fehler), Online DARF keine
+         * haben (sonst waere eine erfunden worden). */
         const zeilen = lies('data/tournament_decklists_per_player.csv').split('\n');
         const kopf = zeilen[0].replace(/^﻿/, '').split(',');
         const iTid = kopf.indexOf('tournament_id');
         const iLim = kopf.indexOf('limitless_tournament_id');
-        assert.ok(iTid >= 0 && iLim >= 0);
-        const leer = zeilen.slice(1).filter(z => z && z.split(',')[iTid] === '');
+        const iQue = kopf.indexOf('quelle');
+        assert.ok(iTid >= 0 && iLim >= 0 && iQue >= 0);
+        const daten = zeilen.slice(1).filter(z => z).map(z => z.split(','));
+        const papier = daten.filter(f => f[iQue] === 'papier');
+        const online = daten.filter(f => f[iQue] === 'online');
+        assert.ok(papier.length > 0 && online.length > 0,
+            `Datei fuehrt nicht mehr beide Herkuenfte: papier=${papier.length}, `
+            + `online=${online.length}`);
+        const leer = papier.filter(f => f[iTid] === '');
         assert.equal(leer.length, 0,
-            `${leer.length} Zeile(n) ohne tournament_id — der Rueckfall auf `
-            + `limitless_tournament_id ist zurueck und _sizeWeight vergibt `
+            `${leer.length} PAPIER-Zeile(n) ohne tournament_id — der Rueckfall `
+            + `auf limitless_tournament_id ist zurueck und _sizeWeight vergibt `
             + `wieder still 0,5. Erste betroffene Limitless-ID: `
-            + (leer.length ? leer[0].split(',')[iLim] : '-'));
+            + (leer.length ? leer[0][iLim] : '-'));
+        const erfunden = online.filter(f => f[iTid] !== '');
+        assert.equal(erfunden.length, 0,
+            `${erfunden.length} ONLINE-Zeile(n) tragen eine Labs-Kennung. `
+            + `Online-Turniere haben keine — die waere geraten.`);
         // Und die Zuordnung stimmt inhaltlich, nicht nur formal:
         const naic = zeilen.slice(1).find(z => z && z.split(',')[iLim] === '518');
         assert.ok(naic, 'NAIC (518) ist nicht mehr in der Datei');
