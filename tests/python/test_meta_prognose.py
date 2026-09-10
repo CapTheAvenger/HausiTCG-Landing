@@ -203,25 +203,62 @@ DATEN = os.path.join(WURZEL, "data")
 def test_der_gemessene_fall_von_mega_excadrill_bleibt_stehen():
     """Der Regressionsriegel gegen den Vorher-Nenner.
 
-    Sauber TEF-PBL gegen TEF-PBL, am Turniertag getrennt:
-      vor  Worlds: 1.983 von 26.130 = 7,59 %
-      nach Worlds:   249 von  5.687 = 4,38 %
-
-    Rutscht ein fremdes Fenster in den Nenner, faellt der Vorwert auf
+    Sauber TEF-PBL gegen TEF-PBL, am Turniertag getrennt. Rutscht ein
+    fremdes Fenster in den Nenner, faellt der Vorwert von 7,59 % auf
     3,25 % und die Bewegung dreht das Vorzeichen. Genau das faengt diese
     Zusicherung.
+
+    WAS HIER EINGEFROREN IST UND WAS NICHT — korrigiert am 10.09.2026,
+    nachdem dieser Test `main` rot gemacht hat:
+
+    Das VORHER-Fenster ist ABGESCHLOSSEN (bis 27.08.2026). Da kann kein
+    Turnier mehr hineinkommen, also ist 7,59 % bei 26.130 Listen ein
+    fester Wert und darf als Zahl dastehen — er IST der Riegel.
+
+    Das NACHHER-Fenster ist OFFEN. Es waechst mit jedem Lauf: am
+    08.09.2026 waren es 249 von 5.687 Listen (4,38 %), am 10.09. schon
+    6.938 Listen (4,30 %). Die eingefrorene 4,38 war damit ein
+    Wochenwert, und der Auto-Lauf der Limitless-API hat ihn planmaessig
+    umgeworfen — die Zusicherung wurde rot, ohne dass etwas kaputt war,
+    und hat den Deploy angehalten.
+
+    An seine Stelle tritt eine GLEICHUNG gegen dieselbe Datei: die
+    Listen des Vorher-Fensters plus die des Luecken-Tages plus die des
+    Nachher-Fensters muessen genau die Listen des ganzen Fensters
+    ergeben. Genau das faellt um, wenn ein fremdes Fenster
+    hineinrutscht — und sie gilt bei jedem Datenstand.
     """
     zeilen = list(csv.DictReader(
         open(os.path.join(DATEN, "online_api_archetypes.csv"), encoding="utf-8"),
         delimiter=";"))
     vor, gv, rv = bp.online_anteile(zeilen, "TEF-PBL", "2026-01-01", "2026-08-27")
     nach, gn, rn = bp.online_anteile(zeilen, "TEF-PBL", "2026-08-29", "2099-01-01")
+    _luecke, gl, _rl = bp.online_anteile(zeilen, "TEF-PBL", "2026-08-28", "2026-08-28")
+    _ganz, gg, _rg = bp.online_anteile(zeilen, "TEF-PBL", "2026-01-01", "2099-01-01")
+
+    # 1. Der feste Wert des abgeschlossenen Fensters. DAS ist der Riegel.
     assert vor["mega-excadrill-ex"] == pytest.approx(7.59, abs=0.05), (
         f"Vorwert {vor['mega-excadrill-ex']:.2f} % statt 7,59 % — steht ein "
-        f"fremdes Formatfenster im Nenner? (Nenner: {gv})")
-    assert nach["mega-excadrill-ex"] == pytest.approx(4.38, abs=0.05)
+        f"fremdes Formatfenster im Nenner? (Nenner: {gv}, erwartet 26.130)")
+    assert gv == 26130, (
+        f"der Nenner des abgeschlossenen Fensters ist {gv} statt 26.130. "
+        f"Er kann nicht wachsen — entweder wurden alte Zeilen entfernt "
+        f"oder das Fenster ist nicht mehr sauber auf TEF-PBL begrenzt")
+
+    # 2. Die Gleichung gegen die Datei: nichts faellt heraus, nichts
+    #    kommt doppelt vor. Welche Zahlen das diese Woche sind, ist egal.
+    assert gv + gl + gn == gg, (
+        f"die Fenster decken die Datei nicht sauber ab: "
+        f"{gv} + {gl} + {gn} = {gv + gl + gn}, ganzes Fenster {gg}. "
+        f"Entweder ueberlappen sie oder es fehlt ein Zeitraum")
+
+    # 3. Die Richtung der Bewegung — das eigentliche Ergebnis.
     assert vor["mega-excadrill-ex"] > nach["mega-excadrill-ex"], (
         "die Bewegung hat das Vorzeichen gedreht")
+
+    # 4. Und das Nachher-Fenster traegt ueberhaupt Listen. Ohne diese
+    #    Vorpruefung bestuende Punkt 3 auch bei einem leeren Fenster.
+    assert gn > 1000, f"das Nachher-Fenster hat nur {gn} Listen"
 
 
 @pytest.mark.skipif(
