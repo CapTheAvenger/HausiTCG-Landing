@@ -3213,6 +3213,11 @@ img[src*="limitlesstcg"] {
     justify-content: center;
     backdrop-filter: blur(3px);
     animation: helpModalIn .2s ease-out;
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
 }
 .modal-dialog {
     background: #1a1a2e;
@@ -3926,6 +3931,11 @@ img[src*="limitlesstcg"] {
     backdrop-filter: blur(4px);
     align-items: center;
     justify-content: center;
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
 }
 #drawSimulatorModal.show,
 #drawSimulatorModal[style*="display:flex"],

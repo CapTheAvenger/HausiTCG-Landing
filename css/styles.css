@@ -2199,7 +2199,12 @@
             height: 100%;
             background-color: rgba(0, 0, 0, 0.6);
             overflow: auto;
-        }
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
+}
         .auth-modal-content {
             background: #fff;
             padding: 24px;
@@ -2233,7 +2238,12 @@
             height: 100%;
             background-color: rgba(0, 0, 0, 0.8);
             overflow: auto;
-        }
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
+}
 
         .image-view-modal.show {
             display: block;
@@ -2468,7 +2478,12 @@
             justify-content: center;
             opacity: 0;
             transition: opacity 0.3s ease;
-        }
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
+}
 
         #fullCardOverlay.active,
         #singleCardModal.active,
@@ -2665,7 +2680,12 @@
             height: 100%;
             background-color: rgba(0, 0, 0, 0.6);
             animation: fadeIn 0.3s ease-in-out;
-        }
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
+}
 
         .rarity-switcher-modal.show {
             display: flex;
@@ -4395,6 +4415,11 @@
     align-items: center;
     cursor: pointer;
     animation: fadeIn 0.2s ease;
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
 }
 
 .fullscreen-card-modal.active {
@@ -6352,6 +6377,11 @@ details[open] > .tier-trending-summary::after {
     align-items: flex-end;
     justify-content: center;
     padding: 12px;
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
 }
 
 .battle-journal-overlay.is-open {
@@ -7770,9 +7800,11 @@ details[open] > .tier-trending-summary::after {
     font-size: 13px;
 }
 
-body.battle-journal-open {
-    overflow: hidden;
-}
+/* Die Seite hinter dem Journal haelt js/hintergrund-sperre.js an. Hier
+   stand `overflow: hidden` — wirkungslos, weil `html` (styles.css:225) ein
+   eigenes overflow traegt und ein overflow am Body den Viewport nur
+   erreicht, solange html auf visible steht. Die Klasse bleibt als Merkmal
+   fuer "das Journal ist offen". */
 
 @media (min-width: 760px) {
     .battle-journal-sheet {
@@ -8047,6 +8079,11 @@ body.battle-journal-open {
     backdrop-filter: blur(4px);
     align-items: center;
     justify-content: center;
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
 }
 #helpModal.active { display: flex; }
 
@@ -10848,13 +10885,25 @@ html[data-theme="dark"] .ma-matchup-list-context strong { color: #e2e8f0; }
    damit dieselbe Palette wie die Tabelle C in js/ds-share.js.
    tests/unit/test-archetype-card.js vergleicht die drei Stellen
    miteinander und schlaegt an, sobald eine davon wandert. */
-body.arc-open { overflow: hidden; }
+/* Die Seite hinter dem Vollbild haelt js/hintergrund-sperre.js an, nicht
+   diese Datei. Hier stand frueher `body.arc-open { overflow: hidden; }` —
+   das wirkt auf DIESER Seite nicht, weil `html` (styles.css:225) ein
+   eigenes `overflow-x: hidden` traegt und ein `overflow` am Body den
+   Viewport nur erreicht, solange `html` auf `visible` steht. Gemessen am
+   10.09.2026: Klasse gesetzt, `body` rechnete auf `hidden`, die Seite
+   scrollte trotzdem von 200 auf 700. Die Klasse bleibt als Merkmal fuer
+   "ein Vollbild ist offen", sie sperrt aber nichts. */
 .arc-overlay {
     position: fixed; inset: 0; z-index: 1200;
     display: flex; align-items: flex-start; justify-content: center;
     padding: 4vh 12px;
     background: rgba(5, 7, 15, 0.72);
     overflow-y: auto;
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
 }
 .arc-overlay[hidden] { display: none; }
 .arc-card {

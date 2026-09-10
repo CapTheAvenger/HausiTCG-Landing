@@ -17,6 +17,11 @@
     background: var(--ui-modal-backdrop);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
 }
 
 .ui-modal-backdrop.show,

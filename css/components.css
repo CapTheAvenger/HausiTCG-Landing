@@ -887,6 +887,11 @@ html.is-signed-out [onclick*="radelist"]:hover {
   justify-content: center;
   padding: 16px;
   animation: ds-bildvorschau-fade 0.15s ease-out;
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
 }
 @keyframes ds-bildvorschau-fade {
   from { opacity: 0; }

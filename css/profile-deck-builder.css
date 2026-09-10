@@ -720,6 +720,11 @@
     padding: 1rem;
     overflow-y: auto;
     animation: pdb-zoom-fade 130ms ease-out;
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
 }
 
 @keyframes pdb-zoom-fade { from { opacity: 0; } to { opacity: 1; } }
