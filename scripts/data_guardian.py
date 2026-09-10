@@ -1275,6 +1275,36 @@ def check_geteilte_produkt_ids(findings):
     # richtig gemeldet, aber nicht dringend: PRE 97/99 unterscheiden sich
     # um 0,03 EUR, CRI 116/122 um 34 EUR.
     SPUERBAR = 1.0
+    # DIE CENT-REGEL DES BETREIBERS, ANGEWENDET STATT ABGEWARTET
+    # (10.09.2026).
+    #
+    # Am 03.09.2026 hat der Betreiber entschieden: "wenn nur Cent
+    # Betraege dann den guenstigeren". Diese Regel lag seither in
+    # tests/python/test_cent_regel_zuordnung.py fest, aber sie wurde
+    # jedes Mal VON HAND auf einen gemeldeten Fall angewandt. Der
+    # naechste Fall waertete wieder darauf, dass jemand hinsieht.
+    #
+    # Jetzt sagt die Meldung selbst, ob die Regel greift, und nennt die
+    # fertige Zeile fuer data/cardmarket_mapping_manual.csv. Sie
+    # SCHREIBT nichts (CLAUDE.md: "Report, don't silently repair") —
+    # eine Betreiberentscheidung gehoert in die Handdatei, nicht in
+    # eine gebaute Zuordnung.
+    #
+    # "Nur Cent Betraege" heisst: JEDER Kandidat, der belegte wie die
+    # freien, liegt unter einem Euro. Steht auch nur einer darueber,
+    # ist der moegliche Fehler kein Centbetrag mehr und die Regel
+    # schweigt — so wie bei MEP 4 (Lunastein), wo die beiden Kandidaten
+    # rund 1,40 EUR auseinanderliegen.
+    #
+    # NACHGEMESSEN AM 10.09.2026, ueber alle 28 trennbaren
+    # Doppelbelegungen des Bestands: KEINE EINZIGE liegt im
+    # Centbereich. Die kleinste Spanne ist 0,65 EUR (SP 3/SP 73), die
+    # zweitkleinste 1,64 EUR. Die Regel entscheidet heute also nichts
+    # mehr — die vier Faelle, die sie entscheiden konnte, sind am
+    # 03.09. entschieden worden. Sie steht hier fuer den naechsten Fall,
+    # nicht fuer einen bestehenden.
+    CENT_GRENZE = 1.0
+    cent_entschieden = []
     trennbar_legal, trennbar_alt, trennbar_klein = [], [], []
     unteilbar, erledigt = 0, []
     for pid, zeilen in gruppen.items():
@@ -1309,6 +1339,30 @@ def check_geteilte_produkt_ids(findings):
                for z in zeilen):
             erledigt.append(text)
             continue
+        # Greift die Cent-Regel? Dafuer muessen ALLE Kandidaten unter
+        # einem Euro liegen — der belegte Preis und jeder freie.
+        #
+        # JEDER Kandidat muss einen BEKANNTEN Preis haben. Ohne diese
+        # Bedingung feuerte die Regel am 10.09.2026 auf UL 56/UL 57:
+        # der belegte Preis lag im Centbereich, fuer die freie 902393
+        # kannte die Preisdatei GAR KEINEN Wert — "nur Cent Betraege"
+        # waere dort eine Behauptung ueber eine Zahl gewesen, die
+        # niemand gesehen hat. Ein unbekannter Preis ist kein kleiner.
+        alle_preise = [jetzt] + werte
+        if (frei and werte and len(werte) == len(frei)
+                and all(isinstance(w, (int, float)) for w in alle_preise)
+                and all(abs(w) < CENT_GRENZE for w in alle_preise)):
+            # Der guenstigere gewinnt: unter den freien IDs die mit dem
+            # kleinsten Preis. Genannt wird die fertige Pin-Zeile.
+            billigste = min(frei, key=lambda x: preise.get(x, float("inf")))
+            offen = [z for z in zeilen
+                     if (z.get("match_method") or "").split("(")[0] not in BESTAETIGT]
+            wandert = offen[0] if offen else zeilen[-1]
+            cent_entschieden.append(
+                f"{text} -> Cent-Regel: "
+                f"{wandert.get('set')},{wandert.get('number')},{billigste},"
+                f"betreiber-regel-cent")
+            continue
         if not any(legal(z) for z in zeilen):
             trennbar_alt.append(text)
         elif groesste >= SPUERBAR:
@@ -1331,6 +1385,17 @@ def check_geteilte_produkt_ids(findings):
             + ". Beide Karten zeigen denselben Preis, und mindestens einer ist "
               "falsch. Die freie Produkt-ID daneben ist der Kandidat; belegbare "
               "Faelle gehoeren nach data/cardmarket_mapping_manual.csv."))
+    if cent_entschieden:
+        findings.append((
+            "WARN",
+            f"{len(cent_entschieden)} trennbare Doppelbelegung(en) liegen "
+            f"VOLLSTAENDIG im Centbereich — dort entscheidet die Betreiberregel "
+            f'vom 03.09.2026 ("wenn nur Cent Betraege dann den guenstigeren"). '
+            f"Die fertigen Zeilen fuer data/cardmarket_mapping_manual.csv: "
+            + "; ".join(sorted(cent_entschieden)[:8])
+            + (" …" if len(cent_entschieden) > 8 else "")
+            + ". Geschrieben wird hier nichts: eine Betreiberentscheidung "
+              "gehoert in die Handdatei, nicht in eine gebaute Zuordnung."))
     if trennbar_klein:
         findings.append((
             "WARN",
