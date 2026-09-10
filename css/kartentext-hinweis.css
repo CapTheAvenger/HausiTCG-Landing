@@ -1,0 +1,46 @@
+/* Kennzeichnung "Kartentext auf Englisch".
+ *
+ * Gehoert zu js/kartentext-hinweis.js. Bewusst eine eigene Datei und
+ * nicht css/profile-deck-builder.css: die Kennzeichnung ist nicht an
+ * das Zoom-Fenster des Profil-Deckbauers gebunden, sondern an jede
+ * Stelle, die `card_text` zeigt.
+ *
+ * Dezent heisst hier: kleiner als der Kartentext, gedaempfte Farbe,
+ * kein Rahmen um den Text selbst. Das Abzeichen soll erklaeren, nicht
+ * den Blick vom Kartentext wegziehen.
+ */
+
+.kartentext-hinweis {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 0 0.35rem 0;
+    font-size: 0.72rem;
+    line-height: 1.2;
+    color: #8c95a5;
+    cursor: help;
+}
+
+.kartentext-hinweis-chip {
+    display: inline-block;
+    padding: 0.05rem 0.3rem;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    opacity: 0.85;
+}
+
+.kartentext-hinweis-text {
+    font-style: italic;
+}
+
+/* Der englische Originaltext. Der Trenner nach oben faellt weg, wenn
+ * die Kennzeichnung direkt darueber steht — sonst haette der Block
+ * zwei Linien. */
+.kartentext-original {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
