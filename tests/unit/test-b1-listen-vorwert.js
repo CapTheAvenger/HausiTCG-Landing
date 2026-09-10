@@ -78,13 +78,27 @@ function satz(sprache) {
     vm.createContext(umgebung);
     const g = vm.runInContext('(' + QUELLE.slice(auf, zu + 1) + ')', umgebung);
 
+    /* SEIT DEM 10.09.2026 GIBT DIE FUNKTION DEN SATZ NICHT ZURUECK.
+       Er stand als neun Zeilen Fliesstext in der Tier-Liste und ist
+       hinter den Info-Knopf der Ueberschrift gewandert — sie MELDET ihn
+       jetzt an window.DsAbschnittInfo. Die Zusicherung unten prueft
+       weiterhin denselben Satz aus denselben Konstanten; nur die
+       Abholstelle ist eine andere. */
+    let gemeldet = '';
     const kasten = {
         Math, Number, String, Object, Array, JSON,
-        getLang: () => sprache, escapeHtml: (x) => String(x)
+        getLang: () => sprache, escapeHtml: (x) => String(x),
+        window: { DsAbschnittInfo: { melde: (id, inh) => {
+            gemeldet = String((inh && inh.html) || '');
+        } } }
     };
     vm.createContext(kasten);
     vm.runInContext(funktion('cmTierGrundlageZeile'), kasten);
-    return kasten.cmTierGrundlageZeile(g);
+    kasten.cmTierGrundlageZeile(g);
+    assert.ok(gemeldet,
+        'cmTierGrundlageZeile hat nichts gemeldet — dann steht der Satz '
+        + 'nirgends mehr, und diese Pruefung liefe gegen einen leeren String.');
+    return gemeldet.replace(/^<p>/, '').replace(/<\/p>$/, '');
 }
 
 // ── Die zwei Exportdateien, nur Schema und Gleichung ────────────────

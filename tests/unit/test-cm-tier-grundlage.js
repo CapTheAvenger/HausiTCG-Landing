@@ -152,16 +152,49 @@ const echteUmgebung = (mindestListen, groesste, labs) => Object.assign({}, T, {
     labsByName: labs === undefined ? { irgendein: {} } : labs
 });
 
-/** cmTierGrundlageZeile() aus der echten Datei laden und ausfuehren. */
+/** cmTierGrundlageZeile() aus der echten Datei laden und ausfuehren.
+ *
+ * SEIT DEM 10.09.2026 GIBT DIE FUNKTION DEN SATZ NICHT MEHR ZURUECK.
+ * Er stand als neun Zeilen Fliesstext in der Tier-Liste und ist hinter
+ * den Info-Knopf der Ueberschrift gewandert — die Funktion MELDET ihn
+ * jetzt an window.DsAbschnittInfo statt ihn zu rendern.
+ *
+ * Alle Zusicherungen dieser Datei bleiben unveraendert: sie pruefen den
+ * INHALT des Satzes, und der wird weiterhin an derselben Stelle aus
+ * denselben Konstanten gebaut. Nur die Abholstelle ist eine andere.
+ * Genau darum wird hier das Register mitgegeben und der gemeldete Text
+ * zurueckgereicht — haette ich stattdessen die Zusicherungen gelockert,
+ * waere aus einer Verlagerung eine Luecke geworden. */
 function zeile(sprache, g) {
+    let gemeldet = '';
     const kasten = {
         Math, Number, String, Object, Array, JSON,
         getLang: () => sprache,
-        escapeHtml: (x) => String(x)
+        escapeHtml: (x) => String(x),
+        window: {
+            DsAbschnittInfo: {
+                melde: (id, inhalt) => {
+                    if (id !== 'tiers') {
+                        throw new Error('unter falscher Kennung gemeldet: ' + id);
+                    }
+                    gemeldet = String((inhalt && inhalt.html) || '');
+                }
+            }
+        }
     };
     vm.createContext(kasten);
     vm.runInContext(funktion('cmTierGrundlageZeile'), kasten);
-    return kasten.cmTierGrundlageZeile(g);
+    const zurueck = kasten.cmTierGrundlageZeile(g);
+    assert.equal(zurueck, '',
+        'Die Funktion rendert wieder auf die Flaeche, statt zu melden — '
+        + 'dann steht der Satz doppelt: im Dialog und in der Tier-Liste.');
+    assert.ok(gemeldet,
+        'Nichts gemeldet. Ohne Meldung zeigt ds-sections.js keinen Knopf, '
+        + 'und die Erklaerung der Reihenfolge ist von der Seite verschwunden '
+        + 'statt umgezogen.');
+    // Die Huelle <p>…</p> abstreifen, damit die Zusicherungen unten
+    // denselben nackten Satz sehen wie vorher.
+    return gemeldet.replace(/^<p>/, '').replace(/<\/p>$/, '');
 }
 
 /** Der Satz, wie die Seite ihn mit ihren eigenen Konstanten baut. */
@@ -359,8 +392,58 @@ describe('Grundlage der Tier-Einteilung im laufenden Meta (C6 / F15.19-F15.24, B
         assert.equal((QUELLE.match(/const MINDEST_ANTEIL_GROESSTER\s*=/g) || []).length, 1);
     });
 
-    it('das Ergebnis ist ein Absatz mit der Klasse, die es auf der japanischen Seite schon gibt', () => {
-        assert.match(satz('de'), /^<p class="tier-grundlage">/);
-        assert.match(satz('de'), /<\/p>$/);
+    it('der Satz wird unter der Kennung des Abschnitts gemeldet, nicht gerendert', () => {
+        /* WAR: "das Ergebnis ist ein Absatz mit der Klasse, die es auf
+           der japanischen Seite schon gibt" — geprueft wurde
+           `^<p class="tier-grundlage">`.
+
+           Seit dem 10.09.2026 gibt es diesen Absatz auf der Flaeche
+           nicht mehr. Er stand als neun Zeilen Fliesstext in der
+           Tier-Liste und ist hinter den Info-Knopf der Ueberschrift
+           gewandert. Eine Klasse fuer einen Absatz, den niemand mehr
+           zeichnet, ist keine Zusicherung.
+
+           Was an ihre Stelle tritt, ist die Bedingung, die wirklich
+           traegt: die Meldung geht unter GENAU der Kennung raus, unter
+           der js/ds-sections.js den Abschnitt fuehrt ('tiers'). Faellt
+           die auseinander, bleibt der Knopf aus und der Satz ist weg —
+           still. `zeile()` oben wirft bei jeder anderen Kennung. */
+        const kasten = { treffer: [] };
+        const g = aufrufObjekt(echteUmgebung(313.8, 3138, undefined));
+        const sandkasten = {
+            Math, Number, String, Object, Array, JSON,
+            getLang: () => 'de',
+            escapeHtml: (x) => String(x),
+            window: { DsAbschnittInfo: { melde: (id, inh) => kasten.treffer.push([id, inh]) } }
+        };
+        vm.createContext(sandkasten);
+        vm.runInContext(funktion('cmTierGrundlageZeile'), sandkasten);
+        sandkasten.cmTierGrundlageZeile(g);
+
+        assert.equal(kasten.treffer.length, 1, 'genau eine Meldung erwartet');
+        assert.equal(kasten.treffer[0][0], 'tiers',
+            'Die Kennung muss die des Abschnitts in js/ds-sections.js sein.');
+        assert.match(kasten.treffer[0][1].html, /^<p>/,
+            'Der Dialog bekommt Absatzmarkup, keinen nackten Text.');
+        assert.ok(kasten.treffer[0][1].titel,
+            'Ohne Titel steht im Dialog die allgemeine Ersatzueberschrift.');
+    });
+
+    it('ohne Register faellt nichts um — die Seite laedt auch ohne die neue Datei', () => {
+        /* ds-abschnitt-info.js ist ein eigenes Skript. Faellt es aus
+           (Ladefehler, alter Zwischenspeicher), darf die Tier-Liste
+           nicht mitfallen — sie ist die Hauptsache, der Erklaersatz die
+           Nebensache. */
+        const g = aufrufObjekt(echteUmgebung(313.8, 3138, undefined));
+        const ohne = {
+            Math, Number, String, Object, Array, JSON,
+            getLang: () => 'de',
+            escapeHtml: (x) => String(x),
+            window: {}
+        };
+        vm.createContext(ohne);
+        vm.runInContext(funktion('cmTierGrundlageZeile'), ohne);
+        assert.equal(ohne.cmTierGrundlageZeile(g), '',
+            'Ohne Register muss die Funktion still einen leeren String liefern.');
     });
 });

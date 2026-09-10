@@ -59,6 +59,17 @@ function bauWidget(lang) {
         ladeStaplesAnzahl: () => 15,
         staplesAnzahl: () => 15,
         STAPLES_STUFEN: [15, 30],
+        /* Seit dem 10.09.2026 kennt das Widget Kartenarten (Top 10
+           Pokemon, Supporter, Items, Tools, Stadion, Spezial-Energie).
+           Diese Attrappen halten die Ansicht auf "Alle" — genau der
+           Zustand, den diese Datei prueft. Fehlen sie, wirft der
+           Sandkasten ReferenceError, und der Test meldet einen Fehler,
+           der keiner ist. */
+        ladeStaplesArt: () => null,
+        staplesArt: () => null,
+        staplesNachArt: () => [],
+        staplesArtZaehlung: () => ({}),
+        STAPLES_ARTEN: [],
     };
     const fabrik = new Function(...Object.keys(attrappen),
         WIDGET + '\nreturn renderTopCardsWidget;');
@@ -128,6 +139,10 @@ describe('Format-Staples: Top 15 und Top 30', () => {
             escapeHtmlAttr: (s) => String(s == null ? '' : s),
             ladeStaplesAnzahl: () => 1, staplesAnzahl: () => 1,
             STAPLES_STUFEN: [15, 30], ladeStaplesModus: () => 'gespielt',
+            // Ansicht "Alle" — siehe die Begruendung beim ersten Sandkasten.
+            ladeStaplesArt: () => null, staplesArt: () => null,
+            staplesNachArt: () => [], staplesArtZaehlung: () => ({}),
+            STAPLES_ARTEN: [],
         };
         const render = new Function(...Object.keys(attrappen),
             WIDGET + '\nreturn renderTopCardsWidget;')(...Object.values(attrappen));
