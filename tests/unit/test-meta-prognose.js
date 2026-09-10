@@ -189,6 +189,24 @@ describe('die Einbettung', () => {
             'die Ruecknahme des thead-Verlaufs fehlt');
     });
 
+    it('jeder Spaltenkopf steht ueber seinen Zahlen', () => {
+        /* GEMESSEN live am 10.09.2026: die Zellen der Online-Spalte
+           sind rechtsbuendig, ihr Kopf erbte die Linksbuendigkeit von
+           `.mp-tabelle th`. Bei 244 px Spaltenbreite stand die
+           Beschriftung 244 px neben der Zahl, die sie beschreibt.
+
+           Die Regel lautet: eine rechtsbuendige Spalte braucht einen
+           rechtsbuendigen Kopf. Geprueft wird sie an der einen Spalte,
+           die das betrifft. */
+        const zellenRechts = /\.mp-zahl \{[^}]*text-align: right/s.test(CSS);
+        assert.ok(zellenRechts,
+            'die Online-Zellen sind nicht mehr rechtsbuendig — dann '
+            + 'gehoert auch diese Zusicherung ueberdacht');
+        assert.match(CSS, /\.mp-tabelle th:nth-child\(2\) \{[^}]*text-align: right/s,
+            'der Kopf der Online-Spalte steht links, seine Zahlen '
+            + 'rechts');
+    });
+
     it('kein Cache-Parameter in einem Template-Literal', () => {
         /* DER TEUERSTE FEHLER DIESER RUNDE (10.09.2026).
            Der Deploy laesst ein sed ueber jede Datei in js/ laufen, das
