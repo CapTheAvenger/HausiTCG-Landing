@@ -109,8 +109,15 @@ describe('Bausteine — verschieben, nicht neu erzeugen', () => {
         assert.match(CODE, /body2\.appendChild\(t\)/);
         // innerHTML darf nur auf Knoten stehen, die dieses Modul selbst
         // erzeugt hat — nie auf einem Block, der schon Handler traegt.
+        //   b      der Kopf-Knopf, in kopf() erzeugt
+        //   platz   das leere <span class="ds-sec-info"> daneben, in
+        //           kopf() erzeugt — dort und nur dort steht seit dem
+        //           10.09.2026 der Info-Knopf. Nachgezeichnet wird die
+        //           Knopfzeile, NIE der Abschnitt: die Bloecke darin
+        //           sind verschoben und traegen fremde Handler.
+        //   row     die Rueckweg-Zeile, in zeichneReset() erzeugt
         const ziele = [...CODE.matchAll(/(\w+)\.innerHTML\s*=/g)].map(m => m[1]);
-        assert.deepStrictEqual([...new Set(ziele)].sort(), ['b', 'row'],
+        assert.deepStrictEqual([...new Set(ziele)].sort(), ['b', 'platz', 'row'],
             'innerHTML auf fremdem Inhalt: ' + ziele.join(', '));
     });
 

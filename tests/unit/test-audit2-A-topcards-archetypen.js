@@ -39,6 +39,17 @@ function build(lang) {
         ladeStaplesAnzahl: () => 15,
         staplesAnzahl: () => 15,
         STAPLES_STUFEN: [15, 30],
+        /* Seit dem 10.09.2026 kennt das Widget Kartenarten (Top 10
+           Pokemon, Supporter, Items, Tools, Stadion, Spezial-Energie).
+           Diese Attrappen halten die Ansicht auf "Alle" — genau der
+           Zustand, den diese Datei prueft. Fehlen sie, wirft der
+           Sandkasten ReferenceError, und der Test meldet einen Fehler,
+           der keiner ist. */
+        ladeStaplesArt: () => null,
+        staplesArt: () => null,
+        staplesNachArt: () => [],
+        staplesArtZaehlung: () => ({}),
+        STAPLES_ARTEN: [],
         ladeStaplesModus: () => 'gespielt',
         // Seit dem 01.09.2026 meldet das Widget seinen Nenner an den
         // Datenumfang, statt ihn selbst als Untertitel zu drucken.

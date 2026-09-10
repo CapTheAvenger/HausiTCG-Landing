@@ -552,6 +552,35 @@ html.is-signed-out [onclick*="radelist"]:hover {
     overflow: hidden;
 }
 
+/* Die Kopfzeile: Klapp-Knopf plus Info-Knopf.
+ *
+ * Vor dem 10.09.2026 WAR .ds-sec-hd die Zeile. Seit der
+ * Professor-Eich-Knopf daneben steht (js/ds-abschnitt-info.js), braucht
+ * es eine Zeile um beide — ein <button> im <button> waere ungueltiges
+ * Markup und zwei ineinander geschachtelte Bedienelemente.
+ *
+ * Der Klapp-Knopf behaelt die volle Breite (flex: 1 1 auto), damit die
+ * Zeile weiterhin ueberall klickbar ist. */
+.ds-sec-kopf {
+    display: flex;
+    align-items: center;
+}
+.ds-sec-kopf > .ds-sec-hd {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-right: var(--s-2);
+}
+/* Der Platz fuer den Info-Knopf steht leer, solange fuer den Abschnitt
+   nichts gemeldet wurde. Ohne :empty bliebe sein Polster als Luecke
+   stehen. */
+.ds-sec-info {
+    flex: none;
+    display: flex;
+    align-items: center;
+    padding-right: var(--s-4);
+}
+.ds-sec-info:empty { display: none; }
+
 .ds-sec-hd {
     display: flex;
     align-items: center;
@@ -664,6 +693,22 @@ html.is-signed-out [onclick*="radelist"]:hover {
 
 @media (max-width: 768px) {
     .ds-sec-hd { padding: var(--s-3); }
+    /* css/mobile-responsive.css nimmt `.ds-sec > .ds-sec-hd` auf dem
+       Telefon die seitlichen Polster, damit der Text an der Kante der
+       Flaeche steht. Seit der Kopfzeile ist der Knopf dort ein Enkel und
+       faellt aus jenem Selektor — dieselbe Regel steht deshalb hier
+       nochmal fuer den neuen Weg.
+
+       Der Info-Knopf behaelt rechts 8 px. Das ist keine Zierde:
+       .ds-sec traegt `overflow: hidden`, und die unsichtbare
+       Trefferflaeche des Knopfes (44 px, css/tippziele.css) wird an
+       der Kante des Abschnitts ABGESCHNITTEN. Gemessen auf 390 px
+       ohne dieses Polster: Flaeche bis x = 386, Abschnitt bis x = 378
+       — 8 px der Flaeche lagen im Nichts, elementFromPoint antwortete
+       dort .tab-content statt des Knopfes. 8 px ist genau die Haelfte
+       des Ueberhangs (44 - 28) / 2. */
+    .ds-sec-kopf > .ds-sec-hd { padding-left: 0; }
+    .ds-sec-info { padding-right: var(--s-2); }
     .ds-sec-body { padding: 0 var(--s-3) var(--s-3); }
     .ds-sec-t { font-size: var(--fs-md); }
     /* Die Zusatzzeile kostet auf 390 px mehr Platz als sie erklaert. */

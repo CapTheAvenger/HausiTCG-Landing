@@ -630,6 +630,13 @@ try { document.documentElement.classList.add('is-signed-out'); } catch (e) {}
            Abschnittskennungen aus app-quellen.js jetzt bei jedem Lauf
            gegen diese Tabelle und gegen die Weissliste. */
         'quellen-umfang':        'quellen',
+        /* 10.09.2026: die langen Erklaerungen der Meta-Ansicht stehen
+           seither hinter dem Professor-Eich-Knopf; der Abschnitt
+           `erklaerungen` in js/app-quellen.js sagt, wo. Alias und
+           Weissliste unten sind derselbe Handgriff wie bei `umfang` am
+           07.09. — tests/unit/test-tieflink-overview-und-quellen-07-09.js
+           vergleicht beide bei jedem Lauf gegen Quellen.ids(). */
+        'quellen-erklaerungen':  'quellen',
         'how-to-use':            'tutorial',
         'howto':                 'tutorial',
         'help':                  'tutorial',
@@ -899,9 +906,9 @@ try { document.documentElement.classList.add('is-signed-out'); } catch (e) {}
             // deshalb jetzt die Liste aus der Quelle selbst; die
             // Aufzaehlung bleibt als Rueckfallebene, falls Quellen.ids()
             // fehlt (aeltere zwischengespeicherte Fassung der Datei).
-            const ABSCHNITTE = { quellen: 1, umfang: 1, begriffe: 1,
-                                 zuverlaessig: 1, trennung: 1, stand: 1,
-                                 rechtliches: 1 };
+            const ABSCHNITTE = { quellen: 1, erklaerungen: 1, umfang: 1,
+                                 begriffe: 1, zuverlaessig: 1, trennung: 1,
+                                 stand: 1, rechtliches: 1 };
             let erlaubt = ABSCHNITTE;
             try {
                 if (typeof window.Quellen.ids === 'function') {

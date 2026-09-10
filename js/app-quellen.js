@@ -117,6 +117,41 @@
                          'Deutsche Namen: PokéAPI. Ergänzungen: Serebii, Smogon.'],
                     ],
                 },
+                /* ── 10.09.2026: die langen Erklaerungen sind umgezogen ──
+                 *
+                 * Sie standen bis dahin als Textwaende mitten in der
+                 * Meta-Ansicht (Tier-Grundlage 9 Zeilen, Heatmap-Legende
+                 * 6 + 5 Zeilen, Meta-Performance 7 Zeilen) und schoben
+                 * die Zahlen nach unten. Jetzt stehen sie hinter dem
+                 * Professor-Eich-Knopf neben der jeweiligen
+                 * Ueberschrift (js/ds-abschnitt-info.js).
+                 *
+                 * WARUM SIE NICHT AUCH HIER STEHEN: sie enthalten
+                 * Zahlen aus dem laufenden Datenstand. Eine Abschrift
+                 * hier waere beim naechsten Scraperlauf falsch — und
+                 * zwar unbemerkt, weil niemand zwei Stellen
+                 * nachrechnet. Diese Seite sagt deshalb, WO sie stehen,
+                 * und nicht, WAS dort steht. */
+                {
+                    id: 'erklaerungen', auf: false,
+                    h: 'Wo die ausführlichen Erklärungen stehen',
+                    p: ['Jede Auswertung der Meta-Ansicht trägt neben ihrer Überschrift ' +
+                        'den Professor-Eich-Knopf. Dahinter stehen Beschreibung, Zahlen ' +
+                        'und Legende genau dieser Auswertung. Die Ansicht selbst bleibt ' +
+                        'dadurch kurz und zeigt die Zahlen, nicht den Beipackzettel.',
+                        'Sechs Auswertungen sind das: Die meistgespielten Archetypen, ' +
+                        'Matchups, Meistgespielte Karten, Gegen welches Meta?, Tier-Liste ' +
+                        'und Meta-Performance. Wo eine Auswertung nichts gemeldet hat, ' +
+                        'steht auch kein Knopf — einer, der einen leeren Kasten öffnet, ' +
+                        'wäre schlimmer als keiner.',
+                        'Diese Texte stehen mit Absicht nicht hier abgeschrieben. Sie ' +
+                        'nennen Zahlen aus dem laufenden Datenstand — Sätze der Bauart ' +
+                        '„hier 365 von 3.644 Listen“. Eine Kopie an dieser Stelle wäre ' +
+                        'beim nächsten Datenlauf falsch, und die falsche Fassung stünde ' +
+                        'ausgerechnet dort, wo niemand sie nachrechnet. Der Text bleibt ' +
+                        'deshalb da, wo die Zahlen entstehen; nur angezeigt wird er ' +
+                        'woanders.'],
+                },
                 {
                     id: 'umfang', auf: false,
                     h: 'Worauf die Zahlen beruhen',
@@ -287,6 +322,26 @@
                          '(CC BY 4.0). In-game usage: championsbattledata.com. German names: ' +
                          'PokéAPI. Supplements: Serebii, Smogon.'],
                     ],
+                },
+                {
+                    id: 'erklaerungen', auf: false,
+                    h: 'Where the detailed explanations live',
+                    p: ['Every view in the meta section carries the Professor Oak button ' +
+                        'next to its heading. Behind it stand the description, figures and ' +
+                        'legend of exactly that view. That is what keeps the view itself ' +
+                        'short — it shows the numbers, not the leaflet.',
+                        'Six views have one: Most played archetypes, Matchups, ' +
+                        'Most played cards, Against which field?, Tier list and ' +
+                        'Meta performance. Where a view has reported nothing, there is no ' +
+                        'button either — one that opens an empty box would be worse ' +
+                        'than none.',
+                        'These texts are deliberately not copied out here. They quote ' +
+                        'figures from the running data — sentences of the kind “365 of ' +
+                        '3,644 lists here”. A copy in this place would be ' +
+                        'wrong after the next data run, and the wrong version would sit ' +
+                        'precisely where ' +
+                        'nobody checks it. The text therefore stays where the figures are ' +
+                        'produced; only where it is shown has changed.'],
                 },
                 {
                     id: 'umfang', auf: false,
