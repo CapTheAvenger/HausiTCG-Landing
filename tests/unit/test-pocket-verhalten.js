@@ -63,9 +63,24 @@ function umgebung(daten) {
         addEventListener(art, f) { (this._hoerer[art] = this._hoerer[art] || []).push(f); },
         querySelector() { return null; }
     };
+    // Der Verlauf, so klein wie moeglich und so echt wie noetig: der
+    // Reiter legt beim Oeffnen einen Eintrag an, damit die Zurueck-Geste
+    // des Telefons das Vollbild schliesst statt die Seite zu verlassen.
+    // Ohne diesen Ersatz koennte der Test genau das nicht pruefen.
+    const verlauf = {
+        eintraege: [],
+        pushState(zustand) { this.eintraege.push(zustand); },
+        back() {
+            this.eintraege.pop();
+            (fenster._hoerer.popstate || []).forEach(h => h({}));
+        }
+    };
     const fenster = {
         document: dok,
         navigator: {},
+        history: verlauf,
+        _hoerer: {},
+        addEventListener(art, f) { (this._hoerer[art] = this._hoerer[art] || []).push(f); },
         fetch(pfad, wahl) {
             fenster._geholt = { pfad: pfad, wahl: wahl };
             return Promise.resolve({ ok: true, json: () => Promise.resolve(daten) });
@@ -74,23 +89,25 @@ function umgebung(daten) {
         console: { warn() {} }
     };
     fenster.window = fenster;
-    return { fenster, dok, knoten };
+    return { fenster, dok, knoten, verlauf };
 }
 
 /** ds-pocket.js in der Ersatzumgebung laufen lassen. */
 function laden(daten) {
-    const { fenster, dok, knoten } = umgebung(daten);
+    const { fenster, dok, knoten, verlauf } = umgebung(daten);
     const quelle = fs.readFileSync(path.join(WURZEL, 'js', 'ds-pocket.js'), 'utf8');
     const qr = require(path.join(WURZEL, 'js', 'qr-svg.js'));
     fenster.qrSvg = qr;
     const f = new Function('window', 'document', 'navigator', 'fetch', 'getLang', 'console',
+                           'history',
                            quelle + '\n;return window.dsPocket;');
     // fetch als Weiterleitung, nicht als feste Bindung: sonst haelt das
     // Modul die urspruengliche Funktion fest, und ein Test, der spaeter
     // einen Netzfehler einsetzt, prueft nichts.
     const holen = function () { return fenster.fetch.apply(fenster, arguments); };
-    const api = f(fenster, dok, fenster.navigator, holen, fenster.getLang, fenster.console);
-    return { api, fenster, dok, knoten };
+    const api = f(fenster, dok, fenster.navigator, holen, fenster.getLang, fenster.console,
+                  verlauf);
+    return { api, fenster, dok, knoten, verlauf };
 }
 
 /** Einen Klick auf ein Element mit diesem Attribut nachstellen. */
@@ -199,6 +216,91 @@ describe('Pocket-Reiter: das Vollbild', () => {
         assert.equal(u.knoten.pocketOverlay.hidden, false);
         klick(u.knoten, 'data-pk-zu', '1');
         assert.equal(u.knoten.pocketOverlay.hidden, true, 'das Vollbild bleibt offen');
+    });
+});
+
+/* Der Weg zurueck aus dem Vollbild.
+ *
+ * BEFUND (10.09.2026, vom Betreiber am Telefon gemeldet: "Man kommt von
+ * hier aus nicht zurueck"). Es gab genau einen Ausweg — den Knopf —, und
+ * der war am Telefon nicht erreichbar: die Polsterung des Overlays
+ * beachtete den unteren Geraeteeinzug, aber nicht den oberen. Gemessen
+ * bei 390 px lag seine Oberkante 20 px unter dem Bildschirmrand, bei
+ * einer Dynamic Island (59 px Einzug) also vollstaendig darunter. Und er
+ * scrollte mit: nach 25 px stand er schon bei -5 px.
+ *
+ * Escape gibt es am Telefon nicht, und ohne Verlaufseintrag verliess die
+ * Zurueck-Geste die ganze Anwendung.
+ *
+ * Geprueft werden hier die WEGE, nicht ihre Pixel — die Geometrie steht
+ * in den CSS-Zusicherungen weiter unten. */
+describe('Pocket-Reiter: der Weg zurueck aus dem Vollbild', () => {
+
+    it('der Knopf steht in der klebenden Leiste, nicht frei im Fluss', async () => {
+        const u = await gezeichnet(DATEN);
+        klick(u.knoten, 'data-pk-deck', '0');
+        const html = u.knoten.pocketOverlay.innerHTML;
+        assert.match(html, /<div class="pk-leiste">\s*<button[^>]*data-pk-zu/,
+            'der Schliessknopf steht wieder frei im Fluss — dann scrollt '
+            + 'er weg und liegt am Telefon unter der Statusleiste');
+    });
+
+    it('das Oeffnen legt einen Verlaufseintrag an', async () => {
+        const u = await gezeichnet(DATEN);
+        assert.equal(u.verlauf.eintraege.length, 0);
+        klick(u.knoten, 'data-pk-deck', '0');
+        assert.equal(u.verlauf.eintraege.length, 1,
+            'ohne Eintrag verlaesst die Zurueck-Geste die ganze Anwendung');
+        assert.equal(u.verlauf.eintraege[0].dsPocket, 'pocketOverlay',
+            'der Eintrag traegt keine Marke — dann laesst er sich nicht '
+            + 'von einem fremden unterscheiden');
+    });
+
+    it('die Zurueck-Geste schliesst das Vollbild', async () => {
+        const u = await gezeichnet(DATEN);
+        klick(u.knoten, 'data-pk-deck', '0');
+        assert.equal(u.knoten.pocketOverlay.hidden, false);
+        u.verlauf.back();
+        assert.equal(u.knoten.pocketOverlay.hidden, true,
+            'die Zurueck-Geste laesst das Vollbild offen — am Telefon ist '
+            + 'sie der Reflex');
+        assert.equal(u.dok.body.style.overflow, '',
+            'die Scroll-Sperre des Koerpers bleibt stehen');
+    });
+
+    it('nach der Zurueck-Geste wird nicht ein zweites Mal zurueckgesprungen', async () => {
+        // Sonst faellt die Anwendung eine Ansicht zu weit zurueck: der
+        // Eintrag ist vom popstate schon verbraucht.
+        const u = await gezeichnet(DATEN);
+        klick(u.knoten, 'data-pk-deck', '0');
+        u.verlauf.back();
+        assert.equal(u.verlauf.eintraege.length, 0);
+        // Ein zweites back() darf nichts mehr aus unserem Bestand nehmen.
+        const vorher = u.verlauf.eintraege.length;
+        u.verlauf.back();
+        assert.equal(u.verlauf.eintraege.length, vorher,
+            'es wurde ein Eintrag zu viel verbraucht');
+    });
+
+    it('der Knopf raeumt seinen Verlaufseintrag wieder ab', async () => {
+        // Sonst sammeln sich Eintraege an, und die Zurueck-Geste muesste
+        // danach mehrfach gedrueckt werden, um die Seite zu verlassen.
+        const u = await gezeichnet(DATEN);
+        klick(u.knoten, 'data-pk-deck', '0');
+        assert.equal(u.verlauf.eintraege.length, 1);
+        klick(u.knoten, 'data-pk-zu', '1');
+        assert.equal(u.knoten.pocketOverlay.hidden, true);
+        assert.equal(u.verlauf.eintraege.length, 0,
+            'der Eintrag bleibt liegen — dann braucht es zwei Zurueck, um '
+            + 'die Seite zu verlassen');
+    });
+
+    it('zweimal oeffnen legt nicht zwei Eintraege an', async () => {
+        const u = await gezeichnet(DATEN);
+        klick(u.knoten, 'data-pk-deck', '0');
+        klick(u.knoten, 'data-pk-deck', '1');
+        assert.equal(u.verlauf.eintraege.length, 1,
+            'ein Deckwechsel im offenen Vollbild haeuft Eintraege an');
     });
 });
 

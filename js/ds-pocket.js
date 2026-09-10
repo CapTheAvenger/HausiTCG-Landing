@@ -358,8 +358,13 @@
         }
 
         var s = '';
+        // Der Knopf steht in einer klebenden Leiste, nicht frei im Fluss.
+        // Warum, steht in css/ds-pocket.css bei .pk-leiste — kurz: frei
+        // im Fluss lag er unter der Statusleiste und scrollte weg.
+        s += '<div class="pk-leiste">';
         s += '<button type="button" class="pk-schliessen" data-pk-zu="1" aria-label="' +
              esc(t('Schließen', 'Close')) + '">✕</button>';
+        s += '</div>';
         // Name, Stufe und Quelle stehen IM Bild, nicht darüber: das
         // Bildschirmfoto ist das Lieferstück.
         s += '<div class="pk-overlay-kopf">';
@@ -384,15 +389,55 @@
         var zu = host.querySelector('[data-pk-zu]');
         if (zu) zu.focus();
         wachHalten();
+        verlaufsMarkeSetzen();
     }
 
-    function schliesse() {
+    /* Die Zurueck-Geste soll das Vollbild schliessen, nicht die Seite
+       verlassen.
+     *
+     * BEFUND (10.09.2026): am Telefon gab es genau einen Weg zurueck —
+     * den Knopf, und der lag unter der Statusleiste. Escape gibt es dort
+     * nicht, und ohne Verlaufseintrag warf die Zurueck-Geste den Leser
+     * aus der ganzen Anwendung.
+     *
+     * Der Eintrag aendert die Adresse NICHT: der Hash bleibt stehen,
+     * damit der Routenzuhoerer in inline-init.js weiter denselben Reiter
+     * sieht und nicht auf die Startansicht springt. Die Marke im Zustand
+     * sagt uns, dass der Eintrag von uns stammt. */
+    var VERLAUFSMARKE = 'pocketOverlay';
+    var eigenerEintrag = false;
+
+    function verlaufsMarkeSetzen() {
+        if (eigenerEintrag) return;
+        try {
+            history.pushState({ dsPocket: VERLAUFSMARKE }, '');
+            eigenerEintrag = true;
+        } catch (e) {
+            // Kein Verlauf verfuegbar (etwa in einem Rahmen ohne Rechte).
+            // Der Knopf bleibt der Weg zurueck; das ist kein Grund, das
+            // Vollbild gar nicht erst zu zeigen.
+            eigenerEintrag = false;
+        }
+    }
+
+    function verlaufsMarkeAufloesen() {
+        if (!eigenerEintrag) return;
+        eigenerEintrag = false;
+        try { history.back(); } catch (e) { /* siehe oben */ }
+    }
+
+    function schliesse(ausDemVerlauf) {
         var host = document.getElementById('pocketOverlay');
         if (!host || host.hidden) return;
         host.hidden = true;
         host.innerHTML = '';
         document.body.style.overflow = '';
         wachFreigeben();
+        // Kam der Schliessbefehl SELBST aus dem Verlauf, ist der Eintrag
+        // schon verbraucht — ein history.back() darauf wuerde eine
+        // Ansicht zu weit zurueckspringen.
+        if (ausDemVerlauf) { eigenerEintrag = false; return; }
+        verlaufsMarkeAufloesen();
     }
 
     /* ── Zeichnen ────────────────────────────────────────────────── */
@@ -473,6 +518,13 @@
 
         document.addEventListener('keydown', function (ev) {
             if (ev.key === 'Escape') schliesse();
+        });
+
+        // Die Zurueck-Geste des Telefons. Sie ist dort der Reflex, und
+        // ohne diesen Zuhoerer verliess sie die ganze Anwendung.
+        window.addEventListener('popstate', function () {
+            var host = document.getElementById('pocketOverlay');
+            if (host && !host.hidden) schliesse(true);
         });
     }
 

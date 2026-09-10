@@ -154,20 +154,61 @@
     align-items: center;
     justify-content: flex-start;
     gap: 12px;
-    padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+    /* OBEN KEINE POLSTERUNG. Die traegt die Leiste unten selbst — nur so
+       klebt sie beim Scrollen wirklich am Bildschirmrand und deckt den
+       Bereich unter der Statusleiste ab. */
+    padding: 0 16px calc(20px + env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     background: var(--surface-1, #fff);
     color: var(--text-primary, #111827);
 }
 .pk-overlay[hidden] { display: none !important; }
+
+/* Die Leiste mit dem Weg zurueck.
+ *
+ * BEFUND (10.09.2026, vom Betreiber am Telefon gemeldet: "Man kommt von
+ * hier aus nicht zurueck"). Drei Dinge kamen zusammen, und jedes einzelne
+ * haette gereicht:
+ *
+ *   1. Die Polsterung des Overlays beachtete `env(safe-area-inset-bottom)`,
+ *      aber NICHT den oberen Einzug. GEMESSEN mit Playwright bei 390 px:
+ *      die Oberkante des Knopfes lag 20 px unter dem Bildschirmrand. Auf
+ *      einem Geraet mit Dynamic Island betraegt der obere Einzug rund
+ *      59 px — der ganze Knopf lag unter der Statusleiste.
+ *   2. Der Knopf war ein gewoehnliches Flex-Kind und scrollte mit. Nach
+ *      25 px Scrollen stand seine Oberkante schon bei -5 px.
+ *   3. Der einzige weitere Ausweg war die Escape-Taste. Die gibt es am
+ *      Telefon nicht, und ein Verlaufseintrag bestand nicht — die
+ *      Zurueck-Geste verliess also die ganze Seite.
+ *
+ * Die Leiste ist die Antwort auf 1 und 2: sie klebt oben, traegt den
+ * Geraeteeinzug in ihrer eigenen Polsterung und ist ueber die volle
+ * Breite deckend, damit beim Scrollen nichts seitlich an ihr
+ * vorbeilaeuft. Punkt 3 loest ds-pocket.js mit einem Verlaufseintrag. */
+.pk-leiste {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    align-self: stretch;
+    display: flex;
+    justify-content: flex-end;
+    /* Zieht sich ueber die seitliche Polsterung des Overlays hinweg. */
+    margin: 0 -16px;
+    padding: calc(20px + env(safe-area-inset-top, 0px)) 16px 8px;
+    background: var(--surface-1, #fff);
+}
 .pk-schliessen {
-    align-self: flex-end;
     min-height: 44px;
     min-width: 44px;
     padding: 0 14px;
     border-radius: 22px;
     border: 1px solid var(--border-color, #d1d5db);
-    background: var(--surface-1, #fff);
+    /* --surface-2 statt --surface-1: der Knopf ist der EINZIGE Weg
+       zurueck (die Zurueck-Geste kommt dazu, sieht man aber nicht), und
+       auf derselben Flaeche wie der Hintergrund blieb von ihm nur ein
+       schwebendes Kreuz uebrig. Eine Stufe abgesetzt liest er sich als
+       Bedienelement. */
+    background: var(--surface-2, #f1f3f7);
     color: var(--text-primary, #111827);
     font-size: 1rem;
     cursor: pointer;

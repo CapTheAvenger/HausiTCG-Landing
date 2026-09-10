@@ -215,4 +215,50 @@ describe('Pocket-Reiter: die Auflagen der Datei', () => {
         assert.match(JS, /Das Muster ließ sich nicht zeichnen/,
             'ohne Rueckfall bleibt bei einem Fehler ein leeres weisses Feld stehen');
     });
+
+    /* Die Geometrie des Rueckwegs.
+     *
+     * BEFUND (10.09.2026, am Telefon gemeldet): der Schliessknopf lag
+     * unter der Statusleiste. Die Polsterung des Overlays beachtete
+     * `env(safe-area-inset-bottom)`, aber NICHT den oberen Einzug —
+     * jemand hat an Geraeteeinzuege gedacht und nur die Haelfte
+     * behandelt. GEMESSEN mit Playwright bei 390 px: Oberkante des
+     * Knopfes 20 px, bei einer Dynamic Island (59 px) also darunter.
+     * Nach dem Umbau, mit nachgestelltem Einzug: 79 px, und beim
+     * Scrollen bis ans Ende bleibt er dort. */
+    it('die obere Leiste beachtet den Geraeteeinzug', () => {
+        const block = CSS.slice(CSS.indexOf('.pk-leiste {'),
+                                CSS.indexOf('.pk-schliessen {'));
+        assert.ok(block.length > 50, 'den Block .pk-leiste gibt es nicht');
+        assert.match(block, /env\(safe-area-inset-top/,
+            'die Leiste beachtet den oberen Geraeteeinzug nicht — dann '
+            + 'liegt der Schliessknopf am Telefon unter der Statusleiste');
+        assert.match(block, /position:\s*sticky/,
+            'die Leiste klebt nicht — dann scrollt der einzige Weg '
+            + 'zurueck aus dem Bild');
+        assert.match(block, /top:\s*0/, 'ohne top greift sticky nicht');
+    });
+
+    it('das Overlay traegt oben KEINE eigene Polsterung mehr', () => {
+        /* Sonst schoebe sie die klebende Leiste nach unten, und der
+           Bereich unter der Statusleiste bliebe unbedeckt — Inhalt
+           wuerde beim Scrollen daran vorbeilaufen. */
+        const block = CSS.slice(CSS.indexOf('.pk-overlay {'),
+                                CSS.indexOf('.pk-overlay[hidden]'));
+        const polster = block.match(/padding:\s*([^;]+);/);
+        assert.ok(polster, '.pk-overlay hat keine padding-Angabe mehr');
+        assert.match(polster[1], /^0\s/,
+            'die obere Polsterung ist zurueck: ' + polster[1].trim());
+        assert.match(polster[1], /env\(safe-area-inset-bottom/,
+            'der untere Geraeteeinzug ist verlorengegangen');
+    });
+
+    it('die Zurueck-Geste des Telefons ist verdrahtet', () => {
+        assert.match(JS, /addEventListener\('popstate'/,
+            'ohne popstate-Zuhoerer verlaesst die Zurueck-Geste die ganze '
+            + 'Anwendung, statt das Vollbild zu schliessen');
+        assert.match(JS, /history\.pushState/,
+            'ohne Verlaufseintrag gibt es nichts, wohin zurueckgegangen '
+            + 'werden koennte');
+    });
 });
