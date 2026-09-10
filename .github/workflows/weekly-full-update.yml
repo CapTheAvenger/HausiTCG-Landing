@@ -818,6 +818,27 @@ jobs:
         run: |
           python3 scripts/repariere_ace_spec.py --melden
 
+      - name: Kartentyp im Decklistenbestand nachziehen
+        # WOZU: data/tournament_decklists_per_player.csv fuehrt eine
+        # Spalte `type` (Basic, Item, Supporter …). Sie kommt aus der
+        # Kartendatenbank; ein Druck, den die Datenbank nicht kennt,
+        # bleibt leer.
+        #
+        # BEFUND 10.09.2026: drei Zeilen (Slowpoke MEP 86) standen ohne
+        # Typ. Die Quelle hatte ihn — limitlesstcg.com schreibt auf
+        # /cards/MEP/86 "Pokémon - Basic". Gefehlt hat er in
+        # data/all_cards_database.csv, weil `scrape_promo_set_pages`
+        # Karten ohne Listenzeile anlegt und der Detaillauf den Typ
+        # nicht nachholte. 51 von 5.146 Karten waren betroffen.
+        #
+        # Die Ursache ist behoben (backend/scrapers/all_cards_scraper.py),
+        # und die Datenbank ist nachgezogen. Dieser Schritt zieht den
+        # BESTAND nach — ohne einen einzigen Abruf, der Typ steht lokal.
+        # Er schreibt nur, was die Datenbank hergibt; ein unbekannter
+        # Druck bleibt leer und wird als ::warning:: gemeldet.
+        run: |
+          python3 scripts/fuelle_kartentyp.py --schreiben
+
       - name: Frischepruefung — was ist wirklich aktuell?
         # WOZU DIESER SCHRITT DA IST
         # --------------------------
