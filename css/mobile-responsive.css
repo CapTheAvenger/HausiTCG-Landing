@@ -1094,6 +1094,72 @@
         font-size: var(--fs-sm);
     }
 
+    /* Etappe 3: City League Entwicklung.
+     *
+     * GEMESSEN bei 390 px, Reiter "City League Entwicklung",
+     * 194 sichtbare Textknoten:
+     *
+     *     mit Boden      183 x 12 px, 7 x 11, 4 groesser  (94,3 % auf 12)
+     *     ohne Boden     106 Knoten unter 11 px, der kleinste bei 6,3 px
+     *
+     * Dieselbe Ursache wie in Etappe 1 und 2, nur deutlicher: die
+     * Tabellenzelle steht auf `font-size: 0.6em` und die Kopfzelle auf
+     * 0.65em (weiter unten in dieser Datei). Gegen einen 11-px-Vorfahren
+     * sind das 6,6 und 7,2 px. Der Boden hat jede dieser Zellen EINZELN
+     * auf 12 px gehoben — deshalb ist die Verschachtelung nie
+     * aufgefallen, und deshalb lag die Ueberschrift "City League
+     * Entwicklung" mit ihren Zellen gleichauf.
+     *
+     * MIT !important, anders als in Etappe 1 und 2. Dort trugen die
+     * Ziele keine eigene !important-Regel; hier tun sie es
+     * (.city-league-info-table-cell setzt 0.6em !important). Eine
+     * Regel ohne !important verliert dagegen, egal wie spezifisch sie
+     * ist. Das ist keine Nachlaessigkeit, sondern die Bedingung dafuer,
+     * dass diese Etappe ueberhaupt greift.
+     *
+     * Alle Werte liegen bei 11 px und damit NICHT ueber dem, was der
+     * Boden vorher erzwungen hat (12 px) — das Layout muss nichts
+     * aushalten, was es nicht schon ausgehalten hat. */
+    #city-league.fs-scale .city-league-info-table-header,
+    #city-league.fs-scale .city-league-info-card-details,
+    #city-league.fs-scale .city-league-info-card-herkunft,
+    #city-league.fs-scale .city-league-info-combined-explanation,
+    #city-league.fs-scale .stat-badge,
+    #city-league.fs-scale .stat-badge-suffix,
+    #city-league.fs-scale .data-freshness-chip,
+    #city-league.fs-scale .js-data-freshness,
+    /* Die zweite Zeile der Saison-Meldung und die Zusammenfassung eines
+       aufklappbaren Abschnitts: beide standen auf 9,6 bzw. 9,7 px. */
+    #city-league.fs-scale .cl-season-notice small,
+    #city-league.fs-scale details > summary,
+    #city-league.fs-scale details > summary * {
+        font-size: var(--fs-xs) !important;
+    }
+
+    /* Und die Ueberschriften duerfen endlich groesser sein als die
+     * Zeilen darunter — das war der ganze Zweck des Ausstiegs.
+     * .city-league-tier-title traegt ueberhaupt keine eigene Regel; sie
+     * stand nur deshalb auf 12 px, weil der Boden sie dorthin gehoben
+     * hat. */
+    /* Die Tabellenzelle ist eine DATENANSICHT, keine Fussnote: tokens.css
+       nennt --fs-sm ausdruecklich "Grundgroesse aller Datenansichten".
+       Sie behaelt damit genau die Groesse, die der Boden ihr gegeben hat
+       (12 px) — der Gewinn dieser Etappe steht ueber ihr, nicht in ihr.
+       Der Deckname darin steht auf 0.95em und braucht denselben Wert
+       ausdruecklich, sonst faellt er auf 11,4 px.
+       Der Kopf darueber ist eine Beschriftung und bleibt bei --fs-xs. */
+    #city-league.fs-scale .city-league-info-table-cell,
+    #city-league.fs-scale .city-league-info-table-cell-archetype .archetype-jump-link {
+        font-size: var(--fs-sm) !important;
+    }
+
+    #city-league.fs-scale .city-league-tier-title {
+        font-size: var(--fs-md) !important;
+    }
+    #city-league.fs-scale .city-league-header h2 {
+        font-size: var(--fs-lg) !important;
+    }
+
     /* Etappe 2: Vergangenes Meta.
      *
      * Gemessen bei 390 px, Reiter "Vergangenes Meta", Chunk TEF-CRI,
