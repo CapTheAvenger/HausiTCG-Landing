@@ -1,11 +1,11 @@
 {
-  "fenster_von": "2026-08-25",
-  "fenster_bis": "2026-09-08",
+  "fenster_von": "2026-08-27",
+  "fenster_bis": "2026-09-10",
   "fenster_tage": 14,
-  "decks_im_fenster": 9617,
-  "decks_differenz_roh": 9650,
+  "decks_im_fenster": 9975,
+  "decks_differenz_roh": 10010,
   "vorfenster_von": "2026-08-11",
-  "nicht_im_fenster_entstanden": 33,
-  "decks_kumulativ": 41714,
-  "staende_vorhanden": 68
+  "nicht_im_fenster_entstanden": 35,
+  "decks_kumulativ": 43543,
+  "staende_vorhanden": 69
 }

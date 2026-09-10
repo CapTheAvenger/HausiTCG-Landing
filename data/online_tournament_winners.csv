@@ -2,6 +2,17 @@ tournament_id,tournament_date,format,player_count,winner_archetype,winner_winrat
 6a2a2ad82d97f3b0c2613980,2026-07-01,CRI,109,Dragapult Dusknoir,25.0
 6a42564583fd320299bd3d12,2026-07-01,CRI,114,Slowking,27.0
 6a427cb383fd320299bd3ed1,2026-06-30,CRI,116,Slowking,18.0
+6aa17dbaab080c8c957ff0fd,2026-09-10,PBL,102,Lucario Hariyama,21.0
+6a99789aab080c8c957f8ad7,2026-09-09,PBL,128,Clefairy Ogerpon,19.0
+6aa127aea4272c53be64b8e3,2026-09-09,PBL,101,Crustle,27.0
+6a98f8efab080c8c957f87af,2026-09-09,PBL,156,Clefairy Ogerpon,28.0
+6a9f71b8a4272c53be64a95f,2026-09-09,PBL,139,Mega Excadrill,30.0
+6a9cd456ab080c8c957fb85a,2026-09-09,PBL,113,Arboliva Ogerpon,21.0
+6a9f32eba4272c53be64a4ad,2026-09-08,PBL,132,Rocket's Honchkrow,19.0
+6a9eec66a4272c53be649d4e,2026-09-08,PBL,142,Alakazam Dudunsparce,30.0
+6a99af5fab080c8c957f8edc,2026-09-08,PBL,189,Slowking,24.0
+6a9c6e29ab080c8c957fb0e5,2026-09-08,PBL,124,N's Zoroark,30.0
+6a9e3b3aab080c8c957fca1b,2026-09-08,PBL,166,Mega Lucario,30.0
 6a9ee909a4272c53be649d1f,2026-09-08,PBL,104,Starmie Froslass,18.0
 6a963bc7629039f77d8a717f,2026-09-07,PBL,241,Rocket's Honchkrow,24.0
 6a9ebc30ab080c8c957fcc9c,2026-09-07,PBL,122,Dragapult,31.0
@@ -91,13 +102,3 @@ worlds-2026-day-one,2026-08-15,PBL,909,Dragapult Dusknoir,24.0
 6a7a21622b308b6067b5051d,2026-08-13,PBL,169,Dragapult,30.0
 6a76139d2b308b6067b4cb68,2026-08-13,PBL,265,Clefairy Ogerpon,36.0
 6a7aa8e92b308b6067b50e60,2026-08-13,PBL,150,Dragapult Dusknoir,28.0
-6a7c79d22b308b6067b52012,2026-08-13,PBL,105,Slowking,15.0
-6a74bc282b308b6067b4bc97,2026-08-12,PBL,128,Raging Bolt Ogerpon,21.0
-6a7a21672b308b6067b5051e,2026-08-12,PBL,115,Slowking,28.0
-6a73b30fcdc0391d7fa5dbed,2026-08-12,PBL,162,Dhelmise Banette,30.0
-6a79a7f42b308b6067b4feed,2026-08-12,PBL,152,Dragapult,31.0
-6a755afbcdc0391d7fa5f0e9,2026-08-12,PBL,112,Festival Lead,21.0
-6a78d6b82b308b6067b4f569,2026-08-11,PBL,206,Raging Bolt Ogerpon,21.0
-6a759dfb2b308b6067b4c640,2026-08-11,PBL,156,Clefairy Ogerpon,24.0
-6a7a19cf2b308b6067b5047b,2026-08-11,PBL,107,Toxtricity Box,30.0
-6a78b14acdc0391d7fa61cc9,2026-08-11,PBL,174,Arboliva Ogerpon,33.0
