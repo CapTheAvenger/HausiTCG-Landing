@@ -71,7 +71,6 @@
     font-weight: var(--lbl-weight, 700);
     letter-spacing: var(--lbl-track, .09em);
     text-transform: uppercase;
-    color: var(--ink-3, #575e70);
     border-bottom: 1px solid var(--line, #e3e7ef);
     white-space: nowrap;
 }
@@ -90,6 +89,14 @@
 .mp-tabelle th:nth-child(2), .mp-tabelle td:nth-child(2) { width: 16%; }
 .mp-tabelle th:nth-child(3), .mp-tabelle td:nth-child(3) { width: 34%; }
 .mp-tabelle th:nth-child(4), .mp-tabelle td:nth-child(4) { width: 16%; }
+
+/* Der Kopf steht ueber seinen Zahlen, nicht 244 Pixel daneben.
+   GEMESSEN live am 10.09.2026: die Zellen der Online-Spalte sind
+   rechtsbuendig (.mp-zahl), der Kopf erbte die Linksbuendigkeit von
+   .mp-tabelle th und klebte damit am linken Rand einer 244 px
+   breiten Spalte. Wer die Zahl 10,8 % las, hatte die Beschriftung
+   ausserhalb des Blickfelds. */
+.mp-tabelle th:nth-child(2) { text-align: right; }
 
 .mp-deck { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mp-name { font-weight: 600; }
