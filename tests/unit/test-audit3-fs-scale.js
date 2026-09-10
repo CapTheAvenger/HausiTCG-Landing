@@ -135,12 +135,58 @@ describe('Audit 3 — Etappe 1 des 12-px-Ausstiegs', () => {
     }
   });
 
-  it('der Ausstieg kommt ohne neues !important aus', () => {
+  it('Etappe 1 und 2 kommen ohne neues !important aus', () => {
     // Der Boden greift in der Ansicht nicht mehr, also genuegt Spezifitaet.
     // #current-meta.fs-scale (1,2,0) schlaegt #currentMetaContent (1,1,0).
+    //
+    // Die Grenze endet ausdruecklich VOR Etappe 3: dort tragen die Ziele
+    // eine eigene !important-Regel, und das ist ein anderer Fall — siehe
+    // die naechste Zusicherung.
     const block = MOBILE.slice(MOBILE.indexOf('#current-meta.fs-scale'),
-                               MOBILE.indexOf('Formularfelder'));
+                               MOBILE.indexOf('Etappe 3: City League'));
+    assert.ok(block.length > 200, 'der Bereich der Etappen 1 und 2 ist leer');
     assert.ok(!/!important/.test(block),
       'der neue Block enthaelt !important — der Zaehler darf nicht steigen');
+  });
+
+  it('Etappe 3: die City League ist die dritte uebernommene Ansicht', () => {
+    assert.match(INDEX, /id="city-league"[^>]*class="[^"]*\bfs-scale\b/,
+      '#city-league traegt die Klasse nicht');
+    assert.ok(MOBILE.indexOf('Etappe 3: City League') > 0,
+      'der Block der Etappe 3 fehlt');
+    // Genau die Komponenten, die ohne Boden unter 11 px fielen — gemessen
+    // bei 390 px: 106 von 194 sichtbaren Textknoten, der kleinste 6,3 px.
+    for (const k of ['.city-league-info-table-cell', '.city-league-info-table-header',
+                     '.city-league-info-card-details', '.stat-badge',
+                     '.data-freshness-chip', '.city-league-tier-title']) {
+      assert.ok(MOBILE.includes('#city-league.fs-scale ' + k),
+        'ohne Tokenwert faellt diese Klasse unter 11 px: ' + k);
+    }
+  });
+
+  it('Etappe 3 braucht !important — und nur deshalb hat sie es', () => {
+    /* ANDERS ALS ETAPPE 1 UND 2, und das ist kein Schlendrian.
+       .city-league-info-table-cell setzt in derselben Datei
+       `font-size: 0.6em !important`. Gegen !important verliert jede
+       Regel ohne, egal wie spezifisch — die Etappe griffe sonst gar
+       nicht. Geprueft wird deshalb BEIDES: dass die Ziele wirklich
+       !important tragen (sonst waere unseres unnoetig) und dass die
+       Groessen trotzdem aus der Skala kommen. */
+    assert.match(MOBILE, /\.city-league-info-table-cell \{[^}]*font-size:[^;]*!important/s,
+      'das Ziel traegt kein !important mehr — dann gehoert es aus Etappe 3 '
+      + 'auch wieder entfernt');
+    // Grenzen an den SELEKTOREN, nicht an den Kommentaren: der Block
+    // zitiert die alten em-Werte absichtlich, und ein Schnitt mitten in
+    // einen Kommentar laesst sich hinterher nicht mehr sauber saeubern.
+    const roh = MOBILE.slice(MOBILE.indexOf('#city-league.fs-scale'),
+                             MOBILE.indexOf('#past-meta.fs-scale'));
+    assert.ok(roh.length > 200, 'der Block der Etappe 3 ist leer');
+    const block = roh.replace(/\/\*[\s\S]*?\*\//g, '');
+    const groessen = block.match(/font-size:\s*[^;]+;/g) || [];
+    assert.ok(groessen.length >= 4, `nur ${groessen.length} Groessen in Etappe 3`);
+    for (const g of groessen) {
+      assert.match(g, /var\(--fs-(xs|sm|md|lg)\)/,
+        'eine Groesse in Etappe 3 kommt nicht aus der Skala: ' + g);
+    }
   });
 });
