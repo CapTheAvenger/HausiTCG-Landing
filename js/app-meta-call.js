@@ -7193,15 +7193,36 @@ window.MetaCall = (function () {
                Ein Deck mit einem Top-8-Platz aus 749 Antritten kaeme auf
                0,0027 -> _clip(0,011) -> 0,5, also den SCHLECHTESTEN
                Boost — waehrend ein Deck ganz ohne Top-8-Platz ueber den
-               Ersatzpfad bei ~1,0 landet. Das ist verkehrt herum.
+               Ersatzpfad bei ~1,0 landet.
 
-               Die Spalte misst also etwas anderes als das, wofuer der
-               Term kalibriert ist. Bis jemand ihn neu kalibriert (die
-               richtige Groesse waere der Top-8-Anteil GETEILT durch den
-               Feldanteil, neutral bei 1,0 — dieselbe Idee wie d2/d1),
-               bleibt der bewaehrte Ersatzpfad der tragende. Die Daten
-               sind trotzdem richtig in der Datei; hier wird nur nichts
-               falsch Kalibriertes verrechnet. */
+               NACHGEMESSEN AM 10.09.2026 — UND EINE BEGRUENDUNG HIER WAR
+               FALSCH. Der Satz "das ist verkehrt herum" stand fuer die
+               SPALTE. Er stimmt fuer sie nicht: die Spalte ordnet richtig,
+               nur schwach.
+
+                   Rangkorrelation top8_conv_rate gegen win_pct
+                     ueber alle 812 gefuellten Zeilen   +0,237
+                     ueber die 74 Zeilen mit Wert > 0   +0,533
+
+               Beide Vorzeichen sind POSITIV. Verkehrt herum ist nicht die
+               Spalte, sondern was die FORMEL daraus macht: von den 74
+               Decks mit einem Wert fallen 69 auf den schlechtesten Boost
+               0,5, weil der Divisor 0,25 eine Groesse in der Naehe von
+               25 % erwartet und hier Werte um 0,003 ankommen.
+
+               Der frueher vorgeschlagene Ausweg — Top-8-Anteil GETEILT
+               durch den Feldanteil, neutral bei 1,0 — ist ebenfalls
+               gemessen, auf denselben 641 Zeilen wie der Ersatzpfad:
+
+                   Vorschlag  top8_count/8 / share_pct   +0,236
+                   Ersatzpfad d2_share / d1_share        +0,690
+
+               Der Ersatzpfad traegt also fast dreimal so viel Signal.
+               Eine Neukalibrierung dieses Zweiges waere damit KEINE
+               Verbesserung, sondern ein Tausch nach unten. Der Schalter
+               bleibt aus — jetzt aus dem gemessenen Grund, nicht aus dem
+               vermuteten. Die Daten sind richtig in der Datei; hier wird
+               nur nichts Schwaecheres verrechnet. */
             const T8_SPALTE_KALIBRIERT = false;
             if (T8_SPALTE_KALIBRIERT && t8 > 0) {
               if (!_labsConvByDeck[k]) _labsConvByDeck[k] = { sum: 0, n: 0 };

@@ -326,3 +326,136 @@ def test_die_beiden_mep_4_kandidaten_liegen_weiterhin_ueber_dem_centbereich(prod
         "die Betreiberregel 'bei Cent-Betraegen den guenstigeren' auch "
         f"hier, und MEP 4 gehoert auf {min(kandidaten, key=lambda k: _preis(preise.get(k)))} "
         "gepinnt statt offengelassen.")
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Die Regel wird jetzt ANGEWANDT, nicht abgewartet (10.09.2026)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Bis heute lag die Regel hier fest und wurde von Hand auf einen
+# gemeldeten Fall angewandt. Der naechste Fall wartete wieder darauf,
+# dass jemand hinsieht. `check_geteilte_produkt_ids` in
+# scripts/data_guardian.py sagt jetzt selbst, ob die Regel greift, und
+# nennt die fertige Zeile fuer data/cardmarket_mapping_manual.csv.
+#
+# GESCHRIEBEN WIRD NICHTS. Eine Betreiberentscheidung gehoert in die
+# Handdatei, nicht in eine gebaute Zuordnung (CLAUDE.md: "Report, don't
+# silently repair").
+#
+# NACHGEMESSEN AM 10.09.2026 ueber alle 28 trennbaren Doppelbelegungen
+# des Bestands: KEINE liegt im Centbereich. Kleinste Spanne 0,65 EUR
+# (SP 3/SP 73), zweitkleinste 1,64 EUR. Die Regel entscheidet heute
+# also nichts mehr — die vier Faelle, die sie entscheiden konnte, sind
+# am 03.09. entschieden worden.
+
+import importlib.util as _ilu
+import sys as _sys
+
+_WURZEL = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+
+def _guardian_quelle():
+    with open(os.path.join(_WURZEL, "scripts", "data_guardian.py"),
+              encoding="utf-8") as f:
+        return f.read()
+
+
+def test_die_regel_steht_im_waechter_und_schreibt_nicht():
+    q = _guardian_quelle()
+    # Auf die VERWENDUNG geprueft, nicht auf den Namen: der steht auch
+    # im Kommentar darueber, und eine Probe, die nur die Zuweisung
+    # umbenennt, waere sonst durchgerutscht (10.09.2026 gemessen).
+    assert "abs(w) < CENT_GRENZE" in q, (
+        "Die Cent-Grenze wird nicht mehr angewandt — die Regel muesste "
+        "weiter von Hand auf jeden neuen Fall gelegt werden.")
+    assert "betreiber-regel-cent" in q, (
+        "Die Meldung nennt die Quelle nicht, unter der der Pin stehen muss.")
+    assert "Geschrieben wird hier nichts" in q, (
+        "Der Hinweis fehlt, dass der Waechter nur meldet. Ohne ihn liest "
+        "sich die Meldung wie eine erledigte Reparatur.")
+
+
+def test_ein_unbekannter_preis_ist_kein_kleiner():
+    """DER FEHLER, DEN DIESE ZUSICHERUNG FESTHAELT.
+
+    Beim ersten Anlauf feuerte die Regel auf UL 56/UL 57: der belegte
+    Preis lag im Centbereich, fuer die freie Produkt-ID 902393 kannte
+    die Preisdatei aber GAR KEINEN Wert. "nur Cent Betraege" waere dort
+    eine Behauptung ueber eine Zahl gewesen, die niemand gesehen hat.
+    """
+    q = _guardian_quelle()
+    assert "len(werte) == len(frei)" in q, (
+        "Der Waechter verlangt nicht mehr, dass JEDER freie Kandidat "
+        "einen bekannten Preis hat — ein unbekannter Preis rutscht dann "
+        "wieder als Centbetrag durch.")
+
+
+def test_die_regel_faellt_auf_den_guenstigeren():
+    """Nicht auf den erstbesten, nicht auf den teuersten."""
+    q = _guardian_quelle()
+    assert "min(frei, key=lambda x: preise.get(x" in q, (
+        "Die Regel waehlt nicht den guenstigsten freien Kandidaten — "
+        'der Betreibersatz lautet aber "dann den guenstigeren".')
+
+
+def test_die_regel_laeuft_wirklich_durch_und_entscheidet_richtig():
+    """AUSGEFUEHRT, nicht nur gelesen.
+
+    Die Zusicherungen darueber lesen den Quelltext. Das faengt eine
+    entfernte Zeile, aber keinen Tippfehler: beim Proben am 10.09.2026
+    liess sich `CENT_GRENZE = 1.0` in `_CENT = 1.0` umbenennen, ohne
+    dass eine einzige Textpruefung umfiel — die Verwendung stand ja
+    weiter da, und der Waechter waere erst zur Laufzeit an einem
+    NameError gestorben.
+
+    Hier laeuft die Pruefung deshalb gegen einen GESETZTEN Datensatz:
+    eine Karte belegt, eine geraten, beide auf derselben Produkt-ID,
+    drei Cent-Produkte unter derselben Metacard.
+    """
+    import csv as _csv
+    import json as _json
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as ordner:
+        # Zwei Karten, eine ID — und Cardmarket fuehrt drei Produkte.
+        with open(os.path.join(ordner, "cardmarket_id_mapping.csv"), "w",
+                  encoding="utf-8", newline="") as f:
+            w = _csv.writer(f)
+            w.writerow(["set", "number", "cardmarket_product_id",
+                        "match_method", "name_en"])
+            w.writerow(["PRE", "200", "900001", "live-verified", "Testkarte"])
+            w.writerow(["PRE", "201", "900001", "heuristic", "Testkarte"])
+        with open(os.path.join(ordner, "products_singles_6.json"), "w",
+                  encoding="utf-8") as f:
+            _json.dump({"products": [
+                {"idProduct": 900001, "idMetacard": 77, "idExpansion": 1},
+                {"idProduct": 900002, "idMetacard": 77, "idExpansion": 1},
+                {"idProduct": 900003, "idMetacard": 77, "idExpansion": 1},
+            ]}, f)
+        with open(os.path.join(ordner, "price_guide_6.json"), "w",
+                  encoding="utf-8") as f:
+            _json.dump({"priceGuides": [
+                {"idProduct": 900001, "trend": 0.05},
+                {"idProduct": 900002, "trend": 0.04},
+                {"idProduct": 900003, "trend": 0.02},
+            ]}, f)
+
+        spec = _ilu.spec_from_file_location(
+            "dg_cent_lauf", os.path.join(_WURZEL, "scripts", "data_guardian.py"))
+        mod = _ilu.module_from_spec(spec)
+        _sys.modules["dg_cent_lauf"] = mod
+        spec.loader.exec_module(mod)
+        mod.DATA = ordner
+
+        befunde = []
+        mod.check_geteilte_produkt_ids(befunde)
+
+    text = " ".join(m for _, m in befunde)
+    assert "Centbereich" in text, (
+        f"Die Cent-Regel hat nicht gegriffen. Befunde: {befunde}")
+    # Der guenstigste FREIE Kandidat ist 900003 (0,02) — nicht 900002.
+    assert "PRE,201,900003,betreiber-regel-cent" in text, (
+        f"Falsche Zeile vorgeschlagen. Befunde: {befunde}")
+    # Und die belegte Zeile wandert NICHT.
+    assert "PRE,200," not in text, (
+        f"Die bestaetigte Zeile wurde umgehaengt. Befunde: {befunde}")
