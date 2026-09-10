@@ -40,6 +40,10 @@ const path = require('path');
 const vm = require('vm');
 const assert = require('assert');
 const { describe, it } = require('node:test');
+const { ZAHL_KOMMA_SRC, zahlKommaEinsetzen } = require('./lib-zahlkomma-sandkasten.js');
+/* zahlKomma() aus js/app-utils.js — im Browser laedt index.html sie vor
+   jedem Aufrufer, der Sandkasten muss sie deshalb ebenfalls kennen. */
+const zahlKomma = new Function(ZAHL_KOMMA_SRC + '\nreturn zahlKomma;')();
 
 const WURZEL = path.join(__dirname, '..', '..');
 const lies = (...p) => fs.readFileSync(path.join(WURZEL, ...p), 'utf8');
@@ -541,8 +545,8 @@ describe('Warum-Dialog: die Luecke wird geschrieben, nicht verschwiegen', () => 
             'buildInfo.techIdeenOhne': 'Nichts gefunden gegen: {liste}. Die Regelbasis kennt {n} Paarungen vom {datum} — diese Matchups sind nicht abgedeckt.',
             'buildInfo.techIdeenOhneEintrag': '{name} ({wr}, {n} Partien)'
         };
-        new Function('_ohne', 'stand', 'wrap', 'document', 't', 'getLang', code)(
-            ohne, stand, wrap, dok, (k) => woerter[k] || k, () => 'de');
+        new Function('_ohne', 'stand', 'wrap', 'document', 't', 'getLang', 'zahlKomma', code)(
+            ohne, stand, wrap, dok, (k) => woerter[k] || k, () => 'de', zahlKomma);
         return geschrieben.map(e => e.textContent);
     }
 

@@ -46,6 +46,10 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { ZAHL_KOMMA_SRC } = require('./lib-zahlkomma-sandkasten.js');
+/* zahlKomma() aus js/app-utils.js — im Browser laedt index.html sie vor
+   jedem Aufrufer, der Sandkasten muss sie deshalb ebenfalls kennen. */
+const zahlKomma = new Function(ZAHL_KOMMA_SRC + '\nreturn zahlKomma;')();
 
 const ROOT = path.join(__dirname, '..', '..');
 const read = p => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -108,10 +112,10 @@ describe('Der Datenumfang — von der Startseite nach Quellen & Methodik', () =>
 
     it('jede Zeile faellt weg, wenn ihre Zahl fehlt', () => {
         // Sonst stuende "null Turniere · undefined Spieler" da.
-        const F = new Function('window', 'sessionStorage', 'Date',
+        const F = new Function('window', 'sessionStorage', 'Date', 'zahlKomma',
             UMFANG + '\nreturn window.DsDatenumfang;');
         const w = {};
-        F(w, { getItem: () => null, setItem: () => {} }, Date);
+        F(w, { getItem: () => null, setItem: () => {} }, Date, zahlKomma);
         const api = w.DsDatenumfang;
         api.setzen({ listen: 26319, archetypen: 138 });
         const z = api.saetze(true).join(' | ');
@@ -136,11 +140,11 @@ describe('Der Datenumfang — von der Startseite nach Quellen & Methodik', () =>
            beim SPRACHWECHSEL dreht sich die Reihenfolge, und die Zeile
            ueber die Kartenanteile verschwand dauerhaft.
            Genau diese Reihenfolge wird hier nachgestellt. */
-        const F = new Function('window', 'sessionStorage', 'Date',
+        const F = new Function('window', 'sessionStorage', 'Date', 'zahlKomma',
             UMFANG + '\nreturn window.DsDatenumfang;');
         const w = {};
         let gemerkt = null;
-        F(w, { getItem: () => gemerkt, setItem: (k, v) => { gemerkt = v; } }, Date);
+        F(w, { getItem: () => gemerkt, setItem: (k, v) => { gemerkt = v; } }, Date, zahlKomma);
         const api = w.DsDatenumfang;
 
         api.setzen({ listen: 100, archetypen: 10 });
@@ -159,11 +163,11 @@ describe('Der Datenumfang — von der Startseite nach Quellen & Methodik', () =>
         /* Sonst stuende unter Quellen & Methodik ein Umfang aus einer
            einzigen Zeile ueber Kartenanteile — das saehe aus wie eine
            Antwort und waere eine Luecke. */
-        const F = new Function('window', 'sessionStorage', 'Date',
+        const F = new Function('window', 'sessionStorage', 'Date', 'zahlKomma',
             UMFANG + '\nreturn window.DsDatenumfang;');
         const w = {};
         let gemerkt = null;
-        F(w, { getItem: () => gemerkt, setItem: (k, v) => { gemerkt = v; } }, Date);
+        F(w, { getItem: () => gemerkt, setItem: (k, v) => { gemerkt = v; } }, Date, zahlKomma);
         const api = w.DsDatenumfang;
         api.ergaenze({ staplesArchetypen: 60 });
         assert.equal(api.lesen(), null, 'ein halber Stand wurde gespeichert');
@@ -174,10 +178,10 @@ describe('Der Datenumfang — von der Startseite nach Quellen & Methodik', () =>
     });
 
     it('mit allen Zahlen stehen alle Zeilen da', () => {
-        const F = new Function('window', 'sessionStorage', 'Date',
+        const F = new Function('window', 'sessionStorage', 'Date', 'zahlKomma',
             UMFANG + '\nreturn window.DsDatenumfang;');
         const w = {};
-        F(w, { getItem: () => null, setItem: () => {} }, Date);
+        F(w, { getItem: () => null, setItem: () => {} }, Date, zahlKomma);
         const api = w.DsDatenumfang;
         api.setzen({ listen: 26319, archetypen: 138, antritte: 8130,
                      feldGesamt: 27357, restAnteil: 3.8,
@@ -202,10 +206,10 @@ describe('Der Datenumfang — von der Startseite nach Quellen & Methodik', () =>
            "das ist kein Parken, das ist ein Umzug" behauptete. */
         assert.match(TIER, /top8Anteil/, 'der Anteil wird nicht mehr gerechnet');
         assert.match(TIER, /\.slice\(0, 8\)/);
-        const F = new Function('window', 'sessionStorage', 'Date',
+        const F = new Function('window', 'sessionStorage', 'Date', 'zahlKomma',
             UMFANG + '\nreturn window.DsDatenumfang;');
         const w = {};
-        F(w, { getItem: () => null, setItem: () => {} }, Date);
+        F(w, { getItem: () => null, setItem: () => {} }, Date, zahlKomma);
         w.DsDatenumfang.setzen({ listen: 100, archetypen: 10, top8Anteil: 61.4 });
         const z = w.DsDatenumfang.saetze(true).join(' | ');
         assert.match(z, /acht größten Archetypen/);

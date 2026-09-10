@@ -188,9 +188,17 @@ describe('Die Majors-Zeile im Meta Call nennt ihren Nenner', () => {
         /* Die Quote erscheint zweimal: in der immer sichtbaren Zeile unter
            dem Decknamen und im aufgeklappten Feld. Eine ohne Nenner wäre
            genauso irreführend wie beide. */
-        assert.match(MC, /t\('mc\.histD2Conv'\)\} \$\{\(r\.empConv \* 100\)\.toFixed\(1\)\.replace\('\.', ','\)\} %\$\{_majors\}/,
+        /* 10.09.2026: die Zahl geht seither durch zahlKomma() aus
+           js/app-utils.js statt durch den 29-fach kopierten Ausdruck
+           `.toFixed(1)` + `.replace('.', ',')`. Die Zusicherung ist
+           dieselbe geblieben — unmittelbar HINTER der Prozentzahl muss
+           der Nenner stehen —, nur der Weg zur Zahl hat sich geaendert.
+           Der Ausdruck steht hier bewusst nicht mehr woertlich drin:
+           was die Zahl formatiert, prueft
+           tests/unit/test-zahlkomma-zeichengleich.js. */
+        assert.match(MC, /t\('mc\.histD2Conv'\)\} \$\{zahlKomma\(\(r\.empConv \* 100\)\)\} %\$\{_majors\}/,
             'die immer sichtbare Zeile nennt die Zahl der Majors nicht');
-        assert.match(MC, /mc-rec-d2wr-value">\$\{pct\.toFixed\(1\)\.replace\('\.', ','\)\} %\$\{esc\(_majors\)\}/,
+        assert.match(MC, /mc-rec-d2wr-value">\$\{zahlKomma\(pct\)\} %\$\{esc\(_majors\)\}/,
             'das aufgeklappte Feld nennt die Zahl der Majors nicht');
     });
 
