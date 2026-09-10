@@ -189,6 +189,29 @@ describe('die Einbettung', () => {
             'die Ruecknahme des thead-Verlaufs fehlt');
     });
 
+    it('der Frischechip traegt seine Sprache zur Einfuegezeit', () => {
+        /* GEMESSEN im CI-Lauf `sprachreinheit` zu PR #723 (10.09.2026):
+           "FAIL EN.i18n 'data.updated' (expected 'Data:' got 'Daten:')".
+
+           Der Reiter rendert erst beim Oeffnen — da ist der
+           Uebersetzungsdurchgang der Seite laengst gelaufen. Ein fest
+           deutsch geschriebenes Wort bleibt dann stehen, egal welche
+           Sprache eingestellt ist. Nach der Korrektur: 675 geprueft,
+           0 Abweichungen.
+
+           Zwei Haelften, beide noetig: der Text muss von der Sprache
+           abhaengen UND das data-i18n muss dranbleiben, damit ein
+           SPAETERER Wechsel ihn wieder anfasst. */
+        assert.match(SRC, /data-i18n="data\.updated"/,
+            'das data-i18n am Frischechip fehlt — dann greift ein '
+            + 'spaeterer Sprachwechsel nicht mehr');
+        const stelle = SRC.slice(SRC.indexOf('data-i18n="data.updated"'),
+                                 SRC.indexOf('data-i18n="data.updated"') + 220);
+        assert.match(stelle, /de\(\)\s*\?\s*'Daten:'\s*:\s*'Data:'/,
+            'der Frischechip schreibt sein Wort fest auf Deutsch statt '
+            + 'in der eingestellten Sprache');
+    });
+
     it('jeder Spaltenkopf steht ueber seinen Zahlen', () => {
         /* GEMESSEN live am 10.09.2026: die Zellen der Online-Spalte
            sind rechtsbuendig, ihr Kopf erbte die Linksbuendigkeit von
