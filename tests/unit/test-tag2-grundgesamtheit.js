@@ -44,6 +44,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const Papa = require('papaparse');
+const { ZAHL_KOMMA_SRC, zahlKommaEinsetzen } = require('./lib-zahlkomma-sandkasten.js');
+/* zahlKomma() aus js/app-utils.js — im Browser laedt index.html sie vor
+   jedem Aufrufer, der Sandkasten muss sie deshalb ebenfalls kennen. */
+const zahlKomma = new Function(ZAHL_KOMMA_SRC + '\nreturn zahlKomma;')();
 
 const WURZEL = path.join(__dirname, '..', '..');
 const D = (n) => path.join(WURZEL, 'data', n);
@@ -576,6 +580,7 @@ describe('Die Schnellreferenz ordnet ihre Zahlen ein', () => {
         };
         g.window = g; g.globalThis = g;
         vm.createContext(g);
+        zahlKommaEinsetzen(g);
         vm.runInContext(
             fs.readFileSync(path.join(WURZEL, 'js', 'current-meta-quickref.js'), 'utf8'),
             g, { filename: 'current-meta-quickref.js' });
@@ -821,6 +826,7 @@ describe('Fehlt eine Zahl, wird sie NICHT geraten — gesetzter Fall', () => {
         };
         g.window = g; g.globalThis = g;
         vm.createContext(g);
+        zahlKommaEinsetzen(g);
         vm.runInContext(
             fs.readFileSync(path.join(WURZEL, 'js', 'current-meta-quickref.js'), 'utf8'),
             g, { filename: 'current-meta-quickref.js' });

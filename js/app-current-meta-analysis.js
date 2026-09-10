@@ -1727,7 +1727,7 @@
                 out.push({
                     ...entry,
                     total_decks_in_archetype: totalDecks,
-                    percentage_in_archetype: pct.toFixed(1).replace('.', ','),
+                    percentage_in_archetype: zahlKomma(pct),
                     average_count: avg.toFixed(2).replace('.', ','),
                     average_count_overall: (totalDecks > 0 ? entry.total_count / totalDecks : 0).toFixed(2).replace('.', ','),
                 });
@@ -2784,7 +2784,7 @@
             // Decimal separator matches the active language so the EN
             // view shows "62.5%" and the DE view shows "62,5%".
             const decimal = (getLang() === 'de') ? ',' : '.';
-            const fmtPct = (v) => v.toFixed(1).replace('.', decimal);
+            const fmtPct = (v) => zahlKomma(v, 1, decimal);
 
             const fmtRow = (m) => `
                 <tr>
@@ -5156,7 +5156,7 @@
                     // Defensive 100 % cap mirrors the data-merge cap so a
                     // stray row with deck_count > total_decks_in_archetype
                     // can never render as e.g. 117 % on the card overview.
-                    const percentage = Math.min(100, Math.max(0, resolvedPercentage)).toFixed(1).replace('.', ',');
+                    const percentage = zahlKomma(Math.min(100, Math.max(0, resolvedPercentage)));
                     const avgCountOverall = Math.max(0, finalAvgOverall).toFixed(2).replace('.', ',');
                     const avgCountInUsedDecks = Math.max(0, finalAvgUsed).toFixed(2).replace('.', ',');
                     const avgCountBaselineDisplay = Math.max(0, finalAvgBaseline).toFixed(2).replace('.', ',');
@@ -5529,7 +5529,7 @@
                         ? avgCountOverallRaw
                         : (totalDecksInArchetype > 0 ? (totalCount / totalDecksInArchetype) : 0);
 
-                    const percentage = Math.min(100, Math.max(0, resolvedPercentage)).toFixed(1).replace('.', ',');
+                    const percentage = zahlKomma(Math.min(100, Math.max(0, resolvedPercentage)));
                     const avgCount = Math.max(0, avgCountUsedValue).toFixed(2).replace('.', ',');
                     const avgCountOverall = Math.max(0, avgCountOverallValue).toFixed(2).replace('.', ',');
                     const decksWithCardDisplay = Math.round(Math.max(0, decksWithCard));

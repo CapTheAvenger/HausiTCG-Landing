@@ -11385,7 +11385,7 @@ ${_zweiKonv ? `<p class="mc-wr-konventionen" style="font-size:0.75rem;color:#888
         ? window.ArchetypeIcons.getIconHtml(r.name, { size: 'sm', layout: 'inline' })
         : '';
       const day2Pct = _mcNum(r.day2Prob * 100, 1);
-      const wrPct   = r.avgWR.toFixed(1).replace('.', ',');
+      const wrPct   = zahlKomma(r.avgWR);
       // Aufgefuellte Zeilen als solche kennzeichnen: die Liste ist immer
       // zehn Zeilen lang, auch wenn weniger Decks die 20 % erreichen.
       const unterSchwelleTag = r.unterSchwelle
@@ -11416,7 +11416,7 @@ ${_zweiKonv ? `<p class="mc-wr-konventionen" style="font-size:0.75rem;color:#888
       const _titelReason = _wrKonventionsTitel('mitUnentschieden');
       const matchupRows = (r.topMatchups || []).map(mu => {
         const wrPctStr = (mu.wr * 100).toFixed(0);
-        const shareStr = mu.share.toFixed(1).replace('.', ',');
+        const shareStr = zahlKomma(mu.share);
         return `<li>
           <span class="mc-rec-reason-vs">${t('mc.reasonVs')} ${esc(mu.opponent)}</span>
           <span class="mc-rec-reason-wr" title="${esc(_titelReason)}" data-hinweis="${esc(_titelReason)}">${wrPctStr} % ${esc(_wrKurzform(t('mc.reasonWr')))}</span>
@@ -11446,7 +11446,7 @@ ${_zweiKonv ? `<p class="mc-wr-konventionen" style="font-size:0.75rem;color:#888
                  + '  ' + _wrKonventionsTitel('mitUnentschieden'))}"
              data-hinweis="${esc(_wrKonventionsTitel('mitUnentschieden'))}">
             <span class="mc-rec-d2wr-label">${esc(_wrKurzform(t('mc.d2WrLabel')))}:</span>
-            <span class="mc-rec-d2wr-value">${r.d2WrPct.toFixed(1).replace('.', ',')} %</span>
+            <span class="mc-rec-d2wr-value">${zahlKomma(r.d2WrPct)} %</span>
             ${d2WrN ? `<span class="mc-rec-d2wr-n">${esc(
                 t('mc.d2WrSample').replace('{n}', String(d2WrN)))}</span>` : ''}
             <span class="mc-rec-d2wr-mult">×${r.d2WrMult.toFixed(2).replace('.', ',')}</span>
@@ -11514,7 +11514,7 @@ ${_zweiKonv ? `<p class="mc-wr-konventionen" style="font-size:0.75rem;color:#888
                und eine andere Schwelle ziehen. */
             return `<div class="mc-rec-d2wr ${cls}" title="${esc(t('mc.d2ConvTooltip') + '  ' + _d2ConvHerkunft())}">
               <span class="mc-rec-d2wr-label">${esc(t('mc.d2ConvLabel'))}:</span>
-              <span class="mc-rec-d2wr-value">${pct.toFixed(1).replace('.', ',')} %${esc(_majors)}${esc(_d2ConvKurz())}</span>
+              <span class="mc-rec-d2wr-value">${zahlKomma(pct)} %${esc(_majors)}${esc(_d2ConvKurz())}</span>
             </div>`;
           })()
         : '';
@@ -11529,10 +11529,10 @@ ${_zweiKonv ? `<p class="mc-wr-konventionen" style="font-size:0.75rem;color:#888
         // B2: dieselbe Mindeststichprobe wie im aufgeklappten Feld —
         // die Zeile zeigt dieselbe Zahl und darf sie nicht anders
         // beschriften.
-        historyParts.push(`${t('mc.histD2Conv')} ${(r.empConv * 100).toFixed(1).replace('.', ',')} %${_majors}${_d2ConvKurz()}`);
+        historyParts.push(`${t('mc.histD2Conv')} ${zahlKomma((r.empConv * 100))} %${_majors}${_d2ConvKurz()}`);
       }
       if (r.d2WrPct != null) {
-        historyParts.push(`${t('mc.histD2Wr')} ${r.d2WrPct.toFixed(1).replace('.', ',')} %`);
+        historyParts.push(`${t('mc.histD2Wr')} ${zahlKomma(r.d2WrPct)} %`);
       }
       /* „D2-WR" ist dieselbe Zahl wie in der Zeile darueber und
          dieselbe Konvention: `_labsDeckWr(r, 'day2_')` rechnet
@@ -11850,9 +11850,9 @@ ${_zweiKonv ? `<p class="mc-wr-konventionen" style="font-size:0.75rem;color:#888
       const icon = (typeof window.ArchetypeIcons !== 'undefined')
         ? window.ArchetypeIcons.getIconHtml(a.name, { size: 'sm', layout: 'inline' })
         : '';
-      const winStr   = a.winPct.toFixed(1).replace('.', ',');
-      const day2Str  = (a.day2Conv * 100).toFixed(1).replace('.', ',');
-      const scoreStr = a.score.toFixed(1).replace('.', ',');
+      const winStr   = zahlKomma(a.winPct);
+      const day2Str  = zahlKomma((a.day2Conv * 100));
+      const scoreStr = zahlKomma(a.score);
       return `<tr class="mc-rec-row">
         <td class="mc-rec-rank">${i + 1}</td>
         <td class="mc-rec-name"><span class="mc-rec-name-inner">${icon}<span class="mc-rec-name-text">${esc(a.name)}</span></span></td>

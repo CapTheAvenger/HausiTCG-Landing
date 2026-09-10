@@ -11779,3 +11779,200 @@ td.arc-mu-major.arc-mu-major-bilanz {
     line-height: 1.5;
     max-width: 78ch;
 }
+
+/* ────────────────────────────────────────────────────────────────────
+   Zwei Decklisten nebeneinander (js/deck-vergleich-nebeneinander.js)
+
+   Nebeneinander nur, wo Platz ist. Der Umbruch liegt bei 700 px, weil
+   eine Spalte aus Marke + Anzahl + Name + Druckangabe darunter nicht
+   mehr ohne Umbruch in die halbe Breite passt; bei 400 px stehen die
+   beiden Listen untereinander, jede weiterhin mit ihrem Decknamen als
+   Ueberschrift.
+
+   Die Fehlt-Platzhalter (.dvn-leer) halten die Zeilen der beiden
+   Spalten auf gleicher Hoehe. Genau dafuer sind sie da — im
+   gestapelten Zustand gibt es nichts auszurichten, und sie waeren nur
+   eine zweite, halb leere Liste. Deshalb dort ausgeblendet; die
+   Information steckt weiterhin in der Zeile der anderen Spalte, die
+   "◀ nur links" bzw. "▶ nur rechts" traegt.
+
+   Barrierefreiheit: jede Klasse traegt Zeichen, Text UND Kantenform.
+   Farbe allein entscheidet nichts. */
+.dvn-kennzahlen {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2, 8px);
+    margin-bottom: var(--s-3, 12px);
+}
+
+.dvn-kennzahl {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--r-sm, 6px);
+    font-size: var(--fs-sm, 12px);
+    background: var(--surface-2);
+    color: var(--ink-2);
+    border: 1px solid var(--line);
+}
+
+.dvn-kennzahl b { font-size: var(--fs-md, 14px); }
+
+.dvn-hinweis {
+    margin: 0 0 var(--s-3, 12px);
+    font-size: var(--fs-xs, 11px);
+    line-height: 1.45;
+    color: var(--ink-2);
+}
+
+.dvn-hinweis-warn {
+    padding: 6px 8px;
+    border-radius: var(--r-sm, 6px);
+    background: var(--tint-warn);
+    color: var(--tint-warn-ink);
+}
+
+.dvn-spalten {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s-3, 12px);
+    align-items: start;
+}
+
+.dvn-spalte { min-width: 0; }
+
+.dvn-titel {
+    margin: 0 0 var(--s-2, 8px);
+    font-size: var(--fs-md, 14px);
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+
+.dvn-summe {
+    display: block;
+    font-size: var(--fs-xs, 11px);
+    font-weight: 400;
+    color: var(--ink-3);
+}
+
+.dvn-liste {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.dvn-zeile {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    align-items: baseline;
+    gap: 6px;
+    padding: 4px 8px;
+    margin-bottom: 3px;
+    border-radius: 0 var(--r-sm, 6px) var(--r-sm, 6px) 0;
+    font-size: var(--fs-sm, 12px);
+    background: var(--surface-2);
+    color: var(--ink-2);
+    border-left: 4px solid var(--line-strong);
+    min-height: 26px;
+}
+
+.dvn-marke {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    font-weight: 700;
+}
+
+.dvn-marke-text {
+    font-size: var(--lbl, 10px);
+    letter-spacing: var(--lbl-track, .09em);
+    text-transform: uppercase;
+}
+
+.dvn-anzahl {
+    font-family: var(--font-num);
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.dvn-name { overflow-wrap: anywhere; }
+
+.dvn-druck,
+.dvn-ohne-druck {
+    font-family: var(--font-num);
+    font-size: var(--fs-xs, 11px);
+    color: var(--ink-3);
+    white-space: nowrap;
+}
+
+.dvn-ohne-druck { color: var(--tint-warn-ink); }
+
+.dvn-fehlt { font-style: italic; }
+
+/* Gleich: ruhig, durchgezogene Kante. */
+.dvn-zeile.dvn-gleich {
+    border-left-style: solid;
+    border-left-color: var(--line-strong);
+}
+
+/* Andere Anzahl: gestrichelte Kante + "≠" + "3 → 4". */
+.dvn-zeile.dvn-abweichend {
+    border-left-style: dashed;
+    border-left-color: var(--tint-warn-ink);
+    background: var(--tint-warn);
+    color: var(--tint-warn-ink);
+}
+
+.dvn-zeile.dvn-abweichend .dvn-anzahl,
+.dvn-zeile.dvn-abweichend .dvn-druck { color: var(--tint-warn-ink); }
+
+.dvn-pfeil { font-weight: 800; }
+
+/* Nur links: doppelte Kante + "◀". */
+.dvn-zeile.dvn-nurA {
+    border-left-style: double;
+    border-left-width: 5px;
+    border-left-color: var(--tint-info-ink);
+    background: var(--tint-info);
+    color: var(--tint-info-ink);
+}
+
+.dvn-zeile.dvn-nurA .dvn-anzahl,
+.dvn-zeile.dvn-nurA .dvn-druck { color: var(--tint-info-ink); }
+
+/* Nur rechts: gepunktete Kante + "▶". */
+.dvn-zeile.dvn-nurB {
+    border-left-style: dotted;
+    border-left-width: 5px;
+    border-left-color: var(--tint-ok-ink);
+    background: var(--tint-ok);
+    color: var(--tint-ok-ink);
+}
+
+.dvn-zeile.dvn-nurB .dvn-anzahl,
+.dvn-zeile.dvn-nurB .dvn-druck { color: var(--tint-ok-ink); }
+
+/* Platzhalter: nur Ausrichtung, keine Aussage. */
+.dvn-zeile.dvn-leer {
+    background: transparent;
+    border-left-color: var(--line);
+    color: var(--ink-3);
+    opacity: .6;
+}
+
+.dvn-kennzahl.dvn-abweichend { background: var(--tint-warn); color: var(--tint-warn-ink); }
+.dvn-kennzahl.dvn-nurA { background: var(--tint-info); color: var(--tint-info-ink); }
+.dvn-kennzahl.dvn-nurB { background: var(--tint-ok); color: var(--tint-ok-ink); }
+
+@media (max-width: 700px) {
+    .dvn-spalten { grid-template-columns: 1fr; }
+    .dvn-zeile.dvn-leer { display: none; }
+    /* Die Druckangabe rutscht in eine zweite Zeile, statt dem Namen die
+       Breite zu nehmen. Marke und Text bleiben stehen: bei 400 px ist
+       genau dort die Aussage, und sie darf nicht auf Farbe zusammen-
+       schrumpfen. */
+    .dvn-zeile { grid-template-columns: auto auto 1fr; }
+    .dvn-druck,
+    .dvn-ohne-druck { grid-column: 1 / -1; white-space: normal; }
+}

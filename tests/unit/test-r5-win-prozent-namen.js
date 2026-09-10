@@ -45,6 +45,10 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const { ausschnitt, baue } = require('./lib-dom-sandkasten.js');
+const { ZAHL_KOMMA_SRC } = require('./lib-zahlkomma-sandkasten.js');
+/* zahlKomma() aus js/app-utils.js — im Browser laedt index.html sie vor
+   jedem Aufrufer, der Sandkasten muss sie deshalb ebenfalls kennen. */
+const zahlKomma = new Function(ZAHL_KOMMA_SRC + '\nreturn zahlKomma;')();
 
 const WURZEL = path.join(__dirname, '..', '..');
 const lies = (rel) => fs.readFileSync(path.join(WURZEL, rel), 'utf8');
@@ -85,6 +89,7 @@ function frozenUmgebung(sprache, texte) {
         zahlLokal: (n) => String(n),
         _pastMetaFormatKey: 'TEF-CRI',
         _pastMetaLabsCache: new Map(),
+        zahlKomma,
         _frozenD2Hinweis: () => 'D2',
         _mcPz: () => ' %',
     });

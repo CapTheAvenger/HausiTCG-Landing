@@ -37,6 +37,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { ZAHL_KOMMA_SRC, zahlKommaEinsetzen } = require('./lib-zahlkomma-sandkasten.js');
+/* zahlKomma() aus js/app-utils.js — im Browser laedt index.html sie vor
+   jedem Aufrufer, der Sandkasten muss sie deshalb ebenfalls kennen. */
+const zahlKomma = new Function(ZAHL_KOMMA_SRC + '\nreturn zahlKomma;')();
 
 const WURZEL = path.join(__dirname, '..', '..');
 const lies = (rel) => fs.readFileSync(path.join(WURZEL, rel), 'utf8');
@@ -726,6 +730,7 @@ describe('B5 — eine Kennzahl, ein Name', () => {
         kontext.window = kontext;
         vm.createContext(kontext);
         vm.runInContext(PARSE_ZAHL, kontext);
+        zahlKommaEinsetzen(kontext);
         vm.runInContext(cmStueck('const renderTier = (tierCards, tierTitle, tierEmoji) =>'), kontext);
         return vm.runInContext(
             'renderTier([{ card_name: "Boss Orders", set: "PAL", number: "172", '

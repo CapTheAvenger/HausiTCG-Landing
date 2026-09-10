@@ -599,7 +599,7 @@
       const _qWpVal = _qWK
         ? _qWK.KONVENTIONEN.matchpunkte.rechne(ref.wins || 0, ref.losses || 0, ref.ties || 0)
         : (_winRate(ref) * 100);
-      const _qWpStr = (Number.isFinite(_qWpVal) ? _qWpVal : 0).toFixed(1).replace('.', ',') + '%';
+      const _qWpStr = zahlKomma((Number.isFinite(_qWpVal) ? _qWpVal : 0)) + '%';
       const _qWpHinweis = _qWK ? _qWK.hinweis('matchpunkte') : '';
       const recordBlock = games > 0
         ? `<span class="past-meta-best-record"${_qWpHinweis ? ` title="${_escHtml(_qWpHinweis)}"` : ''}>${ref.wins || 0}-${ref.losses || 0}-${ref.ties || 0} · ${_qWpStr}</span>`
@@ -681,7 +681,7 @@
         ? _oWK.KONVENTIONEN.matchpunkte.rechne(ref.wins || 0, ref.losses || 0, ref.ties || 0)
         : NaN;
       const _oWpStr = Number.isFinite(_oWpVal)
-        ? _oWpVal.toFixed(1).replace('.', ',') + '%'
+        ? zahlKomma(_oWpVal) + '%'
         : '';
       const _oWpHinweis = _oWK ? _oWK.hinweis('matchpunkte') : '';
       const recordBlock = (games > 0 && _oWpStr)

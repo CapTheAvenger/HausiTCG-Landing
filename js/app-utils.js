@@ -1350,6 +1350,47 @@ function zahlLokal(wert, stellen) {
         ? n.toLocaleString(loc)
         : n.toLocaleString(loc, { minimumFractionDigits: stellen, maximumFractionDigits: stellen });
 }
+window.zahlLokal = zahlLokal;
+
+/* Die ZWEITE, engere Schreibweise: feste Nachkommastellen, deutsches
+ * Dezimalkomma, KEIN Tausenderpunkt. Bis 10.09.2026 stand sie 29-mal
+ * woertlich als `.toFixed(1)` gefolgt von `.replace('.', ',')` in js/
+ * — gezaehlt am 10.09.2026 ueber den Ausdruck als Ganzes: 29 Treffer
+ * in acht
+ * Dateien (27-mal mit fest verdrahtetem Komma, 2-mal mit einem
+ * Trennzeichen aus der Sprachwahl).
+ *
+ * WARUM NICHT EINFACH zahlLokal(x, 1)?
+ * Weil das die Ausgabe AENDERN wuerde. Gemessen 10.09.2026, 23 Proben
+ * durch beide Wege, 9 Abweichungen:
+ *
+ *   Eingabe      zahlKomma(x)         zahlLokal(x, 1)
+ *   1000         "1000,0"             "1.000,0"     <- Tausenderpunkt
+ *   12345.6      "12345,6"            "12.345,6"
+ *   999.95       "1000,0"             "1.000,0"
+ *   1e21         "1e+21"              "1.000.000.000.000.000.000.000,0"
+ *   Infinity     "Infinity"           "\u221e"
+ *   -0           "0,0"                "-0,0"        <- Vorzeichen erfunden
+ *   0.15         "0,1"                "0,2"         <- ANDERE Rundung
+ *
+ * Die letzten beiden sind die gefaehrlichen: `zahlLokal` rundet ueber
+ * Intl (half-expand auf dem Dezimalwert), `toFixed` ueber die
+ * Binaerdarstellung. Bei 0.15 kommen zwei verschiedene Prozentzahlen
+ * heraus. An Werten, die Preise und Kartenidentitaet tragen, ist das
+ * kein Schoenheitsfehler. Deshalb bleiben es ZWEI Funktionen, und diese
+ * hier ist die zeichengleiche Ablesung des alten Ausdrucks.
+ *
+ * BEWUSST OHNE Number()-ZWANG: die 29 abgeloesten Stellen riefen
+ * `.toFixed` direkt auf dem Wert auf. Ein Nicht-Zahl-Wert warf dort
+ * einen TypeError. Wer hier `Number(wert)` ergaenzt, macht aus `null`
+ * eine ausgewiesene "0,0" — ein erfundener Messwert, der richtig
+ * aussieht. Ein Absturz ist meldbar, eine erfundene Null nicht.
+ */
+function zahlKomma(wert, stellen, trenner) {
+    return wert.toFixed(stellen == null ? 1 : stellen)
+               .replace('.', trenner == null ? ',' : trenner);
+}
+window.zahlKomma = zahlKomma;
 
 function parseLocaleNumber(input, fallback = 0) {
     if (typeof input === 'number' && Number.isFinite(input)) return input;

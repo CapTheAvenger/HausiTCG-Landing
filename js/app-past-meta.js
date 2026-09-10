@@ -1452,7 +1452,7 @@
                     ? avgInUsingDecksRaw
                     : (deckCountByStats > 0 ? (avgCount * decklistCount / deckCountByStats) : 0);
 
-                const percentage = Math.max(0, resolvedPercentage).toFixed(1).replace('.', ',');
+                const percentage = zahlKomma(Math.max(0, resolvedPercentage));
                 const avgInUsingDecks = Math.max(0, avgInUsingDecksValue).toFixed(2).replace('.', ',');
                 const avgCountOverallDisplay = Math.max(0, avgCount).toFixed(2).replace('.', ',');
                 const deckCountByStatsDisplay = Math.round(Math.max(0, deckCountByStats));
@@ -2019,7 +2019,7 @@
             // richtig, er ist nur nicht das, wonach er aussieht.
             const DAY2_MIN_SPIELER = 10;
             const day2Duenn = day1 > 0 && day1 < DAY2_MIN_SPIELER;
-            const fmtPct = (n) => n.toFixed(1).replace('.', ',') + '%';
+            const fmtPct = (n) => zahlKomma(n) + '%';
             const fmtInt = (n) => zahlLokal(Math.round(n));
 
             const tournLabel = (typeof t === 'function' ? t('pm.perfStatTournaments') : 'Tournaments');
@@ -2227,7 +2227,7 @@
                 return `<tr${thin ? ' class="is-muted"' : ''}>
                     <td>${(typeof window.escapeHtml === 'function' ? window.escapeHtml(o.name) : o.name)}</td>
                     <td class="past-meta-mu-games">${o.games}</td>
-                    <td class="past-meta-mu-wr ${wrCls}">${o.winPct.toFixed(1).replace('.', ',')}%</td>
+                    <td class="past-meta-mu-wr ${wrCls}">${zahlKomma(o.winPct)}%</td>
                 </tr>`;
             }).join('');
 
@@ -2432,7 +2432,7 @@
             const _wpVal = _WK
                 ? _WK.KONVENTIONEN.matchpunkte.rechne(best.wins || 0, best.losses || 0, best.ties || 0)
                 : (_pmListWinRate(best) * 100);
-            const wpStr = (Number.isFinite(_wpVal) ? _wpVal : 0).toFixed(1).replace('.', ',') + '%';
+            const wpStr = zahlKomma((Number.isFinite(_wpVal) ? _wpVal : 0)) + '%';
             const wpHinweis = _WK ? _WK.hinweis('matchpunkte') : '';
             const placeStr = (best.place && best.place < 9999) ? `#${best.place}` : '—';
             const tournName = _pmCleanTournamentName(best.tournament_name);

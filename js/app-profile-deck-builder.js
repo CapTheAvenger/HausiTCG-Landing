@@ -1387,7 +1387,7 @@
             body.innerHTML = `<p class="pdb-empty">${escapeHtml(t().mulliganEmpty)}</p>`;
             return;
         }
-        const fmt = (p) => (p * 100).toFixed(1).replace('.', uiLang() === 'de' ? ',' : '.') + '%';
+        const fmt = (p) => zahlKomma((p * 100), 1, uiLang() === 'de' ? ',' : '.') + '%';
         const warning = total !== DECK_SIZE
             ? `<p class="pdb-mulligan-warn">${escapeHtml(t().mulliganUnder(total))}</p>`
             : '';

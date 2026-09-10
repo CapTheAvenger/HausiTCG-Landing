@@ -29,6 +29,11 @@ function ladeKonvention() {
     const win = { getLang: () => 'de' };
     return new Function('window', src + '\nreturn window.WinRateKonvention;')(win);
 }
+const { ZAHL_KOMMA_SRC } = require('./lib-zahlkomma-sandkasten.js');
+/* js/app-utils.js stellt zahlKomma() bereit; index.html laedt sie vor
+   allen Aufrufern. Der Sandkasten hier muss sie deshalb ebenfalls
+   kennen — sonst prueft er eine Seite, die es nicht gibt. */
+const zahlKomma = new Function(ZAHL_KOMMA_SRC + '\nreturn zahlKomma;')();
 const WK = ladeKonvention();
 
 // 6-2-1 in Matchpunkten: (3*6 + 1) / (3*9) = 19/27 = 70,37 % -> "70,4%".
@@ -56,8 +61,8 @@ describe('F24 (Past Meta) — MostSuccessfulList nennt die Konvention', () => {
             '</span>`');
         const body = wpBlock + '\nconst recordBlock = ' + span + ';\n'
             + 'return { wpStr: wpStr, wpHinweis: wpHinweis, recordBlock: recordBlock };';
-        const fn = new Function('window', 'best', '_esc', '_pmListWinRate', body);
-        const r = fn({ WinRateKonvention: WK }, { wins: 6, losses: 2, ties: 1 },
+        const fn = new Function('window', 'zahlKomma', 'best', '_esc', '_pmListWinRate', body);
+        const r = fn({ WinRateKonvention: WK }, zahlKomma, { wins: 6, losses: 2, ties: 1 },
             (s) => String(s), () => 0);
 
         assert.equal(r.wpStr, ERWARTET_STR, 'die Quote rechnet nicht (3S+U)/3n');
@@ -83,8 +88,8 @@ describe('F24 (Quickref) — Record-Block nennt die Konvention', () => {
             '</span>`');
         const body = wpBlock + '\nconst recordBlock = ' + span + ';\n'
             + 'return { wpStr: _qWpStr, wpHinweis: _qWpHinweis, recordBlock: recordBlock };';
-        const fn = new Function('window', 'ref', '_escHtml', '_winRate', body);
-        const r = fn({ WinRateKonvention: WK }, { wins: 6, losses: 2, ties: 1 },
+        const fn = new Function('window', 'zahlKomma', 'ref', '_escHtml', '_winRate', body);
+        const r = fn({ WinRateKonvention: WK }, zahlKomma, { wins: 6, losses: 2, ties: 1 },
             (s) => String(s), () => 0);
 
         assert.equal(r.wpStr, ERWARTET_STR, 'die Quote rechnet nicht (3S+U)/3n');
