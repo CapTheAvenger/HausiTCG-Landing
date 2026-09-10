@@ -966,11 +966,16 @@
          * js/win-rate-konvention.js — abgeschrieben wird er nicht (siehe
          * die Begründung bei quoteName in zeitraumHtml()).
          *
-         * OFFEN und NICHT hier zu lösen: js/app-past-meta.js gehört einem
-         * anderen Arbeitspaket. Dort steht der Name schon richtig
-         * (WK.hinweis('matchpunkte') am Kachel-title), aber die Kachel
-         * heißt „Cumulative Win %" und sagt nicht, dass die Deck-Analyse
-         * dieselbe Datei anders rechnet. */
+         * ERLEDIGT — der Absatz stimmte schon beim Committen nicht
+         * (nachgesehen 10.09.2026). Hier stand: „OFFEN und NICHT hier zu
+         * lösen: js/app-past-meta.js … sagt nicht, dass die Deck-Analyse
+         * dieselbe Datei anders rechnet."
+         *
+         * Derselbe Commit b1de7075 (08.09.2026) hat das dort geschlossen:
+         * js/app-past-meta.js:2058-2074 baut `winPctKonvSatz` und schreibt
+         * genau diesen Gegenverweis in den title der Kachel (:2089). Der
+         * OFFEN-Text war eine Textleiche und hätte den nächsten Leser eine
+         * Aufgabe suchen lassen, die es nicht gibt. */
         function _wrKonventionsSatz(deutsch) {
             var K = (typeof window !== 'undefined') ? window.WinRateKonvention : null;
             if (!K) return '';

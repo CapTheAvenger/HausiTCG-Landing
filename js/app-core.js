@@ -2681,7 +2681,26 @@ const BASE_PATH = './data/';
                         parsed = await _loadTournamentCardsChunked(options);
                     }
 
-                    // Fallback to monolith file (or non-tournament files)
+                    /* Rueckfall — aber NICHT auf die Monolithdatei.
+                       ------------------------------------------------
+                       Dieser Zweig traegt zwei Faelle: alle NICHT-Turnier-
+                       dateien (Normalweg, die werden hier ueberhaupt erst
+                       geladen) und frueher auch den Rueckfall der
+                       Turnierdaten auf data/tournament_cards_data_cards.csv.
+                       Den zweiten gibt es nicht mehr: die Datei existiert im
+                       Repo nicht, `ls data/` fuehrt nur die 16 Chunks
+                       tournament_cards_data_cards_<FORMAT>.csv. Der Zweig
+                       konnte fuer Turnierdaten also nur einen 404 erzeugen.
+
+                       js/app-cards-db.js:511 hat denselben Rueckfall am
+                       06.09.2026 mit genau dieser Begruendung entfernt —
+                       hier stand er noch (gefunden 10.09.2026 beim
+                       Marker-Durchgang). Jetzt liefert `null` sauber
+                       zurueck, statt eine Anfrage zu stellen, die nicht
+                       gelingen kann. */
+                    if (!parsed && isTournamentCards) {
+                        return null;
+                    }
                     if (!parsed) {
                         const requestUrl = forceRefresh
                             ? `${BASE_PATH}${filename}?t=${Date.now()}`
@@ -2706,7 +2725,11 @@ const BASE_PATH = './data/';
 
                     if (isCurrentMeta && is404) {
                         if (!window._currentMetaMissingWarned) {
-                            console.warn(`[Current Meta] ${filename} not found (404). Falling back to tournament_cards_data_cards.csv.`);
+                            // Die Meldung versprach bis zum 10.09.2026 einen
+                            // Rueckfall auf tournament_cards_data_cards.csv.
+                            // Diese Datei gibt es nicht — die Meldung hat also
+                            // beruhigt, wo nichts passierte.
+                            console.warn(`[Current Meta] ${filename} nicht gefunden (404). Es gibt KEINEN Rueckfall — die Ansicht bleibt leer.`);
                             window._currentMetaMissingWarned = true;
                         }
                     } else {
