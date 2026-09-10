@@ -70,11 +70,34 @@ def bestand():
 
 @pytest.fixture(scope="module")
 def decklisten(bestand):
-    """Eine Deckliste ist (Turnier, Platz, Spieler) — nicht die Kartenzeile."""
+    """Eine Deckliste ist (Turnier, Platz, Spieler) — nicht die Kartenzeile.
+
+    NUR PAPIERZEILEN. Seit dem Wochenlauf #135 (10.09.2026) schreibt
+    auch backend/scrapers/limitless_online_decklist_scraper.py in diese
+    Datei. Dessen Quelle ist die Standings-Seite von
+    play.limitlesstcg.com, nicht data/player_continuity.csv — die
+    Zusicherungen hier unten pruefen den PAPIERWEG und wuerden fuer
+    Online-Zeilen etwas verlangen, das es dort nicht gibt.
+    Fuer die Online-Seite steht ein eigener Waechter am Dateiende.
+    """
     listen = collections.OrderedDict()
     for z in bestand:
+        if (z.get("quelle") or "").strip() == "online":
+            continue
         listen.setdefault(
             (z["tournament_id"], z["place"], z["player_name"]), z)
+    return listen
+
+
+@pytest.fixture(scope="module")
+def online_listen(bestand):
+    """Dasselbe fuer die Online-Zeilen, ueber die Limitless-Kennung."""
+    listen = collections.OrderedDict()
+    for z in bestand:
+        if (z.get("quelle") or "").strip() != "online":
+            continue
+        listen.setdefault(
+            (z["limitless_tournament_id"], z["place"], z["player_name"]), z)
     return listen
 
 
@@ -367,3 +390,46 @@ def test_nachtragen_schreibt_atomar():
         "open(pfad, 'w') kuerzt die Datei vor dem Schreiben — ein Abbruch "
         "mittendrin hinterliesse eine halbe CSV, und der Commit-Schritt "
         "committet sie")
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 6. Die Online-Seite — eigene Quelle, eigener Waechter
+# ─────────────────────────────────────────────────────────────────────
+
+def test_online_listen_tragen_ganz_ueberwiegend_eine_bilanz(online_listen):
+    """WAS AM 10.09.2026 GEMESSEN WURDE
+
+    Nach dem ersten Wochenlauf mit Online-Zeilen standen 663 von 1.319
+    Online-Listen auf 0-0-0. Ursache war KEIN Datenloch: die
+    Bilanzzelle traegt bei ausgestiegenen Spielern einen Vermerk
+
+        <td class="secondary">6 - 2 - 0<span class="drop">drop</span></td>
+
+    und `get_text(strip=True)` klebte daraus "6 - 2 - 0drop", was das
+    anker-feste Muster ablehnte. Am lebenden Dokument nachgezaehlt
+    (Amyverse PTCG Live Weekly #12, 6a98f8ef…): 100 von 155 Zeilen
+    tragen den Vermerk; mit der Reparatur sind es 0 ohne Bilanz.
+
+    Der Bestand heilt erst mit dem naechsten Lauf — deshalb steht hier
+    eine Obergrenze und keine Null. Sinkt sie nach dem Lauf nicht
+    deutlich, greift die Reparatur nicht.
+    """
+    if not online_listen:
+        pytest.skip("keine Online-Zeilen im Bestand")
+    genullt = [k for k, z in online_listen.items() if _ist_genullt(z)]
+    anteil = len(genullt) / len(online_listen)
+    assert anteil <= 0.55, (
+        f"{len(genullt)} von {len(online_listen)} Online-Listen tragen "
+        f"0-0-0 ({anteil * 100:.1f} %). Der Grundstand vor der Reparatur "
+        f"war 50,3 % (663/1.319); mehr heisst, dass der Drop-Vermerk "
+        f"wieder frisst oder ein neuer Vermerk dazugekommen ist.")
+
+
+def test_online_listen_tragen_ueberhaupt_einen_platz(online_listen):
+    """Der Platz ist die Zahl, an der die Gewichtung haengt — anders als
+    die Bilanz darf er nicht fehlen."""
+    if not online_listen:
+        pytest.skip("keine Online-Zeilen im Bestand")
+    ohne = [k for k in online_listen
+            if not str(k[1]).strip().isdigit() or int(k[1]) < 1]
+    assert ohne == [], ohne[:10]
