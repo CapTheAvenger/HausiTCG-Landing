@@ -2,7 +2,7 @@
   "_meta": {
     "title": "Pokémon Champions — Current Top Doubles Teams",
     "subtitle": "Replica codes from top tournament finishes. Tap a code to copy.",
-    "last_updated": "2026-09-09",
+    "last_updated": "2026-09-10",
     "source": "VGCPastes Champions spreadsheet (auto-discovered tabs: M-B=gid1458357160, M-A=gid791705272)",
     "source_url": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTXHOfUSKTZyVoxF7BO-XIEqtbrsq1OSh_4bSaO0bhAMHqtsvYqM_4eZWIMqdZ--SKCb86EXuk75o1i/pub?gid=1458357160&single=true&output=csv",
     "current_regulation": "M-B",
@@ -10,7 +10,7 @@
       "M-B",
       "M-A"
     ],
-    "team_count": 108
+    "team_count": 106
   },
   "teams": [
     {
@@ -414,7 +414,7 @@
       "replica_code": "T19WBBU68T",
       "team_name": "shaikhvgc786's Pokemon VGC Champions Tour Ep.4 Champion Team",
       "tournament": "Pokemon VGC Champions Tour Ep.4",
-      "trainer": "shaikhvgc786",
+      "trainer": "Sahil",
       "format": "VGC Champions",
       "regulation": "M-B",
       "sheet_rank": "Champion",
@@ -1404,7 +1404,7 @@
       "replica_code": "PFEK0XUFQ6",
       "team_name": "og_albina's Local Tour Champion Team",
       "tournament": "Local Tour",
-      "trainer": "og_albina",
+      "trainer": "Owen",
       "format": "VGC Champions",
       "regulation": "M-B",
       "sheet_rank": "Champion",
@@ -10470,176 +10470,6 @@
             "Thunderbolt",
             "Helping Hand",
             "Trick Room"
-          ]
-        }
-      ],
-      "strategy": []
-    },
-    {
-      "rank": 107,
-      "replica_code": "BP25STHPSF",
-      "team_name": "punihina1334's Charizard-Y Mawile Team",
-      "tournament": "-",
-      "trainer": "punihina1334",
-      "format": "VGC Champions",
-      "regulation": "M-B",
-      "sheet_rank": "",
-      "date_shared": "26 Aug 2026",
-      "pokepaste_url": "https://pokepast.es/a492ad488f9f5395",
-      "pokemon": [
-        {
-          "name": "Charizard",
-          "item": "Charizardite Y",
-          "ability": "Blaze",
-          "tera_type": "",
-          "evs": "16 HP / 18 Def / 19 SpA / 13 Spe",
-          "nature": "Modest",
-          "moves": [
-            "Protect",
-            "Heat Wave",
-            "Weather Ball",
-            "Solar Beam"
-          ]
-        },
-        {
-          "name": "Whimsicott",
-          "item": "Focus Sash",
-          "ability": "Prankster",
-          "tera_type": "",
-          "evs": "2 HP / 32 SpA / 32 Spe",
-          "nature": "Timid",
-          "moves": [
-            "Protect",
-            "Moonblast",
-            "Tailwind",
-            "Encore"
-          ]
-        },
-        {
-          "name": "Garchomp",
-          "item": "Sitrus Berry",
-          "ability": "Rough Skin",
-          "tera_type": "",
-          "evs": "12 HP / 31 Atk / 19 Def / 4 Spe",
-          "nature": "Adamant",
-          "moves": [
-            "Protect",
-            "Earthquake",
-            "Dragon Claw",
-            "Rock Slide"
-          ]
-        },
-        {
-          "name": "Farigiraf",
-          "item": "Colbur Berry",
-          "ability": "Armor Tail",
-          "tera_type": "",
-          "evs": "13 HP / 21 Def / 12 SpA / 17 SpD / 3 Spe",
-          "nature": "Modest",
-          "moves": [
-            "Psychic",
-            "Helping Hand",
-            "Thunderbolt",
-            "Trick Room"
-          ]
-        },
-        {
-          "name": "Basculegion",
-          "item": "Mystic Water",
-          "ability": "Adaptability",
-          "tera_type": "",
-          "evs": "1 HP / 10 Atk / 28 Def / 12 SpD / 15 Spe",
-          "nature": "Adamant",
-          "moves": [
-            "Protect",
-            "Wave Crash",
-            "Last Respects",
-            "Aqua Jet"
-          ]
-        },
-        {
-          "name": "Mawile",
-          "item": "Mawilite",
-          "ability": "Hyper Cutter",
-          "tera_type": "",
-          "evs": "27 HP / 19 Atk / 20 Spe",
-          "nature": "Adamant",
-          "moves": [
-            "Protect",
-            "Play Rough",
-            "Sucker Punch",
-            "Rock Slide"
-          ]
-        }
-      ],
-      "strategy": []
-    },
-    {
-      "rank": 108,
-      "replica_code": "44KL4FYB0Y",
-      "team_name": "AndyBakes' Scovillain Maushold Rain Team",
-      "tournament": "-",
-      "trainer": "AndyBakes",
-      "format": "VGC Champions",
-      "regulation": "M-B",
-      "sheet_rank": "",
-      "date_shared": "26 Aug 2026",
-      "pokepaste_url": "https://pokepast.es/2bb1d948e67b1870",
-      "pokemon": [
-        {
-          "name": "Aerodactyl-Mega",
-          "item": "Aerodactylite",
-          "ability": "Unnerve",
-          "tera_type": "",
-          "evs": "20 HP / 13 Atk / 1 Def / 32 Spe",
-          "nature": "Jolly",
-          "moves": [
-            "Rock Slide",
-            "Dual Wingbeat",
-            "Tailwind",
-            "Protect"
-          ]
-        },
-        {
-          "name": "Scovillain-Mega",
-          "item": "Scovillainite",
-          "ability": "Moody",
-          "tera_type": "",
-          "evs": "31 HP / 17 Def / 18 SpD",
-          "nature": "Calm",
-          "moves": [
-            "Overheat",
-            "Giga Drain",
-            "Rage Powder",
-            "Protect"
-          ]
-        },
-        {
-          "name": "Kingambit",
-          "item": "Focus Sash",
-          "ability": "Defiant",
-          "tera_type": "",
-          "evs": "2 HP / 32 Atk / 32 Spe",
-          "nature": "Adamant",
-          "moves": [
-            "Kowtow Cleave",
-            "Iron Head",
-            "Sucker Punch",
-            "Low Kick"
-          ]
-        },
-        {
-          "name": "Maushold-Four",
-          "item": "Wide Lens",
-          "ability": "Technician",
-          "tera_type": "",
-          "evs": "20 HP / 10 Atk / 4 SpD / 32 Spe",
-          "nature": "Jolly",
-          "moves": [
-            "Population Bomb",
-            "Rain Dance",
-            "Follow Me",
-            "Protect"
           ]
         }
       ],

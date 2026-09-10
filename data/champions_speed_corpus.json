@@ -1,17 +1,17 @@
 {
   "_meta": {
-    "last_updated": "2026-09-09",
+    "last_updated": "2026-09-10",
     "window_days": 14,
-    "window_start": "2026-08-26",
-    "window_end": "2026-09-09",
+    "window_start": "2026-08-27",
+    "window_end": "2026-09-10",
     "window_applies_to": "the recency pool only. The corpus is that pool UNION the rank-selected top teams, which carry no date bound — so samples outside this window are expected, not a defect. For what the file actually covers, read content_from / content_to.",
     "content_from": "2026-06-19",
     "content_to": "2026-09-04",
     "samples_outside_window": 190,
-    "team_count": 108,
-    "teams_with_samples": 107,
-    "sample_count": 644,
-    "species_count": 83,
+    "team_count": 106,
+    "teams_with_samples": 105,
+    "sample_count": 634,
+    "species_count": 82,
     "source": "VGCPastes Champions M-A spreadsheet (gid=791705272)"
   },
   "samples": [
@@ -4452,76 +4452,6 @@
       "nature": "Modest",
       "date": "28 Aug 2026",
       "replica": "NVXSN6PK2V"
-    },
-    {
-      "species": "Charizard",
-      "evs": "16 HP / 18 Def / 19 SpA / 13 Spe",
-      "nature": "Modest",
-      "date": "26 Aug 2026",
-      "replica": "BP25STHPSF"
-    },
-    {
-      "species": "Whimsicott",
-      "evs": "2 HP / 32 SpA / 32 Spe",
-      "nature": "Timid",
-      "date": "26 Aug 2026",
-      "replica": "BP25STHPSF"
-    },
-    {
-      "species": "Garchomp",
-      "evs": "12 HP / 31 Atk / 19 Def / 4 Spe",
-      "nature": "Adamant",
-      "date": "26 Aug 2026",
-      "replica": "BP25STHPSF"
-    },
-    {
-      "species": "Farigiraf",
-      "evs": "13 HP / 21 Def / 12 SpA / 17 SpD / 3 Spe",
-      "nature": "Modest",
-      "date": "26 Aug 2026",
-      "replica": "BP25STHPSF"
-    },
-    {
-      "species": "Basculegion",
-      "evs": "1 HP / 10 Atk / 28 Def / 12 SpD / 15 Spe",
-      "nature": "Adamant",
-      "date": "26 Aug 2026",
-      "replica": "BP25STHPSF"
-    },
-    {
-      "species": "Mawile",
-      "evs": "27 HP / 19 Atk / 20 Spe",
-      "nature": "Adamant",
-      "date": "26 Aug 2026",
-      "replica": "BP25STHPSF"
-    },
-    {
-      "species": "Aerodactyl-Mega",
-      "evs": "20 HP / 13 Atk / 1 Def / 32 Spe",
-      "nature": "Jolly",
-      "date": "26 Aug 2026",
-      "replica": "44KL4FYB0Y"
-    },
-    {
-      "species": "Scovillain-Mega",
-      "evs": "31 HP / 17 Def / 18 SpD",
-      "nature": "Calm",
-      "date": "26 Aug 2026",
-      "replica": "44KL4FYB0Y"
-    },
-    {
-      "species": "Kingambit",
-      "evs": "2 HP / 32 Atk / 32 Spe",
-      "nature": "Adamant",
-      "date": "26 Aug 2026",
-      "replica": "44KL4FYB0Y"
-    },
-    {
-      "species": "Maushold-Four",
-      "evs": "20 HP / 10 Atk / 4 SpD / 32 Spe",
-      "nature": "Jolly",
-      "date": "26 Aug 2026",
-      "replica": "44KL4FYB0Y"
     }
   ]
 }
