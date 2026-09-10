@@ -6163,6 +6163,47 @@ details[open] > .tier-trending-summary::after {
     .top-cards-controls .btn-toggle-item { white-space: nowrap; flex: 0 0 auto; }
 }
 
+/* Die Artenzeile unter den Stufen (10.09.2026).
+   -------------------------------------------
+   Sieben Knoepfe ("Alle" plus bis zu sechs Arten) passen auf 390 px
+   nicht nebeneinander. Sie wischt in sich, wie die Stufenzeile darueber
+   schon seit laengerem — die Seite selbst bekommt dadurch keinen
+   Querlauf.
+
+   Die Zahl am Knopf ist kleiner und blasser als die Beschriftung: sie
+   sagt, wie viele Karten diese Art hergibt, und ist eine Nebenangabe.
+   "Tools 2" soll nach einer Auskunft aussehen, nicht nach einem Fehler. */
+.top-cards-arten {
+    margin: 0 0 14px 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.top-cards-arten::-webkit-scrollbar { display: none; }
+.top-cards-arten .btn-toggle-item {
+    white-space: nowrap;
+    flex: 0 0 auto;
+    /* Tippziel fuer den Finger. Die Zeile steht am Rand des Blocks und
+       hat unter sich Luft, also kostet die Hoehe hier nichts. */
+    min-height: 44px;
+}
+.top-cards-artzahl {
+    display: inline-block;
+    margin-left: 5px;
+    padding: 0 5px;
+    border-radius: 8px;
+    font-size: var(--fs-xs);
+    font-variant-numeric: tabular-nums;
+    background: var(--surface-2);
+    color: var(--ink-2);
+}
+.top-cards-arten .btn-toggle-item.active .top-cards-artzahl {
+    background: rgba(255, 255, 255, 0.22);
+    color: inherit;
+}
+
 .top-cards-scroll,
 .top-cards-grid {
     display: grid;

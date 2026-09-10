@@ -37,6 +37,13 @@
  *     Die 44 px hier sind das strengere 2.5.5 (AAA). Wer sie auch dort
  *     will, muss die Seitenwahl umbauen, nicht die Hoehe hochziehen —
  *     sonst bricht die Leiste auf vier Zeilen um.
+ *   - .ds-abschnitt-info — der Professor-Eich-Knopf an den
+ *     Abschnittsueberschriften der Meta-Ansicht (js/ds-sections.js).
+ *     Er traegt ein Bild und soll so gross bleiben, wie
+ *     css/styles.css:8210 ihn entworfen hat: 28 px auf dem Telefon,
+ *     32 px darueber. Seine Flaeche waechst unsichtbar per ::after,
+ *     wie bei den Knoepfen auf dem Kartenbild. Der Block ganz unten
+ *     sagt, was gemessen wurde.
  *   - .card-proxy-btn und .card-limitless-btn — die "Proxy"-, Preis-
  *     und "L"-Knoepfe, die auf dem
  *     Kartenbild selbst liegen. Sie stehen zu zweit in einer Zeile von
@@ -49,7 +56,7 @@
  * format-btn) und gewinnen sonst.
  */
 @media (pointer: coarse) {
-    button:not(.card-badge):not([data-klein]):not(.pagination-page-btn):not(.card-proxy-btn):not(.card-limitless-btn):not(.wishlist-heart-badge),
+    button:not(.card-badge):not([data-klein]):not(.pagination-page-btn):not(.card-proxy-btn):not(.card-limitless-btn):not(.wishlist-heart-badge):not(.ds-abschnitt-info),
     select:not([data-klein]),
     input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([data-klein]),
     [role="button"]:not(.card-badge):not([data-klein]) {
@@ -226,6 +233,73 @@
         left: 50%;
         width: 34px;
         height: 34px;
+        transform: translate(-50%, -50%);
+    }
+}
+
+
+
+/* ── Der Info-Knopf an den Abschnittsueberschriften ──────────────────
+ *
+ * Der Professor-Eich-Knopf oeffnet die lange Erklaerung einer
+ * Auswertung (js/ds-abschnitt-info.js, js/ds-sections.js). Sechs davon
+ * stehen in der Meta-Ansicht, jeder in einer Ueberschriftszeile neben
+ * dem Klapp-Knopf.
+ *
+ * GEMESSEN am 10.09.2026 (Chromium, 390 x 844, `pointer: coarse`),
+ * bevor diese Regel stand: 44 x 44 px SICHTBAR. Nicht zu klein also,
+ * sondern zu gross — und zwar gegen den eigenen Entwurf: css/styles.css
+ * gibt .tab-help-btn 32 px und ab 768 px ausdruecklich 28 px. Vier
+ * Sammelregeln ueberstimmen das, alle auf `button` ohne jede Klasse:
+ *
+ *   styles.css  @media (max-width: 480px)                  button
+ *   styles.css  @media (max-width: 430px)                  button, .btn
+ *   styles.css  @media (hover: none) and (pointer: coarse) .tab-btn, button, select
+ *   diese Datei @media (pointer: coarse)                   button:not(...)
+ *
+ * Im Bildschirmfoto fuellt das Bild die 44 px hohe Zeile vollstaendig
+ * aus und ueberragt die Trennlinien des Abschnitts. Deshalb steht
+ * .ds-abschnitt-info oben in der Ausnahmeliste (das nimmt die vierte
+ * Regel weg) und hier die Ruecknahme der drei anderen — eine Klasse
+ * (0,1,0) schlaegt `button` (0,0,1), `!important` braucht es dafuer
+ * nicht.
+ *
+ * Die Trefferflaeche darf davon nichts verlieren: 44 x 44 per ::after,
+ * unsichtbar, dasselbe Muster wie bei .card-proxy-btn und
+ * .wishlist-heart-badge weiter oben.
+ *
+ * KEIN `z-index: -1` wie dort. Jene Knoepfe liegen auf einem
+ * Kartenbild, ihre Flaeche gehoert dahinter. Dieser steht auf der
+ * leeren Flaeche des Abschnitts — nach hinten gelegt naehme sie die
+ * Beruehrung nicht mehr an. Nachgemessen mit elementFromPoint() an
+ * allen vier Ecken der Flaeche: ohne z-index antwortet an jeder Ecke
+ * der Knopf selbst.
+ *
+ * 44 statt der 34 px der Kartenknoepfe: hier steht kein zweiter Knopf
+ * daneben, der sich die Beruehrung abfangen koennte. Nachgemessen,
+ * dass die Flaeche den Klapp-Knopf derselben Zeile NICHT ueberlappt —
+ * dazwischen bleiben 2 px auf 390 px und 4 px auf 820 px, weil
+ * .tab-help-btn ohnehin `margin-left: 10px` traegt. Nach rechts
+ * BESCHNEIDET `.ds-sec { overflow: hidden }`
+ * die Flaeche an der Kante des Abschnitts; css/components.css laesst
+ * dem Knopf auf dem Telefon deshalb 8 px Polster, damit die Flaeche
+ * ganz hineinpasst. Gemessen auf 390 px: Flaeche und Abschnitt enden
+ * beide bei x = 378. */
+@media (pointer: coarse) {
+    .ds-abschnitt-info {
+        min-width: 0;
+        min-height: 0;
+    }
+    /* `position: relative` und `overflow: visible` stehen schon an
+       .tab-help-btn (css/styles.css:8040); ohne das zweite waere die
+       Flaeche am Rand des Knopfes abgeschnitten. */
+    .ds-abschnitt-info::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 44px;
+        height: 44px;
         transform: translate(-50%, -50%);
     }
 }
