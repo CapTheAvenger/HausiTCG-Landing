@@ -670,6 +670,73 @@ def backfill_order_from_release_dates(sets_order: dict, release_dates: dict,
     return skipped_older
 
 
+SETS_OHNE_ORDNUNG_GRUNDSTAND = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), '..', '..',
+    'data', '_sets_ohne_ordnung.json')
+
+
+def melde_sets_ohne_ordnung(skipped_older):
+    """Nur NEUE Sets ohne Ordnungszahl melden, nicht den Altbestand.
+
+    WARUM
+    -----
+    Der Lauf meldete bei jedem Durchgang dieselben 239 Sets: alte
+    japanische Serien (BKB, BKC, BKR, BKV, BKW, BKZ ...) und Promos aus
+    der Zeit vor der Ordnungstabelle. Die Zahl aendert sich nicht, die
+    Warnung kam trotzdem jedes Mal — und genau daran gewoehnt man sich.
+    Die Regel des Projekts dazu steht in CLAUDE.md:
+
+        "Absolute quality thresholds produce noise here. Detect *change*
+         against a baseline instead."
+
+    Gemessen am 10.09.2026: 239 Sets, alle aelter als 2026-07-31, seit
+    Wochen unveraendert. Ein neues Set in dieser Liste waere dagegen ein
+    echter Befund — dann fehlt einer aktuellen Serie die Ordnungszahl,
+    und ihre Karten landen im Legacy-Block, wo der Deckbauer sie nicht
+    findet. Genau das soll die Warnung fangen.
+
+    Der Grundstand legt sich beim ersten Lauf selbst an. Danach meldet
+    diese Funktion ausschliesslich, was seither dazugekommen ist.
+
+    Rueckgabe: die Codes, die NEU sind (leer, wenn nichts dazukam).
+    """
+    aktuell = sorted({str(c).upper() for c in (skipped_older or [])})
+    pfad = os.path.abspath(SETS_OHNE_ORDNUNG_GRUNDSTAND)
+    try:
+        with open(pfad, encoding='utf-8') as fh:
+            grundstand = json.load(fh) or {}
+    except (OSError, ValueError):
+        grundstand = None
+
+    if grundstand is None:
+        # Erster Lauf: anlegen, nichts melden. Ein Grundstand, der sich
+        # selbst als Befund meldet, waere beim ersten Mal 239 Warnungen.
+        os.makedirs(os.path.dirname(pfad), exist_ok=True)
+        with open(pfad, 'w', encoding='utf-8') as fh:
+            json.dump({
+                "_hinweis": ("Sets mit Erscheinungsdatum, aber ohne Ordnungszahl. "
+                             "Altbestand — wird NICHT gemeldet. Nur was hier fehlt, "
+                             "loest eine Warnung aus. Siehe melde_sets_ohne_ordnung() "
+                             "in backend/core/update_sets.py."),
+                "angelegt_am": datetime.date.today().isoformat(),
+                "codes": aktuell,
+            }, fh, indent=2, ensure_ascii=False, sort_keys=False)
+        print(f"[Update Sets] Grundstand angelegt: {len(aktuell)} Sets ohne "
+              f"Ordnungszahl in {pfad}")
+        return []
+
+    bekannt = {str(c).upper() for c in (grundstand.get('codes') or [])}
+    neu = [c for c in aktuell if c not in bekannt]
+    weg = sorted(bekannt - set(aktuell))
+    print(f"[Update Sets] Sets ohne Ordnungszahl: {len(aktuell)} "
+          f"({len(bekannt)} im Grundstand, {len(neu)} neu, {len(weg)} nicht mehr dabei)")
+    if weg:
+        # Kein Fehler: ein Set aus dem Altbestand hat eine Ordnungszahl
+        # bekommen. Nur damit es jemand sieht.
+        print(f"[Update Sets] + Nicht mehr ohne Ordnung: {', '.join(weg[:12])}")
+    return neu
+
+
 def write_sets_metadata(sets_order: dict, release_dates: dict,
                         jp_release_dates: dict = None) -> str:
     """Combine order + release date into sets_metadata.json. Returns
@@ -1529,11 +1596,13 @@ def main():
     # Stack genuinely-new releases on top so a rotation needs no code edit.
     skipped_older = backfill_order_from_release_dates(
         sets_order, release_dates, jp_release_dates)
-    if skipped_older:
+    neue_ohne_ordnung = melde_sets_ohne_ordnung(skipped_older)
+    if neue_ohne_ordnung:
         print("::warning title=Sets without order::"
-              f"{len(skipped_older)} set(s) have a release date but no order and are too old "
-              "to append safely: " + ', '.join(sorted(skipped_older)[:20]) +
-              ". Reported, not repaired — add them to FALLBACK_SET_ORDER at the right position.")
+              f"{len(neue_ohne_ordnung)} NEUE(S) Set(s) haben ein Erscheinungsdatum, aber "
+              "keine Ordnungszahl: " + ', '.join(sorted(neue_ohne_ordnung)[:20]) +
+              ". Gemeldet, nicht repariert — an der richtigen Stelle in "
+              "FALLBACK_SET_ORDER eintragen.")
 
     os.makedirs(data_dir, exist_ok=True)
 

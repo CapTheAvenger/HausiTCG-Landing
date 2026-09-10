@@ -173,7 +173,14 @@ def test_jede_schreibstelle_benutzt_die_regel(rel):
     quelle = open(os.path.join(WURZEL, rel), encoding="utf-8-sig").read()
     assert "ace_spec_regel import" in quelle, (
         "%s schreibt is_ace_spec wieder an der Regel vorbei" % rel)
-    assert "entscheide_zeile(" in quelle, (
+    # Zwei Formen derselben Regel sind erlaubt, siehe
+    # backend/core/ace_spec_regel.py:
+    #   entscheide_zeile(...)  kennt nur diese eine Zeile
+    #   entscheide(...)        kennt den ganzen Bestand (seit 10.09.2026
+    #                          in den beiden Dateien, die bei jedem Lauf
+    #                          vollstaendig neu geschrieben werden)
+    # Verboten ist nur, die Regel zu importieren und dann selbst zu raten.
+    assert ("entscheide_zeile(" in quelle) or ("entscheide(" in quelle), (
         "%s importiert die Regel, ruft sie aber nicht auf" % rel)
 
 

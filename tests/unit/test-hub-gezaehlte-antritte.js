@@ -187,6 +187,29 @@ describe('Gezaehlte Antritte — jede angezeigte Zahl nachgerechnet', () => {
    genau die Beanstandung, die den ganzen Punkt ausgeloest hat.
 
    Hier wird deshalb der Satz selbst gelesen. */
+/* HTML-Entitaeten zurueckuebersetzen, bevor ein Deckname verglichen wird.
+ *
+ * BEFUND 10.09.2026: der Lauf stand rot mit "de: der Deckname fehlt".
+ * Kein Datenfehler — das staerkste Deck des Tages hiess
+ * "Cynthia's Garchomp", und im HTML steht es als
+ * "Cynthia&#39;s Garchomp". Der Vergleich lief gegen die rohe
+ * Zeichenkette und musste scheitern.
+ *
+ * Die Maskierung ist RICHTIG: ein Deckname geht escaped ins HTML, sonst
+ * bricht das erste Apostroph das Attribut auf. Also darf nicht die
+ * Anzeige nachgeben, sondern der Test muss lesen wie ein Browser. Dieser
+ * Test prueft die Rechnung und den Wortlaut, nicht die Maskierung — die
+ * hat ihren eigenen Ort.
+ *
+ * Aufgefallen ist es erst heute, weil erstmals ein Deck mit Apostroph
+ * die Kopfzeile fuehrte. Vorher haette es genauso gefehlt. */
+const entziffere = (s) => String(s)
+    .replace(/&#0*39;|&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&#0*38;|&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+
 describe('Gezaehlte Antritte — der Satz, den man liest', () => {
     function texte(rows, lang) {
         const sb = lade(lang || 'de');
@@ -315,7 +338,8 @@ describe('Gezaehlte Antritte — der Satz, den man liest', () => {
                 `${lang}: Quote ${m.headlineConvPct.toFixed(2)} fehlt im Satz: ${roh}`);
             assert.ok(nah(m.conv.expected * 100),
                 `${lang}: Feldschnitt ${(m.conv.expected * 100).toFixed(2)} fehlt im Satz: ${roh}`);
-            assert.ok(roh.includes(m.headline.name), `${lang}: der Deckname fehlt`);
+            assert.ok(entziffere(roh).includes(m.headline.name),
+                `${lang}: der Deckname fehlt im Satz: ${roh}`);
             // Und das Vielfache: Quote geteilt durch Feldschnitt.
             const vielfach = (roh.match(/([\d.,]+)(?:-mal|×)/) || [])[1];
             assert.ok(vielfach, `${lang}: kein Vielfaches im Satz: ${roh}`);
@@ -345,8 +369,10 @@ describe('Gezaehlte Antritte — der Satz, den man liest', () => {
 
     it('der Deckname im Satz und im Nenner ist derselbe', () => {
         const { m, nenner, satz } = texte();
-        assert.ok(nenner.includes(m.headline.name));
-        assert.ok(satz.includes(m.headline.name));
+        assert.ok(entziffere(nenner).includes(m.headline.name),
+            `der Deckname fehlt im Nenner: ${nenner}`);
+        assert.ok(entziffere(satz).includes(m.headline.name),
+            `der Deckname fehlt im Satz: ${satz}`);
     });
 });
 

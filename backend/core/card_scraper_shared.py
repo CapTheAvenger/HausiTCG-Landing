@@ -25,9 +25,9 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import List, Dict, Optional, Tuple, Any, Set, Mapping, TypedDict, Union, DefaultDict, cast
 try:  # als Paket (backend.core) ...
-    from .ace_spec_regel import entscheide_zeile, lade_ace_liste
+    from .ace_spec_regel import entscheide, lade_ace_liste, belege_aus_bestand
 except ImportError:  # ... oder als Einzelmodul, wie die Scraper es laden
-    from ace_spec_regel import entscheide_zeile, lade_ace_liste
+    from ace_spec_regel import entscheide, lade_ace_liste, belege_aus_bestand
 
 try:
     cloudscraper = importlib.import_module('cloudscraper')
@@ -1068,13 +1068,18 @@ def aggregate_card_data(all_decks: List[DeckEntry], card_db: CardDatabaseLookup,
                 'rarity': c_info.get('rarity',''), 'type': c_info.get('type',''),
                 'image_url': c_info.get('image_url',''),
                 # Drei Werte, jeder mit Beleg — nicht 'No' als Rueckfall.
-                # max_count und type stehen hier bereits fest, damit ist ein
-                # Teil der Zeilen belegbar; der Rest bleibt ehrlich leer.
                 # Regel: backend/core/ace_spec_regel.py
+                #
+                # `entscheide` statt `entscheide_zeile` (10.09.2026): die
+                # zeilenweise Form kennt nur diese eine Zeile, und weil
+                # diese Datei bei JEDEM Lauf vollstaendig neu geschrieben
+                # wird, ging das Wissen aus frueheren Formaten jedes Mal
+                # verloren. Der spaetere Abgleich rechnete mit dem ganzen
+                # Bestand und meldete die Differenz als Drift — am
+                # 10.09.2026 waren das 770 von 4501 Zeilen allein hier.
                 'is_ace_spec': ('Yes' if card_db.is_ace_spec_by_name(name)
-                                else entscheide_zeile(name, lade_ace_liste(),
-                                                      stats['max_count'],
-                                                      c_info.get('type', '')))
+                                else entscheide(name, lade_ace_liste(),
+                                                *belege_aus_bestand()))
             }
 
             if group_by_tournament_date:

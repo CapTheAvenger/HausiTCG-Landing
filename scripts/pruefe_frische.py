@@ -1,0 +1,265 @@
+#!/usr/bin/env python3
+"""Beweist nach jedem Lauf, was frisch ist — und was nicht, und warum.
+
+WARUM ES DIESES SKRIPT GIBT
+---------------------------
+Frage des Betreibers am 10.09.2026: „Erledigt der Lauf eigentlich
+wirklich alle Scraper, oder sind danach irgendwelche Daten noch nicht
+auf dem aktuellsten Stand?"
+
+Die Antwort liess sich bis dahin nicht geben. `data/data_stand.json`
+fuehrt je Datei den Zeitpunkt der letzten INHALTLICHEN Aenderung — und
+eine Datei, die seit 41 Tagen unveraendert ist, kann zweierlei heissen:
+
+    (a) der Scraper lief nicht                → ein Fehler
+    (b) der Scraper lief, die Quelle hat nichts Neues → kein Fehler
+
+Genau dieser Unterschied fehlte. Am 10.09.2026 sahen vier
+City-League-Dateien 41 Tage alt aus; nachgesehen im Browser stand auf
+limitlesstcg.com/tournaments/jp der Satz „The current City League season
+has concluded" — Fall (b), also in Ordnung. Ohne den Blick in die Quelle
+war das aus den Daten nicht zu unterscheiden.
+
+WAS DIESES SKRIPT TUT
+---------------------
+Es legt beide Quellen nebeneinander:
+
+    data/data_stand.json      wann hat sich der INHALT zuletzt geaendert
+    data/_job_heartbeats.json wann lief der ERZEUGER zuletzt erfolgreich
+
+und meldet nur, was wirklich eine Luecke ist:
+
+    STILL   Erzeuger lief nicht in der erwarteten Frist  -> Befund
+    RUHIG   Erzeuger lief, Inhalt aendert sich nicht     -> kein Befund,
+                                                            wird benannt
+    FRISCH  beides aktuell
+
+Ausgabe ist eine Tabelle plus eine Zusammenfassung fuer die
+Laufuebersicht. Der Rueckgabewert ist 0, solange kein Erzeuger stumm
+ist — gemeldet wird, nicht blockiert (CLAUDE.md: „Report, don't silently
+repair").
+"""
+
+import argparse
+import datetime as dt
+import json
+import os
+import sys
+
+WURZEL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATEN = os.path.join(WURZEL, "data")
+
+# Wie oft ein Erzeuger laufen SOLL, in Tagen. Abgeleitet aus den
+# Zeitplaenen in .github/workflows/ (Stand 10.09.2026).
+#
+#   2  -> Di+Fr-Lauf (weekly-full-update.yml, cron '0 6 * * 2,5').
+#         Zwischen Freitag und Dienstag liegen vier Tage, deshalb 5 als
+#         Frist statt 2 — sonst meldet der Montag jede Woche.
+#   1.5-> taeglich (champions-replica-scrape, limitless-api-scrape,
+#         daily-price-refresh, data-guardian)
+#   9  -> woechentlich (cardmarket-card-images So, prizepack So,
+#         verify-cardmarket-mapping Mi)
+ERWARTET_TAGE = {
+    "taeglich": 1.5,
+    "zweimal_woechentlich": 5.0,
+    "woechentlich": 9.0,
+}
+
+# Erzeuger -> Rhythmus. Die Namen sind die Schluessel aus
+# data/_job_heartbeats.json.
+RHYTHMUS = {
+    # Di + Fr
+    "core/update_sets.py": "zweimal_woechentlich",
+    "core/prepare_card_data.py": "zweimal_woechentlich",
+    "scrapers/all_cards_scraper.py": "zweimal_woechentlich",
+    "scrapers/japanese_cards_scraper.py": "zweimal_woechentlich",
+    "scrapers/cardmarket_id_mapper.py": "zweimal_woechentlich",
+    "scrapers/cardmarket_price_merger.py": "zweimal_woechentlich",
+    "scrapers/current_meta_analysis_scraper.py": "zweimal_woechentlich",
+    "scrapers/limitless_online_scraper.py": "zweimal_woechentlich",
+    "scrapers/online_tournament_scraper.py": "zweimal_woechentlich",
+    "scrapers/tournament_scraper_JH.py": "zweimal_woechentlich",
+    "scrapers/labs_tournament_scraper.py": "zweimal_woechentlich",
+    "scrapers/per_decklist_scraper.py": "zweimal_woechentlich",
+    "scrapers/player_continuity_scraper.py": "zweimal_woechentlich",
+    "scrapers/limitless_online_decklist_scraper.py": "zweimal_woechentlich",
+    "scrapers/city_league_analysis_scraper.py": "zweimal_woechentlich",
+    "scrapers/city_league_archetype_scraper.py": "zweimal_woechentlich",
+    "scrapers/city_league_past_analysis_scraper.py": "zweimal_woechentlich",
+    "scrapers/city_league_past_archetype_scraper.py": "zweimal_woechentlich",
+    "scrapers/archetype_icons_scraper.py": "zweimal_woechentlich",
+    "scrapers/pokemon_card_text_scraper.py": "zweimal_woechentlich",
+    "scrapers/pokemon_card_effects_scraper.py": "zweimal_woechentlich",
+    "scrapers/scrape_pokemonproxies_urls.py": "zweimal_woechentlich",
+    "scripts/build_online_fenster.py": "zweimal_woechentlich",
+    "tools/build_threat_intel.py": "zweimal_woechentlich",
+    # taeglich
+    "scrapers/champions_replica_scraper.py": "taeglich",
+    "scripts/scrape_champions_usage.py": "taeglich",
+    "scripts/scrape_champions_roster.py": "taeglich",
+    "scripts/scrape_champions_items.py": "taeglich",
+    "scripts/scrape_opgg_champions_moves.py": "taeglich",
+    "scripts/scrape_pokemon_go_liste.py": "taeglich",
+    "scripts/scrape_pokemon_go_shiny.py": "taeglich",
+    "scripts/scrape_de_names.py": "taeglich",
+    "scripts/scrape_pokemonproxies.py": "taeglich",
+    "scripts/build_champions_resources.py": "taeglich",
+    "scripts/build_champions_pokedex.py": "taeglich",
+    "scripts/build_champions_editionen.py": "taeglich",
+}
+
+# Erzeuger, die BEWUSST keinen Zeitplan haben — mit der Begruendung.
+# Sie erscheinen in der Uebersicht, loesen aber nie einen Befund aus.
+OHNE_ZEITPLAN = {
+    "scripts/scrape_pocket_tierlist.py":
+        "Game8 antwortet dem GitHub-Laeufer auf jedem Weg mit HTTP 202 "
+        "(Cloudflare). Drei Laeufe am 04.09.2026 gemessen. Ein Zeitplan "
+        "erzeugte jede Nacht eine Warnung und nie eine Zeile Daten.",
+    "scripts/build_champions_sprites.py":
+        "Der Kader aendert sich mit einer Regelrunde, nicht taeglich. "
+        "292 Abrufe bei einem ehrenamtlichen Wiki gehoeren nicht in einen "
+        "naechtlichen Lauf.",
+    "scripts/build_pokepricelab_index.py":
+        "Identitaetsquelle, nur auf Zuruf — der Lauf kriecht ueber 271 "
+        "Teil-Sitemaps.",
+    "scripts/verify_via_pokepricelab.py":
+        "Meldet nur, repariert nie. Kartenidentitaet entscheidet kein "
+        "Zeitplan.",
+}
+
+
+def _lies(pfad):
+    try:
+        with open(pfad, encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return {}
+
+
+def _alter_tage(zeitpunkt, jetzt):
+    if not zeitpunkt:
+        return None
+    try:
+        t = dt.datetime.fromisoformat(str(zeitpunkt).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=dt.timezone.utc)
+    return (jetzt - t).total_seconds() / 86400.0
+
+
+def pruefe(jetzt=None):
+    """Gibt (zeilen, stille) zurueck. `stille` sind die echten Befunde."""
+    jetzt = jetzt or dt.datetime.now(dt.timezone.utc)
+    herz = _lies(os.path.join(DATEN, "_job_heartbeats.json"))
+    stand = _lies(os.path.join(DATEN, "data_stand.json"))
+    dateien = stand.get("dateien") or {}
+
+    juengste_datei = None
+    for zeitpunkt in dateien.values():
+        a = _alter_tage(zeitpunkt, jetzt)
+        if a is not None and (juengste_datei is None or a < juengste_datei):
+            juengste_datei = a
+
+    zeilen = []
+    stille = []
+    for job, rhythmus in sorted(RHYTHMUS.items()):
+        eintrag = herz.get(job)
+        eintrag = eintrag if isinstance(eintrag, dict) else {}
+        erfolg = _alter_tage(eintrag.get("zuletzt_erfolgreich"), jetzt)
+        frist = ERWARTET_TAGE[rhythmus]
+        if erfolg is None:
+            zustand = "STILL"
+            hinweis = "kein Herzschlag — der Erzeuger lief hier noch nie erfolgreich"
+        elif erfolg > frist:
+            zustand = "STILL"
+            hinweis = (f"letzter Erfolg vor {erfolg:.1f} Tagen, erwartet "
+                       f"hoechstens {frist:.1f}")
+        else:
+            zustand = "FRISCH"
+            hinweis = f"lief vor {erfolg:.1f} Tagen"
+        zeilen.append((zustand, job, rhythmus, erfolg, hinweis))
+        if zustand == "STILL":
+            stille.append((job, hinweis))
+
+    for job, grund in sorted(OHNE_ZEITPLAN.items()):
+        eintrag = herz.get(job)
+        eintrag = eintrag if isinstance(eintrag, dict) else {}
+        erfolg = _alter_tage(eintrag.get("zuletzt_erfolgreich"), jetzt)
+        zeilen.append(("OHNE PLAN", job, "auf Zuruf", erfolg, grund))
+
+    return zeilen, stille, juengste_datei
+
+
+def ruhige_dateien(jetzt=None, schwelle=14.0):
+    """Dateien, deren Inhalt lange still steht. KEIN Befund fuer sich —
+    nur die Liste, die man beim Nachsehen in der Hand haben will."""
+    jetzt = jetzt or dt.datetime.now(dt.timezone.utc)
+    stand = _lies(os.path.join(DATEN, "data_stand.json"))
+    heraus = []
+    for name, zeitpunkt in (stand.get("dateien") or {}).items():
+        a = _alter_tage(zeitpunkt, jetzt)
+        if a is not None and a > schwelle:
+            heraus.append((a, name))
+    return sorted(heraus, reverse=True)
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--markdown", action="store_true",
+                    help="zusaetzlich eine Tabelle fuer die Laufuebersicht")
+    args = ap.parse_args()
+
+    zeilen, stille, juengste = pruefe()
+    ruhig = ruhige_dateien()
+
+    print("── Frischepruefung ──")
+    print(f"{'Zustand':<10} {'Rhythmus':<22} {'Erfolg vor':>11}  Erzeuger")
+    print("-" * 88)
+    for zustand, job, rhythmus, erfolg, hinweis in zeilen:
+        alt = f"{erfolg:11.1f}" if erfolg is not None else "        nie"
+        print(f"{zustand:<10} {rhythmus:<22} {alt}  {job}")
+        if zustand != "FRISCH":
+            print(f"{'':<10} {'':<22} {'':>11}  -> {hinweis}")
+
+    print()
+    if ruhig:
+        print(f"Inhaltlich still seit mehr als 14 Tagen ({len(ruhig)} Dateien) —")
+        print("kein Befund fuer sich: der Erzeuger laeuft, die Quelle liefert nichts Neues.")
+        for a, name in ruhig:
+            print(f"  {a:6.1f} Tage  {name}")
+        print()
+
+    if stille:
+        namen = ", ".join(j for j, _ in stille)
+        print(f"::warning title=Erzeuger ohne Herzschlag::{len(stille)} Erzeuger "
+              f"lief(en) nicht in der erwarteten Frist: {namen}")
+    else:
+        print("Alle Erzeuger mit Zeitplan haben in ihrer Frist erfolgreich gelaufen.")
+
+    zusammenfassung = os.environ.get("GITHUB_STEP_SUMMARY")
+    if args.markdown and zusammenfassung:
+        with open(zusammenfassung, "a", encoding="utf-8") as fh:
+            fh.write("\n### Frischepruefung\n\n")
+            fh.write(f"- Erzeuger mit Zeitplan: **{len(RHYTHMUS)}**, "
+                     f"davon stumm: **{len(stille)}**\n")
+            fh.write(f"- Bewusst ohne Zeitplan: **{len(OHNE_ZEITPLAN)}** "
+                     "(Begruendung je Eintrag im Protokoll)\n")
+            fh.write(f"- Inhaltlich still > 14 Tage: **{len(ruhig)}** Dateien\n\n")
+            if stille:
+                fh.write("| stummer Erzeuger | Befund |\n| --- | --- |\n")
+                for job, hinweis in stille:
+                    fh.write(f"| `{job}` | {hinweis} |\n")
+            if ruhig:
+                fh.write("\n<details><summary>Inhaltlich still</summary>\n\n")
+                fh.write("| Datei | Tage |\n| --- | ---: |\n")
+                for a, name in ruhig:
+                    fh.write(f"| `{name}` | {a:.0f} |\n")
+                fh.write("\n</details>\n")
+
+    # Gemeldet, nicht blockiert.
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

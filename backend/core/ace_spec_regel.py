@@ -90,3 +90,107 @@ def entscheide(name, ace, mehrfach=None, typen=None) -> str:
     if ts and set(ts) <= KEINE_ACE_TYPEN:
         return "No"
     return ""
+
+# ── Belege aus dem gesamten Bestand ──────────────────────────────────
+#
+# WARUM DAS HIER STEHT UND NICHT NUR IM REPARATURSKRIPT
+#
+# Bis zum 10.09.2026 schrieben die Scraper mit `entscheide_zeile` (nur
+# die eine Zeile bekannt), der spaetere Abgleich rechnete mit
+# `entscheide` (ganzer Bestand bekannt). Beide waren fuer sich richtig —
+# und die Differenz meldete sich bei JEDEM Wochenlauf als "Drift":
+#
+#     10.09.2026: 5276 Felder abweichend, verteilt auf genau zwei Dateien
+#         current_meta_card_data.csv         770 von 4501 Zeilen
+#         online_tournament_dated_cards.csv 4506 von 29153 Zeilen
+#     alle uebrigen ~20 Dateien: 0
+#
+# Nur diese beiden werden bei jedem Lauf VOLLSTAENDIG aus dem aktuellen
+# Ausschnitt neu geschrieben. Wissen aus frueheren Formaten ("Karte X
+# wurde vor drei Formaten zweimal gespielt") ging dabei jedes Mal
+# verloren und tauchte beim naechsten Abgleich wieder als Drift auf.
+#
+# Seit 10.09.2026 holen sich beide Scraper die Belege des gesamten
+# Bestands hier ab und schreiben gleich den starken Wert. Damit gibt es
+# nichts mehr nachzurechnen — die Ursache ist weg, nicht die Meldung.
+#
+# Der Bestand wird EINMAL je Prozess gelesen und gemerkt.
+
+_BELEGE_CACHE = {}
+
+
+def _belege_spalten(kopf):
+    idx = {str(n or '').strip().lower(): i for i, n in enumerate(kopf)}
+    return (idx.get('card_name'),
+            idx.get('type'),
+            idx.get('max_count', idx.get('count')))
+
+
+def sammle_belege(dateien):
+    """(mehrfach, typen) aus den angegebenen CSV-Dateien.
+
+    mehrfach — Namen, die IRGENDWO mit mehr als einer Kopie im Deck
+               standen. Die Deckregel verbietet das fuer ACE SPEC, also
+               ist die Karte belegt KEIN ACE SPEC.
+    typen    — Name -> alle je beobachteten `type`-Werte.
+    """
+    import csv as _csv
+    mehrfach = set()
+    typen = {}
+    for pfad in dateien:
+        try:
+            with open(pfad, encoding='utf-8-sig', newline='') as fh:
+                probe = fh.read(4096)
+                fh.seek(0)
+                trenner = ';' if probe.count(';') > probe.count(',') else ','
+                leser = _csv.reader(fh, delimiter=trenner)
+                try:
+                    kopf = next(leser)
+                except StopIteration:
+                    continue
+                i_name, i_typ, i_max = _belege_spalten(kopf)
+                if i_name is None:
+                    continue
+                for zeile in leser:
+                    if len(zeile) <= i_name:
+                        continue
+                    name = (zeile[i_name] or '').strip().lower()
+                    if not name:
+                        continue
+                    if i_typ is not None and len(zeile) > i_typ:
+                        t = (zeile[i_typ] or '').strip()
+                        if t:
+                            typen.setdefault(name, set()).add(t)
+                    if i_max is not None and len(zeile) > i_max:
+                        m = _zahl(zeile[i_max])
+                        if m is not None and m > 1:
+                            mehrfach.add(name)
+        except OSError:
+            continue
+    return mehrfach, typen
+
+
+def belege_aus_bestand(ordner=None):
+    """Die Belege ueber ALLE ausgelieferten CSVs mit einer `card_name`-Spalte.
+
+    Wird je Prozess einmal gelesen. Fehlt der Ordner, kommt ein leeres
+    Paar zurueck — dann entscheidet `entscheide` genau wie
+    `entscheide_zeile`, also ohne zu raten.
+    """
+    import glob as _glob
+    ordner = ordner or os.path.join(_repo_wurzel(), 'data')
+    schluessel = os.path.abspath(ordner)
+    if schluessel in _BELEGE_CACHE:
+        return _BELEGE_CACHE[schluessel]
+    dateien = []
+    for pfad in sorted(_glob.glob(os.path.join(ordner, '*.csv'))):
+        try:
+            with open(pfad, encoding='utf-8-sig') as fh:
+                kopf = fh.readline()
+        except OSError:
+            continue
+        if 'card_name' in kopf:
+            dateien.append(pfad)
+    ergebnis = sammle_belege(dateien)
+    _BELEGE_CACHE[schluessel] = ergebnis
+    return ergebnis
