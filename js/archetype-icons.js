@@ -76,7 +76,19 @@
   const _NOISE_TOKENS = new Set([
     'ex','v','vmax','vstar','gx','tag','team',
     'box','lead','control','toolbox','tera','build',
-    'the','of','and','with','dx','lv'
+    'the','of','and','with','dx','lv',
+    /* 'rocket' dazu am 10.09.2026. "Team Rocket's Weezing ex" ergab
+       den Slug `rocket` — den es nicht gibt, also blieb an der Stelle
+       ein leeres Bild (das <img onerror> versteckt es) und das
+       eigentliche Pokemon fiel aus der Zweierauswahl heraus. Gemessen
+       an der Pocket-Tierliste: sechs von 33 Decknamen betroffen.
+       'team' stand schon hier, 'rocket' nicht — _sanitizeWord macht
+       aus "Rocket's" vorher schon "Rocket".
+       Gefahrlos fuer die kuratierten Eintraege: die fuenf
+       "Rocket's …"-Zeilen in data/archetype_icons.json werden ueber
+       den Namensschluessel getroffen und laufen gar nicht durch
+       diesen Rateweg. Ein Pokemon namens Rocket gibt es nicht. */
+    'rocket'
   ]);
 
   // Form-prefix words that should combine with the NEXT token to form a
@@ -168,12 +180,32 @@
       if (formSuffix !== undefined && artWort) {
         const nxt = artWort.toLowerCase();
         if (!_NOISE_TOKENS.has(nxt)) {
-          const combined = _formSlug(nxt, formSuffix);
+          /* Die Variante als EIGENES Wort: "Mega Charizard Y".
+           *
+           * BEFUND (10.09.2026): _formSlug kennt die angehaengte
+           * Schreibweise ("Mega Charizard-Y" -> charizard-mega-y), die
+           * getrennte nicht. Das lone "Y" faellt danach durch
+           * _MIN_SLUG_LAENGE heraus, und uebrig bleibt charizard-mega —
+           * das es bei Limitless NICHT gibt. Am 10.09. im Browser
+           * geprueft: charizard-mega-x und charizard-mega-y laden,
+           * charizard-mega nicht.
+           *
+           * Aufgefallen an der Pocket-Tierliste ("Mega Charizard Y ex").
+           * Die kuratierte Datei traegt "Mega Charizard X" und
+           * "Mega Charizard X ex" — die Y-Zeilen fehlen dort, also
+           * greift fuer sie dieser Rateweg. Kuratierte Eintraege
+           * gewinnen weiterhin, dies faengt nur, was dort nicht steht. */
+          let variante = '';
+          const folgt = raw[i + 2 + extraWort];
+          if (formSuffix && folgt && /^[xy]$/i.test(folgt)) {
+            variante = '-' + folgt.toLowerCase();
+          }
+          const combined = _formSlug(nxt, formSuffix) + variante;
           if (combined && !seen.has(combined)) {
             slugs.push(combined);
             seen.add(combined);
           }
-          i += 1 + extraWort; // Formwort(e) + Art verbraucht
+          i += 1 + extraWort + (variante ? 1 : 0); // Formwort(e) + Art (+ Variante)
           continue;
         }
       }

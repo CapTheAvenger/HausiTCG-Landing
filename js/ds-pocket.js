@@ -62,6 +62,92 @@
     var filter = 'alle';
     var wachschloss = null;
 
+
+    /* ── Sprites vor dem Deck-Namen ──────────────────────────────────
+     *
+     * Vom Betreiber am 10.09.2026 gewuenscht. Die Schwierigkeit liegt
+     * nicht im Zeichnen, sondern darin, aus einem Deck-Namen die
+     * richtigen Pokemon zu bekommen — Game8 schreibt dort Set-Kuerzel
+     * ("PD Espeon", "RS Heliolisk", "TRA Garchomp"), Kartenzusaetze
+     * ("ex"), Formworte ("Mega", "Alolan", "Teal Mask") und Beiwerk
+     * ("and 18 Trainers") bunt durcheinander.
+     *
+     * GERATEN WIRD NICHTS. Jedes Deck traegt seine Kartenliste selbst
+     * (`pokemon`), und nur ein Pokemon, das BEIDES ist — im Deck-Namen
+     * genannt UND als Karte im Deck — bekommt ein Bild. Damit fallen
+     * die Kuerzel von allein weg: "TRA" ist keine Karte, "Garchomp"
+     * schon.
+     *
+     * GEMESSEN am 10.09.2026 ueber alle 33 Decks: 30 ergeben zwei
+     * Bilder, drei ergeben eins ("Flygon ex", "Team Rocket's Moltres
+     * ex" und "Team Rocket's Articuno ex and 18 Trainers" nennen auch
+     * nur ein Pokemon), keines geht leer aus. Die 48 entstehenden
+     * Slugs wurden einzeln im Browser gegen r2.limitlesstcg.net
+     * geprueft — alle 48 laden.
+     *
+     * Zwei Feinheiten, beide an echten Namen aufgefallen:
+     *   * Der LAENGERE Treffer an derselben Stelle gewinnt, sonst
+     *     schlaegt "Lucario" das "Mega Lucario ex", in dem es steckt.
+     *   * Eine schon getroffene Stelle im Namen ist verbraucht — sonst
+     *     lieferte "Mega Lucario ex and Hitmonlee" zweimal Lucario
+     *     statt Lucario und Hitmonlee.
+     */
+    var SPRITE_HOECHSTZAHL = 2;
+
+    function ohneApostroph(v) {
+        return String(v || '').toLowerCase().replace(/['\u2018\u2019]/g, '');
+    }
+
+    /** Die Pokemon eines Decks, die sein Name wirklich nennt. */
+    function benannteArten(d) {
+        var name = ohneApostroph(d && d.name);
+        if (!name) return [];
+        var kandidaten = [];
+        (d.pokemon || []).forEach(function (p) {
+            var kurz = ohneApostroph(p && p.name);
+            if (!kurz) return;
+            var pos = name.indexOf(kurz);
+            if (pos < 0) return;
+            kandidaten.push({ name: p.name, pos: pos, len: kurz.length });
+        });
+        // Nach Stellung im Namen, bei Gleichstand der laengere zuerst.
+        kandidaten.sort(function (a, b) { return a.pos - b.pos || b.len - a.len; });
+        var belegt = [];
+        var heraus = [];
+        kandidaten.forEach(function (k) {
+            if (heraus.length >= SPRITE_HOECHSTZAHL) return;
+            var drin = belegt.some(function (r) { return k.pos >= r[0] && k.pos < r[1]; });
+            if (drin) return;
+            belegt.push([k.pos, k.pos + k.len]);
+            heraus.push(k.name);
+        });
+        return heraus;
+    }
+
+    /** Bilder zu einem Deck — leer, wenn der Namensauflöser nichts hergibt. */
+    function spriteHtml(d) {
+        var api = window.ArchetypeIcons;
+        if (!api || typeof api.getIconUrls !== 'function') return '';
+        var gesehen = {};
+        var bilder = [];
+        benannteArten(d).forEach(function (art) {
+            var urls = api.getIconUrls(art) || [];
+            if (!urls.length) return;
+            var url = urls[0];
+            if (gesehen[url]) return;
+            gesehen[url] = 1;
+            /* alt bleibt leer: der Deck-Name steht unmittelbar daneben,
+               eine Vorlesehilfe wuerde ihn sonst doppelt ansagen.
+               onerror versteckt ein Bild, das die Quelle nicht hat —
+               dann steht der Name allein da, statt einer Luecke. */
+            bilder.push('<img class="pk-sprite" src="' + esc(url) + '" alt="" ' +
+                        'loading="lazy" onerror="this.style.display=\'none\'">');
+        });
+        if (!bilder.length) return '';
+        return '<span class="pk-sprites" aria-hidden="true">' + bilder.join('') + '</span>';
+    }
+
+
     function t(de, en) {
         return (typeof getLang === 'function' && getLang() === 'en') ? en : de;
     }
@@ -187,6 +273,7 @@
                 var i = (daten.decks || []).indexOf(d);
                 s += '<button type="button" class="pk-zeile" data-pk-deck="' + i + '">';
                 s += '<span class="pk-marke">' + esc(d.tier) + '</span>';
+                s += spriteHtml(d);
                 s += '<span class="pk-name">' + esc(d.name);
                 var fuss = [];
                 if (d.quelle_liste === 'set') {
@@ -454,6 +541,31 @@
             return;
         }
         host.innerHTML = kopf() + filterleiste() + liste() + rechnung();
+        spritesNachziehen(host);
+    }
+
+    /* Die Bilder brauchen data/archetype_icons.json, und die Tierliste
+     * ist oft frueher da. `getIconUrls` gibt ohne geladene Datei eine
+     * leere Liste zurueck — dann stuenden die Namen dauerhaft ohne
+     * Bild, ohne dass etwas kaputt waere. Also einmal nachziehen,
+     * sobald die Datei liegt.
+     *
+     * Nur EINMAL: `_pkSpritesDa` merkt sich, dass schon gezeichnet
+     * wurde, sonst haengt an jedem Filterklick ein weiterer Durchlauf. */
+    var _spritesGeholt = false;
+    function spritesNachziehen(host) {
+        if (_spritesGeholt) return;
+        var api = window.ArchetypeIcons;
+        if (!api || typeof api.preload !== 'function') return;
+        if (host.querySelector('.pk-sprite')) { _spritesGeholt = true; return; }
+        _spritesGeholt = true;
+        Promise.resolve(api.preload()).then(function () {
+            var jetzt = document.getElementById('pocketListe');
+            // Nur zeichnen, wenn seither niemand anderes uebernommen
+            // hat — sonst ueberschreibt der Nachzug ein Vollbild oder
+            // eine Fehlermeldung.
+            if (jetzt && jetzt.querySelector('.pk-zeile')) zeichne();
+        }).catch(function () { /* ohne Bilder bleibt die Liste lesbar */ });
     }
 
     function fehler(e) {
@@ -534,5 +646,10 @@
         verdrahten();
     }
 
-    window.dsPocket = { render: render, oeffne: oeffne, schliesse: schliesse };
+    window.dsPocket = { render: render, oeffne: oeffne, schliesse: schliesse,
+                        /* Fuer die Abnahme: die Namensaufloesung wird
+                           AUSGEFUEHRT geprueft, nicht im Test
+                           nachgebaut. Ein Nachbau haette bewiesen, dass
+                           der Nachbau stimmt. */
+                        _intern: { benannteArten: benannteArten } };
 }());

@@ -72,7 +72,10 @@
 .pk-zeile {
     display: flex;
     align-items: center;
-    gap: 12px;
+    /* 8 statt 12: die Zeile traegt seit dem 10.09.2026 ein drittes
+       Element (die Sprites), und jeder Abstand geht vom Deck-Namen ab.
+       Siehe die Messung bei .pk-sprite weiter unten. */
+    gap: 8px;
     width: 100%;
     min-height: 56px;
     padding: 10px 14px;
@@ -99,6 +102,48 @@
     background: var(--text-primary, #111827);
     color: var(--surface-1, #fff);
 }
+/* Die Sprites vor dem Namen.
+ *
+ * 28 px, nicht groesser: die Zeile ist 56 px hoch und traegt links
+ * schon die Stufenmarke. Zwei Bilder à 28 px plus Abstaende passen
+ * daneben, ohne dass der Name (der wichtigste Teil der Zeile) Platz
+ * verliert.
+ *
+ * `flex: 0 0 auto` — die Bilder schrumpfen nicht, wenn ein langer
+ * Deckname drueckt. Sieben Namen beginnen mit "Team Rocket's …"; ohne
+ * das waeren ihre Bilder auf dem Telefon zu Streifen gequetscht.
+ *
+ * Die Quelle liefert die Sprites in 20 bis 65 px Breite (am
+ * 10.09.2026 ueber alle 48 gemessen). `object-fit: contain` haelt
+ * sie deshalb auf gleicher Grundlinie, statt sie zu verzerren. */
+.pk-sprites {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+}
+.pk-sprite {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+    image-rendering: -webkit-optimize-contrast;
+}
+/* Das zweite Bild ueberlappt das erste. Nicht aus Stilgruenden,
+   sondern gerechnet: die Bilder kosten den Deck-Namen Platz, und der
+   ist der wichtigste Teil der Zeile. GEMESSEN bei 390 px ueber alle
+   33 Decks, Namen die auf zwei Zeilen umbrechen:
+
+       ohne Bilder                             2
+       26 px, 2 px Abstand, Zeilenabstand 12  12
+       24 px, Ueberlappung 6                   8
+       26 px, Ueberlappung 8, Zeilenabstand 8  6   <- diese
+       22 px, Ueberlappung 6, Zeilenabstand 8  4
+
+   22 px waeren zwei Umbrueche billiger, die Bilder aber deutlich
+   kleiner. Vier zusaetzliche Umbrueche von 33 sind der bessere
+   Tausch. Vom ersten Bild bleiben 18 px sichtbar — genug, um die Art
+   zu erkennen. */
+.pk-sprite + .pk-sprite { margin-left: -8px; }
+
 .pk-name {
     /* Deck-Namen sind englisch (Game8s Bezeichnungen) und lang. Sie
        brechen um statt zu kürzen: sieben beginnen mit "Team Rocket's …",

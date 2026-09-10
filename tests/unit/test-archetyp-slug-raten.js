@@ -61,6 +61,31 @@ describe('die Variante steht hinter dem Formzusatz', () => {
         });
     }
 
+    /* Die Variante als EIGENES Wort — aufgefallen am 10.09.2026 an der
+       Pocket-Tierliste ("Mega Charizard Y ex"). Die kuratierte Datei
+       traegt "Mega Charizard X" und "Mega Charizard X ex", die
+       Y-Zeilen fehlen dort; fuer sie greift also dieser Rateweg. Vorher
+       kam charizard-mega heraus — im Browser geprueft: das gibt es bei
+       Limitless NICHT, charizard-mega-x und charizard-mega-y schon. */
+    const getrennt = [
+        ['Mega Charizard Y ex', ['charizard-mega-y']],
+        ['Mega Charizard X ex', ['charizard-mega-x']],
+        ['Mega Charizard Y ex and Entei ex', ['charizard-mega-y', 'entei']],
+        ['Mega Mewtwo Y', ['mewtwo-mega-y']],
+    ];
+    for (const [name, erwartet] of getrennt) {
+        it(`${name} -> ${erwartet.join(', ')}`, () => {
+            assert.deepEqual(raten(name), erwartet);
+        });
+    }
+
+    it('ein Mega ohne Variante bleibt ohne Variante', () => {
+        // Sonst haengte die Regel jedem Mega ein -x oder -y an.
+        assert.deepEqual(raten('Mega Absol ex'), ['absol-mega']);
+        assert.deepEqual(raten('Mega Altaria ex and Sylveon ex'),
+                         ['altaria-mega', 'sylveon']);
+    });
+
     it('kein geratener Slug hat die Variante vor dem Formzusatz', () => {
         const namen = ['Mega Charizard-X Zoroark', 'Mega Charizard-Y Delphox',
                        'Mega Mewtwo-X Dusknoir', 'Zoroark Mega Charizard-X'];
@@ -124,6 +149,33 @@ describe('die bekannten Formen bleiben richtig', () => {
                          'Mega Charizard-X Mega Charizard-Y Zoroark']) {
             assert.ok(raten(n).length <= 2, n + ' -> ' + raten(n).join(','));
         }
+    });
+
+    /* "Team Rocket's …" — am 10.09.2026 an der Pocket-Tierliste
+       aufgefallen: sechs von 33 Decknamen beginnen so, und der
+       Rateweg machte daraus den Slug `rocket`. Den gibt es nicht, das
+       Bild versteckte sich per onerror, und weil die Auswahl bei zwei
+       Slugs endet, fiel das eigentliche Pokemon ganz heraus.
+
+       'team' stand schon in der Rauschliste, 'rocket' nicht. Die fuenf
+       kuratierten "Rocket's …"-Zeilen sind davon unberuehrt — sie
+       werden ueber den Namensschluessel getroffen. */
+    const rocket = [
+        ["Team Rocket's Weezing ex and Hoopa ex", ['weezing', 'hoopa']],
+        ["Team Rocket's Moltres ex", ['moltres']],
+        ["Team Rocket's Raticate ex and Alolan Ninetales ex",
+         ['raticate', 'ninetales-alola']],
+    ];
+    for (const [name, erwartet] of rocket) {
+        it(`${name} -> ${erwartet.join(', ')}`, () => {
+            assert.deepEqual(raten(name), erwartet);
+        });
+    }
+
+    it('kein geratener Slug heisst rocket', () => {
+        const namen = ["Team Rocket's Weezing ex", "Rocket's Mewtwo",
+                       "Team Rocket's Articuno ex and 18 Trainers"];
+        assert.deepEqual(namen.flatMap(raten).filter(s => s === 'rocket'), []);
     });
 
     it('bleibt bei Unsinn stumm statt zu raten', () => {
