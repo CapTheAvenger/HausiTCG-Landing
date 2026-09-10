@@ -429,3 +429,35 @@ Gehalten von `tests/python/test_attacken_typen_vollstaendig.py`: keine
 genutzte Attacke ohne Eintrag, keine ohne Typ, kein Nachtrag ohne
 Nutzungsbeleg, Obergrenze und Leer-Abbruch im Bauer, und die
 CI-Reihenfolge in beiden Laeufen.
+
+## Zwei Spalten heissen `deck_slug` und meinen nicht dasselbe
+
+GEMESSEN am 10.09.2026. Beide Dateien fuehren eine Spalte dieses Namens:
+
+| Datei | Beispielwerte |
+| --- | --- |
+| `tournament_decklists_per_player.csv` | `24442`, `25592`, `26263` — eine Kennung der Quelle |
+| `labs_tournament_decks.csv` | `alakazam-dudunsparce`, `aegislash-par` — ein Namensschluessel |
+
+Ein Verbund darueber ergibt **0 Treffer** — 934 verschiedene Werte auf der
+einen Seite, 267 auf der anderen, Schnittmenge leer. Und genau das ist die
+Falle: eine leere Ergebnismenge sieht aus wie "diese Woche gab es keine
+Uebereinstimmung" und nicht wie "diese beiden Spalten sind nicht dasselbe
+Ding".
+
+**Der Verbund, der traegt, laeuft ueber die Namen:**
+
+    tournament_decklists_per_player.deck_archetype  ==  labs_tournament_decks.deck_name
+
+Gemessen: 52 von 53 Archetypen der Decklisten haben dort ein Gegenstueck. Der
+eine ohne ist `Ogerpon Box` — labs fuehrt ihn unter einem anderen Namen, und
+das ist ein Namensunterschied der Quellen, kein Datenfehler.
+
+Ein Umbenennen der Spalten waere die saubere Loesung und ist genau das, was
+diese Datei oben verbietet: die Namen sind veroeffentlicht, und ein anderes
+Projekt liest sie. Deshalb steht hier die Warnung statt einer Umbenennung.
+
+Gehalten von `tests/python/test_deck_slug_kein_verbund.py`: dass die beiden
+Spalten weiterhin nicht ueberlappen (taeten sie es ploetzlich, hat sich eine
+Quelle geaendert und diese Warnung gehoert ueberdacht), und dass der
+Namensverbund weiterhin die grosse Mehrheit trifft.
