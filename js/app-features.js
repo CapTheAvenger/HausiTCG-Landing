@@ -13,6 +13,7 @@
             if (!window.allCardsDatabase || window.allCardsDatabase.length === 0) {
                 devLog('[Deck Compare] Loading cards database...');
                 document.getElementById('deckCompareModal').style.display = 'flex';
+                if (window.HintergrundSperre) window.HintergrundSperre.sperren('deckvergleich');
                 document.getElementById('deckCompareResult').innerHTML = '<div class="loading">Loading card database...</div>';
                 document.getElementById('deckCompareResult').classList.remove('d-none');
                 
@@ -52,12 +53,14 @@
             }
             
             document.getElementById('deckCompareModal').style.display = 'flex';
+            if (window.HintergrundSperre) window.HintergrundSperre.sperren('deckvergleich');
             document.getElementById('oldDeckListInput').value = '';
             document.getElementById('deckCompareResult').classList.add('d-none');
         }
 
         function closeDeckCompare() {
             document.getElementById('deckCompareModal').style.display = 'none';
+            if (window.HintergrundSperre) window.HintergrundSperre.freigeben('deckvergleich');
             currentDeckSource = null;
         }
         
@@ -433,6 +436,9 @@
             window._shareImageTitle = 'Deck_Compare';
 
             modal.classList.add('show');
+            // Dasselbe Fenster wie im Deckbauer, also derselbe Sperrname:
+            // zweimal sperren zaehlt einmal, und ein Schliessen reicht.
+            if (window.HintergrundSperre) window.HintergrundSperre.sperren('deck-teilen');
 
             // Show native share button only if supported
             const testBlob = new Blob(['test'], { type: 'image/png' });

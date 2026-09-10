@@ -1734,6 +1734,7 @@
         if (!modal) return;
         modal.classList.remove('is-open');
         modal.classList.add('d-none');
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('binder-abgaenge');
     }
 
     // cardsOverride: the Custom Binder reuses this modal with its own
@@ -1770,6 +1771,7 @@
 
         modal.classList.remove('d-none');
         modal.classList.add('is-open');
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('binder-abgaenge');
     }
 
     // ── Render ──

@@ -2966,6 +2966,7 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
             }
             
             modal.classList.add('show');
+            if (window.HintergrundSperre) window.HintergrundSperre.sperren('deckbild');
             
             // Close on ESC key
             const escapeHandler = (e) => {
@@ -2980,6 +2981,7 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
         function closeImageView() {
             const modal = document.getElementById('imageViewModal');
             modal.classList.remove('show');
+            if (window.HintergrundSperre) window.HintergrundSperre.freigeben('deckbild');
         }
 
         // ========== DECK IMAGE EXPORT (Screenshot) ==========
@@ -3380,6 +3382,7 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
             _shareImageTitle = deckName || 'Deck';
 
             modal.classList.add('show');
+            if (window.HintergrundSperre) window.HintergrundSperre.sperren('deck-teilen');
 
             // Show native share button only if supported
             const testBlob = new Blob(['test'], { type: 'image/png' });
@@ -3432,6 +3435,7 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
         function closeShareImageModal() {
             const modal = document.getElementById('shareImageModal');
             modal.classList.remove('show');
+            if (window.HintergrundSperre) window.HintergrundSperre.freigeben('deck-teilen');
             _shareImageBlob = null;
             if (_sharePreviewObjectUrl) {
                 URL.revokeObjectURL(_sharePreviewObjectUrl);
@@ -3633,10 +3637,12 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
 
             // Show modal
             document.getElementById('deckGridPreviewModal').style.display = 'flex';
+            if (window.HintergrundSperre) window.HintergrundSperre.sperren('deckraster-vorschau');
         }
 
         function closeDeckGridPreview() {
             document.getElementById('deckGridPreviewModal').style.display = 'none';
+            if (window.HintergrundSperre) window.HintergrundSperre.freigeben('deckraster-vorschau');
             _currentPreviewDeckIndex = -1;
         }
 
@@ -4637,20 +4643,25 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
             const closeBtn = document.createElement('button');
             closeBtn.textContent = t('btn.close') || 'Close';
             closeBtn.className = 'modal-btn-ok';
-            closeBtn.onclick = () => overlay.remove();
+            const bauZu = () => {
+                overlay.remove();
+                if (window.HintergrundSperre) window.HintergrundSperre.freigeben('bau-erklaerung');
+            };
+            closeBtn.onclick = bauZu;
             btnRow.appendChild(closeBtn);
             modal.appendChild(btnRow);
 
-            overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+            overlay.onclick = e => { if (e.target === overlay) bauZu(); };
             document.addEventListener('keydown', function escListener(e) {
                 if (e.key === 'Escape') {
-                    overlay.remove();
+                    bauZu();
                     document.removeEventListener('keydown', escListener);
                 }
             });
 
             overlay.appendChild(modal);
             document.body.appendChild(overlay);
+            if (window.HintergrundSperre) window.HintergrundSperre.sperren('bau-erklaerung');
         }
 
 

@@ -986,6 +986,7 @@
             </div>
         `;
         document.body.appendChild(overlay);
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('sq-sprite-waehler');
 
         const grid = overlay.querySelector('#sq-play-picker-grid');
 
@@ -1089,6 +1090,7 @@
     function closeSpritePicker() {
         const el = document.getElementById('sq-play-picker');
         if (el) el.remove();
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('sq-sprite-waehler');
         if (_pickerKeyHandler) {
             document.removeEventListener('keydown', _pickerKeyHandler);
             _pickerKeyHandler = null;
@@ -1163,6 +1165,7 @@
         `;
         document.body.appendChild(overlay);
         _playOverlay = overlay;
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('sq-spiel');
 
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) closePlayModal();
@@ -1230,6 +1233,7 @@
 
     function closePlayModal() {
         if (_playOverlay) { _playOverlay.remove(); _playOverlay = null; }
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('sq-spiel');
         if (_playKeyHandler) {
             document.removeEventListener('keydown', _playKeyHandler);
             _playKeyHandler = null;

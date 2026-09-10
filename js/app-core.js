@@ -104,7 +104,11 @@ const BASE_PATH = './data/';
                     btnRow.appendChild(copyBtn);
                 }
 
-                function close(val) { overlay.remove(); resolve(val); }
+                function close(val) {
+                    overlay.remove();
+                    if (window.HintergrundSperre) window.HintergrundSperre.freigeben('eingabefenster');
+                    resolve(val);
+                }
                 cancelBtn.onclick = () => close(null);
                 okBtn.onclick = () => close(opts.readonly ? null : input.value);
                 overlay.onclick = e => { if (e.target === overlay) close(null); };
@@ -116,6 +120,7 @@ const BASE_PATH = './data/';
                 modal.appendChild(btnRow);
                 overlay.appendChild(modal);
                 document.body.appendChild(overlay);
+                if (window.HintergrundSperre) window.HintergrundSperre.sperren('eingabefenster');
                 
                 // Focus trap: keep Tab within modal
                 modal.addEventListener('keydown', e => {
@@ -358,6 +363,7 @@ const BASE_PATH = './data/';
             modal.querySelector('.help-modal-title').textContent = help.title;
             modal.querySelector('.help-modal-body').innerHTML = help.html;
             modal.classList.add('active');
+            if (window.HintergrundSperre) window.HintergrundSperre.sperren('hilfe');
 
             /* BEFUND 07.09.2026: hier stand eine unbedingte Zuweisung. Ein
              * zweites openTabHelp() OHNE Schliessen dazwischen merkte sich
@@ -404,6 +410,7 @@ const BASE_PATH = './data/';
         function closeHelpModal() {
             const modal = document.getElementById('helpModal');
             if (modal) modal.classList.remove('active');
+            if (window.HintergrundSperre) window.HintergrundSperre.freigeben('hilfe');
             if (_hilfeTastenZuhoerer) {
                 document.removeEventListener('keydown', _hilfeTastenZuhoerer, true);
                 _hilfeTastenZuhoerer = null;

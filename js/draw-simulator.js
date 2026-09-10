@@ -57,6 +57,7 @@ function openDrawSimulator(source) {
     }
 
     document.getElementById('drawSimulatorModal').style.display = 'flex';
+    if (window.HintergrundSperre) window.HintergrundSperre.sperren('ziehsimulator');
     _comboTargets = [];
     drawNewHand();
     _populateComboDropdowns();
@@ -92,6 +93,7 @@ function _simIstBasis(deckKey, cardName) {
 
 function closeDrawSimulator() {
     document.getElementById('drawSimulatorModal').style.display = 'none';
+    if (window.HintergrundSperre) window.HintergrundSperre.freigeben('ziehsimulator');
 }
 
 // -------------------------------------------------------

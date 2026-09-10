@@ -1958,11 +1958,13 @@ function openWishlistGridModal() {
 
   grid.innerHTML = html || '<p style="color: var(--ink-3);">No cards to display</p>';
   modal.classList.add('show');
+  if (window.HintergrundSperre) window.HintergrundSperre.sperren('wunschliste-bilder');
 }
 
 function closeWishlistGridModal() {
   const modal = document.getElementById('wishlistGridModal');
   if (modal) modal.classList.remove('show');
+  if (window.HintergrundSperre) window.HintergrundSperre.freigeben('wunschliste-bilder');
 }
 
 function exportWishlistAsImage() {
@@ -2172,11 +2174,13 @@ async function copyWishlistForCardmarket() {
   _populateCardmarketWishlistModal({ items, pasteText, totalCount: items.length, missingDisambig });
   const modal = document.getElementById('wishlistCardmarketModal');
   if (modal) modal.classList.add('show');
+  if (window.HintergrundSperre) window.HintergrundSperre.sperren('wunschliste-cardmarket');
 }
 
 function closeCardmarketWishlistModal() {
   const modal = document.getElementById('wishlistCardmarketModal');
   if (modal) modal.classList.remove('show');
+  if (window.HintergrundSperre) window.HintergrundSperre.freigeben('wunschliste-cardmarket');
 }
 
 function _populateCardmarketWishlistModal({ items, pasteText, totalCount, missingDisambig }) {
@@ -6137,11 +6141,13 @@ function openTradelistGridModal() {
   });
   grid.innerHTML = html || '<p style="color: var(--ink-3);">No cards to display</p>';
   modal.classList.add('show');
+  if (window.HintergrundSperre) window.HintergrundSperre.sperren('tauschliste-bilder');
 }
 
 function closeTradelistGridModal() {
   const modal = document.getElementById('tradelistGridModal');
   if (modal) modal.classList.remove('show');
+  if (window.HintergrundSperre) window.HintergrundSperre.freigeben('tauschliste-bilder');
 }
 
 function exportTradelistAsImage() {

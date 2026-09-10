@@ -955,6 +955,7 @@
     if (modal) {
       modal.classList.remove('d-none');
       modal.style.display = 'flex';
+      if (window.HintergrundSperre) window.HintergrundSperre.sperren('dreiervergleich');
     }
   }
 
@@ -964,6 +965,7 @@
       modal.classList.add('d-none');
       modal.style.display = 'none';
     }
+    if (window.HintergrundSperre) window.HintergrundSperre.freigeben('dreiervergleich');
   }
 
   /* Sprachwechsel zeichnet die Schnellreferenz neu.

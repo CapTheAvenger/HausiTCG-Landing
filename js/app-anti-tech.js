@@ -1026,6 +1026,7 @@
 
         modal.classList.remove('d-none');
         modal.classList.add('show');
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('anti-tech');
         _showStep(1);
 
         const input = document.getElementById('antiTechCustomInput');
@@ -1049,6 +1050,7 @@
             modal.classList.remove('show');
             modal.classList.add('d-none');
         }
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('anti-tech');
         _source = null;
         _targets = new Set();
         _targetDisplay = new Map();

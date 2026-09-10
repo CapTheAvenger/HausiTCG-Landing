@@ -144,6 +144,82 @@ describe('Vollbild-Sperre — Verdrahtung', () => {
             + 'weiter: ' + ohne.join(', '));
     });
 
+    it('jedes Sperren hat ein Freigeben und umgekehrt', () => {
+        // Eine Sperre ohne Gegenstueck nagelt die Seite fest, ein
+        // Freigeben ohne Sperre gibt die Seite frei, waehrend noch ein
+        // Fenster offen steht. Beides faellt hier auf, ohne Register.
+        const auf = new Set();
+        const zu = new Set();
+        fs.readdirSync(path.join(WURZEL, 'js'))
+            .filter(n => n.endsWith('.js') && n !== 'hintergrund-sperre.js')
+            .forEach(n => {
+                const q = lies('js', n);
+                for (const m of q.matchAll(/HintergrundSperre\.sperren\('([^']+)'\)/g)) auf.add(m[1]);
+                for (const m of q.matchAll(/HintergrundSperre\.freigeben\('([^']+)'\)/g)) zu.add(m[1]);
+            });
+        const ohneFreigabe = [...auf].filter(n => !zu.has(n)).sort();
+        const ohneSperre = [...zu].filter(n => !auf.has(n)).sort();
+        assert.deepEqual(ohneFreigabe, [],
+            'Diese Sperren werden nie geloest — die Seite bliebe festgenagelt: '
+            + ohneFreigabe.join(', '));
+        assert.deepEqual(ohneSperre, [],
+            'Diese Namen werden freigegeben, aber nie gesperrt: '
+            + ohneSperre.join(', '));
+        assert.ok(auf.size >= 30,
+            'Es sind nur ' + auf.size + ' Sperren verdrahtet. Am 10.09.2026 '
+            + 'waren es 36 — da ist eine verlorengegangen.');
+    });
+
+    it('jedes Vollbild-Fenster der Seite ist verdrahtet', () => {
+        // Die Liste der bildschirmfuellenden Fenster kommt aus dem CSS
+        // selbst, nicht aus einer gepflegten Aufzaehlung — sonst faellt ein
+        // neues Fenster genau dann durch, wenn niemand die Liste nachzieht.
+        const klassen = new Set();
+        const kennungen = new Set();
+        CSS_DATEIEN.forEach(n => {
+            regeln(lies('css', n)).forEach(r => {
+                if (!istVollbild(r.koerper)) return;
+                r.selektor.split('\n').pop().split(',').forEach(s => {
+                    s = s.trim();
+                    if (/^\.[\w-]+$/.test(s)) klassen.add(s.slice(1));
+                    else if (/^#[\w-]+$/.test(s)) kennungen.add(s.slice(1));
+                });
+            });
+        });
+        assert.ok(klassen.size + kennungen.size >= 15,
+            'Nur ' + (klassen.size + kennungen.size) + ' Vollbild-Selektoren '
+            + 'gefunden; am 10.09.2026 waren es 21.');
+
+        const html = lies('index.html');
+        const ids = [];
+        for (const m of html.matchAll(/<div\b[^>]*>/g)) {
+            const id = /id="([^"]+)"/.exec(m[0]);
+            if (!id) continue;
+            const kl = (/class="([^"]*)"/.exec(m[0]) || ['', ''])[1].split(/\s+/);
+            if (kennungen.has(id[1]) || kl.some(k => klassen.has(k))) ids.push(id[1]);
+        }
+        assert.ok(ids.length >= 15,
+            'Nur ' + ids.length + ' Vollbild-Fenster in index.html gefunden; '
+            + 'am 10.09.2026 waren es 19.');
+
+        const dateien = fs.readdirSync(path.join(WURZEL, 'js'))
+            .filter(n => n.endsWith('.js'))
+            .map(n => ['js/' + n, lies('js', n)]);
+
+        const ohne = [];
+        ids.forEach(id => {
+            const nutzer = dateien.filter(([, q]) =>
+                q.includes("getElementById('" + id + "')") ||
+                q.includes('getElementById("' + id + '")'));
+            if (!nutzer.length) return;          // reines Markup, kein Schalter
+            if (nutzer.some(([, q]) => q.includes('HintergrundSperre'))) return;
+            ohne.push(id + ' (' + nutzer.map(([n]) => n).join(', ') + ')');
+        });
+        assert.deepEqual(ohne, [],
+            'Diese Vollbild-Fenster halten die Seite dahinter nicht an: '
+            + ohne.join(' | '));
+    });
+
     it('die Sperre wird geladen, bevor jemand sie braucht', () => {
         const html = lies('index.html');
         const pos = html.indexOf('js/hintergrund-sperre.js');
