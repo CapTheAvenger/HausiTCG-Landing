@@ -32,6 +32,32 @@ laesst der Reparaturlauf diese Felder leer, statt sie zu raten.
 
 Geschrieben wird weiterhin von Hand ueber den Workflow „Daten
 reparieren" (ace-spec-reparatur.yml) mit seinem `schreiben`-Eingang.
+
+NACHTRAG 10.09.2026 — die Begruendung oben stimmte nicht mehr
+-------------------------------------------------------------
+Der Lauf vom 10.09.2026 meldete 5276 abweichende Felder, nicht 0. Der
+Satz „--schreiben haette also nichts zu schreiben" traf damit nicht mehr
+zu, und der Schalter stand ohne seine Begruendung da.
+
+Die Untersuchung ergab, dass die Drift KEIN Scraper-Fehler war, sondern
+der Unterschied zwischen zwei richtigen Formen derselben Regel:
+`entscheide_zeile` (nur diese Zeile bekannt, so schrieben die Scraper)
+gegen `entscheide` (ganzer Bestand bekannt, so rechnet der Abgleich).
+Die Differenz steckte in genau zwei Dateien — den beiden, die bei jedem
+Lauf vollstaendig neu geschrieben werden:
+
+    current_meta_card_data.csv          770 von  4501 Zeilen
+    online_tournament_dated_cards.csv  4506 von 29153 Zeilen
+
+Der Betreiber hat entschieden: Ursache im Scraper beheben. Seither holen
+sich beide Schreibstellen die Belege des Gesamtbestands
+(`belege_aus_bestand()` in backend/core/ace_spec_regel.py) und schreiben
+gleich den starken Wert. Damit hat der Abgleich nichts mehr zu finden —
+und der Schalter bleibt aus demselben Grund wie vorher auf „melden":
+nicht weil nichts zu tun waere, sondern weil ein unbeaufsichtigter Lauf
+ueber 660.000 Zeilen die falsche Antwort auf einen Befund ist.
+
+Abgesichert in tests/python/test_ace_spec_bestandsbelege.py.
 """
 
 import csv

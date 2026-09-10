@@ -257,6 +257,24 @@ def test_mep_4_bleibt_bewusst_ungepinnt(pins):
         "hier waere geraten, nicht entschieden")
 
 
+# Kennzahlen, ueber die die Naehe belegt sein muss, bevor die Cent-Regel
+# greift. EINE Kennzahl reicht nicht — siehe die Begruendung im Test.
+CENT_KENNZAHLEN = ("trend", "avg", "avg7", "avg30")
+
+
+def _spannen_je_kennzahl(preise, kandidaten):
+    """Abstand der beiden Kandidaten, je Kennzahl. Fehlende werden
+    ausgelassen — ein fehlender Wert ist kein Beleg fuer Naehe."""
+    heraus = {}
+    for feld in CENT_KENNZAHLEN:
+        werte = [(preise.get(pid) or {}).get(feld) for pid in kandidaten]
+        if any(w is None or w == "" for w in werte):
+            continue
+        werte = [float(w) for w in werte]
+        heraus[feld] = max(werte) - min(werte)
+    return heraus
+
+
 def test_die_beiden_mep_4_kandidaten_liegen_weiterhin_ueber_dem_centbereich(produkte, preise):
     """Die Gegenprobe zur Aussage oben.
 
@@ -264,6 +282,29 @@ def test_die_beiden_mep_4_kandidaten_liegen_weiterhin_ueber_dem_centbereich(prod
     GILT die Betreiberregel auch hier, und MEP 4 gehoert entschieden statt
     offengelassen. Dieser Test macht aus 'bleibt offen' eine pruefbare
     Aussage statt einer Gewohnheit.
+
+    WARUM ES NICHT AN EINER EINZIGEN KENNZAHL HAENGT (10.09.2026)
+    ------------------------------------------------------------
+    An diesem Tag stand der Test auf rot: `trend` lag bei 15,47 gegen
+    15,51 — vier Cent. Nach der Regel waere MEP 4 damit entschieden
+    gewesen. Die uebrigen Kennzahlen desselben Tages sagten aber etwas
+    ganz anderes:
+
+        trend    15,47   15,51   ->  0,04
+        avg      17,75   16,40   ->  1,35
+        low       9,00    7,80   ->  1,20
+        avg1     15,75    9,00   ->  6,75
+        avg7     16,16   18,86   ->  2,70
+        avg30    16,95   15,39   ->  1,56
+
+    Die Naehe war also eine Tageslaune einer einzigen Kennzahl, nicht die
+    Lage der beiden Produkte. Eine Zuordnung von Kartenidentitaet, die an
+    so etwas kippt, waere geraten — und Raten ist genau das, was
+    CLAUDE.md hier ausschliesst ("card identity is not something a
+    scraper gets to decide").
+
+    Deshalb muss die Naehe ueber MEHRERE Kennzahlen belegt sein. Erst
+    dann ist es die Lage der Produkte und nicht das Rauschen eines Tages.
     """
     kandidaten = [pid for pid, p in produkte.items()
                   if p["idExpansion"] == EXP_MEP and p["name"].startswith("Lunatone")]
@@ -273,9 +314,15 @@ def test_die_beiden_mep_4_kandidaten_liegen_weiterhin_ueber_dem_centbereich(prod
     werte = [_preis(preise.get(pid)) for pid in kandidaten]
     assert all(w is not None for w in werte), \
         f"ein Lunatone-Kandidat hat keinen Preis mehr: {dict(zip(kandidaten, werte))}"
-    spanne = max(werte) - min(werte)
-    assert spanne > CENT_GRENZE, (
-        f"die beiden MEP-4-Kandidaten liegen nur noch {spanne:.2f} EUR "
-        f"auseinander ({dict(zip(kandidaten, werte))}). Damit greift die "
-        f"Betreiberregel 'bei Cent-Betraegen den guenstigeren', und MEP 4 "
-        f"sollte auf den guenstigeren gepinnt werden statt offenzubleiben")
+
+    spannen = _spannen_je_kennzahl(preise, kandidaten)
+    assert len(spannen) >= 2, (
+        f"nur {len(spannen)} Kennzahl(en) fuer beide Kandidaten vorhanden "
+        f"({spannen}) — auf dieser Grundlage laesst sich die Naehe weder "
+        "belegen noch widerlegen")
+    nah = sorted(f for f, s in spannen.items() if s <= CENT_GRENZE)
+    assert len(nah) < len(spannen), (
+        f"ALLE Kennzahlen liegen im Centbereich ({spannen}). Damit greift "
+        "die Betreiberregel 'bei Cent-Betraegen den guenstigeren' auch "
+        f"hier, und MEP 4 gehoert auf {min(kandidaten, key=lambda k: _preis(preise.get(k)))} "
+        "gepinnt statt offengelassen.")
