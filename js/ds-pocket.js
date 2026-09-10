@@ -139,9 +139,27 @@
             /* alt bleibt leer: der Deck-Name steht unmittelbar daneben,
                eine Vorlesehilfe wuerde ihn sonst doppelt ansagen.
                onerror versteckt ein Bild, das die Quelle nicht hat —
-               dann steht der Name allein da, statt einer Luecke. */
+               dann steht der Name allein da, statt einer Luecke.
+
+               KEIN loading="lazy". GEMESSEN live am 10.09.2026: mit dem
+               Attribut luden 3 von 63 Bildern, die uebrigen 60 blieben
+               dauerhaft auf naturalWidth 0 — auch nach dem Scrollen, und
+               ohne dass onerror feuerte. Uebrig blieb auf jeder Zeile
+               eine leere Luecke von 26 px, also schlimmer als gar keine
+               Bilder. Dieselben Bilder ohne das Attribut: 63 von 63,
+               null Fehler.
+
+               Der Grund duerfte die zweite Zeichnung sein (siehe
+               spritesNachziehen): die Bilder entstehen erst, wenn die
+               Symboldatei liegt, und Chrome bewertet die Verzoegerung
+               fuer nachtraeglich eingefuegte Bilder offenbar nicht neu.
+               Das nachzuweisen waere Aufwand ohne Ertrag — es geht um
+               66 Sprites von je ein bis drei Kilobyte, von einem
+               Server, den die Seite ohnehin fuer jedes Archetyp-Symbol
+               benutzt. Die Verzoegerung spart hier nichts und kostet
+               die ganze Anzeige. */
             bilder.push('<img class="pk-sprite" src="' + esc(url) + '" alt="" ' +
-                        'loading="lazy" onerror="this.style.display=\'none\'">');
+                        'onerror="this.style.display=\'none\'">');
         });
         if (!bilder.length) return '';
         return '<span class="pk-sprites" aria-hidden="true">' + bilder.join('') + '</span>';
