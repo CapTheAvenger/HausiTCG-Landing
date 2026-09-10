@@ -208,10 +208,22 @@
         const m = _daten.modell;
         const mt = _daten._meta || {};
 
+        /* Der Frischechip traegt seinen Text ZUR EINFUEGEZEIT in der
+           aktuellen Sprache, nicht fest auf Deutsch.
+
+           GEMESSEN am 10.09.2026 im CI-Lauf `sprachreinheit`:
+           "FAIL EN.i18n 'data.updated' (expected 'Data:' got 'Daten:')".
+           Der Reiter rendert erst, wenn er geoeffnet wird — da ist der
+           Uebersetzungsdurchgang der Seite laengst gelaufen, und ein fest
+           deutsch geschriebenes Wort bleibt stehen. Das `data-i18n`
+           bleibt trotzdem dran, damit ein SPAETERER Sprachwechsel den
+           Text wieder anfasst. Dasselbe Muster wie in
+           app-current-meta-analysis.js Zeile 6071. */
         return `<section class="mp-panel">
             <h3 class="mp-titel">${esc(l.titel)}<span class="data-freshness-chip"
                 title="Daten zuletzt aktualisiert"><span class="data-freshness-chip-icon"
-                aria-hidden="true">&#128260;</span> <span data-i18n="data.updated">Daten:</span>
+                aria-hidden="true">&#128260;</span> <span data-i18n="data.updated">${
+                de() ? 'Daten:' : 'Data:'}</span>
                 <span class="js-data-freshness" data-quelle="meta_prognose.json">&#8230;</span></span></h3>
             <p class="mp-unter">${esc(l.unter)}</p>
             <div class="mp-tabelle-wrap">
