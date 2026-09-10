@@ -1,5 +1,5 @@
 {
- "erzeugt": "2026-09-10 11:37:30+00:00",
+ "erzeugt": "2026-09-10 18:13:32+00:00",
  "format": "TEF-PBL",
  "betriebsart": "A",
  "betriebsart_klartext": "Anker aus dem laufenden Format",
@@ -16,7 +16,7 @@
  "ankerspieler_gesamt": 797,
  "online_abdeckung": {
   "schnappschuss": "2026-09-10",
-  "anteil_unbekannt": 11.49,
+  "anteil_unbekannt": 11.51,
   "groesste_unbekannte": [
    {
     "deck": "Beedrill",
@@ -28,7 +28,7 @@
    },
    {
     "deck": "Manectric Eelektrik",
-    "anteil": 0.69
+    "anteil": 0.68
    },
    {
     "deck": "Ceruledge",
