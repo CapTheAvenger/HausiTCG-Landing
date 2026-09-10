@@ -1732,6 +1732,7 @@
         const ov = document.getElementById('archetypeCardOverlay');
         if (ov) { ov.hidden = true; ov.innerHTML = ''; }
         document.body.classList.remove('arc-open');
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('archetyp-karte');
         _openDeck = null;
     }
 
@@ -1741,6 +1742,7 @@
         const ov = overlayEl();
         ov.hidden = false;
         document.body.classList.add('arc-open');
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('archetyp-karte');
         ov.innerHTML = `<div class="arc-card"><p class="arc-empty">${esc(
             L('arc.loading', isDe() ? 'Lade …' : 'Loading …'))}</p></div>`;
         load().then(() => {

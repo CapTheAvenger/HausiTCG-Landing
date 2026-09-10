@@ -4836,7 +4836,7 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                 modalContent.appendChild(panel);
             }
 
-            document.body.style.overflow = 'hidden';
+            if (window.HintergrundSperre) window.HintergrundSperre.sperren('einzelkarte');
 
             // Cancel any pending hide-timeout from a previous close
             if (overlay._hideTimeout) {
@@ -4895,7 +4895,7 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                 window._singleCardOverlayClickHandler = null;
             }
 
-            document.body.style.overflow = '';
+            if (window.HintergrundSperre) window.HintergrundSperre.freigeben('einzelkarte');
 
             if (window._singleCardEscHandler) {
                 document.removeEventListener('keydown', window._singleCardEscHandler);
@@ -4922,15 +4922,22 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
             hideSingleCard();
         }
 
-        // Safety net: if body.overflow is stuck on 'hidden' but no modal is
-        // visible, restore scrollability.  This prevents "frozen page" bugs.
+        // Sicherungsnetz gegen eine haengende Sperre: steht die Sperre noch,
+        // obwohl das Einzelkarten-Fenster gar nicht sichtbar ist, wird sie
+        // geloest. Frueher wurde dafuer `body.style.overflow` geprueft — das
+        // war der Griff, der auf dieser Seite nie gewirkt hat (siehe
+        // js/hintergrund-sperre.js). Seit die Sperre den Body auf
+        // `position: fixed` legt, ist ein Haenger nicht mehr harmlos: die
+        // Seite waere dann gar nicht mehr zu bewegen. Also wird jetzt der
+        // echte Sperrhalter geprueft.
         if (!window.__overflowSafetyBound) {
             setInterval(() => {
-                if (document.body.style.overflow !== 'hidden') return;
+                const s = window.HintergrundSperre;
+                if (!s || s.halter().indexOf('einzelkarte') < 0) return;
                 const singleModal = document.getElementById('singleCardModal') || document.getElementById('fullCardOverlay');
                 const isVisible = singleModal && (singleModal.classList.contains('active') || singleModal.classList.contains('show'));
                 if (!isVisible) {
-                    document.body.style.overflow = '';
+                    s.freigeben('einzelkarte');
                 }
             }, 2000);
             window.__overflowSafetyBound = true;

@@ -490,7 +490,7 @@
 
         host.innerHTML = s;
         host.hidden = false;
-        document.body.style.overflow = 'hidden';
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('pocket-vollbild');
         var zu = host.querySelector('[data-pk-zu]');
         if (zu) zu.focus();
         wachHalten();
@@ -536,7 +536,7 @@
         if (!host || host.hidden) return;
         host.hidden = true;
         host.innerHTML = '';
-        document.body.style.overflow = '';
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('pocket-vollbild');
         wachFreigeben();
         // Kam der Schliessbefehl SELBST aus dem Verlauf, ist der Eintrag
         // schon verbraucht — ein history.back() darauf wuerde eine
