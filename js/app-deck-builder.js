@@ -2048,7 +2048,7 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                         ? computedAvgWhenUsedRaw
                         : (Number.isFinite(avgOverallRaw) && avgOverallRaw > 0 ? avgOverallRaw : computedAvgOverallRaw));
 
-                const fallbackShare = Math.max(0, fallbackShareValue).toFixed(1).replace('.', ',');
+                const fallbackShare = zahlKomma(Math.max(0, fallbackShareValue));
                 const fallbackAvg = Math.max(0, fallbackAvgValue).toFixed(2).replace('.', ',');
 
                 const isM3Special = ((setCode || '').toUpperCase() === 'M3')
@@ -4307,7 +4307,7 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                 const liste = _ohne.slice(0, 5).map(g =>
                     t('buildInfo.techIdeenOhneEintrag')
                         .replace('{name}', g.name)
-                        .replace('{wr}', (Number(g.quote) || 0).toFixed(1).replace('.', ',') + ' %')
+                        .replace('{wr}', zahlKomma((Number(g.quote) || 0)) + ' %')
                         .replace('{n}', String(Number(g.partien) || 0))
                 ).join(', ');
                 const p = document.createElement('p');
@@ -8572,10 +8572,10 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                                 : `aus ${_basisQ} von ${_t} Turnieren${_ankerDatum ? `, zuletzt ${_ankerDatum}` : ''}`;
                             const _alt = (cands.length > 1)
                                 ? ` Die nächste Wahl war ${cands[1].name || '—'} mit `
-                                  + `${Number(((cands[1].weightedShare || 0) * 100)).toFixed(1).replace('.', ',')} %.`
+                                  + `${zahlKomma(Number(((cands[1].weightedShare || 0) * 100)))} %.`
                                 : '';
                             return `${_aceTraceEntry.chosen || ''} steht in `
-                                 + `${Number(((cands[0] && cands[0].weightedShare || 0) * 100)).toFixed(1).replace('.', ',')} % `
+                                 + `${zahlKomma(Number(((cands[0] && cands[0].weightedShare || 0) * 100)))} % `
                                  + `der ausgewerteten Präsenz-Tag-2-Listen — ${_wo}.`
                                  + (_ankerAlter != null ? ` Das ist ${_ankerAlter} Tage her.` : '')
                                  + _alt;
@@ -9037,12 +9037,12 @@ try { localStorage.removeItem('autosave_deck'); } catch (_) {}
                     </div>
                     <div class="deck-bench-nums">
                         <span class="deck-bench-pct" title="${r.nListsTotal ? `in ${r.nListsWith} von ${r.nListsTotal} Listen (erfolgsgewichtet)` : ''}">${pct}%</span>
-                        <span class="deck-bench-count">${r.nListsTotal ? `dort ` : ''}Ø ${(r.avgCount || 0).toFixed(1).replace('.', ',')} → ${r.packCount}×</span>
+                        <span class="deck-bench-count">${r.nListsTotal ? `dort ` : ''}Ø ${zahlKomma((r.avgCount || 0))} → ${r.packCount}×</span>
                     </div>
                 </div>`;
             };
             const moreRows = (report.bench_more_copies || []).map(r =>
-                `<div class="deck-bench-more-row">${escapeHtml(r.name)}: ${r.inDeck}× ${t('bench.inDeck') || 'im Deck'}, Ø ${(r.avgCount).toFixed(1).replace('.', ',')} → +${r.addCount} ${t('bench.copies') || 'Kopie(n) einpacken'}</div>`
+                `<div class="deck-bench-more-row">${escapeHtml(r.name)}: ${r.inDeck}× ${t('bench.inDeck') || 'im Deck'}, Ø ${zahlKomma((r.avgCount))} → +${r.addCount} ${t('bench.copies') || 'Kopie(n) einpacken'}</div>`
             ).join('');
             el.innerHTML = `
             <details class="deck-bench">

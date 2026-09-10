@@ -160,7 +160,7 @@
         }
         if (u.feldGesamt && u.restAnteil) {
             z.push(de
-                ? 'Das sind ' + (100 - u.restAnteil).toFixed(1).replace('.', ',') + ' % des Feldes. '
+                ? 'Das sind ' + zahlKomma((100 - u.restAnteil)) + ' % des Feldes. '
                   + 'Die übrigen ' + g(u.feldGesamt - u.listen) + ' Listen führt Limitless als '
                   + '„Other“ und meldet sie nicht einzeln.'
                 : 'That is ' + (100 - u.restAnteil).toFixed(1) + ' % of the field. The remaining '

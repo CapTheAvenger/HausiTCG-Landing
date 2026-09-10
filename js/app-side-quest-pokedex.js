@@ -94,6 +94,7 @@
             shinyJa: 'Shiny ist veröffentlicht',
             shinyNein: 'Kein veröffentlichtes Shiny',
             quelleLabel: 'Quelle:',
+            standLabel: 'Stand:',
             gegenTypLabel: 'Effektiv gegen:',
             gegenTypAus: 'kein Typ gewählt',
             gegenTypHint: 'Wählt einen Verteidiger-Typ. Die Attackenliste zeigt dann je Attacke, wie sie gegen diesen Typ wirkt.',
@@ -188,6 +189,7 @@
             shinyJa: 'Shiny is released',
             shinyNein: 'No released shiny',
             quelleLabel: 'Source:',
+            standLabel: 'As of:',
             gegenTypLabel: 'Effective against:',
             gegenTypAus: 'no type chosen',
             gegenTypHint: 'Pick a defending type. The move list then shows how each move fares against it.',
@@ -708,6 +710,25 @@
         return menge.indexOf(e.dex) !== -1 ? 'ja' : 'nein';
     }
 
+    /* Das Standdatum der Shiny-Liste, lesbar.
+     *
+     * BEFUND 10.09.2026: die Zeile "Kein veroeffentlichtes Shiny" stand
+     * ohne Datum da. Die Datei selbst schreibt in
+     * `_meta.lesart_kein_treffer` ausdruecklich "zum Stand der Quelle" —
+     * genau dieser Vorbehalt fehlte auf dem Schirm. Eine Verneinung ohne
+     * Datum liest sich als Aussage ueber heute, und die Datei altert:
+     * scripts/scrape_pokemon_go_shiny.py laeuft nicht taeglich.
+     *
+     * `_meta.stand` steht als "2026/09/10" in der Datei (Schraegstriche,
+     * nicht ISO), deshalb werden beide Schreibweisen gelesen. Ohne
+     * brauchbares Datum wird NICHTS geschrieben — ein erfundenes oder
+     * halbes Datum waere schlimmer als keines. */
+    function standLesbar(roh) {
+        const m = /^(\d{4})[-/](\d{2})[-/](\d{2})$/.exec(String(roh || '').trim());
+        if (!m) return '';
+        return `${m[3]}.${m[2]}.${m[1]}`;
+    }
+
     function editionenFuer(e) {
         if (!_editionen || !e) return [];
         return (_editionen.editionen || {})[String(e.dex)] || [];
@@ -957,7 +978,10 @@
                     ? `<span class="sqp-go is-ja">✨ ${escapeHtml(l.shinyJa)}</span>`
                     : `<span class="sqp-go is-nein">${escapeHtml(l.shinyNein)}</span>`}</div>
                 ${(_shiny && _shiny._meta && _shiny._meta.quelle)
-                    ? `<p class="sqp-herkunft-quelle">${escapeHtml(l.quelleLabel)} ${escapeHtml(_shiny._meta.quelle)}</p>`
+                    ? `<p class="sqp-herkunft-quelle">${escapeHtml(l.quelleLabel)} ${escapeHtml(_shiny._meta.quelle)}${
+                        standLesbar(_shiny._meta.stand)
+                            ? ` \u00b7 ${escapeHtml(l.standLabel)} ${escapeHtml(standLesbar(_shiny._meta.stand))}`
+                            : ''}</p>`
                     : ''}
             </div>`;
 

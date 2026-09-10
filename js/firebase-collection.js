@@ -5019,6 +5019,33 @@ function showDeckComparison(deckA, deckB, compareMode = 'functional', viewMode) 
     ${(!swapOut.length && !swapIn.length) ? `<div style="text-align:center;color:var(--tint-ok-ink);font-weight:700;padding:24px 0;">${de ? 'Keine Unterschiede — die Decks sind identisch.' : 'No differences — the decks are identical.'}</div>` : ''}
   `;
 
+  // ── Ansicht "Nebeneinander" ───────────────────────────────────────────
+  //
+  // Die dritte Ansicht: beide Listen als LISTEN, Seite an Seite. Die
+  // beiden anderen beantworten "was baue ich um" (changes) und "was
+  // faellt in welche Schublade" (list); diese beantwortet "was steht
+  // bei mir an dieser Stelle, was beim anderen".
+  //
+  // Sie hoert bewusst NICHT auf `mode`. Der funktionale Modus fasst
+  // ueber `international_prints` zusammen und faellt notfalls auf einen
+  // Namensvergleich zurueck (siehe getCanonicalComparisonInfo). Fuer
+  // eine Ansicht, die Druck neben Druck stellt, waere das falsch:
+  // js/deck-vergleich-nebeneinander.js ordnet ausschliesslich ueber
+  // (set, nummer) zu und sagt das in der Kopfzeile auch.
+  let sideHtml = '';
+  if (view === 'side') {
+    const modul = window.DeckVergleichNebeneinander;
+    sideHtml = modul
+      ? modul.rendere(modul.vergleiche(deckA, deckB), {
+          nameA: deckA.name,
+          nameB: deckB.name,
+          sprache: de ? 'de' : 'en'
+        })
+      : `<p style="color: var(--ink-2);">${de
+          ? 'Der Vergleichsbaustein konnte nicht geladen werden.'
+          : 'The comparison module could not be loaded.'}</p>`;
+  }
+
   // Create comparison modal
   let existingModal = document.getElementById('deck-compare-modal');
   if (existingModal) existingModal.remove();
@@ -5029,31 +5056,34 @@ function showDeckComparison(deckA, deckB, compareMode = 'functional', viewMode) 
   modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
   
   modal.innerHTML = `
-    <div style="background: var(--surface-1);border-radius:12px;max-width:700px;width:100%;max-height:80vh;overflow-y:auto;padding:25px;">
+    <div style="background: var(--surface-1);border-radius:12px;max-width:${view === 'side' ? '960px' : '700px'};width:100%;max-height:80vh;overflow-y:auto;padding:25px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
-        <h2 style="margin:0;font-size:1.3em;">Deck Comparison</h2>
+        <h2 style="margin:0;font-size:1.3em;">${de ? 'Deckvergleich' : 'Deck Comparison'}</h2>
         <button onclick="this.closest('#deck-compare-modal').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;">✕</button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
         <button onclick="showDeckComparison(window._deckCompareA, window._deckCompareB, '${mode}', 'changes')" style="flex:1;min-height:44px;padding:8px 10px;border-radius:8px;border:${view === 'changes' ? 'none' : '1px solid #ccc'};background:${view === 'changes' ? '#c0392b' : '#f5f5f5'};color:${view === 'changes' ? 'white' : '#333'};font-size:13px;font-weight:800;cursor:pointer;">${de ? '🔄 Nur Änderungen' : '🔄 Changes only'}</button>
         <button onclick="showDeckComparison(window._deckCompareA, window._deckCompareB, '${mode}', 'list')" style="flex:1;min-height:44px;padding:8px 10px;border-radius:8px;border:${view === 'list' ? 'none' : '1px solid #ccc'};background:${view === 'list' ? '#34495e' : '#f5f5f5'};color:${view === 'list' ? 'white' : '#333'};font-size:13px;font-weight:800;cursor:pointer;">${de ? '📋 Volle Liste' : '📋 Full list'}</button>
+        <button onclick="showDeckComparison(window._deckCompareA, window._deckCompareB, '${mode}', 'side')" style="flex:1;min-height:44px;padding:8px 10px;border-radius:8px;border:${view === 'side' ? 'none' : '1px solid #ccc'};background:${view === 'side' ? '#1565c0' : '#f5f5f5'};color:${view === 'side' ? 'white' : '#333'};font-size:13px;font-weight:800;cursor:pointer;">${de ? '↔ Nebeneinander' : '↔ Side by side'}</button>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:12px;">
-        <span style="font-size:12px;color: var(--ink-2);font-weight:700;margin-right:4px;">Compare mode:</span>
+      <div style="display:${view === 'side' ? 'none' : 'flex'};gap:8px;align-items:center;justify-content:flex-end;margin-bottom:12px;">
+        <span style="font-size:12px;color: var(--ink-2);font-weight:700;margin-right:4px;">${de ? 'Vergleichsart:' : 'Compare mode:'}</span>
         <button onclick="showDeckComparison(window._deckCompareA, window._deckCompareB, 'functional')" style="padding:6px 10px;border-radius:999px;border:${mode === 'functional' ? 'none' : '1px solid #ccc'};background:${mode === 'functional' ? '#2e7d32' : '#f5f5f5'};color:${mode === 'functional' ? 'white' : '#333'};font-size:12px;font-weight:700;cursor:pointer;">Functional (prints merged)</button>
         <button onclick="showDeckComparison(window._deckCompareA, window._deckCompareB, 'exact')" style="padding:6px 10px;border-radius:999px;border:${mode === 'exact' ? 'none' : '1px solid #ccc'};background:${mode === 'exact' ? '#1565c0' : '#f5f5f5'};color:${mode === 'exact' ? 'white' : '#333'};font-size:12px;font-weight:700;cursor:pointer;">Exact print</button>
       </div>
-      <div style="margin:-4px 0 12px 0;font-size:12px;color: var(--ink-2);">${mode === 'functional' ? (getLang()==='de' ? 'Artwork- und Set-Varianten derselben Karte werden zusammengefasst.' : 'Artwork and set variants of the same card are merged.') : (getLang()==='de' ? 'Jeder Print (set+nummer) wird einzeln verglichen.' : 'Each print (set+number) is compared individually.')}</div>
+      <div style="margin:-4px 0 12px 0;font-size:12px;color: var(--ink-2);">${view === 'side'
+        ? (de ? 'Jeder Druck (Set + Nummer) steht als eigene Zeile — die Vergleichsart gilt hier nicht.' : 'Every print (set + number) is its own row — the compare mode does not apply here.')
+        : (mode === 'functional' ? (de ? 'Artwork- und Set-Varianten derselben Karte werden zusammengefasst.' : 'Artwork and set variants of the same card are merged.') : (de ? 'Jeder Druck (Set + Nummer) wird einzeln verglichen.' : 'Each print (set + number) is compared individually.'))}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:${view === 'changes' ? '6px' : '15px'};">
         <div style="background:var(--solid-info);color:white;padding:10px;border-radius:8px;text-align:center;font-weight:700;">${safeNameA}<div style="font-size:0.72em;font-weight:600;opacity:.95;">${sizeA === 60 ? '60/60' : `⚠ ${sizeA}/60`}</div></div>
         <div style="background:#764ba2;color:white;padding:10px;border-radius:8px;text-align:center;font-weight:700;">${safeNameB}<div style="font-size:0.72em;font-weight:600;opacity:.95;">${sizeB === 60 ? '60/60' : `⚠ ${sizeB}/60`}</div></div>
       </div>
       ${view === 'changes' ? `<div style="font-size:12px;color: var(--ink-2);margin-bottom:12px;text-align:center;">${de ? `So baust du <b>${safeNameA}</b> in <b>${safeNameB}</b> um:` : `How to turn <b>${safeNameA}</b> into <b>${safeNameB}</b>:`}</div>` : ''}
-      ${view === 'changes' ? changesHtml : `
-      ${onlyA.length ? `<div style="margin-bottom:12px;"><h4 style="color:#667eea;margin:0 0 5px 0;">Only in ${safeNameA} (${onlyA.length})</h4><div style="font-size:0.9em;color: var(--ink-2);">${onlyA.join('<br>')}</div></div>` : ''}
-      ${onlyB.length ? `<div style="margin-bottom:12px;"><h4 style="color:#764ba2;margin:0 0 5px 0;">Only in ${safeNameB} (${onlyB.length})</h4><div style="font-size:0.9em;color: var(--ink-2);">${onlyB.join('<br>')}</div></div>` : ''}
-      ${different.length ? `<div style="margin-bottom:12px;"><h4 style="color:#e67e22;margin:0 0 5px 0;">Different counts (${different.length})</h4><div style="font-size:0.9em;color: var(--ink-2);">${different.join('<br>')}</div></div>` : ''}
-      <div style="margin-bottom:12px;"><h4 style="color:var(--tint-ok-ink);margin:0 0 5px 0;">Same cards (${same.length})</h4><div style="font-size:0.9em;color: var(--ink-2);">${same.length > 0 ? same.join('<br>') : 'No cards in common'}</div></div>`}
+      ${view === 'side' ? sideHtml : view === 'changes' ? changesHtml : `
+      ${onlyA.length ? `<div style="margin-bottom:12px;"><h4 style="color:#667eea;margin:0 0 5px 0;">${de ? 'Nur in' : 'Only in'} ${safeNameA} (${onlyA.length})</h4><div style="font-size:0.9em;color: var(--ink-2);">${onlyA.join('<br>')}</div></div>` : ''}
+      ${onlyB.length ? `<div style="margin-bottom:12px;"><h4 style="color:#764ba2;margin:0 0 5px 0;">${de ? 'Nur in' : 'Only in'} ${safeNameB} (${onlyB.length})</h4><div style="font-size:0.9em;color: var(--ink-2);">${onlyB.join('<br>')}</div></div>` : ''}
+      ${different.length ? `<div style="margin-bottom:12px;"><h4 style="color:#e67e22;margin:0 0 5px 0;">${de ? 'Abweichende Anzahl' : 'Different counts'} (${different.length})</h4><div style="font-size:0.9em;color: var(--ink-2);">${different.join('<br>')}</div></div>` : ''}
+      <div style="margin-bottom:12px;"><h4 style="color:var(--tint-ok-ink);margin:0 0 5px 0;">${de ? 'Gleiche Karten' : 'Same cards'} (${same.length})</h4><div style="font-size:0.9em;color: var(--ink-2);">${same.length > 0 ? same.join('<br>') : (de ? 'Keine gemeinsamen Karten' : 'No cards in common')}</div></div>`}
       ${totalProxyCopies > 0 ? `<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);text-align:center;"><button onclick="addCompareNewCardsToProxy()" style="padding:10px 20px;border:none;border-radius:8px;background:#1e8449;color:white;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='#166b3a';this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 12px rgba(231,76,60,0.35)'" onmouseout="this.style.background='#1e8449';this.style.transform='';this.style.boxShadow=''">${getLang()==='de' ? '➕ Alle neuen Karten zum Proxy Printer' : 'Add all new cards to Proxy Printer'} (${totalProxyCopies})</button></div>` : ''}
     </div>
   `;

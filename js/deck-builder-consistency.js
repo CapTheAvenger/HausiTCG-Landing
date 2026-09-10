@@ -261,19 +261,56 @@
   // build. Der Konsens ist der des TAG-2-CUT, nicht der des Feldes —
   // die Quelle kennt keine Liste ausserhalb des Cuts.
   //
-  // The thresholds below are deliberately conservative — the Turin
-  // sweep showed a 50/50 win-rate for naive vs plurality with looser
-  // settings, but the tighter "≥50 % plurality + ≥5-list sample +
-  // ≥50-place median gap" combo only fires on cases where plurality
-  // genuinely correlated with better placements (3 / 4 wins on Turin
-  // data). Once enough TEF-CRI tournaments land we revisit the
-  // thresholds and consider promoting the diagnostic to a live
-  // override.
+  // HERKUNFT DER VIER ZAHLEN — NACHGEPRUEFT 10.09.2026.
+  //
+  // Hier stand: "the Turin sweep showed a 50/50 win-rate for naive vs
+  // plurality with looser settings, but the tighter combo only fires on
+  // cases where plurality genuinely correlated with better placements
+  // (3 / 4 wins on Turin data)."
+  //
+  // DIESER BELEG IST IM REPO NICHT AUFFINDBAR. Gesucht wurde am
+  // 10.09.2026 nach "Turin sweep", "alt_suggestion", "ALT_SUGGESTION"
+  // und "Pruefstand" in allen .md, .json und .py — kein Datensatz, kein
+  // Protokoll, keine Auswertung. Und die Datenlage, auf die er sich
+  // beruft, gibt es nicht mehr: data/tournament_decklists_per_player.csv
+  // trug damals NUR Turin (AUDIT_DATA_PIPELINE.md, Befund F-D09:
+  // "distinct tournaments: 1"), heute 2.514 Listen aus vier Turnieren.
+  //
+  // Die 50 gilt deshalb bis auf Weiteres als GEGRIFFEN, nicht als
+  // belegt. Sie wird NICHT geraten korrigiert — eine erfundene bessere
+  // Zahl saehe genauso aus und waere genauso unbelegt.
+  //
+  // WAS SIE HEUTE TATSAECHLICH TUT (gemessen 10.09.2026 an allen
+  // 89 Archetypen der CSV, 58 davon baubar; Messweg und Zahlen in
+  // tests/unit/test-alt-vorschlag-schwelle.js):
+  //
+  //   1.384 Aufrufe von _computeAlternativeSuggestion
+  //     -   288 raus an ALT_SUGGESTION_MIN_SAMPLE (< 5 Listen)
+  //     -   908 raus an der Randzone FRAC_MIN/FRAC_MAX
+  //     -   143 raus, weil Mehrheit == naive Rundung
+  //     -     7 raus an ALT_SUGGESTION_MIN_SHARE (< 50 %)
+  //     -     1 raus, weil ein Median fehlt
+  //     =    37 erreichen ALT_SUGGESTION_MIN_GAP
+  //          davon 27 unterdrueckt, 10 gezeigt (in 7 Archetypen)
+  //
+  //   Die 50 ist also NICHT verhaltensneutral: sie unterdrueckt
+  //   11 der 21 Vorschlaege, die die anderen Regeln durchlassen
+  //   (bei MIN_GAP = 0 waeren es 21 in 14 Archetypen).
+  //
+  //   Sie sitzt aber auch nicht auf einer Kante: der naechste
+  //   gemessene Abstand darunter ist 42, der naechste darueber 64.
+  //   Jede Schwelle zwischen 43 und 64 ergibt exakt dieselben 10
+  //   Vorschlaege. Innerhalb dieses Fensters ist die genaue Zahl
+  //   folgenlos — was die 50 gerade noch traegt, ohne sie zu belegen.
+  //
+  // Der Vorschlag aendert den Bau NICHT; er steht als Zeile im
+  // Warum-Dialog. Das ist der Grund, warum eine gegriffene Zahl hier
+  // ueberhaupt stehen bleiben darf.
   const ALT_SUGGESTION_FRAC_MIN     = 0.30;
   const ALT_SUGGESTION_FRAC_MAX     = 0.70;
   const ALT_SUGGESTION_MIN_SHARE    = 0.50;
   const ALT_SUGGESTION_MIN_SAMPLE   = 5;
-  const ALT_SUGGESTION_MIN_GAP      = 50;
+  const ALT_SUGGESTION_MIN_GAP      = 50;  // GEGRIFFEN, siehe oben.
 
   // Hard rules from the game:
   const DECK_SIZE = 60;
@@ -2092,6 +2129,17 @@
        gefallen ist. Ohne diesen Export haette er die 3 abschreiben
        muessen, und dann gaebe es die Zahl zweimal. */
     MIN_WEIGHTED_LISTS,
+    /* Die vier Schwellen des Alternativvorschlags. Exportiert am
+       10.09.2026, damit tests/unit/test-alt-vorschlag-schwelle.js sie
+       messen kann, ohne sie abzuschreiben — eine abgeschriebene
+       Schwelle prueft nur die Kopie. */
+    ALT_SUGGESTION_SCHWELLEN: {
+      FRAC_MIN:   ALT_SUGGESTION_FRAC_MIN,
+      FRAC_MAX:   ALT_SUGGESTION_FRAC_MAX,
+      MIN_SHARE:  ALT_SUGGESTION_MIN_SHARE,
+      MIN_SAMPLE: ALT_SUGGESTION_MIN_SAMPLE,
+      MIN_GAP:    ALT_SUGGESTION_MIN_GAP,
+    },
     // Exposed for unit tests / future "explain why" UIs:
     _internals: {
       placementWeight:  _placementWeight,
@@ -2101,6 +2149,7 @@
       isBasicEnergy:    _isBasicEnergy,
       isEnergy:         _isEnergy,
       isAceSpec:        _isAceSpec,
+      alternativVorschlag: _computeAlternativeSuggestion,
     },
   };
 
