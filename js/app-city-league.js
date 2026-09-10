@@ -641,6 +641,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
                 // BEFUND B4: derselbe Name, den der Leerzustand nennt — hier
                 // abgelegt, damit er nicht ein zweites Mal geschrieben wird.
                 window._cityLeagueVergleichsQuelle = comparisonUrl;
+                chipQuelleNachziehen(isPast);
                 // No separate _past variant — the current images JSON
                 // accumulates archetype→image mappings across rotations.
                 const imagesUrl = `${BASE_PATH}city_league_images.json`;
@@ -2276,6 +2277,47 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
         // Explicit escape hatch for a manual refresh affordance.
         window.invalidateCityLeagueAnalysisCache = () => _clAnalysisCache.clear();
 
+
+        /* Der Frischechip nennt die Datei, die WIRKLICH angezeigt wird.
+         *
+         * BEFUND (10.09.2026, live an thedipidis.app/#city-league): der
+         * Reiter stand auf "Vergangenes Meta" und zeigte 26 Listen aus 11
+         * Archetypen — daneben schrieb der Chip "Daten: keine Daten".
+         * Beides stimmte fuer sich: die Zahlen kamen aus
+         * city_league_archetypes_past.csv, der Chip war fest auf
+         * city_league_archetypes.csv verdrahtet, und DIE ist leer.
+         *
+         * Fuer den Leser stand damit eine Auskunft neben Zahlen, die sie
+         * widerlegt. ds-datenstand.js schreibt die Regel selbst auf:
+         * "Jeder Chip nennt den Stand SEINER Ansicht." Ein fest
+         * verdrahteter Dateiname kann das nicht, sobald die Ansicht
+         * zwischen zwei Dateien umschaltet.
+         *
+         * Deshalb wird die Angabe beim Umschalten mitgezogen und der Chip
+         * neu gezeichnet. Die Zuordnung steht hier ausgeschrieben statt
+         * als Namensregel ("haeng _past an") — eine Regel wuerde auch
+         * fuer Dateien gelten, die es nicht gibt.
+         */
+        const CHIP_PAARE = [
+            ['city_league_archetypes.csv', 'city_league_archetypes_past.csv'],
+            ['city_league_analysis.csv',   'city_league_analysis_past.csv']
+        ];
+
+        function chipQuelleNachziehen(isPast) {
+            document.querySelectorAll('.js-data-freshness[data-quelle]').forEach(el => {
+                const jetzt = el.getAttribute('data-quelle');
+                for (const [aktuell, vergangen] of CHIP_PAARE) {
+                    if (jetzt === aktuell || jetzt === vergangen) {
+                        el.setAttribute('data-quelle', isPast ? vergangen : aktuell);
+                        break;
+                    }
+                }
+            });
+            if (window.DsDatenstand && typeof window.DsDatenstand.zeichne === 'function') {
+                window.DsDatenstand.zeichne();
+            }
+        }
+
         async function loadCityLeagueAnalysis() {
             devLog('Loading City League Analysis...');
 
@@ -2287,6 +2329,7 @@ function cityLeagueOffSeasonHtml(istVergangenheit) {
             const comparisonUrl = `${BASE_PATH}${isPast ? 'city_league_archetypes_past_comparison.csv' : 'city_league_archetypes_comparison.csv'}`;
             // BEFUND B4: siehe oben — eine Ablage, ein Name.
             window._cityLeagueVergleichsQuelle = comparisonUrl;
+            chipQuelleNachziehen(isPast);
             const hasComparisonFile = true;
             
             devLog(`Loading City League Analysis for format: ${format}`);
