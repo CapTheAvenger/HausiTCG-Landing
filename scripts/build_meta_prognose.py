@@ -141,9 +141,23 @@ def online_anteile(zeilen: List[dict], meta: str, von: str, bis: str
         if zeile.get("archetype_id") == SAMMELEIMER:
             continue
         roh[zeile["archetype_id"]] += n
+        name = (zeile.get("archetype_name") or "").strip()
+        if name:
+            NAMEN.setdefault(zeile["archetype_id"], name)
     if not gesamt:
         return {}, 0, {}
     return ({k: v / gesamt * 100 for k, v in roh.items()}, gesamt, dict(roh))
+
+
+# archetyp_id -> Anzeigename, aus der Spalte `archetype_name` derselben
+# Datei eingesammelt.
+#
+# WARUM DAS NOETIG IST (09.09.2026): die Prognose fuehrte nur die Kennung
+# ("n-zoroark"). Wer daraus einen Namen ableitet, trifft 26 von 62 —
+# "n-zoroark" wuerde still zu "Zoroark" verschmolzen, und beide Decks
+# existieren getrennt. Ohne diese Tabelle ist die Datei fuer eine Anzeige
+# nicht brauchbar, ohne dass man Namen raet.
+NAMEN: Dict[str, str] = {}
 
 
 def praesenz_anker(datenverzeichnis: str) -> List[dict]:
@@ -284,6 +298,7 @@ def prognose(aktuell: Dict[str, float], roh: Dict[str, int], gesamt: int,
     for k, v in rang:
         zeile = {
             "archetyp_id": k,
+            "archetyp_name": NAMEN.get(k, ""),
             "online_anteil": round(v, 4),
             "online_listen": roh.get(k, 0),
             "online_listen_gesamt": gesamt,
