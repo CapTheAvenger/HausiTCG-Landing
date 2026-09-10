@@ -101,6 +101,42 @@ const ERHEBUNG = TURNIERE.map(erhebe);
 
 /* Feldgroessen der Online-Turniere, aus derselben Datei, die auch der
    Motor liest. Semikolon-getrennt und ohne BOM. */
+/* Die Feldgroesse, die der Motor fuer ein ONLINE-Turnier kennt — in
+   DERSELBEN Reihenfolge, in der er sie sucht.
+
+   NACHGETRAGEN AM 10.09.2026, ABENDS. Vormittags kannte der Motor nur
+   data/online_api_tournaments.csv, und diese Karte hier reichte. Seit
+   dem Wochenlauf um 18:13 UTC fuellt der Online-Scraper die Spalte
+   `spielerzahl` in der Zeile selbst — sie ist die ERSTE Quelle des
+   Motors, und fuer Turniere, die die Turnierdatei noch nicht kennt,
+   die einzige. Gemessen: 1.427 Online-Listen, davon 0 ohne
+   Feldgroesse (vormittags waren es 305 von 1.319).
+
+   Ohne diesen Nachtrag rechnet der Test den Sollwert aus einer
+   aermeren Quelle als der Motor und meldet eine Abweichung, wo keine
+   ist — genau das ist hier passiert. */
+const ONLINE_FELD_AUS_ZEILE = (() => {
+    const m = new Map();
+    try {
+        const zeilen = fs.readFileSync(
+            D('tournament_decklists_per_player.csv'), 'utf8').split('\n');
+        const kopf = zeilen[0].replace(/^﻿/, '').split(',');
+        const iQ = kopf.indexOf('quelle');
+        const iL = kopf.indexOf('limitless_tournament_id');
+        const iS = kopf.indexOf('spielerzahl');
+        if (iQ < 0 || iL < 0 || iS < 0) return m;
+        for (const z of zeilen.slice(1)) {
+            if (!z) continue;
+            const f = z.split(',');
+            if (f[iQ] !== 'online') continue;
+            const n = parseInt((f[iS] || '').trim(), 10);
+            const tid = (f[iL] || '').trim();
+            if (tid && Number.isFinite(n) && n > 0 && !m.has(tid)) m.set(tid, n);
+        }
+    } catch (_) { /* Datei fehlt: dann bleibt die Karte leer */ }
+    return m;
+})();
+
 const ONLINE_FELD = (() => {
     const m = new Map();
     try {
@@ -335,7 +371,9 @@ describe('dataQuality traegt Piloten und Feldgroesse aus den Labs-Dateien', () =
                 else pOk = false;
                 const e = ERHEBUNG.find(x => x.tid === tid);
                 if (e && e.feld > 0) { sollFeld += e.feld; continue; }
-                const onl = ONLINE_FELD.get(tid);
+                // Dieselbe Reihenfolge wie im Motor: erst die Zeile,
+                // dann die Turnierdatei.
+                const onl = ONLINE_FELD_AUS_ZEILE.get(tid) || ONLINE_FELD.get(tid);
                 if (onl > 0) sollFeld += onl; else fOk = false;
             }
             assert.equal(dq.n_piloten, pOk ? sollPiloten : null,
