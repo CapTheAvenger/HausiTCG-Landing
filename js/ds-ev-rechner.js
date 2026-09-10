@@ -454,10 +454,13 @@
                  + esc(de() ? f.de : f.en) + '</option>';
         }).join('');
 
-        return ''
-        + '<div class="ds-panel ' + BLOCK + '">'
-        + '<h3 class="ds-label">🎯 ' + esc(L('Gegen welches Meta?', 'Against which meta?')) + '</h3>'
-        + '<p class="ds-note">' + L(
+        /* Der Erklaersatz wandert hinter den Info-Knopf der
+           Abschnittsueberschrift (10.09.2026). Er nennt den Hausnamen
+           der Quote zur Laufzeit (quotenName()) — deshalb gemeldet und
+           nicht abgeschrieben. Ohne Register bleibt er stehen, wo er
+           war: eine Erklaerung ersatzlos zu verlieren waere schlimmer
+           als eine Zeile zu viel. */
+        var evText = L(
             'Die Heatmap sagt, wer wen schlägt. Hier steht, was daraus für <em>dich</em> folgt: '
             + 'du wählst dein Deck, und die Seite gewichtet jede Paarung mit dem Anteil, den der '
             + 'Gegner im Meta hat. Heraus kommt die ' + quotenName() + ', mit der du über ein ganzes Turnier '
@@ -465,7 +468,20 @@
             'The heatmap says who beats whom. This says what that means for <em>you</em>: pick your '
             + 'deck and every matchup is weighted by how much of the field that opponent is. The '
             + 'result is the ' + quotenName() + ' to expect across a whole tournament — not against one deck, '
-            + 'but against all of them at once.') + '</p>'
+            + 'but against all of them at once.');
+        var evGemeldet = false;
+        if (typeof window !== 'undefined' && window.DsAbschnittInfo) {
+            window.DsAbschnittInfo.melde('ev', {
+                titel: L('Gegen welches Meta?', 'Against which field?'),
+                html: '<p>' + evText + '</p>'
+            });
+            evGemeldet = true;
+        }
+
+        return ''
+        + '<div class="ds-panel ' + BLOCK + '">'
+        + '<h3 class="ds-label">🎯 ' + esc(L('Gegen welches Meta?', 'Against which meta?')) + '</h3>'
+        + (evGemeldet ? '' : '<p class="ds-note">' + evText + '</p>')
         + '<div class="ds-controls">'
           + '<label class="ds-field is-wide"><span class="ds-stat-label">'
             + esc(L('Dein Deck', 'Your deck')) + '</span>'

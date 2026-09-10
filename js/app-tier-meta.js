@@ -329,7 +329,31 @@
                    + ' That is why a deck with a higher share can sit below one with a lower share.');
 
             const sicher = (typeof escapeHtml === 'function') ? escapeHtml(text) : text;
-            return '<p class="tier-grundlage">' + sicher + '</p>';
+
+            /* DER SATZ WANDERT HINTER DEN KNOPF (10.09.2026).
+               -----------------------------------------------
+               Er stand als neun Zeilen Fliesstext mitten in der
+               Tier-Liste. Gemeldet mit Bildschirmfoto: "wird sonst zu
+               viel Text auf der Seite … oder wie man das Professor eich
+               Bild neben jedem Titel und geben darueber die
+               Beschreibung, Infos und Legenden."
+
+               GEMELDET, NICHT KOPIERT. Elf der siebzehn Zahlen in
+               diesem Satz kommen aus den Konstanten der Einteilung und
+               aus den Daten des Tages ("hier 365 von 3.644 Listen").
+               Eine Abschrift in js/ds-abschnitt-info.js waere beim
+               naechsten Datenlauf falsch — deshalb baut ihn diese
+               Funktion weiter hier und reicht ihn nur weiter.
+
+               Der Rueckgabewert bleibt ein leerer String statt null:
+               die Aufrufer haengen ihn per `+` an ihr HTML. */
+            if (typeof window !== 'undefined' && window.DsAbschnittInfo) {
+                window.DsAbschnittInfo.melde('tiers', {
+                    titel: de ? 'Tier-Liste' : 'Tier list',
+                    html: '<p>' + sicher + '</p>'
+                });
+            }
+            return '';
         }
 
         /**
@@ -2388,7 +2412,20 @@
                     overallTop8Html = `
                         <div class="ds-panel cm-rangliste-block">
                             <h3 class="ds-label">🏆 ${deR ? 'Meta-Performance' : 'Meta performance'}</h3>
+                            <!-- DER ERKLAERTEXT WANDERT HINTER DEN KNOPF
+                                 (10.09.2026). Er stand als sieben Zeilen ueber
+                                 einer Tabelle mit neun Spalten. Gemeldet mit
+                                 Bildschirmfoto: "auch der Info kann zu source,
+                                 wird sonst zu viel Text auf der Seite".
+
+                                 Auf der Flaeche bleibt nur der Weg zum Beleg —
+                                 eine Zeile statt sieben. Der Text selbst wird
+                                 gemeldet, nicht kopiert: er beschreibt die
+                                 Spalten, die GERADE in der Tabelle stehen
+                                 (zaehlungDa), und nennt den Hausnamen der
+                                 Quote zur Laufzeit. -->
                             <p class="ds-note cm-rang-hinweis">${(() => {
+                                const langText = (() => {
                                 /* BEFUND (02.09.2026): der Text nannte vier
                                    Spalten, von denen zwei gerade nicht in der
                                    Tabelle stehen. Wer "Turnier-Antritte" liest
@@ -2438,6 +2475,17 @@
                                       + 'still missing: the file so far carries only a weighted sum, and you cannot '
                                       + 'half-attend. They arrive with the next data run; the rates are already correct. '
                                       + 'Every column heading sorts and explains itself. ';
+                                })();
+                                if (typeof window !== 'undefined' && window.DsAbschnittInfo) {
+                                    window.DsAbschnittInfo.melde('rang', {
+                                        titel: deR ? 'Meta-Performance' : 'Meta performance',
+                                        html: '<p>' + langText + '</p>'
+                                    });
+                                    return '';
+                                }
+                                /* Ohne Register bleibt der Text, wo er war —
+                                   sonst waere die Erklaerung ersatzlos weg. */
+                                return langText;
                             })()}<a class="qu-verweis" href="#quellen">${
                                     deR ? 'Nenner und Rechenweg →' : 'Denominators and method →'}</a></p>
                             <div class="mobile-table-scroll">
@@ -3001,6 +3049,108 @@
         let _staplesAnzahl = 15;
         let _staplesDaten = null;
 
+        /* ── Die Kartenarten als eigene Listen ────────────────────────
+         *
+         * GEMELDET am 10.09.2026: "koennen wir Most played noch mal also
+         * Option geben Top 10 Pokemon, Top 10 Supporter, Top 10 Items,
+         * Top 10 Tools, Top 10 Stadion und Top 10 Special Energie.
+         * Wichtig ist hier nicht einfach immer Top 10 zu zeigen wenn halt
+         * nur 3 relevant sind dann halt auch nur 3 Anzeigen."
+         *
+         * DAS IST DER PUNKT DIESER LISTE. Sie zeigt nicht die haeufigsten
+         * Karten, sondern die Karten, die VIELE ARCHETYPEN teilen — der
+         * Prozentwert unter jeder Karte ist der Anteil der Archetypen,
+         * nicht der Decklisten. Eine Liste, die immer auf zehn
+         * auffuellt, behauptet damit zehn geteilte Karten, wo es
+         * vielleicht zwei gibt.
+         *
+         * DIE SCHWELLE: 25 % der Archetypen, vom Betreiber gewaehlt.
+         * Gemessen an data/current_meta_card_data.csv, Stand 10.09.2026
+         * (62 Archetypen, 519 verschiedene Karten ohne Basis-Energie) —
+         * so viele Karten stehen je Art ueber der Schwelle:
+         *
+         *     Pokemon          17     Stadion            4
+         *     Item             17     Special Energy     3
+         *     Supporter        14     Tool               2
+         *
+         * Genau der gewuenschte Effekt: Pokemon und Item fuellen die
+         * Zehn, Tool zeigt zwei. Zum Vergleich lagen die anderen
+         * geprueften Schwellen daneben — bei 10 % kaeme fast jede Art
+         * auf volle zehn (Pokemon 50, Item 32, Supporter 25), bei 50 %
+         * blieben Stadion und Special Energy ganz leer.
+         *
+         * `null` als Art heisst "alle" — das ist die gewachsene Ansicht
+         * mit ihren Stufen 15/30 und OHNE Schwelle. Sie bleibt die
+         * Voreinstellung; die Artenlisten kommen daneben. */
+        const STAPLES_ART_SCHWELLE = 25;   // Prozent der Archetypen
+        const STAPLES_ART_MAX = 10;
+        const STAPLES_ART_KEY = 'staples_art_v1';
+        /* Reihenfolge = Reihenfolge der Knoepfe. `typen` sind die Werte
+           der Spalte `type` in data/current_meta_card_data.csv — gemessen
+           am 10.09.2026, nicht geraten: Basic / Stage 1 / Stage 2 sind
+           die drei Pokemon-Stufen, die uebrigen stehen fuer sich. */
+        /* DIE DEUTSCHEN NAMEN SIND DIE DES DEUTSCHEN SPIELS, NICHT
+           UEBERSETZTE ENGLISCHE (10.09.2026).
+           --------------------------------------------------------
+           Beim ersten Anlauf stand hier "Supporter" — und
+           tests/e2e_i18n_language_purity.py fiel prompt um: das Wort
+           steht auf seiner Sperrliste (Zeile 68), weil die deutschen
+           Karten "Unterstuetzer" heissen. Genauso "Tools": das deutsche
+           Spiel nennt sie Ausruestung.
+
+           Der Test hatte recht, und er hat den Fehler gefunden, bevor
+           ihn jemand auf der Seite lesen musste. */
+        const STAPLES_ARTEN = [
+            { id: 'pokemon', typen: ['Basic', 'Stage 1', 'Stage 2', 'V-UNION', 'VMAX', 'VSTAR', 'Level Up'],
+              de: 'Pokémon',         en: 'Pokémon' },
+            { id: 'supporter', typen: ['Supporter'],
+              de: 'Unterstützer',    en: 'Supporters' },
+            { id: 'item', typen: ['Item'],
+              de: 'Items',           en: 'Items' },
+            { id: 'tool', typen: ['Tool'],
+              de: 'Ausrüstung',      en: 'Tools' },
+            { id: 'stadion', typen: ['Stadium'],
+              de: 'Stadion',         en: 'Stadiums' },
+            { id: 'energie', typen: ['Special Energy'],
+              de: 'Spezial-Energie', en: 'Special Energy' }
+        ];
+        let _staplesArt = null;
+
+        function staplesArt() { return _staplesArt; }
+
+        function ladeStaplesArt() {
+            try {
+                const v = localStorage.getItem(STAPLES_ART_KEY);
+                if (v && STAPLES_ARTEN.some(a => a.id === v)) _staplesArt = v;
+            } catch (_e) { /* egal */ }
+            return _staplesArt;
+        }
+
+        /**
+         * Die Karten einer Art, ueber der Schwelle, hoechstens zehn.
+         *
+         * Gibt IMMER ein Feld zurueck — auch ein leeres. Der Aufrufer
+         * entscheidet, was er mit null Treffern anfaengt; hier wird nicht
+         * heimlich auf eine andere Art ausgewichen.
+         */
+        function staplesNachArt(daten, artId) {
+            const art = STAPLES_ARTEN.filter(a => a.id === artId)[0];
+            if (!art) return [];
+            const menge = {};
+            art.typen.forEach(t => { menge[t] = true; });
+            return (daten || [])
+                .filter(c => menge[String(c.type || '').trim()] === true)
+                .filter(c => Number(c.global_share) >= STAPLES_ART_SCHWELLE)
+                .slice(0, STAPLES_ART_MAX);
+        }
+
+        /** Wie viele Karten jede Art gerade hergibt — fuer die Knopfzeile. */
+        function staplesArtZaehlung(daten) {
+            const out = {};
+            STAPLES_ARTEN.forEach(a => { out[a.id] = staplesNachArt(daten, a.id).length; });
+            return out;
+        }
+
         function staplesAnzahl() { return _staplesAnzahl; }
 
         function ladeStaplesAnzahl() {
@@ -3145,13 +3295,53 @@
             return true;
         }
 
+        /* Die Art wechseln. Wie setStaplesAnzahl: die Liste wird neu
+           gebaut, aus den schon geladenen Daten — kein zweiter Abruf. */
+        async function setStaplesArt(id) {
+            const wert = (id === null || id === 'null' || id === '') ? null : String(id);
+            if (wert !== null && !STAPLES_ARTEN.some(a => a.id === wert)) return;
+            _staplesArt = wert;
+            try {
+                if (wert === null) localStorage.removeItem(STAPLES_ART_KEY);
+                else localStorage.setItem(STAPLES_ART_KEY, wert);
+            } catch (_e) { /* egal */ }
+            const behaelter = document.querySelector('.top-cards-container');
+            if (behaelter && _staplesDaten) {
+                behaelter.outerHTML = renderTopCardsWidget(_staplesDaten);
+                try {
+                    await staplesDruckeAnwenden();
+                } catch (e) {
+                    console.warn('[Staples] Druckmodus nach Artwechsel:', e);
+                }
+            }
+        }
+
         window.setStaplesAnzahl = setStaplesAnzahl;
+        window.setStaplesArt = setStaplesArt;
         window.staplesListe = staplesListe;
+        /* Fuer Tests und fuer die Bildkarte: die Auswahlregeln, ohne den
+           Umweg ueber das gezeichnete Markup. */
+        window.staplesArten = {
+            liste: () => STAPLES_ARTEN.map(a => Object.assign({}, a)),
+            schwelle: () => STAPLES_ART_SCHWELLE,
+            hoechstens: () => STAPLES_ART_MAX,
+            waehle: (daten, id) => staplesNachArt(daten, id),
+            zaehlung: (daten) => staplesArtZaehlung(daten),
+            aktiv: () => staplesArt()
+        };
 
         function renderTopCardsWidget(topCards) {
             if (!topCards || topCards.length === 0) return '';
             
-            const gezeigt = topCards.slice(0, ladeStaplesAnzahl());
+            /* Welche Art gerade gewaehlt ist, entscheidet BEIDES: was
+               gezeigt wird und wie viele. Bei einer Art gibt es keine
+               Stufen 15/30 — die Liste ist so lang, wie die Schwelle
+               hergibt, hoechstens zehn. */
+            ladeStaplesArt();
+            const artJetzt = staplesArt();
+            const gezeigt = artJetzt
+                ? staplesNachArt(topCards, artJetzt)
+                : topCards.slice(0, ladeStaplesAnzahl());
             const deLbl = getLang() === 'de';
             // Der Nenner der Prozente sind die Archetypen, nicht die Decklisten.
             // Er wird einmal als Untertitel ausgewiesen ("von N Archetypen"),
@@ -3184,9 +3374,86 @@
 
             const anzahl = staplesAnzahl();
             const zahlKnopf = (n) => `<button type="button" class="btn-toggle-item${
-                    n === anzahl ? ' active' : ''}" id="staplesAnzahl-${n}"
-                    aria-pressed="${n === anzahl ? 'true' : 'false'}"
+                    !artJetzt && n === anzahl ? ' active' : ''}" id="staplesAnzahl-${n}"
+                    aria-pressed="${!artJetzt && n === anzahl ? 'true' : 'false'}"
                     onclick="setStaplesAnzahl(${n})">${escapeHtml(deLbl ? 'Top ' + n : 'Top ' + n)}</button>`;
+
+            /* DIE ARTENZEILE ZEIGT NUR, WAS ES GIBT.
+               --------------------------------------
+               Eine Art ohne eine einzige Karte ueber der Schwelle bekommt
+               keinen Knopf. Ein Knopf, der auf eine leere Liste fuehrt,
+               ist die Enttaeuschung, die diese Aenderung gerade vermeiden
+               soll — und die Zahl am Knopf sagt vorher, wie viele es sind,
+               damit "Tools 2" nicht wie ein Fehler aussieht.
+
+               Gemessen am 10.09.2026: Pokemon 17 (10 gezeigt), Item 17
+               (10), Supporter 14 (10), Stadion 4, Special Energy 3,
+               Tool 2. Alle sechs haben also etwas — das kann sich mit
+               jedem Datenlauf aendern, und genau dann faellt ein Knopf
+               weg statt ins Leere zu fuehren. */
+            const zaehlung = staplesArtZaehlung(topCards);
+
+            /* Was hinter dem Info-Knopf dieses Abschnitts steht.
+               -------------------------------------------------
+               Der Nenner ist die haeufigste Rueckfrage zu diesem Block:
+               "100 % der Archetypen" liest sich sonst als 133 von 133,
+               waehrend es 62 von 62 MIT DECKLISTE sind. Die Zahl stand
+               frueher als eigener Kopf ueber den Kacheln und ist am
+               01.09.2026 weggefallen ("das brauchen wir auch nicht
+               nochmal") — hier ist ihr Platz.
+
+               Dazu die neue Schwelle: ohne sie liest sich "Ausruestung 2"
+               wie ein Fehler statt wie eine Auskunft.
+
+               Gemeldet mit den Zahlen DIESES Aufrufs, nicht abgeschrieben. */
+            if (typeof window !== 'undefined' && window.DsAbschnittInfo) {
+                const artZeilen = STAPLES_ARTEN
+                    .map(a => (deLbl ? a.de : a.en) + ': ' + (zaehlung[a.id] || 0))
+                    .join(' · ');
+                const nenner = topCards.totalArchetypes != null
+                    ? escapeHtml(String(topCards.totalArchetypes)) : null;
+                window.DsAbschnittInfo.melde('cards', {
+                    titel: deLbl ? 'Meistgespielte Karten' : 'Most played cards',
+                    html: deLbl
+                        ? ('<p>Der Prozentwert unter jeder Karte ist der Anteil der '
+                           + '<strong>Archetypen</strong>, die sie spielen — nicht der Anteil '
+                           + 'aller Decklisten. ' + (nenner
+                             ? 'Der Nenner sind die ' + nenner + ' Archetypen mit Deckliste.'
+                             : '') + '</p>'
+                           + '<p>Die Listen je Kartenart zeigen nur Karten ab '
+                           + STAPLES_ART_SCHWELLE + ' % der Archetypen, höchstens '
+                           + STAPLES_ART_MAX + '. Deshalb ist eine Liste manchmal kürzer als '
+                           + 'zehn: es gibt schlicht nicht mehr Karten, die so viele '
+                           + 'Archetypen teilen. Eine auf zehn aufgefüllte Liste würde zehn '
+                           + 'geteilte Karten behaupten, wo es zwei gibt.</p>'
+                           + '<p>Gerade über der Schwelle: ' + escapeHtml(artZeilen) + '.</p>')
+                        : ('<p>The percentage under each card is the share of '
+                           + '<strong>archetypes</strong> that play it — not the share of all '
+                           + 'decklists. ' + (nenner
+                             ? 'The denominator is the ' + nenner + ' archetypes with a decklist.'
+                             : '') + '</p>'
+                           + '<p>The per-type lists only show cards at ' + STAPLES_ART_SCHWELLE
+                           + ' % of archetypes or above, at most ' + STAPLES_ART_MAX
+                           + '. That is why a list is sometimes shorter than ten: there simply '
+                           + 'are no more cards shared that widely. Padding to ten would claim '
+                           + 'ten shared cards where there are two.</p>'
+                           + '<p>Currently above the threshold: ' + escapeHtml(artZeilen) + '.</p>')
+                });
+            }
+            const artKnoepfe = STAPLES_ARTEN
+                .filter(a => zaehlung[a.id] > 0)
+                .map(a => {
+                    const n = zaehlung[a.id];
+                    const aktiv = artJetzt === a.id;
+                    return `<button type="button" class="btn-toggle-item${aktiv ? ' active' : ''}"
+                        aria-pressed="${aktiv ? 'true' : 'false'}"
+                        onclick="setStaplesArt('${a.id}')">${escapeHtml(deLbl ? a.de : a.en)}
+                        <span class="top-cards-artzahl">${n}</span></button>`;
+                }).join('');
+            const alleKnopf = `<button type="button" class="btn-toggle-item${
+                    artJetzt ? '' : ' active'}" aria-pressed="${artJetzt ? 'false' : 'true'}"
+                    onclick="setStaplesArt(null)">${escapeHtml(deLbl ? 'Alle' : 'All')}</button>`;
+
             const steuerung = `
                     <div class="top-cards-controls">
                         <div class="btn-toggle-group top-cards-anzahl">
@@ -3195,7 +3462,10 @@
                         <button type="button" class="btn-modern top-cards-bild"
                                 onclick="staplesBildErzeugen()">${escapeHtml(t('mc.generateImage'))}</button>
                         <span class="top-cards-hint">${escapeHtml(t('staples.printHint'))}</span>
-                    </div>`;
+                    </div>
+                    ${artKnoepfe ? `<div class="btn-toggle-group top-cards-arten">
+                        ${alleKnopf}${artKnoepfe}
+                    </div>` : ''}`;
 
             let html = `
                 <div class="top-cards-container">

@@ -63,10 +63,16 @@
     //    "Dieses 'Wer schlaegt wen' kann da weg … ist eine super
     //    sinnlose Bezeichnung." Wo die Unterzeile nichts hinzufuegt,
     //    steht keine mehr.
+    //
+    // NACHTRAG 10.09.2026, vom Betreiber gemeldet: "Decks" war ungenau.
+    // Die Kacheln darunter zeigen ARCHETYPEN mit ihren Varianten
+    // ("Dragapult · 7 Varianten"), nicht einzelne Decklisten. Wer
+    // "Decks" liest und Decklisten zaehlt, kommt auf eine andere Zahl
+    // als die Kachel daneben.
     var SECTIONS = [
         { id: 'top',     auf: true,  nimm: ['section.tier-hero-section'],
-          de: ['Die meistgespielten Decks', ''],
-          en: ['The most played decks', ''] },
+          de: ['Die meistgespielten Archetypen', ''],
+          en: ['Most played archetypes', ''] },
         { id: 'heatmap', auf: true,  nimm: ['#matchupHeatmapContainer'],
           de: ['Matchups', ''],
           en: ['Matchups', ''] },
@@ -249,8 +255,29 @@
         el.hidden = !text;
     }
 
+    /* Die Kopfzeile traegt seit dem 10.09.2026 ZWEI Bedienelemente: den
+       Klapp-Knopf und rechts daneben den Professor-Eich-Knopf, hinter
+       dem die lange Erklaerung dieser Auswertung steht
+       (js/ds-abschnitt-info.js).
+
+       WARUM EINE ZEILE UM DEN KNOPF UND NICHT DER KNOPF IM KNOPF
+       ----------------------------------------------------------
+       .ds-sec-hd IST ein <button>. Ein zweiter <button> darin waere
+       ungueltiges HTML und zwei ineinander geschachtelte
+       Bedienelemente — Hilfsmittel geben das nicht verlaesslich aus.
+       Nachgemessen in Chromium: `innerHTML` auf einem <button> LAESST
+       den inneren <button> stehen (Kinder: SPAN.t, BUTTON.innen,
+       SPAN.sub), es faellt also nicht auf. Genau deshalb steht es hier
+       ausgeschrieben.
+
+       Der Klapp-Knopf behaelt die ganze Breite (flex: 1), damit die
+       Zeile weiter ueberall klickbar ist; der Info-Knopf sitzt am
+       rechten Rand, immer an derselben Stelle. */
     function kopf(s, aufgeklappt) {
         var t = texte(s);
+        var zeile = document.createElement('div');
+        zeile.className = 'ds-sec-kopf';
+
         var b = document.createElement('button');
         b.type = 'button';
         b.className = 'ds-sec-hd';
@@ -261,7 +288,53 @@
             '<span class="ds-sec-sub"></span>';
         b.querySelector('.ds-sec-t').textContent = t[0];
         setzeUnterzeile(b, t[1]);
-        return b;
+        zeile.appendChild(b);
+
+        /* Der Platz fuer den Info-Knopf. Er bleibt LEER, solange fuer
+           diesen Abschnitt nichts gemeldet wurde — `.ds-sec-info:empty`
+           blendet ihn dann ganz aus. */
+        var platz = document.createElement('span');
+        platz.className = 'ds-sec-info';
+        zeile.appendChild(platz);
+        return zeile;
+    }
+
+    /* Nur die Knopfzeile neu zeichnen — NICHT den Abschnitt.
+     *
+     * Das ist die ganze Vorsicht dieser Funktion: die Inhalte wurden per
+     * appendChild aus fremden Renderern VERSCHOBEN (siehe den Kopf
+     * dieser Datei). Wer den Abschnitt neu baut, schneidet jeden
+     * Ereignis-Handler ab, den app-tier-meta.js, app-current-meta.js und
+     * app-meta-cards.js daran gehaengt haben. Geschrieben wird deshalb
+     * ausschliesslich in das leere <span class="ds-sec-info">.
+     *
+     * Und geschrieben wird nur, wenn sich etwas geaendert hat. Der
+     * Beobachter unten horcht auf childList im ganzen Teilbaum; ein
+     * Schreiben bei jedem Durchlauf loeste die naechste Runde aus. Die
+     * Marke haelt fest, was zuletzt drinstand: Abschnitt, ob gemeldet
+     * ist, und die Sprache (der Knopf traegt eine uebersetzte
+     * Beschriftung). Attribute beobachtet niemand, das Setzen der Marke
+     * ist also still. */
+    function zeichneInfoKnoepfe(host) {
+        host = host || document.getElementById(HOST_ID);
+        if (!host) return;
+        var A = window.DsAbschnittInfo;
+        SECTIONS.forEach(function (s) {
+            var sec = host.querySelector('.ds-sec[data-sec="' + s.id + '"]');
+            if (!sec) return;
+            var platz = sec.querySelector('.ds-sec-info');
+            if (!platz) return;
+            var hat = !!(A && typeof A.hat === 'function' && A.hat(s.id));
+            var marke = s.id + '|' + (hat ? '1' : '0') + '|' + (de() ? 'de' : 'en');
+            if (platz.getAttribute('data-info-marke') === marke) return;
+            platz.setAttribute('data-info-marke', marke);
+            /* knopfHtml() gibt fuer einen Abschnitt ohne Meldung einen
+               leeren String zurueck. Ein Knopf, der einen leeren Dialog
+               oeffnet, waere schlimmer als kein Knopf. */
+            platz.innerHTML = (hat && typeof A.knopfHtml === 'function')
+                ? A.knopfHtml(s.id, texte(s)[0])
+                : '';
+        });
     }
 
     function zeichneReset(host) {
@@ -396,6 +469,37 @@
             host.__dsSecWeiche = true;
             host.addEventListener('click', function (ev) {
                 if (!ev.target || !ev.target.closest) return;
+                /* DER INFO-KNOPF KLAPPT NICHTS.
+                 *
+                 * js/ds-abschnitt-info.js ruft in seinem eigenen
+                 * Zuhoerer stopPropagation(). Das reicht hier NICHT:
+                 * jener Zuhoerer haengt am `document`, diese Weiche am
+                 * Host, und der Host liegt im Baum darunter. Ein Klick
+                 * blubbert von unten nach oben — diese Weiche ist also
+                 * zuerst dran, und wenn der andere die Weitergabe
+                 * stoppt, ist hier laengst umgeschaltet.
+                 *
+                 * LIVE GEMESSEN (10.09.2026, Chromium 1440 x 900, echte
+                 * Datei ueber einen lokalen Server, Klick auf den
+                 * Info-Knopf des Abschnitts "heatmap"). Drei Faelle:
+                 *
+                 *   Knopf NEBEN dem Klapp-Knopf, ohne diese Zeile
+                 *       aria-expanded true -> true, ds_sections_v1 leer
+                 *   Knopf IM Klapp-Knopf, ohne diese Zeile
+                 *       aria-expanded true -> FALSE,
+                 *       ds_sections_v1 ["top","cards"] — zugeklappt
+                 *   Knopf IM Klapp-Knopf, mit dieser Zeile
+                 *       aria-expanded true -> true, ds_sections_v1 leer
+                 *
+                 * Der erste Fall ist der ausgelieferte: weil der Knopf
+                 * ein GESCHWISTER von .ds-sec-hd ist, greift
+                 * closest('.ds-sec-hd') schon nicht. Die Zeile ist
+                 * damit heute wirkungslos — und steht trotzdem hier,
+                 * weil der zweite Fall zeigt, was passiert, sobald
+                 * jemand den Knopf in die Ueberschrift zieht: der
+                 * Dialog geht auf UND der Abschnitt klappt zu, und das
+                 * Zuklappen wird auch noch gespeichert. */
+                if (ev.target.closest('[data-abschnitt-info]')) return;
                 // Der Zuruecksetzen-Knopf haengt am selben Problem: er sitzt
                 // im Host und verliert seinen Handler bei jedem fremden
                 // innerHTML. Hier mitbehandelt, statt ihn spaeter einzeln
@@ -434,10 +538,10 @@
                 sec.className = 'ds-sec';
                 sec.setAttribute('data-sec', s.id);
                 var auf = offen.indexOf(s.id) > -1;
-                var hd = kopf(s, auf);
+                var kopfzeile = kopf(s, auf);
                 var body = document.createElement('div');
                 body.className = 'ds-sec-body';
-                sec.appendChild(hd);
+                sec.appendChild(kopfzeile);
                 sec.appendChild(body);
                 host.appendChild(sec);
                 geaendert = true;
@@ -471,6 +575,13 @@
             });
             geaendert = true;
         }
+
+        /* Immer, nicht nur bei `geaendert`: die Erklaerungen werden
+           gemeldet, waehrend die Daten nachladen — ein Abschnitt, der
+           laengst steht, bekommt seinen Knopf also spaeter. Die Funktion
+           schreibt nur, wenn sich wirklich etwas geaendert hat, und
+           schaukelt den Beobachter darum nicht auf. */
+        zeichneInfoKnoepfe(host);
 
         if (geaendert) anwenden(host);
         return geaendert;
@@ -514,12 +625,26 @@
             sec.querySelector('.ds-sec-t').textContent = t[0];
             setzeUnterzeile(sec, t[1]);
         });
+        /* Der Info-Knopf traegt title und aria-label in der Sprache der
+           Seite; ohne diesen Aufruf bliebe seine Beschriftung nach einem
+           Sprachwechsel in der alten stehen. */
+        zeichneInfoKnoepfe(host);
         zeichneReset(host);
     }
 
     function start() {
         sektionieren();
         beobachte();
+        /* Die Erklaerungen kommen NACH dieser Datei — die Erzeuger
+           melden sie erst, wenn ihre Daten da sind. Ohne diese Anmeldung
+           bekaeme ein Abschnitt, der spaeter meldet, nie einen Knopf.
+           Gezeichnet wird nur die Knopfzeile, nie der Abschnitt. */
+        if (window.DsAbschnittInfo
+            && typeof window.DsAbschnittInfo.beiAenderung === 'function') {
+            window.DsAbschnittInfo.beiAenderung(function () {
+                zeichneInfoKnoepfe();
+            });
+        }
         // i18n verschickt auf document und ohne bubbles — auf window
         // kaeme es nie an. Das war der Fehler aus Block 4.
         document.addEventListener('languageChanged', neuBeschriften);
@@ -534,6 +659,8 @@
 
     window.DsSections = {
         resektionieren: sektionieren,
+        infoKnoepfe: zeichneInfoKnoepfe,
+        abschnitte: function () { return SECTIONS.map(function (s) { return s.id; }); },
         zustand: function () { return (offen || []).slice(); }
     };
 })();

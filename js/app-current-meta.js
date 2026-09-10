@@ -775,21 +775,64 @@
                              (heatmapMitQuote / heatmapQuotenHinweis). Und
                              "Win %" darf es hier auch nicht heissen — so
                              nennt Limitless die Matchpunkte (3S+U)/(3n). -->
+                        <!-- AUF DER FLAECHE STEHT JETZT NUR NOCH DIE FARBSKALA
+                             UND DIE ZWEI KUERZEL (10.09.2026).
+                             ----------------------------------------------------
+                             Vorher standen hier sechs Zeilen Fliesstext plus eine
+                             fuenfzeilige Definitionsliste — zusammen elf Zeilen
+                             ueber einer Tabelle, die auf dem Telefon ohnehin
+                             gescrollt werden muss. Gemeldet mit Bildschirmfoto:
+                             "die Erklaerung bei der Matchup Heatmap ist zu lang,
+                             lange Erlaeuterung bitte auch zu source und bei der
+                             Heatmap nur eine kurze knappe Legende mit den
+                             wichtigsten Punkten".
+
+                             WAS BLEIBT, IST DAS, WAS MAN BEIM LESEN DER TABELLE
+                             BRAUCHT: die drei Farben (sonst ist die Faerbung
+                             unlesbar) und die zwei Kuerzel, die in JEDER Zelle
+                             stehen (WR und M). Alles andere — wie gerechnet wird,
+                             was online und Major unterscheidet, was kursiv
+                             bedeutet — erklaert der Knopf an der Ueberschrift.
+
+                             Das title-Attribut am WR-Kuerzel bleibt: es nennt
+                             die Konvention zur Laufzeit aus dem Modul daneben
+                             (heatmapQuotenHinweis) und ist die Stelle, an der
+                             ein Zweifel sofort aufgeloest wird, ohne den
+                             Dialog zu oeffnen. -->
                         <div class="heatmap-kopf">
-                            <p class="heatmap-desc">
-                                ${heatmapMitQuote(t('heatmap.desc'), 'ohneUnentschieden')}
+                            <p class="heatmap-desc heatmap-desc-kurz">
                                 <span class="heatmap-key heatmap-key-fav"></span> ${t('heatmap.favorable')} (≥ 55 %),
                                 <span class="heatmap-key heatmap-key-even"></span> ${t('heatmap.even')} (45–54,9 %),
                                 <span class="heatmap-key heatmap-key-unfav"></span> ${t('heatmap.unfavorable')} (≤ 45 %)
+                                <span class="heatmap-kuerzel"><b title="${escAttr(heatmapQuotenHinweis('ohneUnentschieden'))}" data-quote-konvention="ohneUnentschieden">${t('heatmap.wrLabel')}</b> ${heatmapMitQuote(t('heatmap.legendeWr'), 'ohneUnentschieden')} · <b>${t('heatmap.gamesShort')}</b> ${t('heatmap.legendeM')}</span>
                             </p>
-                            <dl class="heatmap-legende">
-                                <dt title="${escAttr(heatmapQuotenHinweis('ohneUnentschieden'))}" data-quote-konvention="ohneUnentschieden">${t('heatmap.wrLabel')}</dt><dd>${heatmapMitQuote(t('heatmap.legendeWr'), 'ohneUnentschieden')}</dd>
-                                <dt>${t('heatmap.gamesShort')}</dt><dd>${t('heatmap.legendeM')}</dd>
-                                <dt>${t('heatmap.onlineLabel')}</dt><dd>${t('heatmap.legendeOnline')}</dd>
-                                <dt>${t('heatmap.majorLabel')}</dt><dd>${heatmapMitQuote(t('heatmap.legendeMajor'), 'ohneUnentschieden')}</dd>
-                                <dt><i>${t('heatmap.legendeKursivKurz')}</i></dt><dd>${t('heatmap.legendeKursiv')}</dd>
-                            </dl>
                         </div>
+                        ${(function () {
+                            /* Die lange Fassung wandert hinter den Knopf an der
+                               Abschnittsueberschrift "Matchups".
+
+                               GEMELDET, NICHT KOPIERT: {quote} und {formel}
+                               kommen zur Laufzeit aus js/win-rate-konvention.js.
+                               Eine Abschrift in ds-abschnitt-info.js waere die
+                               zweite Stelle, an der ein Hausname steht — und
+                               genau davor warnt der Kommentar oben. */
+                            if (typeof window === 'undefined' || !window.DsAbschnittInfo) return '';
+                            window.DsAbschnittInfo.melde('heatmap', {
+                                titel: t('heatmap.title') || 'Matchups',
+                                html: '<p>' + heatmapMitQuote(t('heatmap.desc'), 'ohneUnentschieden') + '</p>'
+                                    + '<dl class="heatmap-legende">'
+                                    + '<dt>' + t('heatmap.wrLabel') + '</dt><dd>'
+                                    + heatmapMitQuote(t('heatmap.legendeWr'), 'ohneUnentschieden') + '</dd>'
+                                    + '<dt>' + t('heatmap.gamesShort') + '</dt><dd>' + t('heatmap.legendeM') + '</dd>'
+                                    + '<dt>' + t('heatmap.onlineLabel') + '</dt><dd>' + t('heatmap.legendeOnline') + '</dd>'
+                                    + '<dt>' + t('heatmap.majorLabel') + '</dt><dd>'
+                                    + heatmapMitQuote(t('heatmap.legendeMajor'), 'ohneUnentschieden') + '</dd>'
+                                    + '<dt><i>' + t('heatmap.legendeKursivKurz') + '</i></dt><dd>'
+                                    + t('heatmap.legendeKursiv') + '</dd>'
+                                    + '</dl>'
+                            });
+                            return '';
+                        })()}
                         ${searchControlsHtml}
                         <div class="heatmap-table-scroll">
                             ${tableHtml}

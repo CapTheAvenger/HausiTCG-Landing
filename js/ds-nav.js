@@ -300,12 +300,42 @@
         else if (facts.luecke) bits.push('<span class="ds-space-pause">' + esc(f.luecke) + '</span>');
 
         host.setAttribute('data-space', key);
-        // Statt des wiederholten Trennungssatzes ein Weg zur Erklaerung.
-        // Wer die Zahl nur lesen will, wird nicht aufgehalten; wer sie
-        // nachrechnen will, findet den Beleg in einem Klick.
-        host.innerHTML = bits.join('<span class="ds-space-sep" aria-hidden="true">·</span>') +
-            '<a class="qu-verweis ds-space-quelle" href="#quellen">' +
+
+        /* DER AUSWEIS WANDERT HINTER DEN KNOPF (10.09.2026).
+           --------------------------------------------------
+           Er stand als zwei Zeilen ueber der Ueberschrift der
+           Meta-Ansicht — Quelle, Stichprobe, Stand und ein Verweis auf
+           Quellen & Methodik. Gemeldet mit Bildschirmfoto: "Die beiden
+           markierten Bereiche koennen zu source geschoben werden. Die
+           Info irgendwo auf der Seite haben ist okay aber brauchen wir
+           nicht da."
+
+           WAS DAS HEISST UND WAS NICHT: die Angaben verschwinden nicht.
+           Sie stehen jetzt im Dialog hinter dem Knopf am ersten
+           Abschnitt — also weiter EINEN Griff entfernt, aber nicht mehr
+           zwischen dem Leser und der ersten Zahl.
+
+           NUR AUF DEN DATENSEITEN, DIE ABSCHNITTE HABEN. js/ds-sections.js
+           fasst heute nur die Meta-Ansicht in Abschnitte. Auf jeder
+           anderen Seite gaebe es keinen Knopf — dort bliebe der Ausweis
+           ersatzlos weg, und das waere ein Verlust, kein Umzug. Deshalb
+           entscheidet die Anwesenheit des Registers UND des Abschnitts
+           darueber, ob die Zeile weicht. */
+        var zeile = bits.join('<span class="ds-space-sep" aria-hidden="true">·</span>');
+        var verweis = '<a class="qu-verweis ds-space-quelle" href="#quellen">' +
             esc(lg === 'de' ? 'Quellen & Methodik' : 'Sources & method') + ' →</a>';
+
+        var inAbschnitten = !!(window.DsSections && typeof window.DsSections.abschnitte === 'function'
+            && (window.DsSections.abschnitte() || []).length);
+        if (inAbschnitten && window.DsAbschnittInfo) {
+            window.DsAbschnittInfo.melde('top', {
+                titel: lg === 'de' ? 'Datengrundlage' : 'Data basis',
+                html: '<p class="ds-space-dialog">' + zeile + '</p>' + verweis
+            });
+            host.innerHTML = '';
+            return;
+        }
+        host.innerHTML = zeile + verweis;
     }
 
     var current = null;
