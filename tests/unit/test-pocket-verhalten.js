@@ -105,9 +105,24 @@ function laden(daten) {
     // Modul die urspruengliche Funktion fest, und ein Test, der spaeter
     // einen Netzfehler einsetzt, prueft nichts.
     const holen = function () { return fenster.fetch.apply(fenster, arguments); };
+    /* Die ECHTE Symbol-Aufloesung dazu, mit der ECHTEN Datei.
+     *
+     * ds-pocket.js holt die Sprites ueber window.ArchetypeIcons. Ein
+     * Ersatz dafuer wuerde nur beweisen, dass der Ersatz stimmt — und
+     * genau in dieser Kette steckt die Arbeit: aus "TRA Garchomp and
+     * Mantyke" muessen garchomp und mantyke werden, nicht `tra`.
+     * Also laeuft hier das Original. */
+    const iconQuelle = fs.readFileSync(path.join(WURZEL, 'js', 'archetype-icons.js'), 'utf8');
+    const iconDaten = JSON.parse(fs.readFileSync(
+        path.join(WURZEL, 'data', 'archetype_icons.json'), 'utf8'));
+    new Function('window', 'globalThis', 'fetch', 'document', iconQuelle)(
+        fenster, fenster,
+        () => Promise.resolve({ ok: true, json: () => Promise.resolve(iconDaten) }),
+        undefined);
+
     const api = f(fenster, dok, fenster.navigator, holen, fenster.getLang, fenster.console,
                   verlauf);
-    return { api, fenster, dok, knoten, verlauf };
+    return { api, fenster, dok, knoten, verlauf, iconsBereit: fenster.ArchetypeIcons.preload() };
 }
 
 /** Einen Klick auf ein Element mit diesem Attribut nachstellen. */
@@ -124,6 +139,9 @@ function klick(knoten, attribut, wert) {
 
 async function gezeichnet(daten) {
     const u = laden(daten);
+    // Erst die Symboldatei, dann zeichnen — sonst faenden die Zeilen
+    // die Sprites noch nicht, genau wie im Browser vor dem Nachzug.
+    await u.iconsBereit;
     u.api.render();
     await new Promise(r => setTimeout(r, 0));
     return u;
@@ -216,6 +234,119 @@ describe('Pocket-Reiter: das Vollbild', () => {
         assert.equal(u.knoten.pocketOverlay.hidden, false);
         klick(u.knoten, 'data-pk-zu', '1');
         assert.equal(u.knoten.pocketOverlay.hidden, true, 'das Vollbild bleibt offen');
+    });
+});
+
+/* Sprites vor dem Deck-Namen.
+ *
+ * Vom Betreiber am 10.09.2026 gewuenscht. Die Arbeit steckt nicht im
+ * Zeichnen, sondern darin, aus einem Game8-Decknamen die richtigen
+ * Pokemon zu bekommen: dort stehen Set-Kuerzel ("PD Espeon", "RS
+ * Heliolisk", "TRA Garchomp", "CB Magnezone", "EW Butterfree"),
+ * Kartenzusaetze ("ex"), Formworte ("Mega", "Alolan", "Teal Mask")
+ * und Beiwerk ("and 18 Trainers") durcheinander.
+ *
+ * GERATEN WIRD NICHTS: nur ein Pokemon, das im Decknamen genannt wird
+ * UND als Karte im Deck steht, bekommt ein Bild. Deshalb faellt "TRA"
+ * von allein weg — es ist keine Karte, "Garchomp" schon.
+ *
+ * Diese Datei prueft die Regel an den ECHTEN Daten, ueber alle Decks.
+ * Sie behauptet keine Wochenwerte: welche Decks Game8 diese Woche
+ * fuehrt, ist ihr egal. */
+describe('Pocket-Reiter: die Sprites vor dem Namen', () => {
+
+    /* Die ECHTE Funktion aus dem Modul, nicht ein Nachbau. Ein Nachbau
+       haette nur bewiesen, dass der Nachbau stimmt. */
+    let _api = null;
+    function arten(d) {
+        if (!_api) _api = laden(DATEN).api;
+        return _api._intern.benannteArten(d);
+    }
+    // benannteArten braucht die Symboldatei nicht — sie liest nur den
+    // Decknamen gegen die Kartenliste. Deshalb kein await noetig.
+
+
+    it('jedes Deck bekommt mindestens ein Bild', async () => {
+        const u = await gezeichnet(DATEN);
+        const zeilen = u.knoten.pocketListe.innerHTML.split('class="pk-zeile"');
+        // erstes Stueck ist der Kopf vor der ersten Zeile
+        const echte = zeilen.slice(1);
+        assert.equal(echte.length, DATEN.decks.length,
+            `${echte.length} Zeilen fuer ${DATEN.decks.length} Decks`);
+        const ohne = echte.filter(z => !z.includes('pk-sprite'));
+        assert.deepEqual(ohne.map(z => (z.match(/pk-name">([^<]*)/) || [])[1]), [],
+            'diese Decks bekommen kein einziges Bild — dann steht die '
+            + 'Aufloesung ueber die Kartenliste nicht mehr');
+    });
+
+    it('kein Bild ohne Karte im Deck', () => {
+        /* DIE Zusicherung. Sie faellt, sobald jemand anfaengt, aus dem
+           Decknamen zu raten statt gegen die Kartenliste zu pruefen —
+           dann kaemen Slugs wie `tra` oder `rocket` heraus, die es
+           nicht gibt. */
+        const norm = (v) => String(v || '').toLowerCase().replace(/['\u2018\u2019]/g, '');
+        for (const d of DATEN.decks) {
+            const gefunden = arten(d);
+            for (const a of gefunden) {
+                const drin = (d.pokemon || []).some(p => p.name === a);
+                assert.ok(drin, `${d.name}: "${a}" ist keine Karte in diesem Deck`);
+                assert.ok(norm(d.name).includes(norm(a)),
+                    `${d.name}: "${a}" wird im Namen gar nicht genannt`);
+            }
+        }
+    });
+
+    it('jede Zeile traegt ein oder zwei Bilder, nie mehr', async () => {
+        /* GLEICHHEIT statt "hoechstens": eine Ungleichung gegen Live-Daten
+           waere genau das, was tests/unit/test-testdaten-wachhund.js
+           verhindern soll. Ein Deck nennt ein oder zwei Pokemon — drei
+           waere ein Fehler in der Auswahl, null ein Fehler in der
+           Aufloesung. Welche Decks es diese Woche sind, ist egal. */
+        const u = await gezeichnet(DATEN);
+        for (const stueck of u.knoten.pocketListe.innerHTML.split('class="pk-zeile"').slice(1)) {
+            const n = (stueck.match(/class="pk-sprite"/g) || []).length;
+            assert.ok(n === 1 || n === 2, `eine Zeile traegt ${n} Bilder`);
+        }
+    });
+
+    it('ein Name, der in einem anderen steckt, wird nicht doppelt gezaehlt', () => {
+        /* "Mega Lucario ex and Hitmonlee" fuehrt BEIDE als Karte:
+           "Mega Lucario ex" und "Lucario". Ohne die Sperre auf schon
+           belegte Stellen im Namen kam zweimal Lucario heraus und
+           Hitmonlee gar nicht. */
+        const d = DATEN.decks.find(x => /Lucario/.test(x.name) && /Hitmonlee/.test(x.name));
+        if (!d) return;   // das Deck ist aus der Liste gefallen
+        const gefunden = arten(d);
+        assert.ok(gefunden.some(a => /Hitmonlee/.test(a)),
+            `Hitmonlee fehlt: ${JSON.stringify(gefunden)}`);
+        const lucarios = gefunden.filter(a => /Lucario/.test(a));
+        assert.equal(lucarios.length, 1,
+            `Lucario kommt ${lucarios.length}-mal vor: ${JSON.stringify(gefunden)}`);
+    });
+
+    it('der laengere Name an derselben Stelle gewinnt', () => {
+        // Sonst schlaegt "Altaria" das "Mega Altaria ex", in dem es steckt.
+        const d = DATEN.decks.find(x => /^Mega Altaria ex and PD Espeon/.test(x.name));
+        if (!d) return;
+        assert.deepEqual(arten(d), ['Mega Altaria ex', 'Espeon']);
+    });
+
+    it('das Bild traegt einen leeren Alternativtext', async () => {
+        /* Der Deck-Name steht unmittelbar daneben. Ein gefuellter
+           Alternativtext liesse eine Vorlesehilfe alles doppelt sagen. */
+        const u = await gezeichnet(DATEN);
+        const html = u.knoten.pocketListe.innerHTML;
+        assert.ok(!/class="pk-sprite"[^>]*alt="[^"]+"/.test(html),
+            'ein Sprite traegt einen gefuellten Alternativtext');
+        assert.match(html, /class="pk-sprites" aria-hidden="true"/,
+            'die Bildgruppe ist fuer Vorlesehilfen nicht ausgeblendet');
+    });
+
+    it('ein fehlendes Bild versteckt sich, statt eine Luecke zu lassen', async () => {
+        const u = await gezeichnet(DATEN);
+        assert.match(u.knoten.pocketListe.innerHTML, /onerror="this\.style\.display=/,
+            'ohne onerror bliebe bei einer fehlenden Datei ein leerer '
+            + 'Kasten vor dem Namen stehen');
     });
 });
 
