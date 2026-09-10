@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-10T09:03:35Z",
+  "generated_at": "2026-09-10T10:39:15Z",
   "format_window": "PBL",
   "format_label": "TEF-PBL",
   "legal_format_min_set": "TEF",
@@ -183,7 +183,7 @@
             {
               "archetype": "N's Zoroark",
               "share_in_archetype": 0.3,
-              "meta_share": 0.053
+              "meta_share": 0.0529
             },
             {
               "archetype": "Toxtricity Box",
@@ -195,7 +195,7 @@
       ]
     },
     "retreat_lock": {
-      "weighted_meta_share": 0.1992,
+      "weighted_meta_share": 0.1991,
       "cards": [
         {
           "card_id": "MEG|1",
@@ -285,7 +285,7 @@
             {
               "archetype": "N's Zoroark",
               "share_in_archetype": 0.8,
-              "meta_share": 0.053
+              "meta_share": 0.0529
             },
             {
               "archetype": "Grimmsnarl Froslass",
@@ -338,7 +338,7 @@
             {
               "archetype": "N's Zoroark",
               "share_in_archetype": 0.5,
-              "meta_share": 0.053
+              "meta_share": 0.0529
             }
           ]
         },
