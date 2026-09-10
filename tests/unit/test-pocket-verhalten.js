@@ -342,6 +342,24 @@ describe('Pocket-Reiter: die Sprites vor dem Namen', () => {
             'die Bildgruppe ist fuer Vorlesehilfen nicht ausgeblendet');
     });
 
+    it('die Bilder tragen keine Ladeverzoegerung', async () => {
+        /* GEMESSEN live am 10.09.2026: mit loading="lazy" luden 3 von
+           63 Bildern. Die uebrigen 60 blieben dauerhaft bei
+           naturalWidth 0 — auch nach dem Scrollen, und ohne dass
+           onerror feuerte. Uebrig blieb auf jeder Zeile eine leere
+           Luecke von 26 px: schlimmer als gar keine Bilder. Dieselben
+           Bilder ohne das Attribut: 63 von 63, null Fehler.
+
+           66 Sprites von je ein bis drei Kilobyte, von einem Server,
+           den die Seite ohnehin fuer jedes Archetyp-Symbol benutzt —
+           die Verzoegerung spart hier nichts. */
+        const u = await gezeichnet(DATEN);
+        const html = u.knoten.pocketListe.innerHTML;
+        assert.ok(!/class="pk-sprite"[^>]*loading=/.test(html),
+            'ein Sprite traegt wieder loading="lazy" — dann bleiben die '
+            + 'Bilder aus und auf jeder Zeile steht eine leere Luecke');
+    });
+
     it('ein fehlendes Bild versteckt sich, statt eine Luecke zu lassen', async () => {
         const u = await gezeichnet(DATEN);
         assert.match(u.knoten.pocketListe.innerHTML, /onerror="this\.style\.display=/,
