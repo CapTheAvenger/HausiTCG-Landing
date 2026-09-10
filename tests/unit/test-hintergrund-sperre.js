@@ -56,6 +56,10 @@ function umgebung(startStand) {
     const wurzel = { style: {}, scrollTop: startStand || 0 };
     const dok = { body: body, documentElement: wurzel };
     const gerollt = [];
+    // Der Browser stellt nach einer Zurueck-Geste seinerseits einen
+    // Scrollstand her — und zwar NACH uns. Der Ersatz kann dieses Bild
+    // ausloesen, sonst laesst sich die Nachbesserung nicht pruefen.
+    const bilder = [];
     const fenster = {
         document: dok,
         pageYOffset: startStand || 0,
@@ -63,11 +67,13 @@ function umgebung(startStand) {
             gerollt.push({ x: x, y: y, verhalten: wurzel.style.scrollBehavior });
             fenster.pageYOffset = y;
             wurzel.scrollTop = y;
-        }
+        },
+        requestAnimationFrame(f) { bilder.push(f); return bilder.length; }
     };
     fenster.window = fenster;
     new Function('window', 'document', QUELLE)(fenster, dok);
-    return { sperre: fenster.HintergrundSperre, body, wurzel, fenster, gerollt, klassen };
+    const naechstesBild = () => { const f = bilder.shift(); if (f) f(); };
+    return { sperre: fenster.HintergrundSperre, body, wurzel, fenster, gerollt, klassen, naechstesBild };
 }
 
 describe('HintergrundSperre', () => {
@@ -138,6 +144,36 @@ describe('HintergrundSperre', () => {
         u.sperre.freigeben('detail');
         assert.equal(u.body.style.position, '',
             'die Seite bleibt gesperrt, obwohl das Fenster zu ist');
+    });
+
+    it('holt den Stand zurueck, wenn der Browser ihn nach uns auf 0 setzt', () => {
+        // Nach der Zurueck-Geste stellt der Browser den Stand her, den er
+        // zum Verlaufseintrag gemerkt hat — und gemerkt hatte er 0, weil
+        // der Koerper festlag. Diese Wiederherstellung kommt NACH unserer.
+        // GEMESSEN live am 10.09.2026: das Pocket-Vollbild schloss an den
+        // Listenanfang statt an die Stelle des Lesers.
+        const u = umgebung(300);
+        u.sperre.sperren('vollbild');
+        u.sperre.freigeben('vollbild');
+        assert.equal(u.fenster.pageYOffset, 300);
+        // Der Browser setzt jetzt seinerseits auf 0.
+        u.fenster.pageYOffset = 0;
+        u.wurzel.scrollTop = 0;
+        u.naechstesBild();
+        assert.equal(u.fenster.pageYOffset, 300,
+            'die Seite bleibt oben stehen — der Leser verliert seine Stelle');
+    });
+
+    it('faehrt NICHT nach, wenn inzwischen absichtlich gesprungen wurde', () => {
+        // Sonst reisst die Sperre einen Ankersprung oder Reiterwechsel
+        // zurueck, der waehrenddessen passiert ist.
+        const u = umgebung(300);
+        u.sperre.sperren('vollbild');
+        u.sperre.freigeben('vollbild');
+        u.fenster.pageYOffset = 1200;      // jemand ist woanders hin
+        u.naechstesBild();
+        assert.equal(u.fenster.pageYOffset, 1200,
+            'die Sperre reisst einen fremden Sprung zurueck');
     });
 
     it('ein Freigeben ohne Sperre tut nichts', () => {
