@@ -121,9 +121,28 @@
     display: inline-flex;
     align-items: center;
 }
+/* !important auf Groesse und Hoechstgroesse — aus demselben Grund, den
+   css/archetype-icons.css fuer .tcg-pokemon-icon aufschreibt, und um
+   einen zweiten:
+
+     ui-components.css:20   img[src*="limitlesstcg"] { width: 100% }
+     mobile-responsive.css  img { width: 100% } (<= 768 px)
+
+   Der erste Selektor ist (0,1,1) und schlaegt damit die blanke Klasse
+   .pk-sprite (0,1,0). GEMESSEN live am 10.09.2026 nach dem ersten
+   Deploy: die Bilder standen auf 0x0 px — `width: 100%` eines
+   Elternteils ohne eigene Breite. Die Adressen waren richtig, die
+   Bilder luden, sichtbar war nichts.
+
+   Warum es lokal nicht auffiel: die Layout-Probe ersetzte die Bilder
+   durch lokale Dateien aus images/champions/, und die tragen
+   "limitlesstcg" nicht im Pfad. Die Ersetzung hat genau das Merkmal
+   entfernt, an dem die fremde Regel haengt. */
 .pk-sprite {
-    width: 26px;
-    height: 26px;
+    width: 26px !important;
+    height: 26px !important;
+    max-width: 26px !important;
+    max-height: 26px !important;
     object-fit: contain;
     image-rendering: -webkit-optimize-contrast;
 }

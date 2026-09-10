@@ -253,6 +253,47 @@ describe('Pocket-Reiter: die Auflagen der Datei', () => {
             'der untere Geraeteeinzug ist verlorengegangen');
     });
 
+    it('die Sprites setzen sich gegen die pauschalen Bildregeln durch', () => {
+        /* BEFUND live am 10.09.2026, direkt nach dem ersten Deploy: die
+           Bilder standen auf 0x0 px. Zwei fremde Regeln greifen auf
+           genau diese Adressen:
+
+             ui-components.css:20   img[src*="limitlesstcg"] { width: 100% }
+             mobile-responsive.css  img { width: 100% } (<= 768 px)
+
+           Der erste Selektor ist (0,1,1) und schlaegt die blanke Klasse
+           .pk-sprite (0,1,0). `width: 100%` eines Elternteils ohne
+           eigene Breite ergibt 0.
+
+           Warum die Layout-Probe es nicht fand: sie ersetzte die Bilder
+           durch lokale Dateien aus images/champions/ — und die tragen
+           "limitlesstcg" nicht im Pfad. Die Ersetzung entfernte genau
+           das Merkmal, an dem die fremde Regel haengt.
+
+           css/archetype-icons.css loest dasselbe fuer .tcg-pokemon-icon
+           und schreibt den Grund dort auf. Hier steht er auch. */
+        const block = CSS.slice(CSS.indexOf('.pk-sprite {'),
+                                CSS.indexOf('.pk-sprite + .pk-sprite'));
+        assert.ok(block.length > 40, 'den Block .pk-sprite gibt es nicht');
+        for (const feld of ['width', 'height', 'max-width', 'max-height']) {
+            const m = block.match(new RegExp(feld + ':\\s*[^;]+;'));
+            assert.ok(m, `.pk-sprite setzt ${feld} nicht`);
+            assert.match(m[0], /!important/,
+                `${feld} ohne !important — die pauschale Bildregel gewinnt `
+                + 'dann wieder und das Sprite steht auf 0 px');
+        }
+    });
+
+    it('die fremde Regel, gegen die das noetig ist, gibt es noch', () => {
+        /* Faellt sie weg, ist das !important oben unnoetig und gehoert
+           entfernt — die Zusicherung sagt dann, dass jemand nachsehen
+           soll, statt es stillschweigend mitzuschleppen. */
+        const ui = lies('css/ui-components.css');
+        assert.match(ui, /img\[src\*="limitlesstcg"\]/,
+            'die Regel img[src*="limitlesstcg"] ist verschwunden — dann '
+            + 'gehoert das !important in ds-pocket.css ueberprueft');
+    });
+
     it('die Zurueck-Geste des Telefons ist verdrahtet', () => {
         assert.match(JS, /addEventListener\('popstate'/,
             'ohne popstate-Zuhoerer verlaesst die Zurueck-Geste die ganze '
