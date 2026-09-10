@@ -90,13 +90,43 @@
         b.classList.remove('hintergrund-gesperrt');
         gemerkt = null;
 
-        // `html` traegt scroll-behavior: smooth. Ohne diese Klammer sieht
-        // der Nutzer nach dem Schliessen die Seite an ihre alte Stelle
-        // zurueckfahren, statt einfach dort zu stehen.
+        zurueckRollen(stand);
+
+        /* NOCH EINMAL IM NAECHSTEN BILD — und zwar nur dann, wenn die
+         * Seite inzwischen wieder oben steht.
+         *
+         * GEMESSEN live am 10.09.2026 auf 202609100706-65a91ed: wer das
+         * Pocket-Vollbild mit der Zurueck-Geste schliesst, landete am
+         * Listenanfang statt an seiner Stelle. Der Ablauf ist
+         *
+         *   popstate  ->  Overlay zu  ->  freigeben  ->  scrollTo(300)
+         *             ->  DANACH stellt der Browser den Stand her, den er
+         *                 zu diesem Verlaufseintrag gemerkt hat
+         *
+         * und gemerkt hatte er 0, weil der Koerper zu diesem Zeitpunkt
+         * auf `position: fixed` lag. Die eigene Wiederherstellung des
+         * Browsers kommt also NACH unserer und ueberschreibt sie.
+         *
+         * Die Bedingung `=== 0` ist wichtig: hat inzwischen jemand
+         * absichtlich woanders hingesprungen (ein Anker, ein Reiter),
+         * steht dort nicht 0, und dann wird nichts angefasst. */
+        if (stand > 0 && typeof window.requestAnimationFrame === 'function') {
+            var ziel = stand;
+            window.requestAnimationFrame(function () {
+                var jetzt = window.pageYOffset || document.documentElement.scrollTop || 0;
+                if (jetzt === 0) zurueckRollen(ziel);
+            });
+        }
+    }
+
+    /* Springen, nicht fahren: `html` traegt auf dieser Seite
+     * `scroll-behavior: smooth`. Ohne die Klammer sieht der Nutzer nach
+     * dem Schliessen die Seite an ihre alte Stelle zurueckfahren. */
+    function zurueckRollen(ziel) {
         var wurzel = document.documentElement;
         var altesVerhalten = wurzel.style.scrollBehavior;
         wurzel.style.scrollBehavior = 'auto';
-        window.scrollTo(0, stand);
+        window.scrollTo(0, ziel);
         wurzel.style.scrollBehavior = altesVerhalten;
     }
 
