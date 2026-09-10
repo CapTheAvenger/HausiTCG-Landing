@@ -94,10 +94,73 @@ CONSUMERS = {
         "purpose": ("Veroeffentlichte Shinys in Pokemon GO (leekduck.com). "
                     "Belegt zugleich, dass es die Art in GO gibt."),
     },
-    # opgg_champions_moves.json gehoert hier ebenfalls hin — sie wird
-    # aber erst im ersten CI-Lauf erzeugt (op.gg ist aus dem
-    # Bausandkasten nicht erreichbar). Eintragen, sobald sie da ist;
-    # vorher meldet der Waechter zu Recht "consumer file missing".
+    # NACHGETRAGEN 10.09.2026: opgg_champions_moves.json stand hier als
+    # Aufgabe ("Eintragen, sobald sie da ist"). Sie ist da — gemessen:
+    # data/opgg_champions_moves.json, 92.757 Bytes, Stand 10.09.2026
+    # 04:10. Die selbstgestellte Bedingung war seit dem Morgen erfuellt,
+    # der Eintrag fehlte trotzdem. Genau dafuer taugt eine Notiz im
+    # Quelltext nicht: niemand liest sie zum richtigen Zeitpunkt.
+    "opgg_champions_moves.json": {
+        "required": [],
+        "purpose": ("Attacken je Champion von op.gg — Grundlage der "
+                    "Attackenzeilen im Champions-Bereich."),
+    },
+    # ── Die sieben Vertragsdateien, die der Waechter nicht kannte ─────
+    #
+    # BEFUND 10.09.2026. data/_consumers.md sagt woertlich: "scripts/
+    # data_guardian.py verifies daily that EVERY file above exists and
+    # still has its required columns." Gezaehlt: das Dokument beschreibt
+    # 17 Dateien, CONSUMERS fuehrte 10. Sieben Zusicherungen gab es also
+    # nur auf dem Papier — darunter die beiden online_api_*_<FORMAT>-
+    # Dateien, obwohl der Kommentar oben in diesem Block selbst von
+    # "diesen vier Dateien" spricht und nur zwei eingetragen wurden.
+    #
+    # Auch diese ohne Spaltenvertrag: die online_api_*-Dateien sind
+    # semikolongetrennt (siehe Warnung oben), die JSON-Dateien haben
+    # gar keine Kopfzeile. Geprueft werden Vorhandensein und
+    # Nicht-Leere — genau das, was gefehlt hat.
+    #
+    # Die <FORMAT>-Dateien stehen unter ihrem heutigen Formatschluessel.
+    # Rotiert das Format, zeigt der Waechter auf eine Datei, die es
+    # nicht mehr gibt — und das ist Absicht: dann muss jemand hinsehen,
+    # ob der neue Auszug wirklich entstanden ist.
+    "online_api_cards_TEF-PBL.csv": {
+        "required": [],
+        "purpose": ("Kartenzeilen je Online-Turnier. Traegt ueber "
+                    "backend/core/update_sets.py den Riegel fuer "
+                    "data/format_window.json. Semikolon-getrennt."),
+    },
+    "online_api_matchups_TEF-PBL.csv": {
+        "required": [],
+        "purpose": ("Direktvergleiche je Online-Turnier. "
+                    "Semikolon-getrennt."),
+    },
+    "cardmarket_mapping_verified.csv": {
+        "required": [],
+        "purpose": ("Von Hand bzw. am Fingerabdruck bestaetigte "
+                    "Produktzuordnungen. Ein Beleg schlaegt jede "
+                    "Heuristik — faellt die Datei weg, mischt der "
+                    "naechste Lauf bestaetigte Zuordnungen neu."),
+    },
+    "archetype_aliases.json": {
+        "required": [],
+        "purpose": ("Namensbruecke Turnier <-> Ladder <-> Labs. Ohne sie "
+                    "faellt der Verbund still auf 0 Treffer, und das "
+                    "sieht aus wie 'diese Woche nichts gefunden'."),
+    },
+    "champions_type_chart.json": {
+        "required": [],
+        "purpose": "Typwirkungen im Champions-Bereich.",
+    },
+    "pokemon_go_liste.json": {
+        "required": [],
+        "purpose": ("Welche Arten es in Pokemon GO gibt — Gegenstueck zu "
+                    "pokemon_go_shiny.json."),
+    },
+    "champions_resources.json": {
+        "required": [],
+        "purpose": "Quellenverweise des Champions-Bereichs.",
+    },
     "cardmarket_id_mapping.csv": {
         "required": ["set", "number", "cardmarket_product_id", "match_method", "base_name"],
         "purpose": "(set, number) -> Cardmarket idProduct. The join key for prices.",
@@ -179,7 +242,11 @@ REFRESH_DRIVEN = {
 # Deshalb nur ein WARN nach großzügigem Horizont, und der Text sagt ausdrücklich,
 # dass das Alter nichts beweist. Sauber lösen lässt sich das erst mit einem
 # Heartbeat — jeder Job schreibt bei Erfolg einen Zeitstempel, unabhängig davon,
-# ob sich Inhalt geändert hat. Siehe TODO unten.
+# ob sich Inhalt geändert hat. GENAU DAS STEHT INZWISCHEN UNTEN: HEARTBEAT_DATEI
+# und check_heartbeat() setzen es um, aufgerufen im Hauptlauf. Der Satz "Siehe
+# TODO unten" zeigte bis zum 10.09.2026 auf ein TODO, das es nicht mehr gab —
+# eine Textleiche, die den Leser eine offene Aufgabe vermuten liess, wo eine
+# fertige Loesung steht.
 CONTENT_DRIVEN = {
     "cardmarket_card_images.csv":    60,
     "prizepack_official_images.csv": 60,

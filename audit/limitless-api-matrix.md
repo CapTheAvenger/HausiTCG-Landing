@@ -239,17 +239,23 @@ keine tut es. Also auch dort: kein Nutzer.
    `avg_count`, `inclusion_rate` — die eigentliche Leistung des Scrapers — hat
    im ganzen Repo keinen Leser.
 
-10. **`data_stand.json` kennt `meta_prognose.json` nicht.**
-    `scripts/build_data_stand.py:115` führt die Datei in `DATEIEN`, die
-    ausgelieferte `data/data_stand.json` (erzeugt 08.09.2026 11:49) hat aber
-    weder unter `dateien` noch unter `inhalt_bis` einen Eintrag dafür, und sie
-    steht auch nicht unter `ohne_stand` (dort steht nur `format_window.json`).
-    Ein Chip auf die Prognose bliebe damit stumm — auch wenn ihn jemand baute.
+10. ~~**`data_stand.json` kennt `meta_prognose.json` nicht.**~~ **ERLEDIGT,
+    nachgemessen 10.09.2026.** `data/data_stand.json` führt
+    `meta_prognose.json` inzwischen sowohl unter `dateien` als auch unter
+    `inhalt_bis`; `ohne_stand` ist leer. Der Befund beschrieb den Stand vom
+    08.09.2026 11:49 und ist seit dem nächsten Lauf gegenstandslos — er stand
+    hier zwei Tage länger als er zutraf.
 
-11. **Toter Pfad im Workflow.** `.github/workflows/limitless-api-scrape.yml:268`
-    macht `git add -u data/online_api_cards.csv data/online_api_matchups.csv`
-    für die flachen Vorgängerdateien. Beide existieren nicht mehr (nur die
-    `_TEF-PBL`-Chunks). Harmlos durch `|| true`, aber irreführend beim Lesen.
+11. ~~**Toter Pfad im Workflow.**~~ **ERLEDIGT, nachgemessen 10.09.2026.**
+    `.github/workflows/limitless-api-scrape.yml:266` benutzt heute den Glob
+    `data/online_api_cards_*.csv data/online_api_matchups_*.csv`; die flachen
+    Vorgängerzeilen sind weg, die Begründung steht in Z. 267-273 daneben.
+
+    *(Beide Streichungen kommen aus einem Marker-Durchgang am 10.09.2026:
+    gesucht wurde nach offenen Punkten im ganzen Repo, gefunden wurden zwei
+    Befunde, die längst behoben waren. Ein Audit-Dokument, das erledigte
+    Punkte als offen führt, kostet beim nächsten Durchgang genauso viel Zeit
+    wie ein echter Befund.)*
 
 12. **Rundenzahl und Modus gehen verloren, obwohl sie schon geholt wurden.**
     `/pairings` liefert `round` und `phase`, `/details` liefert

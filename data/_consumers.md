@@ -234,8 +234,28 @@ shrinks, a set stops mapping, or an input goes stale.
 **If you need a new column or a new file, open an issue here** rather than
 parsing around the gap — that keeps the contract explicit and checkable.
 
+### `japanese_cards_database.csv`
+`name_jp,name_en,set,number,type,energy_type,hp,rarity,image_url,…`
+
+**NACHGETRAGEN 10.09.2026, Gegenrichtung.** Diese Datei stand im
+Waechtervertrag (`scripts/data_guardian.py`), aber in keinem Absatz dieses
+Dokuments — die Zusicherung war also da, die Beschreibung fehlte. Sie ist die
+japanische Haelfte der Kartendatenbank; `backend/core/prepare_card_data.py`
+fuehrt sie mit `all_cards_database.csv` zu `all_cards_merged.json` zusammen.
+Gemessen am 21.08.2026, als sie im Saatgut des Preislaufs fehlte: die
+zusammengefuehrte Datenbank fuehrte danach **0** japanische Karten statt 772,
+und im Deck Builder waren JP-Karten an fuenf von sieben Tagen verschwunden.
+
 ### `archetype_aliases.json`
-`{_meta, turnier_zu_ladder: [{turnier, ladder, beleg}], bewusst_nicht_verbunden: [{turnier, vermutet, grund}]}`
+`{_meta, turnier_zu_ladder: [{turnier, ladder, beleg}], bewusst_nicht_verbunden: [{turnier, vermutet, grund}], decklisten_zu_labs: [...]}`
+
+**NACHGETRAGEN 10.09.2026:** der vierte Schluessel `decklisten_zu_labs` steht
+seit dem 09.09.2026 in der Datei (Commit `b0e0e5ed`), gelesen von
+`js/deck-builder-consistency.js:492`, gehalten von
+`tests/unit/test-namensbruecke-decklisten.js`. In dieser
+Schnittstellenbeschreibung fehlte er — und genau das ist der Fehler, vor dem
+diese Datei oben warnt: eine veroeffentlichte Struktur waechst, das Dokument
+nicht, und ein fremder Leser plant mit drei Schluesseln statt vier.
 
 The curated bridge between archetype names in `limitless_online_decks.csv`
 (ladder) and `online_tournament_top8_decks.csv` (tournaments) — two sources
@@ -361,6 +381,23 @@ Zwei Sortierungen, beide beschriftet:
 Praesenz ist die Voreinstellung. Nach Bindung sortiert stehen oben
 ausschliesslich Mega-Steine (Floetteonit 99,1 % bei einem Traeger) — richtig
 gerechnet und als erster Bildschirm wertlos.
+
+## `opgg_champions_moves.json` — Attacken je Champion von op.gg
+
+**NACHGETRAGEN 10.09.2026.** Die Datei wurde am selben Tag um 04:10 zum ersten
+Mal erzeugt (92.757 Bytes). Im Waechter stand seit Wochen der Satz
+"opgg_champions_moves.json gehoert hier ebenfalls hin — Eintragen, sobald sie
+da ist"; die Bedingung war seit dem Morgen erfuellt, der Eintrag fehlte
+trotzdem. Genau dafuer taugt eine Notiz im Quelltext nicht: niemand liest sie
+zum richtigen Zeitpunkt. Jetzt haelt
+`tests/python/test_consumers_vertrag_deckt_sich.py` beide Listen deckungsgleich.
+
+Geholt von `scripts/scrape_opgg_champions_moves.py`. Sie ergaenzt
+`champions_resources.json` um Attacken, die der Schalter `inChampions` dort
+nicht hergibt — die beiden Dateien sind also **kein** Ersatz fuereinander.
+
+Gelesen wird sie im Champions-Bereich der Oberflaeche. Fehlt sie, bleiben die
+Attackenzeilen leer; erfunden wird nichts.
 
 ## `champions_resources.json` traegt Attacken aus den Nutzungsdaten nach
 
