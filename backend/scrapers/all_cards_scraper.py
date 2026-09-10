@@ -505,6 +505,21 @@ def parse_prints_table(prints_table):
     return int_prints, jp_prints, cardmarket_url
 
 
+# Der Wortschatz der Spalte `type`, gezaehlt an
+# data/cards_chunk_standard.json am 10.09.2026 (5.146 Karten):
+#   Basic 2.509 | Stage 1 1.307 | Stage 2 478 | Supporter 348 |
+#   Item 196 | Tool 78 | Stadium 75 | Special Energy 35 |
+#   V-UNION 20 | VMAX 15 | VSTAR 15 | Basic Energy 11 | Level Up 8
+# Nur diese Werte werden aus der Detailseite uebernommen — was hier
+# nicht steht, waere ein neuer Befund und gehoert gemeldet, nicht
+# still in den Bestand geschrieben.
+BEKANNTE_KARTENTYPEN = {
+    "Basic", "Stage 1", "Stage 2", "Supporter", "Item", "Tool",
+    "Stadium", "Special Energy", "Basic Energy", "V-UNION", "VMAX",
+    "VSTAR", "Level Up",
+}
+
+
 def _fetch_single_card(card: dict) -> dict:
     if not card.get("card_url"):
         return card
@@ -589,6 +604,34 @@ def _fetch_single_card(card: dict) -> dict:
     card["international_prints"] = ",".join(sorted(int_prints))
     card["jp_prints"] = ",".join(sorted(jp_prints))
     card["cardmarket_url"] = cardmarket_url
+
+    # ── Kartentyp aus der Detailseite, wenn die Liste keinen hatte ──
+    #
+    # WARUM (10.09.2026): Karten, die ueber `scrape_promo_set_pages`
+    # hereinkommen, haben KEINE Listenzeile und damit kein `type`. Der
+    # Detaillauf hat bisher Name, Energie und KP nachgeholt, den Typ
+    # aber nicht — er stand die ganze Zeit auf der Seite.
+    #
+    # GEMESSEN: 51 von 5.146 Karten in data/cards_chunk_standard.json
+    # ohne Typ, alle aus MEP. Drei davon (Slowpoke MEP 86) sind ueber
+    # die Online-Decklisten in data/tournament_decklists_per_player.csv
+    # gelandet und haben dort tests/python/test_kartentyp_aus_druck.py
+    # rot gemacht.
+    #
+    # Die Seite schreibt den Typ zweiteilig, nachgesehen am 10.09.2026:
+    #     /cards/MEP/86   "Pokémon - Basic"
+    #     /cards/MEP/34   "Pokémon - Stage 2 - Evolves from Bayleef"
+    #     /cards/SVI/196  "Trainer - Item"
+    # Gebraucht wird der ZWEITE Teil — dasselbe Wort, das die Listen-
+    # spalte fuehrt. Geschrieben wird nur, was im bekannten Wortschatz
+    # steht; ein unbekannter Wert bliebe sonst still im Bestand.
+    if not str(card.get("type") or "").strip():
+        typ_el = soup.select_one("p.card-text-type")
+        if typ_el:
+            teile = [t.strip() for t in
+                     typ_el.get_text(" ", strip=True).split(" - ")]
+            if len(teile) >= 2 and teile[1] in BEKANNTE_KARTENTYPEN:
+                card["type"] = teile[1]
 
     # ── Card text / TCG energy type from detail page ──────────────
     title_el = soup.select_one("p.card-text-title")

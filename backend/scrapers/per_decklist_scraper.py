@@ -570,6 +570,26 @@ CSV_FIELDS = [
     # 'quelle' in dieser Liste, wuerde der naechste Papier-Lauf die
     # Herkunft aller Online-Zeilen wieder wegwerfen.
     'quelle',
+    # Die Feldgroesse des Turniers, gemessen an der Quelle.
+    #
+    # WARUM DIESE SPALTE SEIT DEM 10.09.2026 EXISTIERT: Papierzeilen
+    # tragen eine `tournament_id`, ueber die
+    # js/deck-builder-consistency.js die Spielerzahl aus
+    # data/labs_tournament_decks.csv holt. Online-Zeilen haben keine
+    # Labs-Nummer (siehe limitless_online_decklist_scraper.py) — der
+    # Deckbauer fand fuer sie KEINE Feldgroesse und vergab still den
+    # Notwert `SIZE_WEIGHT_FLOOR` 0,5.
+    #
+    # Gemessen am 10.09.2026, nach dem ersten Lauf mit Online-Zeilen:
+    # 1.319 Online-Listen trugen 24,6 % der Gewichtsmasse des
+    # Deckbauers — zum Notwert, nicht zu einer gemessenen Groesse.
+    #
+    # Der Online-Scraper liest die Zahl ohnehin schon aus dem Attribut
+    # `data-players` der Turnierliste (Funktion `hole_turnierliste`);
+    # sie stand nur nie in der Zeile. Papierzeilen lassen die Spalte
+    # leer: dort ist die Labs-Datei die Quelle, und eine zweite Zahl
+    # danebenzuschreiben hiesse, zwei Wahrheiten zu pflegen.
+    'spielerzahl',
     # Woher der Druck (set, number) stammt: 'seite' = von der
     # Decklistenseite abgegriffen, 'name' = ueber den Kartennamen
     # aufgeloest, weil die Seite nichts hergab. Leer = vor dem

@@ -111,7 +111,8 @@ from card_scraper_shared import (
     setup_console_encoding, setup_logging, get_data_dir, fix_mojibake,
     safe_fetch_html, _feiner_typ,
 )
-from ace_spec_regel import entscheide_zeile, lade_ace_liste
+from ace_spec_regel import (entscheide, entscheide_zeile,  # noqa: F401
+                            belege_aus_bestand, lade_ace_liste)
 from tournament_scraper_JH import _derive_meta_from_date_JH
 
 # Die Spaltenliste kommt aus dem Papier-Scraper, nicht aus einer zweiten
@@ -168,7 +169,19 @@ _ABSCHNITT_RE = re.compile(r"^\s*(.+?)\s*\((\d+)\)\s*$")
 _KARTE_RE = re.compile(r"^\s*(\d+)\s+(.*?)\s*$")
 _DRUCK_IM_TEXT_RE = re.compile(r"\(([A-Z0-9\-]+)[\s-]([A-Za-z0-9]+)\)\s*$")
 _DRUCK_IM_LINK_RE = re.compile(r"/cards/([A-Za-z0-9\-]+)/([A-Za-z0-9]+)")
-_BILANZ_RE = re.compile(r"^\s*(\d+)\s*-\s*(\d+)(?:\s*-\s*(\d+))?\s*$")
+# Die Bilanzzelle kann hinter der Zahl noch einen Vermerk tragen:
+#   <td class="secondary">6 - 2 - 0<span class="drop">drop</span></td>
+# `get_text(strip=True)` klebt das zu "6 - 2 - 0drop" zusammen, und
+# das anker-feste Muster von vorher hat es abgelehnt.
+#
+# GEMESSEN am 10.09.2026 an der echten Seite (Amyverse PTCG Live
+# Weekly #12, 6a98f8ef…): 100 von 155 Standings-Zeilen tragen den
+# Vermerk. Im Bestand standen dadurch 663 von 1.319 Online-Listen
+# auf 0-0-0 — nicht weil die Spieler nichts gewonnen haetten,
+# sondern weil ein <span> danebenstand.
+_BILANZ_RE = re.compile(
+    r"^\s*(\d+)\s*-\s*(\d+)(?:\s*-\s*(\d+))?\s*(?:drop)?\s*$",
+    re.IGNORECASE)
 _TURNIER_ID_RE = re.compile(r"/tournament/([0-9a-zA-Z]+)/")
 
 
@@ -283,7 +296,15 @@ def zerlege_bilanz(text: str) -> tuple:
     m = _BILANZ_RE.match(text or "")
     if not m:
         return (0, 0, 0)
-    return (int(m.group(1)), int(m.group(2)), int(m.group(3) or 0))
+    w, l, t = int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)
+    # Plausibilitaetsgrenze, damit die Form nicht auf Fremdes passt:
+    # "2026-09-09" ergibt sonst (2026, 9, 9). Auf der Standings-Seite
+    # steht heute keine Datumszelle — aber die Suche laeuft ueber ALLE
+    # Zellen der Zeile, und was dort morgen steht, weiss diese Datei
+    # nicht. Kein Turnier spielt mehr als 99 Runden.
+    if w > 99 or l > 99 or t > 99 or (w + l + t) > 99:
+        return (0, 0, 0)
+    return (w, l, t)
 
 
 def lies_standings(html: str) -> list:
@@ -323,6 +344,13 @@ def lies_standings(html: str) -> list:
         # wird deshalb nach der FORM, nicht nach der Position.
         wins = losses = ties = 0
         for td in tr.find_all("td"):
+            # Den Vermerk aus der Zelle nehmen, BEVOR der Text gelesen
+            # wird — sonst haengt er ohne Trennzeichen an der Zahl.
+            # Das Muster oben faengt ihn zusaetzlich ab; beide Wege,
+            # weil die Seite den Vermerk auch mal anders auszeichnen
+            # koennte und eine Bilanz nicht an einer Klasse haengen soll.
+            for weg in td.select("span.drop"):
+                weg.extract()
             w, l, t = zerlege_bilanz(td.get_text(strip=True))
             if (w + l + t) > 0:
                 wins, losses, ties = w, l, t
@@ -448,6 +476,23 @@ def _druck(href: str, text: str) -> tuple:
 # 4. Aus Standings + Listen werden CSV-Zeilen
 # ─────────────────────────────────────────────────────────────────────
 
+_BELEGE = None
+
+
+def _belege():
+    """(mehrfach, typen) ueber den ganzen ausgelieferten Bestand.
+
+    Einmal je Prozess. `belege_aus_bestand()` liest alle CSVs mit einer
+    `card_name`-Spalte und braucht dafuer rund drei Sekunden — pro
+    Kartenzeile waere das nicht bezahlbar, einmal pro Lauf ist es
+    nichts.
+    """
+    global _BELEGE
+    if _BELEGE is None:
+        _BELEGE = belege_aus_bestand()
+    return _BELEGE
+
+
 def baue_zeilen(turnier: dict, standing: dict, karten: list, gestempelt: str) -> list:
     """Eine Zeile je Karte dieser einen Liste — im Schema des
     Papier-Scrapers, damit jeder vorhandene Leser ohne Aenderung
@@ -482,9 +527,24 @@ def baue_zeilen(turnier: dict, standing: dict, karten: list, gestempelt: str) ->
             "set_number":              k["set_number"],
             "count":                   k["count"],
             "type":                    k["type"],
-            "is_ace_spec":             entscheide_zeile(k["name"], ace,
-                                                        k["count"], k["type"]),
+            # Die STARKE Regel, nicht die zeilenlokale.
+            #
+            # `entscheide_zeile` sieht nur die eine Zeile: eine
+            # ACE-SPEC-verdaechtige Karte, die in DIESER Liste einmal
+            # steht, gilt ihr als ACE SPEC. `entscheide` bekommt den
+            # ganzen Bestand dazu — jede Karte, die IRGENDWO mit mehr
+            # als einem Exemplar gespielt wurde, kann keine sein.
+            # PR #738 hat card_scraper_shared.py und limitless_dated.py
+            # am 10.09.2026 umgestellt; diese Datei war uebersehen und
+            # schrieb weiter nach der schwachen Regel in DIESELBE CSV.
+            "is_ace_spec":             entscheide(k["name"], ace, *_belege()),
             "quelle":                  QUELLE_ONLINE,
+            # Gemessen an `data-players` der Turnierliste, nicht
+            # geschaetzt. 0 heisst: das Attribut fehlte — dann
+            # bleibt die Spalte leer statt eine Null zu behaupten.
+            "spielerzahl":             (str(turnier.get("spieler") or "")
+                                        if (turnier.get("spieler") or 0) > 0
+                                        else ""),
             # Der Druck kam von der Seite — anders kommt er hier gar
             # nicht heraus, `lies_deckliste` bricht sonst ab.
             "druck_quelle":            "seite",
