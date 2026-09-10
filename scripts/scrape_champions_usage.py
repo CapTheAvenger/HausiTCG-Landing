@@ -77,6 +77,17 @@ OUT_KEY = {"stat_alignment": "nature"}
 ITEMS_REF = os.path.join(ROOT, "data", "champions_available_items.json")
 
 
+def rang_aus_zeile(zeile, ersatz):
+    """Der Rang aus der Quellzeile. `ersatz` ist die Position in der
+    Liste — die Zeilen kommen in Rangfolge, aber geraten ist sie nicht:
+    steht in der Spalte `rank` eine Zahl, gewinnt die."""
+    roh = (zeile.get("rank") or "").strip()
+    try:
+        return int(roh)
+    except (TypeError, ValueError):
+        return ersatz
+
+
 def lade_item_namen():
     """{name ohne Leerzeichen, klein: kanonischer Name} — leer bei Fehler."""
     try:
@@ -267,7 +278,28 @@ def summarize_csv(text):
                     entry["pct"] = derived_pct[id(r)]
                     entry["derived"] = True   # computed, not source-reported
                 items.append(entry)
-            else:                                # move / ability / teammate
+            elif cat == "teammate":
+                # GEMESSEN am 10.09.2026 direkt an der Quelle, an vier
+                # Eintraegen (Absol, Dragapult, Incineroar, Pelipper):
+                # die Spalte `percentage` ist bei JEDER Mitstreiterzeile
+                # leer — 0 von 36 Zeilen tragen einen Wert —, waehrend
+                # held_item in derselben Datei "43.7%" traegt. Die Quelle
+                # veroeffentlicht Mitstreiter als RANGLISTE, nicht als
+                # Anteile.
+                #
+                # Ein Feld `pct: null` ueber alle Zeilen sieht aus wie ein
+                # Loch im Abzug und laesst sich von einem kaputten Abzug
+                # nicht unterscheiden. Deshalb steht hier der Rang, den die
+                # Quelle wirklich liefert — und `pct` NUR dann, wenn die
+                # Quelle je einen liefert. Faengt sie damit an, taucht das
+                # Feld von selbst wieder auf, statt still verworfen zu
+                # werden.
+                eintrag = {"name": r.get("name", "").strip(),
+                           "rang": rang_aus_zeile(r, len(items) + 1)}
+                if pct is not None:
+                    eintrag["pct"] = pct
+                items.append(eintrag)
+            else:                                # move / ability
                 items.append({"name": r.get("name", "").strip(), "pct": pct})
         out[OUT_KEY.get(cat, cat)] = items
 
@@ -280,6 +312,19 @@ def summarize_csv(text):
 # Liste; 105 % laesst dafuer reichlich Luft. Gemessen am Datenstand vom
 # 20.08.2026 liegt kein gesunder Eintrag ueber 101,4 %.
 SUMMEN_GRENZE = 105.0
+
+# GEGENGEMESSEN am 10.09.2026, weil sieben Naturen-Bloecke ueber der
+# Grenze standen und in einer Pruefung als Befund auftauchten: die
+# Ueberschreitung kommt aus der QUELLE, nicht aus dem Abzug. Abomasnow
+# doubles liefert dort selbst
+#
+#   Quiet 68,5 + Modest 19,5 + Relaxed 8,0 + Timid 7,7 + Sassy 7,7
+#   + Brave 7,0 + Bold 1,4 + Calm 1,0 + Adamant 1,0 + Mild 0,5 = 122,3 %
+#
+# Zeile fuer Zeile so in Abomasnow.csv. Der Scraper gibt das unveraendert
+# weiter und markiert es — er rechnet nichts glatt. Genau so soll es
+# bleiben: eine stille Korrektur saehe richtig aus und waere falsch.
+# Die Markierung ist die Aussage, nicht der Fehler.
 
 # Nur die Kategorien, in denen sich die Anteile auf ~100 % addieren MUESSEN.
 # Attacken tun das nicht (ein Pokemon hat vier), Teamkameraden auch nicht.
@@ -746,6 +791,17 @@ def main():
             "season": season,
             "count": ok,
             "formats": ["doubles", "singles"],
+            # Was die Quelle bei Mitstreitern NICHT liefert — schriftlich,
+            # damit ein fehlendes `pct` dort nie als Loch im Abzug gelesen
+            # wird. Gemessen am 10.09.2026 an Absol, Dragapult, Incineroar
+            # und Pelipper: 0 von 36 Mitstreiterzeilen tragen einen Wert in
+            # der Spalte `percentage`, waehrend held_item in derselben
+            # Datei "43.7%" traegt.
+            "teamkameraden_ohne_anteil": True,
+            "teamkameraden_hinweis":
+                "Die Quelle veroeffentlicht Mitstreiter als Rangliste ohne "
+                "Anteile. Die Eintraege tragen deshalb `rang`, kein `pct`. "
+                "Ein `pct` taucht auf, sobald die Quelle eins liefert.",
             "note": "Authoritative ladder usage. Replaces the older VGCPastes "
                     "top-team sample for the Pokédex 'Meist genutzt' line.",
         },
