@@ -530,6 +530,47 @@ jobs:
           echo "::endgroup::"
           exit 0  # nicht blockierend, aber sichtbar (S5)
 
+      - name: Online-Einzellisten holen (play.limitlesstcg.com)
+        env:
+          PYTHONPATH: ${{ github.workspace }}/backend/core
+        # WARUM DIESER SCHRITT DAZUGEHOERT
+        # -------------------------------
+        # Der Scraper hatte bis 10.09.2026 nur einen eigenen Ablauf
+        # (online-decklists.yml) — und der hat KEINEN Zeitplan. Niemand
+        # startete ihn also, ausser von Hand. Die Zeilen mit
+        # `quelle=online` in tournament_decklists_per_player.csv sind
+        # damit genau so alt wie der letzte Knopfdruck.
+        #
+        # Was dadurch fehlte, steht im Kopf von online-decklists.yml:
+        # Papier-Majors veroeffentlichen rund 18 % ihrer Listen, online
+        # sind es praktisch 100 % — 253 von 253 bei einem einzigen
+        # Turnier. Ein Online-Turnier bringt also mehr Einzellisten als
+        # der ganze Papierbestand des laufenden Formats.
+        #
+        # Er laeuft NACH dem Papier-Scraper, weil beide dieselbe Datei
+        # schreiben und der Papierlauf sie neu aufbaut.
+        #
+        # --resume: nur Turniere, die noch nicht in der Datei stehen.
+        run: |
+          set +e
+          echo "::group::scrapers/limitless_online_decklist_scraper.py"
+          ziel=backend/core/data/tournament_decklists_per_player.csv
+          vorher=0
+          if [ -f "$ziel" ]; then vorher=$(( $(wc -l < "$ziel") - 1 )); fi
+          python backend/scrapers/limitless_online_decklist_scraper.py --resume
+          rc=$?
+          nachher=0
+          if [ -f "$ziel" ]; then nachher=$(( $(wc -l < "$ziel") - 1 )); fi
+          echo "  Zeilen: $vorher -> $nachher"
+          if [ "$rc" -ne 0 ]; then
+              echo "::warning::limitless_online_decklist_scraper exited with $rc"
+              echo "FAIL scrapers/limitless_online_decklist_scraper.py (rc=$rc)" >> "$RUNNER_TEMP/rc_extra.txt"
+          else
+              echo "OK   scrapers/limitless_online_decklist_scraper.py" >> "$RUNNER_TEMP/rc_extra.txt"
+          fi
+          echo "::endgroup::"
+          exit 0  # nicht blockierend, aber sichtbar (S5)
+
       # KEIN champions-replica-Scrape mehr in diesem Lauf.
       #
       # Bis 25.08.2026 lief der Scraper hier ein zweites Mal — mit
@@ -773,6 +814,36 @@ jobs:
         # retten soll. Mit --streng wuerde er gaten.
         run: |
           python3 scripts/repariere_ace_spec.py --melden
+
+      - name: Frischepruefung — was ist wirklich aktuell?
+        # WOZU DIESER SCHRITT DA IST
+        # --------------------------
+        # Frage des Betreibers am 10.09.2026: "Erledigt der Lauf
+        # eigentlich wirklich alle Scraper, oder sind danach irgendwelche
+        # Daten noch nicht auf dem aktuellsten Stand?"
+        #
+        # Aus data_stand.json allein war das nicht zu beantworten: eine
+        # Datei, die seit 41 Tagen unveraendert ist, kann heissen "der
+        # Scraper lief nicht" ODER "die Quelle hat nichts Neues". Am
+        # 10.09.2026 sahen vier City-League-Dateien 41 Tage alt aus — im
+        # Browser stand auf limitlesstcg.com/tournaments/jp der Satz
+        # "The current City League season has concluded". Also der
+        # zweite Fall, kein Fehler.
+        #
+        # Dieser Schritt legt Herzschlag und Inhaltsstand nebeneinander
+        # und trennt die beiden Faelle. Er meldet, er blockiert nicht.
+        run: |
+          set +e
+          echo "::group::scripts/pruefe_frische.py"
+          python3 scripts/pruefe_frische.py --markdown
+          rc=$?
+          echo "::endgroup::"
+          if [ "$rc" -ne 0 ]; then
+              echo "FAIL scripts/pruefe_frische.py (rc=$rc)" >> "$RUNNER_TEMP/rc_extra.txt"
+          else
+              echo "OK   scripts/pruefe_frische.py" >> "$RUNNER_TEMP/rc_extra.txt"
+          fi
+          exit 0
 
       - name: Datenluecken neu bestimmen (Admin-Bereich)
         # BEFUND 07.09.2026: `grep -rn datenluecken .github/` fand nichts.
