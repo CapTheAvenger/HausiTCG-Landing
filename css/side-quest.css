@@ -721,6 +721,11 @@
     align-items: center;
     justify-content: center;
     padding: 1rem;
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
 }
 
 .side-quest-modal {
@@ -1003,6 +1008,11 @@
     padding: 0.75rem;
     overflow-y: auto;
     animation: sq-play-fade 130ms ease-out;
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
 }
 @keyframes sq-play-fade { from { opacity: 0; } to { opacity: 1; } }
 
@@ -2099,13 +2109,25 @@
 }
 
 /* ── Pokédex detail overlay (full in-game analysis for one Pokémon) ── */
-body.sqp-d-open { overflow: hidden; }
+/* Die Seite hinter dem Vollbild haelt js/hintergrund-sperre.js an, nicht
+   diese Datei. Hier stand frueher `body.sqp-d-open { overflow: hidden; }` —
+   das wirkt auf DIESER Seite nicht, weil `html` (styles.css:225) ein
+   eigenes `overflow-x: hidden` traegt und ein `overflow` am Body den
+   Viewport nur erreicht, solange `html` auf `visible` steht. Gemessen am
+   10.09.2026: Klasse gesetzt, `body` rechnete auf `hidden`, die Seite
+   scrollte trotzdem von 200 auf 700. Die Klasse bleibt als Merkmal fuer
+   "ein Vollbild ist offen", sie sperrt aber nichts. */
 .sqp-d-overlay {
     position: fixed; inset: 0; z-index: 1000;
     background: rgba(0, 0, 0, 0.5);
     display: flex; align-items: flex-start; justify-content: center;
     padding: 4vh 12px; overflow-y: auto;
     -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
 }
 .sqp-d-overlay[hidden] { display: none; }
 .sqp-d-card {
@@ -2554,6 +2576,11 @@ body.sqp-d-open { overflow: hidden; }
     background: rgba(15, 23, 42, 0.55);
     display: flex; align-items: flex-start; justify-content: center;
     padding: 24px 14px; overflow-y: auto;
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
 }
 .sqb-modal-box {
     background: var(--surface-1); border-radius: 14px; width: min(560px, 100%);

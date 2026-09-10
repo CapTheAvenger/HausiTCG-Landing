@@ -1147,6 +1147,9 @@
         els.overlay.classList.add('is-open');
         els.overlay.setAttribute('aria-hidden', 'false');
         document.body.classList.add('battle-journal-open');
+        // Die Klasse allein haelt die Seite nicht an, siehe
+        // js/hintergrund-sperre.js.
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('kampfjournal');
     }
 
     function closeBattleJournalSheet() {
@@ -1157,6 +1160,7 @@
         els.overlay.classList.remove('is-open');
         els.overlay.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('battle-journal-open');
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('kampfjournal');
     }
 
     function handleBattleJournalVisibilitySync() {

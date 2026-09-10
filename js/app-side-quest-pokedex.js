@@ -1696,6 +1696,10 @@
         ov.innerHTML = detailOverlayHtml(_detailEntry);
         ov.hidden = false;
         document.body.classList.add('sqp-d-open');
+        // Die Klasse allein haelt die Seite NICHT an — `html` traegt ein
+        // eigenes overflow, also erreicht `body { overflow: hidden }` den
+        // Viewport nicht. Siehe js/hintergrund-sperre.js.
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('pokedex-detail');
         wireDetailEvents(ov);
     }
 
@@ -1753,6 +1757,7 @@
         const ov = document.getElementById('sqpDetailOverlay');
         if (ov) ov.hidden = true;
         document.body.classList.remove('sqp-d-open');
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('pokedex-detail');
         _detailEntry = null;
     }
 

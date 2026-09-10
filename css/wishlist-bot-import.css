@@ -11,6 +11,11 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
+    /* Der Bildlauf bleibt in diesem Fenster. Ohne das reicht eine Geste
+       ueber das Ende des Inhalts hinaus an die Seite dahinter weiter
+       (Scroll-Verkettung) — am Telefon der haeufigste Weg, wie sich
+       der Hintergrund doch noch bewegt. */
+    overscroll-behavior: contain;
 }
 
 .wl-bot-import-panel {

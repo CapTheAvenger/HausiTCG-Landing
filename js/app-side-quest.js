@@ -1064,7 +1064,7 @@
         const el = document.getElementById('sideQuestSpeciesPicker');
         if (el) el.remove();
         if (_pickerKey) { document.removeEventListener('keydown', _pickerKey); _pickerKey = null; }
-        document.body.style.overflow = '';   // release the background-scroll lock
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('arten-waehler');
     }
 
     // Close + re-render the teams list ONCE. The picker overlay is
@@ -1094,9 +1094,10 @@
                 <div class="sq-play-picker-grid" id="sqSpeciesGrid"></div>
             </div>`;
         document.body.appendChild(overlay);
-        // Lock the page behind so a scroll gesture inside the picker can't
-        // scroll the main page (combined with overscroll-behavior: contain).
-        document.body.style.overflow = 'hidden';
+        // Die Seite dahinter anhalten. `body { overflow: hidden }` reicht
+        // hier nicht — `html` traegt ein eigenes overflow, siehe
+        // js/hintergrund-sperre.js.
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('arten-waehler');
 
         const grid = overlay.querySelector('#sqSpeciesGrid');
         const search = overlay.querySelector('#sqSpeciesSearch');

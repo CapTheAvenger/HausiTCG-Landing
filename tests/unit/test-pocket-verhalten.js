@@ -55,9 +55,20 @@ function umgebung(daten) {
         pocketListe: element('pocketListe'),
         pocketOverlay: element('pocketOverlay')
     };
+    // Der Koerper muss echt genug sein, dass die Hintergrund-Sperre an ihm
+    // arbeiten kann — sonst prueft der Test die Sperre nicht, er glaubt sie.
+    const koerperKlassen = new Set();
     const dok = {
         readyState: 'complete',
-        body: { style: {} },
+        body: {
+            style: {},
+            classList: {
+                add(k) { koerperKlassen.add(k); },
+                remove(k) { koerperKlassen.delete(k); },
+                contains(k) { return koerperKlassen.has(k); }
+            }
+        },
+        documentElement: { style: {}, scrollTop: 0 },
         _hoerer: {},
         getElementById(id) { return knoten[id] || null; },
         addEventListener(art, f) { (this._hoerer[art] = this._hoerer[art] || []).push(f); },
@@ -86,7 +97,9 @@ function umgebung(daten) {
             return Promise.resolve({ ok: true, json: () => Promise.resolve(daten) });
         },
         getLang: () => 'de',
-        console: { warn() {} }
+        console: { warn() {} },
+        pageYOffset: 0,
+        scrollTo(x, y) { fenster.pageYOffset = y; dok.documentElement.scrollTop = y; }
     };
     fenster.window = fenster;
     return { fenster, dok, knoten, verlauf };
@@ -112,6 +125,13 @@ function laden(daten) {
      * genau in dieser Kette steckt die Arbeit: aus "TRA Garchomp and
      * Mantyke" muessen garchomp und mantyke werden, nicht `tra`.
      * Also laeuft hier das Original. */
+    /* Die ECHTE Hintergrund-Sperre dazu. Ein Ersatz wuerde nur zeigen,
+     * dass ds-pocket.js irgendetwas aufruft — geprueft werden soll aber,
+     * dass die Seite dahinter wirklich stillsteht. */
+    new Function('window', 'document',
+                 fs.readFileSync(path.join(WURZEL, 'js', 'hintergrund-sperre.js'), 'utf8')
+    )(fenster, dok);
+
     const iconQuelle = fs.readFileSync(path.join(WURZEL, 'js', 'archetype-icons.js'), 'utf8');
     const iconDaten = JSON.parse(fs.readFileSync(
         path.join(WURZEL, 'data', 'archetype_icons.json'), 'utf8'));
@@ -413,8 +433,32 @@ describe('Pocket-Reiter: der Weg zurueck aus dem Vollbild', () => {
         assert.equal(u.knoten.pocketOverlay.hidden, true,
             'die Zurueck-Geste laesst das Vollbild offen — am Telefon ist '
             + 'sie der Reflex');
-        assert.equal(u.dok.body.style.overflow, '',
-            'die Scroll-Sperre des Koerpers bleibt stehen');
+        assert.equal(u.fenster.HintergrundSperre.aktiv(), false,
+            'die Hintergrund-Sperre bleibt stehen — die Seite waere danach '
+            + 'gar nicht mehr zu bewegen');
+        assert.equal(u.dok.body.style.position, '',
+            'der Koerper bleibt auf position:fixed festgenagelt');
+    });
+
+    it('das Vollbild haelt die Seite dahinter an', async () => {
+        // Gemeldet am 10.09.2026: „Wenn ich in der Ansicht bin, kann ich
+        // manchmal die Seite dahinter scrollen." Die Sperre gab es, sie
+        // lief nur ueber body.style.overflow und war damit wirkungslos.
+        const u = await gezeichnet(DATEN);
+        u.fenster.pageYOffset = 420;
+        u.dok.documentElement.scrollTop = 420;
+        klick(u.knoten, 'data-pk-deck', '0');
+        assert.equal(u.fenster.HintergrundSperre.aktiv(), true,
+            'das Vollbild sperrt die Seite nicht — der Hintergrund scrollt mit');
+        assert.equal(u.dok.body.style.position, 'fixed');
+        assert.equal(u.dok.body.style.top, '-420px',
+            'ohne den gemerkten Versatz springt die Seite beim Oeffnen an '
+            + 'ihren Anfang');
+        u.api.schliesse();
+        assert.equal(u.fenster.HintergrundSperre.aktiv(), false);
+        assert.equal(u.fenster.pageYOffset, 420,
+            'der Leser landet nach dem Schliessen an einer anderen Stelle '
+            + 'als vor dem Oeffnen');
     });
 
     it('nach der Zurueck-Geste wird nicht ein zweites Mal zurueckgesprungen', async () => {
