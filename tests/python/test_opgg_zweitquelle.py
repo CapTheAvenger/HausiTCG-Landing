@@ -60,8 +60,16 @@ def test_der_parser_liest_die_karten():
     assert mir["ziel"] == "alle gegner"
 
     # Statusattacke: keine Staerke, keine Genauigkeit — aber AP.
+    #
+    # Seit dem 10.09.2026 schreibt der Parser ein fehlendes Feld GAR
+    # NICHT, statt es auf null zu setzen. Grund: im ersten CI-Lauf
+    # waren power/accuracy/pp in 581 von 581 Eintraegen null, weil
+    # op.gg sie erst im Browser nachrendert. Ein Feld, das in jeder
+    # Zeile leer ist, sieht aus wie ein Datenverlust; ein fehlendes
+    # Feld ist ehrlich.
     nr = aus["no-retreat"]
-    assert nr["power"] is None and nr["accuracy"] is None
+    assert "power" not in nr and "accuracy" not in nr, (
+        "leere Felder werden wieder als null geschrieben")
     assert nr["pp"] == 8
 
 
@@ -85,6 +93,32 @@ def test_der_parser_ignoriert_links_ohne_karte():
     assert "spirit-break" not in aus, (
         "ein Link ohne <h3> wurde als Attacke gelesen")
     assert len(aus) == 3
+
+
+def test_fehlende_kampfwerte_werden_benannt():
+    """Wenn KEIN Eintrag Zahlen traegt, muss die Datei das sagen.
+
+    Sonst liest sich eine Datei mit 581 vollstaendig aussehenden
+    Eintraegen so, als haette sie alles — und niemand merkt, dass drei
+    Felder fehlen.
+    """
+    quelle = open(SKRIPT, encoding="utf-8").read()
+    assert "warnung_kampfwerte" in quelle, (
+        "die Datei benennt fehlende Kampfwerte nicht")
+    assert "mit_kampfwerten" in quelle, (
+        "die Zahl der Eintraege mit Kampfwerten wird nicht gefuehrt")
+
+    pfad = os.path.join(DATEN, "opgg_champions_moves.json")
+    if not os.path.exists(pfad):
+        return
+    d = json.load(open(pfad, encoding="utf-8"))
+    mt = d.get("_meta", {})
+    mit = sum(1 for v in (d.get("attacken") or {}).values()
+              if "power" in v or "pp" in v)
+    if mit == 0:
+        assert (mt.get("warnung_kampfwerte") or "").strip(), (
+            "kein Eintrag traegt Kampfwerte, und die Datei sagt nichts "
+            "dazu")
 
 
 def test_eine_halb_geladene_seite_schreibt_nichts():

@@ -434,6 +434,28 @@ jobs:
       # commits a month and churn the service worker's CACHE_NAME, which makes
       # the activate handler drop every client cache several times a day.
 
+      # Datenstaende fortschreiben.
+      #
+      # BEFUND 10.09.2026: data_stand.json wies fuer champions_usage.json
+      # den 30.08. aus, obwohl die Datei taeglich frisch committet wird —
+      # ZEHN Tage daneben. Ursache: build_data_stand.py lief nur im
+      # Wochenlauf und im Limitless-Lauf, nie hier. Die Frischechips der
+      # Seite lesen genau diese Datei; eine Frischeanzeige, die zehn Tage
+      # danebenliegt, ist schlimmer als keine.
+      #
+      # Muss NACH allen Scrapern und VOR dem Commit stehen — beides ist
+      # hier der Fall. Fail-soft: faellt es um, bleibt der alte Stand.
+      - name: Datenstaende fortschreiben
+        run: |
+          set +e
+          python3 -u scripts/build_data_stand.py
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+              echo "::warning::build_data_stand exited with $rc — data_stand.json unveraendert"
+              git checkout -- data/data_stand.json 2>/dev/null
+          fi
+          exit 0
+
       - name: Commit + push
         id: commit
         run: |
@@ -451,7 +473,8 @@ jobs:
                   data/champions_editionen.json \
                   data/pokemon_go_liste.json \
                   data/pokemon_go_shiny.json \
-                  data/opgg_champions_moves.json
+                  data/opgg_champions_moves.json \
+                  data/data_stand.json
           # BEFUND 05.09.2026: champions_speed_corpus.json wurde in jedem
           # naechtlichen Lauf gebaut, nach data/ kopiert (Schritt "Copy
           # output back to data/") — und dann weggeworfen, weil sie in

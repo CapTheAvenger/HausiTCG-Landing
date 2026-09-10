@@ -120,13 +120,23 @@ def parse(html):
             m = re.search(muster, text)
             return int(m.group(1)) if m else None
 
-        aus[slug] = {
+        eintrag = {
             "de": h3.get_text(strip=True),
             "text": " ".join(p.get_text(" ", strip=True).split()) if p else "",
-            "power": zahl(r"Stärke:\s*(\d+)"),
-            "accuracy": zahl(r"Gen:\s*(\d+)\s*%"),
-            "pp": zahl(r"AP:\s*(\d+)"),
         }
+        # Die drei Statistikfelder stehen NICHT im server-gerenderten
+        # HTML (gemessen im ersten CI-Lauf: 0 von 581 belegt). Sie
+        # werden weiter versucht — falls op.gg das aendert, faellt es
+        # sofort auf — aber ein `null` wird nicht geschrieben. Ein Feld,
+        # das in jeder Zeile leer ist, sieht aus wie ein Datenverlust;
+        # ein fehlendes Feld ist ehrlich.
+        for name, muster in (("power", r"Stärke:\s*(\d+)"),
+                             ("accuracy", r"Gen:\s*(\d+)\s*%"),
+                             ("pp", r"AP:\s*(\d+)")):
+            wert = zahl(muster)
+            if wert is not None:
+                eintrag[name] = wert
+        aus[slug] = eintrag
         m = re.search(r"Ziel:\s*([^:]+?)(?:\s+(?:HP|Atk|Def|SpA|SpD|Spe)\b|$)", text)
         if m:
             aus[slug]["ziel"] = m.group(1).strip()
@@ -147,6 +157,7 @@ def main():
         return 1
 
     mit_text = sum(1 for v in eintraege.values() if v["text"])
+    mit_zahlen = sum(1 for v in eintraege.values() if "power" in v or "pp" in v)
     aus = {
         "_meta": {
             "quelle": URL,
@@ -159,6 +170,14 @@ def main():
             ),
             "attacken": len(eintraege),
             "mit_deutschem_text": mit_text,
+            "mit_kampfwerten": mit_zahlen,
+            "warnung_kampfwerte": (
+                "Staerke, Genauigkeit und AP stehen NICHT im "
+                "server-gerenderten HTML — op.gg rendert sie erst im "
+                "Browser nach. Sie fehlen deshalb in den Eintraegen "
+                "(kein null, sondern kein Feld). Wer sie braucht, "
+                "braucht einen Scraper, der die Seite ausfuehrt."
+            ) if mit_zahlen == 0 else "",
             "hinweis": (
                 "Der Schluessel ist der englische Slug aus der URL "
                 "(make-it-rain). Er laesst sich ueber norm() gegen den "
