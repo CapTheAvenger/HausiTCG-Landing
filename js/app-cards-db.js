@@ -4647,6 +4647,7 @@
                 return;
             }
             modal.classList.add('show');
+            if (window.HintergrundSperre) window.HintergrundSperre.sperren('seltenheitswaehler');
         }
 
         async function selectRarityVersion(setCode, setNumber, oldDeckKey, cardName, sourceHint = '') {
@@ -4931,6 +4932,7 @@
             const modal = document.getElementById('raritySwitcherModal');
             modal.classList.remove('show');
             currentRaritySwitcherCard = null;
+            if (window.HintergrundSperre) window.HintergrundSperre.freigeben('seltenheitswaehler');
         }
 
         /* Einen Druck nur fuer die Anzeige waehlen.
@@ -5077,6 +5079,7 @@
             img.src = imageUrl;
             img.alt = cardName;
             modal.classList.add('active');
+            if (window.HintergrundSperre) window.HintergrundSperre.sperren('kartenvollbild');
             
             // Close on ESC key
             const escapeHandler = (e) => {
@@ -5093,6 +5096,7 @@
             if (modal) {
                 modal.classList.remove('active');
             }
+            if (window.HintergrundSperre) window.HintergrundSperre.freigeben('kartenvollbild');
         }
 
         function openCardmarket(cardmarketUrl, cardName, plain) {

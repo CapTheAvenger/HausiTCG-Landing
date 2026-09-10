@@ -1787,11 +1787,13 @@
         populateMatchupFilters();
         renderMatchupAnalysis();
         modal.style.display = 'flex';
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('matchup-auswertung');
     }
 
     function closeMatchupAnalysisModal() {
         const modal = document.getElementById('matchupAnalysisModal');
         if (modal) modal.style.display = 'none';
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('matchup-auswertung');
     }
 
     function populateMatchupFilters() {
@@ -2358,11 +2360,13 @@
         bjFuelleSchnappschussAuswahl(entries);
 
         modal.style.display = 'flex';
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('turnier-bearbeiten');
     }
 
     function closeEditTournamentModal() {
         const modal = document.getElementById('bjEditTournamentModal');
         if (modal) modal.style.display = 'none';
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('turnier-bearbeiten');
     }
 
     function selectEditTournType(value) {
@@ -2525,6 +2529,7 @@
         }
 
         modal.style.display = 'flex';
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('journal-eintrag');
     }
 
     // Builds the per-game editor (turn / result / brick / notes for each
@@ -2615,6 +2620,7 @@
     function closeEditEntryModal() {
         const modal = document.getElementById('bjEditEntryModal');
         if (modal) modal.style.display = 'none';
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('journal-eintrag');
     }
 
     async function saveEditEntry() {

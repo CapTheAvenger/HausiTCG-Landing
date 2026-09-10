@@ -21,6 +21,8 @@ function showAuthModal(mode = 'signin') {
   
   modal.classList.remove('d-none', 'd-none');
   modal.style.display = 'flex';
+  // Die Seite dahinter anhalten, siehe js/hintergrund-sperre.js.
+  if (window.HintergrundSperre) window.HintergrundSperre.sperren('anmeldung');
 }
 
 function closeAuthModal() {
@@ -29,6 +31,7 @@ function closeAuthModal() {
   console.info('[Auth] Closing auth modal');
   modal.classList.add('d-none');
   modal.style.display = 'none';
+  if (window.HintergrundSperre) window.HintergrundSperre.freigeben('anmeldung');
 }
 
 window.showAuthModal = showAuthModal;

@@ -649,6 +649,7 @@
     function closeEditor() {
         const el = document.getElementById('sqbSetModal');
         if (el) el.remove();
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('sqb-editor');
         document.removeEventListener('keydown', onEditorKey);
         _editSlug = null;
     }
@@ -662,6 +663,7 @@
         document.body.insertAdjacentHTML('beforeend', editorHtml(slug, l));
         const box = document.getElementById('sqbSetModal');
         if (!box) return;
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('sqb-editor');
         document.addEventListener('keydown', onEditorKey);
         box.addEventListener('click', e => { if (e.target === box) closeEditor(); });
         box.querySelector('.sqb-modal-x').addEventListener('click', closeEditor);

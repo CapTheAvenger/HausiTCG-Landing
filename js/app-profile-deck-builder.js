@@ -958,11 +958,13 @@
         // Focus the close button so Tab order is sane and Esc works
         // even when the page itself didn't have focus.
         overlay.querySelector('.pdb-zoom-close').focus();
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('kartenlupe');
     }
 
     function closeZoomModal() {
         const overlay = document.getElementById('pdb-zoom-overlay');
         if (overlay) overlay.remove();
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('kartenlupe');
         if (_zoomKeyHandler) {
             document.removeEventListener('keydown', _zoomKeyHandler);
             _zoomKeyHandler = null;

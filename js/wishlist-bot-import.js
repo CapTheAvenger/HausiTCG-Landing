@@ -215,6 +215,7 @@
         </div>
       </div>`;
     document.body.appendChild(modal);
+    if (window.HintergrundSperre) window.HintergrundSperre.sperren('wunschliste-bot');
     const ta = document.getElementById('wlBotImportText');
     if (ta) ta.focus();
   }
@@ -346,6 +347,7 @@
       </div>`;
     modal._matched = matched;
     document.body.appendChild(modal);
+    if (window.HintergrundSperre) window.HintergrundSperre.sperren('wunschliste-bot');
     const sel = document.getElementById('wlBotPreviewQty');
     if (sel) sel.value = String(qty);
     refreshPreview();
@@ -492,6 +494,13 @@
     if (id) {
       const el = document.getElementById(id);
       if (el) el.remove();
+      // Beide Fenster teilen sich eine Sperre: das Vorschaufenster
+      // loest das Importfenster ab, es steht nie eines allein.
+      if (!document.getElementById('wishlistBotImportModal') &&
+          !document.getElementById('wishlistBotPreviewModal') &&
+          window.HintergrundSperre) {
+        window.HintergrundSperre.freigeben('wunschliste-bot');
+      }
       return;
     }
     ['wishlistBotImportModal', 'wishlistBotPreviewModal'].forEach(k => closeModal(k));

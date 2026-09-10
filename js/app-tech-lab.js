@@ -1107,6 +1107,7 @@
         if (!overlay || !input || !dropdown) return;
         overlay.classList.remove('d-none');
         overlay.classList.add('show');
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('techlab-hinzufuegen');
         if (title) {
             title.textContent = (_addDirection === 'beats')
                 ? _t('techLab.addModalTitleBeats', 'Add a meta card this card is good against')
@@ -1135,6 +1136,7 @@
             overlay.classList.remove('show');
             overlay.classList.add('d-none');
         }
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('techlab-hinzufuegen');
     }
 
     // ── RESET ────────────────────────────────────────────────────────

@@ -161,6 +161,7 @@
               '</div>' +
             '</div>';
         document.body.appendChild(modal);
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('bildvorschau');
 
         /* Das PNG wird sofort gebaut, nicht erst beim Klick.
          *
@@ -184,6 +185,7 @@
             function zu() {
                 document.removeEventListener('keydown', taste, true);
                 modal.remove();
+                if (window.HintergrundSperre) window.HintergrundSperre.freigeben('bildvorschau');
                 // Fokus zurueck auf den Knopf, der das Fenster geoeffnet hat.
                 // Ohne das steht er nach dem Schliessen am Seitenanfang.
                 if (vorher && typeof vorher.focus === 'function') {

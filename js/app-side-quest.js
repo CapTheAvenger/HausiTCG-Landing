@@ -584,6 +584,7 @@
     function closeStrategyModal() {
         const overlay = document.getElementById('sideQuestStrategyModal');
         if (overlay) overlay.remove();
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('sq-strategie');
         document.removeEventListener('keydown', onModalKeydown);
     }
 
@@ -648,6 +649,7 @@
             .addEventListener('click', closeStrategyModal);
         document.addEventListener('keydown', onModalKeydown);
         document.body.appendChild(overlay);
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('sq-strategie');
         overlay.querySelector('.side-quest-modal-close').focus();
     }
 
@@ -847,6 +849,7 @@
     function closeExportModal() {
         const el = document.getElementById('sideQuestExportModal');
         if (el) el.remove();
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('sq-export');
         document.removeEventListener('keydown', onExportKeydown);
     }
     function onExportKeydown(e) { if (e.key === 'Escape') closeExportModal(); }
@@ -915,6 +918,7 @@
         });
         document.addEventListener('keydown', onExportKeydown);
         document.body.appendChild(overlay);
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('sq-export');
         ta.focus();
         ta.select();
     }
@@ -1344,6 +1348,7 @@
     function closeImportModal() {
         const el = document.getElementById('sideQuestImportModal');
         if (el) el.remove();
+        if (window.HintergrundSperre) window.HintergrundSperre.freigeben('sq-import');
         document.removeEventListener('keydown', onImportKeydown);
     }
     function onImportKeydown(e) { if (e.key === 'Escape') closeImportModal(); }
@@ -1399,6 +1404,7 @@
         });
         document.addEventListener('keydown', onImportKeydown);
         document.body.appendChild(overlay);
+        if (window.HintergrundSperre) window.HintergrundSperre.sperren('sq-import');
         overlay.querySelector('#sqImportText').focus();
     }
 
