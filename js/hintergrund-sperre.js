@@ -53,6 +53,8 @@
     var anzahl = 0;
     var stand = 0;
     var gemerkt = null;
+    var alteWiederherstellung = null;   // history.scrollRestoration vor der Sperre
+    var wiederherstellungUhr = null;
 
     function body() { return document.body; }
 
@@ -76,7 +78,54 @@
         b.style.right = '0';
         b.style.width = '100%';
         b.classList.add('hintergrund-gesperrt');
+        wiederherstellungUebernehmen();
         return true;
+    }
+
+    /* DER BROWSER STELLT SEINEN EIGENEN STAND HER — UND ZWAR NACH UNS.
+     *
+     * GEMESSEN live am 10.09.2026 auf 202609100726-ebf8a22, Pocket-Vollbild
+     * von Stand 300 aus geoeffnet und mit der Zurueck-Geste geschlossen:
+     *
+     *   im popstate-Zuhoerer:   scrollY 300, body position static   (unsere
+     *                           Wiederherstellung hatte gegriffen)
+     *   eine Sekunde spaeter:   scrollY 0
+     *
+     * Dazwischen hat KEIN Skript gescrollt — window.scrollTo, scrollTop und
+     * scrollIntoView waren zur Kontrolle umgehaengt und meldeten genau einen
+     * Aufruf: unseren eigenen. Es war der Browser, der den zum
+     * Verlaufseintrag gemerkten Stand herstellte. Gemerkt hatte er 0, weil
+     * der Koerper zu dem Zeitpunkt auf `position: fixed` lag.
+     *
+     * Ein Nachfassen im naechsten Bild reicht dagegen nicht: der Browser war
+     * zu diesem Zeitpunkt noch nicht dran, unsere Pruefung sah die richtigen
+     * 300 und liess die Finger davon. Deshalb wird ihm die Wiederherstellung
+     * fuer die Dauer der Sperre ganz abgenommen und erst kurz nach dem
+     * Schliessen zurueckgegeben. */
+    function wiederherstellungUebernehmen() {
+        if (wiederherstellungUhr) {
+            clearTimeout(wiederherstellungUhr);
+            wiederherstellungUhr = null;
+        }
+        try {
+            if (!window.history || typeof window.history.scrollRestoration !== 'string') return;
+            if (alteWiederherstellung === null) {
+                alteWiederherstellung = window.history.scrollRestoration;
+            }
+            window.history.scrollRestoration = 'manual';
+        } catch (e) { alteWiederherstellung = null; }
+    }
+
+    function wiederherstellungZurueckgeben() {
+        if (alteWiederherstellung === null) return;
+        var wert = alteWiederherstellung;
+        // Nicht sofort: der Browser wuerde sonst genau jetzt noch seinen
+        // gemerkten Stand herstellen und unsere Rueckkehr ueberschreiben.
+        wiederherstellungUhr = setTimeout(function () {
+            wiederherstellungUhr = null;
+            alteWiederherstellung = null;
+            try { window.history.scrollRestoration = wert; } catch (e) { }
+        }, 400);
     }
 
     function abbauen() {
@@ -91,6 +140,7 @@
         gemerkt = null;
 
         zurueckRollen(stand);
+        wiederherstellungZurueckgeben();
 
         /* NOCH EINMAL IM NAECHSTEN BILD — und zwar nur dann, wenn die
          * Seite inzwischen wieder oben steht.
