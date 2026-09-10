@@ -60,7 +60,12 @@ function umgebung(startStand) {
     // Scrollstand her — und zwar NACH uns. Der Ersatz kann dieses Bild
     // ausloesen, sonst laesst sich die Nachbesserung nicht pruefen.
     const bilder = [];
+    const uhren = [];
+    const verlauf = { scrollRestoration: 'auto' };
     const fenster = {
+        history: verlauf,
+        setTimeout(f, ms) { uhren.push({ f, ms }); return uhren.length; },
+        clearTimeout(id) { if (id) uhren[id - 1] = null; },
         document: dok,
         pageYOffset: startStand || 0,
         scrollTo(x, y) {
@@ -71,9 +76,14 @@ function umgebung(startStand) {
         requestAnimationFrame(f) { bilder.push(f); return bilder.length; }
     };
     fenster.window = fenster;
-    new Function('window', 'document', QUELLE)(fenster, dok);
+    new Function('window', 'document', 'setTimeout', 'clearTimeout', QUELLE)(
+        fenster, dok, fenster.setTimeout, fenster.clearTimeout);
     const naechstesBild = () => { const f = bilder.shift(); if (f) f(); };
-    return { sperre: fenster.HintergrundSperre, body, wurzel, fenster, gerollt, klassen, naechstesBild };
+    const uhrenLaufen = () => {
+        while (uhren.length) { const u = uhren.shift(); if (u && u.f) u.f(); }
+    };
+    return { sperre: fenster.HintergrundSperre, body, wurzel, fenster, gerollt, klassen,
+             naechstesBild, verlauf, uhrenLaufen };
 }
 
 describe('HintergrundSperre', () => {
@@ -174,6 +184,24 @@ describe('HintergrundSperre', () => {
         u.naechstesBild();
         assert.equal(u.fenster.pageYOffset, 1200,
             'die Sperre reisst einen fremden Sprung zurueck');
+    });
+
+    it('nimmt dem Browser seine eigene Wiederherstellung ab', () => {
+        // GEMESSEN live am 10.09.2026: der Browser stellte den zum
+        // Verlaufseintrag gemerkten Stand her — 0, weil der Koerper festlag —
+        // und zwar NACH unserer Rueckkehr. Kein Skript war beteiligt.
+        const u = umgebung(300);
+        assert.equal(u.verlauf.scrollRestoration, 'auto');
+        u.sperre.sperren('vollbild');
+        assert.equal(u.verlauf.scrollRestoration, 'manual',
+            'der Browser merkt sich den Stand 0 und stellt ihn spaeter her');
+        u.sperre.freigeben('vollbild');
+        assert.equal(u.verlauf.scrollRestoration, 'manual',
+            'sofort zurueckgegeben — dann ueberschreibt der Browser die '
+            + 'Rueckkehr noch im selben Zug');
+        u.uhrenLaufen();
+        assert.equal(u.verlauf.scrollRestoration, 'auto',
+            'die Einstellung des Nutzers bleibt dauerhaft verstellt');
     });
 
     it('ein Freigeben ohne Sperre tut nichts', () => {
